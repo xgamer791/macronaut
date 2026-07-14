@@ -28,7 +28,7 @@ export function Screen({
   ];
   const contentPad = {
     padding: padded ? spacing.lg : 0,
-    paddingBottom: (padded ? spacing.lg : 0) + (tabBarSpace ? 96 : insets.bottom),
+    paddingBottom: (padded ? spacing.lg : 0) + (tabBarSpace ? 112 : insets.bottom),
     gap: spacing.lg,
   };
 
