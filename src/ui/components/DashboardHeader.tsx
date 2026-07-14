@@ -1,11 +1,9 @@
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
-import { GlassView, isGlassEffectAPIAvailable } from 'expo-glass-effect';
+import { useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   LayoutChangeEvent,
-  Modal,
-  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -13,18 +11,21 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import Animated, {
-  Easing,
   interpolate,
-  runOnJS,
   useAnimatedStyle,
   useSharedValue,
   withSpring,
-  withTiming,
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useWeekProgress, useWeekStart } from '@/state/queries';
+import {
+  useDayNote,
+  useDayNotesRange,
+  useWeekProgress,
+  useWeekStart,
+} from '@/state/queries';
 import {
   DayKey,
+  addDays,
   addMonths,
   formatDayKey,
   formatMonthYear,
@@ -38,10 +39,12 @@ import {
 import { useTheme } from '@/ui/theme/ThemeProvider';
 import { spacing, touchTarget } from '@/ui/theme/tokens';
 import { AppText } from './AppText';
+import { DayInfoPopup } from './DayInfoPopup';
+import { DayNotesPopup } from './DayNotesPopup';
+import { GlassPopup } from './GlassPopup';
 
 const BUBBLE_SIZE = 36;
 const BUBBLE_SLOT = 48;
-const CALENDAR_RADIUS = 24;
 const SPRING = { damping: 20, stiffness: 280, mass: 0.8 };
 /** Small gap between the Today title and the floating month calendar. */
 const CALENDAR_GAP = 8;
@@ -54,17 +57,26 @@ export interface DashboardHeaderProps {
 }
 
 /**
- * Compact dashboard header: expandable day title + floating month calendar +
- * weekly day-bubble strip. Reusable across diary-style screens.
+ * Compact dashboard header: notes + activity actions, expandable day title,
+ * floating liquid-glass month calendar, and weekly day-bubble strip.
  */
 export function DashboardHeader({ date, onDateChange, right }: DashboardHeaderProps) {
   const { colors } = useTheme();
+  const router = useRouter();
   const insets = useSafeAreaInsets();
   const weekStart = useWeekStart();
   const week = useWeekProgress(date);
   const titleRef = useRef<View>(null);
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [calendarTop, setCalendarTop] = useState(insets.top + touchTarget + CALENDAR_GAP);
+  const [notesOpen, setNotesOpen] = useState(false);
+  const [dayInfoOpen, setDayInfoOpen] = useState(false);
+
+  const weekKeys = useMemo(() => weekDays(date, weekStart), [date, weekStart]);
+  const notesWeek = useDayNotesRange(weekKeys[0], weekKeys[weekKeys.length - 1]);
+  const dayNote = useDayNote(date);
+
+  const notedDays = useMemo(() => new Set(notesWeek.data ?? []), [notesWeek.data]);
 
   const completedDays = useMemo(() => {
     const set = new Set<DayKey>();
@@ -76,6 +88,7 @@ export function DashboardHeader({ date, onDateChange, right }: DashboardHeaderPr
 
   const title = formatDayKey(date);
   const isToday = date === todayKey();
+  const today = todayKey();
 
   const closeCalendar = useCallback(() => setCalendarOpen(false), []);
 
@@ -104,7 +117,6 @@ export function DashboardHeader({ date, onDateChange, right }: DashboardHeaderPr
     openCalendar();
   }, [calendarOpen, closeCalendar, openCalendar]);
 
-  /** Change the active day without dismissing the month picker. */
   const changeDate = useCallback(
     (next: DayKey) => {
       void Haptics.selectionAsync();
@@ -113,9 +125,54 @@ export function DashboardHeader({ date, onDateChange, right }: DashboardHeaderPr
     [onDateChange],
   );
 
+  /** Select a day; past days also open the day-info glass popup. */
+  const selectDay = useCallback(
+    (next: DayKey) => {
+      changeDate(next);
+      if (next < today) {
+        closeCalendar();
+        setDayInfoOpen(true);
+      }
+    },
+    [changeDate, today, closeCalendar],
+  );
+
   return (
     <View style={styles.root}>
       <View ref={titleRef} style={styles.titleRow} collapsable={false}>
+        <View style={styles.leftActions}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={dayNote.data?.body ? 'Edit day notes' : 'Add day notes'}
+            onPress={() => {
+              void Haptics.selectionAsync();
+              setNotesOpen(true);
+            }}
+            hitSlop={6}
+            style={styles.iconBtn}
+          >
+            <Ionicons
+              name={dayNote.data?.body ? 'document-text' : 'document-text-outline'}
+              size={22}
+              color={dayNote.data?.body ? colors.accent : colors.textPrimary}
+            />
+          </Pressable>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Open activity"
+            onPress={() => {
+              void Haptics.selectionAsync();
+              router.push('/activity');
+            }}
+            hitSlop={6}
+            style={styles.activityLink}
+          >
+            <AppText variant="caption" weight="600" tone="accent">
+              Activity
+            </AppText>
+          </Pressable>
+        </View>
+
         <Pressable
           accessibilityRole="button"
           accessibilityLabel={`${title}. ${calendarOpen ? 'Close' : 'Open'} calendar`}
@@ -125,12 +182,12 @@ export function DashboardHeader({ date, onDateChange, right }: DashboardHeaderPr
           hitSlop={8}
           style={styles.titlePress}
         >
-          <AppText variant="title" weight="600" display style={styles.titleText}>
+          <AppText variant="title" weight="600" display style={styles.titleText} numberOfLines={1}>
             {title}
           </AppText>
           <AnimatedChevron open={calendarOpen} color={colors.textPrimary} />
         </Pressable>
-        {right ? <View style={styles.right}>{right}</View> : null}
+        {right ? <View style={styles.right}>{right}</View> : <View style={styles.rightSpacer} />}
       </View>
 
       {!isToday ? (
@@ -150,7 +207,8 @@ export function DashboardHeader({ date, onDateChange, right }: DashboardHeaderPr
         date={date}
         weekStart={weekStart}
         completedDays={completedDays}
-        onSelect={changeDate}
+        notedDays={notedDays}
+        onSelect={selectDay}
       />
 
       <CalendarDropdown
@@ -159,13 +217,23 @@ export function DashboardHeader({ date, onDateChange, right }: DashboardHeaderPr
         weekStart={weekStart}
         top={calendarTop}
         onClose={closeCalendar}
-        onSelect={changeDate}
+        onSelect={selectDay}
         accent={colors.accent}
         onAccent={colors.onAccent}
         textPrimary={colors.textPrimary}
         textMuted={colors.textMuted}
         textSecondary={colors.textSecondary}
-        overlay={colors.overlay}
+      />
+
+      <DayNotesPopup visible={notesOpen} date={date} onClose={() => setNotesOpen(false)} />
+      <DayInfoPopup
+        visible={dayInfoOpen}
+        date={date}
+        onClose={() => setDayInfoOpen(false)}
+        onEditNotes={() => {
+          setDayInfoOpen(false);
+          setNotesOpen(true);
+        }}
       />
     </View>
   );
@@ -190,11 +258,13 @@ function WeekBubbleRow({
   date,
   weekStart,
   completedDays,
+  notedDays,
   onSelect,
 }: {
   date: DayKey;
   weekStart: 'sunday' | 'monday';
   completedDays: Set<DayKey>;
+  notedDays: Set<DayKey>;
   onSelect: (date: DayKey) => void;
 }) {
   const { colors } = useTheme();
@@ -208,7 +278,6 @@ function WeekBubbleRow({
     setRowWidth(e.nativeEvent.layout.width);
   };
 
-  // Auto-center the selected bubble when the week or selection changes.
   useEffect(() => {
     const index = days.indexOf(date);
     if (index < 0) return;
@@ -237,6 +306,7 @@ function WeekBubbleRow({
           const selected = day === date;
           const isToday = day === today;
           const completed = completedDays.has(day);
+          const hasNote = notedDays.has(day);
           const dayNum = Number(day.slice(8));
           return (
             <DayBubble
@@ -246,6 +316,7 @@ function WeekBubbleRow({
               selected={selected}
               isToday={isToday}
               completed={completed}
+              hasNote={hasNote}
               accent={colors.accent}
               onAccent={colors.onAccent}
               textMuted={colors.textMuted}
@@ -267,6 +338,7 @@ function DayBubble({
   selected,
   isToday,
   completed,
+  hasNote,
   accent,
   onAccent,
   textMuted,
@@ -280,6 +352,7 @@ function DayBubble({
   selected: boolean;
   isToday: boolean;
   completed: boolean;
+  hasNote: boolean;
   accent: string;
   onAccent: string;
   textMuted: string;
@@ -306,7 +379,7 @@ function DayBubble({
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={`${letter} ${dayNum}${isToday ? ', today' : ''}${selected ? ', selected' : ''}${completed ? ', logged' : ''}`}
+      accessibilityLabel={`${letter} ${dayNum}${isToday ? ', today' : ''}${selected ? ', selected' : ''}${completed ? ', logged' : ''}${hasNote ? ', has notes' : ''}`}
       accessibilityState={{ selected }}
       onPress={onPress}
       style={[styles.bubbleSlot, slotWidth != null && { width: slotWidth }]}
@@ -322,10 +395,7 @@ function DayBubble({
         {completed && !filled ? (
           <View
             pointerEvents="none"
-            style={[
-              styles.completionRing,
-              { borderColor: accent + '66' },
-            ]}
+            style={[styles.completionRing, { borderColor: accent + '66' }]}
           />
         ) : null}
         <View
@@ -347,6 +417,12 @@ function DayBubble({
             {dayNum}
           </AppText>
         </View>
+        {hasNote ? (
+          <View
+            pointerEvents="none"
+            style={[styles.noteDot, { backgroundColor: filled ? onAccent : accent }]}
+          />
+        ) : null}
       </Animated.View>
     </Pressable>
   );
@@ -364,7 +440,6 @@ function CalendarDropdown({
   textPrimary,
   textMuted,
   textSecondary,
-  overlay,
 }: {
   visible: boolean;
   selected: DayKey;
@@ -377,188 +452,124 @@ function CalendarDropdown({
   textPrimary: string;
   textMuted: string;
   textSecondary: string;
-  overlay: string;
 }) {
   const [month, setMonth] = useState(() => monthStartOf(selected));
-  const [mounted, setMounted] = useState(visible);
   const [prevVisible, setPrevVisible] = useState(visible);
-  const progress = useSharedValue(0);
+  const monthEnd = useMemo(() => addDays(addMonths(month, 1), -1), [month]);
+  const notesMonth = useDayNotesRange(month, monthEnd);
+  const notedDays = useMemo(() => new Set(notesMonth.data ?? []), [notesMonth.data]);
 
-  // Keep the modal mounted through the exit animation (React-recommended prop→state sync).
   if (visible !== prevVisible) {
     setPrevVisible(visible);
-    if (visible) {
-      setMounted(true);
-      setMonth(monthStartOf(selected));
-    }
+    if (visible) setMonth(monthStartOf(selected));
   }
-
-  useEffect(() => {
-    if (visible) {
-      // Card-only spring — scrim stays steady to avoid a background flash.
-      progress.value = 0;
-      progress.value = withSpring(1, SPRING);
-    } else if (mounted) {
-      progress.value = withTiming(0, { duration: 180, easing: Easing.out(Easing.cubic) }, (finished) => {
-        if (finished) runOnJS(setMounted)(false);
-      });
-    }
-  }, [visible, progress, mounted]);
 
   const letters = useMemo(() => weekdayLetters(weekStart), [weekStart]);
   const cells = useMemo(() => monthCalendarDays(month, weekStart), [month, weekStart]);
   const today = todayKey();
 
-  const cardStyle = useAnimatedStyle(() => ({
-    opacity: progress.value,
-    transform: [
-      { translateY: interpolate(progress.value, [0, 1], [-6, 0]) },
-      { scale: interpolate(progress.value, [0, 1], [0.98, 1]) },
-    ],
-  }));
-
-  if (!mounted) return null;
-
   return (
-    <Modal visible={mounted} transparent animationType="none" onRequestClose={onClose}>
-      <View style={styles.modalRoot} pointerEvents="box-none">
-        {/* Steady scrim — no opacity animation (prevents one-frame background flash). */}
-        <View style={[StyleSheet.absoluteFill, { backgroundColor: overlay }]}>
-          <Pressable
-            style={StyleSheet.absoluteFill}
-            onPress={onClose}
-            accessibilityRole="button"
-            accessibilityLabel="Dismiss calendar"
-          />
-        </View>
-
-        <Animated.View style={[{ marginTop: top }, cardStyle]}>
-          <LiquidGlassCard>
-            <View style={styles.calendarHeader}>
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="Previous month"
-                onPress={() => setMonth((m) => addMonths(m, -1))}
-                style={styles.monthArrow}
-              >
-                <Ionicons name="chevron-back" size={20} color={textPrimary} />
-              </Pressable>
-              <AppText variant="heading" weight="600" display>
-                {formatMonthYear(month)}
-              </AppText>
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="Next month"
-                onPress={() => setMonth((m) => addMonths(m, 1))}
-                style={styles.monthArrow}
-              >
-                <Ionicons name="chevron-forward" size={20} color={textPrimary} />
-              </Pressable>
-            </View>
-
-            <View style={styles.weekdayRow}>
-              {letters.map((letter, i) => (
-                <View key={`${letter}-${i}`} style={styles.calCell}>
-                  <AppText variant="micro" weight="600" style={{ color: textMuted }}>
-                    {letter}
-                  </AppText>
-                </View>
-              ))}
-            </View>
-
-            <View style={styles.calGrid}>
-              {cells.map((day, i) => {
-                if (!day) {
-                  return <View key={`empty-${i}`} style={styles.calCell} />;
-                }
-                const isSelected = day === selected;
-                const isToday = day === today;
-                return (
-                  <Pressable
-                    key={day}
-                    accessibilityRole="button"
-                    accessibilityLabel={`${formatDayKey(day)}${isToday ? ', today' : ''}`}
-                    accessibilityState={{ selected: isSelected }}
-                    onPress={() => onSelect(day)}
-                    style={styles.calCell}
-                  >
-                    <View
-                      style={[
-                        styles.calDay,
-                        isSelected && { backgroundColor: accent },
-                        isToday && !isSelected && { borderColor: accent, borderWidth: 1.5 },
-                        !isSelected && !isToday && { backgroundColor: 'transparent' },
-                      ]}
-                    >
-                      <AppText
-                        variant="caption"
-                        weight={isSelected || isToday ? '600' : '400'}
-                        display={isSelected || isToday}
-                        style={{
-                          color: isSelected ? onAccent : isToday ? accent : textPrimary,
-                        }}
-                      >
-                        {Number(day.slice(8))}
-                      </AppText>
-                    </View>
-                  </Pressable>
-                );
-              })}
-            </View>
-
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Jump to today"
-              onPress={() => onSelect(today)}
-              style={styles.jumpToday}
-            >
-              <AppText variant="caption" tone="accent" weight="600">
-                Today
-              </AppText>
-              <AppText variant="micro" style={{ color: textSecondary }}>
-                {formatMonthYear(today)} · {Number(today.slice(8))}
-              </AppText>
-            </Pressable>
-          </LiquidGlassCard>
-        </Animated.View>
-      </View>
-    </Modal>
-  );
-}
-
-/** Black translucent liquid-glass surface — native GlassView on iOS 26+, CSS blur elsewhere. */
-function LiquidGlassCard({ children }: { children: React.ReactNode }) {
-  const useNativeGlass = Platform.OS === 'ios' && isGlassEffectAPIAvailable();
-
-  if (useNativeGlass) {
-    return (
-      <GlassView
-        glassEffectStyle="regular"
-        tintColor="rgba(0, 0, 0, 0.55)"
-        colorScheme="dark"
-        style={styles.glassNative}
-      >
-        <View style={styles.calendarInner}>{children}</View>
-      </GlassView>
-    );
-  }
-
-  return (
-    <View
-      style={[
-        styles.glassWeb,
-        {
-          // RN Web liquid-glass blur (not in RN ViewStyle typings)
-          backdropFilter: 'blur(48px) saturate(165%)',
-          WebkitBackdropFilter: 'blur(48px) saturate(165%)',
-        } as object,
-      ]}
+    <GlassPopup
+      visible={visible}
+      onClose={onClose}
+      top={top}
+      accessibilityLabel="Dismiss calendar"
     >
-      <View pointerEvents="none" style={styles.glassFill} />
-      <View pointerEvents="none" style={styles.glassSheen} />
-      <View pointerEvents="none" style={styles.glassHighlight} />
-      <View style={styles.calendarInner}>{children}</View>
-    </View>
+      <View style={styles.calendarHeader}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Previous month"
+          onPress={() => setMonth((m) => addMonths(m, -1))}
+          style={styles.monthArrow}
+        >
+          <Ionicons name="chevron-back" size={20} color={textPrimary} />
+        </Pressable>
+        <AppText variant="heading" weight="600" display>
+          {formatMonthYear(month)}
+        </AppText>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Next month"
+          onPress={() => setMonth((m) => addMonths(m, 1))}
+          style={styles.monthArrow}
+        >
+          <Ionicons name="chevron-forward" size={20} color={textPrimary} />
+        </Pressable>
+      </View>
+
+      <View style={styles.weekdayRow}>
+        {letters.map((letter, i) => (
+          <View key={`${letter}-${i}`} style={styles.calCell}>
+            <AppText variant="micro" weight="600" style={{ color: textMuted }}>
+              {letter}
+            </AppText>
+          </View>
+        ))}
+      </View>
+
+      <View style={styles.calGrid}>
+        {cells.map((day, i) => {
+          if (!day) {
+            return <View key={`empty-${i}`} style={styles.calCell} />;
+          }
+          const isSelected = day === selected;
+          const isToday = day === today;
+          const hasNote = notedDays.has(day);
+          return (
+            <Pressable
+              key={day}
+              accessibilityRole="button"
+              accessibilityLabel={`${formatDayKey(day)}${isToday ? ', today' : ''}${hasNote ? ', has notes' : ''}`}
+              accessibilityState={{ selected: isSelected }}
+              onPress={() => onSelect(day)}
+              style={styles.calCell}
+            >
+              <View
+                style={[
+                  styles.calDay,
+                  isSelected && { backgroundColor: accent },
+                  isToday && !isSelected && { borderColor: accent, borderWidth: 1.5 },
+                  !isSelected && !isToday && { backgroundColor: 'transparent' },
+                ]}
+              >
+                <AppText
+                  variant="caption"
+                  weight={isSelected || isToday ? '600' : '400'}
+                  display={isSelected || isToday}
+                  style={{
+                    color: isSelected ? onAccent : isToday ? accent : textPrimary,
+                  }}
+                >
+                  {Number(day.slice(8))}
+                </AppText>
+                {hasNote ? (
+                  <View
+                    style={[
+                      styles.calNoteDot,
+                      { backgroundColor: isSelected ? onAccent : accent },
+                    ]}
+                  />
+                ) : null}
+              </View>
+            </Pressable>
+          );
+        })}
+      </View>
+
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Jump to today"
+        onPress={() => onSelect(today)}
+        style={styles.jumpToday}
+      >
+        <AppText variant="caption" tone="accent" weight="600">
+          Today
+        </AppText>
+        <AppText variant="micro" style={{ color: textSecondary }}>
+          {formatMonthYear(today)} · {Number(today.slice(8))}
+        </AppText>
+      </Pressable>
+    </GlassPopup>
   );
 }
 
@@ -570,23 +581,45 @@ const styles = StyleSheet.create({
   titleRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
     minHeight: touchTarget,
+    gap: spacing.sm,
+  },
+  leftActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  iconBtn: {
+    width: 40,
+    height: touchTarget,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  activityLink: {
+    minHeight: touchTarget,
+    paddingHorizontal: spacing.xs,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   titlePress: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
     minHeight: touchTarget,
-    paddingRight: spacing.sm,
+    minWidth: 0,
   },
   titleText: {
     letterSpacing: -0.3,
+    flexShrink: 1,
   },
   right: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
+  },
+  rightSpacer: {
+    width: 8,
   },
   backToday: {
     alignSelf: 'flex-start',
@@ -626,49 +659,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  modalRoot: {
-    flex: 1,
-    paddingHorizontal: spacing.lg,
-  },
-  glassNative: {
-    borderRadius: CALENDAR_RADIUS,
-    overflow: 'hidden',
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(255, 255, 255, 0.18)',
-  },
-  glassWeb: {
-    borderRadius: CALENDAR_RADIUS,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.16)',
-    // More opaque base so backdrop-filter settle doesn't flash through
-    backgroundColor: 'rgba(8, 10, 14, 0.78)',
-    shadowColor: '#000',
-    shadowOpacity: 0.5,
-    shadowRadius: 32,
-    shadowOffset: { width: 0, height: 18 },
-    elevation: 24,
-  },
-  glassFill: {
-    ...StyleSheet.absoluteFill,
-    backgroundColor: 'rgba(0, 0, 0, 0.22)',
-  },
-  glassSheen: {
-    ...StyleSheet.absoluteFill,
-    backgroundColor: 'rgba(255, 255, 255, 0.03)',
-  },
-  glassHighlight: {
+  noteDot: {
     position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    height: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.28)',
-  },
-  calendarInner: {
-    paddingHorizontal: spacing.md,
-    paddingTop: spacing.md,
-    paddingBottom: spacing.lg,
+    bottom: 1,
+    width: 5,
+    height: 5,
+    borderRadius: 2.5,
   },
   calendarHeader: {
     flexDirection: 'row',
@@ -704,6 +700,13 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  calNoteDot: {
+    position: 'absolute',
+    bottom: 3,
+    width: 4,
+    height: 4,
+    borderRadius: 2,
   },
   jumpToday: {
     marginTop: spacing.sm,

@@ -3,6 +3,7 @@ import { Database } from '@/db/driver';
 import { getDatabase } from '@/db';
 import { createDiaryRepo, DiaryRepo } from '@/repositories/diaryRepo';
 import { createActivityRepo, ActivityRepo } from '@/repositories/activityRepo';
+import { createDayNotesRepo, DayNotesRepo } from '@/repositories/dayNotesRepo';
 import { createFoodRepo, FoodRepo } from '@/repositories/foodRepo';
 import { createGoalRepo, GoalRepo } from '@/repositories/goalRepo';
 import {
@@ -18,6 +19,7 @@ export interface Repos {
   db: Database;
   diary: DiaryRepo;
   activity: ActivityRepo;
+  dayNotes: DayNotesRepo;
   food: FoodRepo;
   goals: GoalRepo;
   savedMeals: SavedMealRepo;
@@ -47,6 +49,7 @@ export function AppProvider({
           db,
           diary: createDiaryRepo(db),
           activity: createActivityRepo(db),
+          dayNotes: createDayNotesRepo(db),
           food: createFoodRepo(db),
           goals: createGoalRepo(db),
           savedMeals: createSavedMealRepo(db),
