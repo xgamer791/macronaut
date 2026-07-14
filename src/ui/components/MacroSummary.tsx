@@ -6,6 +6,9 @@ import { useTheme } from '@/ui/theme/ThemeProvider';
 import { radius, spacing } from '@/ui/theme/tokens';
 import { AppText } from './AppText';
 
+/** Explicit track thickness (dp/css px) for the Protein/Carbs/Fat bars. */
+const TRACK_HEIGHT = 11;
+
 export interface MacroColumn {
   label: string;
   consumed: number;
@@ -83,7 +86,10 @@ export function MacroSummary({ macros, unit = 'g' }: MacroSummaryProps) {
                 ) : null}
               </View>
               <View
-                style={[styles.track, { backgroundColor: colors.track }]}
+                style={[
+                  styles.track,
+                  { backgroundColor: colors.track, height: TRACK_HEIGHT },
+                ]}
                 accessible
                 accessibilityRole="progressbar"
                 accessibilityLabel={`${macro.label}: ${roundForDisplay(consumed)}${unit}${
@@ -143,7 +149,7 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
   },
   track: {
-    height: 11,
+    height: TRACK_HEIGHT,
     borderRadius: radius.full,
     overflow: 'hidden',
     marginTop: 4,
