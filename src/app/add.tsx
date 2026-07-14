@@ -2,7 +2,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useQuery } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
-import { Pressable, View } from 'react-native';
+import { Linking, Pressable, View } from 'react-native';
+import { webFoodLookup } from '@/services/food/webFallback';
 import { SearchFilter } from '@/services/food/types';
 import { useRepos } from '@/state/AppProvider';
 import { useFoodSearch } from '@/state/foodSearch';
@@ -196,7 +197,7 @@ export default function AddScreen() {
 
           {searching && search.isLoading ? (
             <AppText variant="caption" tone="muted" align="center">
-              Searching…
+              Searching USDA, Open Food Facts and built-in foods…
             </AppText>
           ) : null}
 
@@ -221,12 +222,19 @@ export default function AddScreen() {
                 </AppText>
               ) : null}
               {search.data.foods.length === 0 ? (
-                <EmptyState
-                  title="No foods found"
-                  body="Try a simpler search term, or create it as a custom food."
-                  actionTitle="Create custom food"
-                  onAction={() => router.push('/custom-food')}
-                />
+                <View style={{ gap: spacing.sm }}>
+                  <EmptyState
+                    title="No foods found"
+                    body="We checked USDA, Open Food Facts and the built-in database. Look it up on the web, or create it as a custom food."
+                    actionTitle="Create custom food"
+                    onAction={() => router.push('/custom-food')}
+                  />
+                  <Button
+                    title="Search the web"
+                    variant="ghost"
+                    onPress={() => Linking.openURL(webFoodLookup.searchUrl({ name: query }))}
+                  />
+                </View>
               ) : (
                 <Card padded={false} style={{ paddingHorizontal: spacing.lg, paddingVertical: spacing.xs }}>
                   {search.data.foods.map((f) => {

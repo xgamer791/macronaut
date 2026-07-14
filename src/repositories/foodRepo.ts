@@ -54,6 +54,9 @@ interface CachedRow {
   nutrition_per_100g: string | null;
   nutrition_per_serving: string | null;
   flagged: number;
+  confidence: number | null;
+  serving_basis: string | null;
+  corrected: number | null;
   cached_at: string;
 }
 
@@ -75,6 +78,9 @@ function toCached(r: CachedRow): CachedFood {
       ? safeParse<Nutrition | undefined>(r.nutrition_per_serving, undefined)
       : undefined,
     flagged: r.flagged === 1,
+    confidence: r.confidence ?? undefined,
+    servingBasis: r.serving_basis ?? undefined,
+    corrected: r.corrected === 1,
     cachedAt: r.cached_at,
   };
 }
@@ -110,7 +116,8 @@ export function createFoodRepo(db: Database): FoodRepo {
     grams_per_serving, nutrition, notes, favorite, source_provider, source_id, created_at, updated_at
     FROM custom_foods`;
   const KSELECT = `SELECT provider, provider_id, name, brand, barcode, image_url, serving_qty,
-    serving_unit, grams_per_serving, nutrition_per_100g, nutrition_per_serving, flagged, cached_at
+    serving_unit, grams_per_serving, nutrition_per_100g, nutrition_per_serving, flagged,
+    confidence, serving_basis, corrected, cached_at
     FROM cached_foods`;
 
   async function getCustom(id: string): Promise<CustomFood | null> {
@@ -221,17 +228,21 @@ export function createFoodRepo(db: Database): FoodRepo {
     },
 
     async upsertCachedFood(food) {
+      // Never overwrite a user-corrected record with fresh provider data.
       await db.runAsync(
         `INSERT INTO cached_foods (provider, provider_id, name, brand, barcode, image_url,
           serving_qty, serving_unit, grams_per_serving, nutrition_per_100g, nutrition_per_serving,
-          flagged, cached_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          flagged, confidence, serving_basis, corrected, cached_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
          ON CONFLICT(provider, provider_id) DO UPDATE SET
            name=excluded.name, brand=excluded.brand, barcode=excluded.barcode,
            image_url=excluded.image_url, serving_qty=excluded.serving_qty,
            serving_unit=excluded.serving_unit, grams_per_serving=excluded.grams_per_serving,
            nutrition_per_100g=excluded.nutrition_per_100g,
-           nutrition_per_serving=excluded.nutrition_per_serving, cached_at=excluded.cached_at`,
+           nutrition_per_serving=excluded.nutrition_per_serving,
+           confidence=excluded.confidence, serving_basis=excluded.serving_basis,
+           cached_at=excluded.cached_at
+         WHERE cached_foods.corrected = 0`,
         [
           food.provider,
           food.providerId,
@@ -245,6 +256,9 @@ export function createFoodRepo(db: Database): FoodRepo {
           food.nutritionPer100g ? JSON.stringify(food.nutritionPer100g) : null,
           food.nutritionPerServing ? JSON.stringify(food.nutritionPerServing) : null,
           food.flagged ? 1 : 0,
+          food.confidence ?? null,
+          food.servingBasis ?? null,
+          food.corrected ? 1 : 0,
           food.cachedAt,
         ],
       );

@@ -224,13 +224,16 @@ describe('foodSearchService', () => {
     const hit = await svc.lookupBarcode('555');
     expect(hit.custom).toBe(custom.id);
 
+    // A confident, complete cached record is served without re-querying.
     await repo.upsertCachedFood({
       provider: 'off',
       providerId: '777',
       name: 'Cached snack',
       barcode: '777',
-      nutritionPer100g: { calories: 100 },
+      gramsPerServing: 40,
+      nutritionPerServing: { calories: 190, protein: 4, carbs: 22, fat: 9 },
       flagged: false,
+      confidence: 0.8,
       cachedAt: new Date().toISOString(),
     });
     const cachedHit = await svc.lookupBarcode('777');

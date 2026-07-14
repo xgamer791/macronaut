@@ -58,6 +58,12 @@ export interface CachedFood {
   nutritionPer100g?: Nutrition;
   nutritionPerServing?: Nutrition;
   flagged: boolean;
+  /** 0..1 accuracy confidence from the lookup pipeline. */
+  confidence?: number;
+  /** What the stored nutrition describes. */
+  servingBasis?: string;
+  /** True once the user corrected this record locally. */
+  corrected?: boolean;
   cachedAt: string;
 }
 

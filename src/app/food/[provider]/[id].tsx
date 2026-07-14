@@ -2,8 +2,10 @@ import { Ionicons } from '@expo/vector-icons';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useMemo, useState } from 'react';
-import { Pressable, View } from 'react-native';
+import { Linking, Pressable, View } from 'react-native';
 import { roundForDisplay } from '@/domain/nutrition';
+import { LOW_CONFIDENCE } from '@/services/food/confidence';
+import { webFoodLookup } from '@/services/food/webFallback';
 import {
   availableUnits,
   describePortion,
@@ -42,6 +44,12 @@ interface LoadedFood {
   sourceLabel: string;
   /** Exact source record description (attribution). */
   sourceDetail?: string;
+  /** What the base nutrition describes ('per serving' / 'per 100 g' …). */
+  basisLabel?: string;
+  /** 0..1 accuracy confidence. */
+  confidence?: number;
+  /** Human-readable validation warnings. */
+  warnings?: string[];
   flagged?: boolean;
   favorite: boolean;
   barcode?: string;
@@ -108,26 +116,44 @@ export default function FoodDetailScreen() {
       }
       const c = await food.getCachedFood(provider, id);
       if (!c) return null;
-      const perServing =
-        c.nutritionPerServing ??
-        (c.nutritionPer100g
-          ? scale(c.nutritionPer100g, (c.gramsPerServing ?? 100) / 100)
-          : undefined);
-      if (!perServing) return null;
+      const [{ normalizeFood, SERVING_BASIS_LABEL }, { scoreConfidence }, { WARNING_LABELS }] =
+        await Promise.all([
+          import('@/services/food/normalize'),
+          import('@/services/food/confidence'),
+          import('@/services/food/nutritionValidation'),
+        ]);
+      const nf = normalizeFood({
+        provider: c.provider,
+        id: c.providerId,
+        name: c.name,
+        brand: c.brand,
+        barcode: c.barcode,
+        imageUrl: c.imageUrl,
+        isGeneric: false,
+        nutritionPer100g: c.nutritionPer100g,
+        nutritionPerServing: c.nutritionPerServing,
+        gramsPerServing: c.gramsPerServing,
+        servingLabel: c.servingUnit,
+      });
+      if (!nf.perServing) return null;
+      const confidence = c.confidence ?? scoreConfidence(nf, { scannedBarcode: c.barcode }).score;
       return {
-        key: `${c.provider}:${c.providerId}`,
+        key: nf.key,
         name: c.name,
         brand: c.brand,
         imageUrl: c.imageUrl,
         source: c.provider,
-        sourceLabel: c.provider === 'usda' ? 'USDA FoodData Central' : 'Open Food Facts',
+        sourceLabel: nf.sourceLabel,
+        basisLabel: SERVING_BASIS_LABEL[nf.servingBasis],
+        confidence,
+        warnings: nf.validation.warnings.map((w) => WARNING_LABELS[w]),
         flagged: c.flagged,
-        favorite: await food.isFavorite(`${c.provider}:${c.providerId}`),
+        favorite: await food.isFavorite(nf.key),
         barcode: c.barcode,
         info: {
-          nutritionPerServing: perServing,
-          gramsPerServing: c.gramsPerServing,
-          servingLabel: c.servingUnit ?? undefined,
+          nutritionPerServing: nf.perServing,
+          gramsPerServing: nf.gramsPerServing,
+          servingLabel: nf.servingLabel ?? undefined,
         },
       };
     },
@@ -264,6 +290,11 @@ export default function FoodDetailScreen() {
               {f.sourceDetail}
             </AppText>
           ) : null}
+          {f.basisLabel ? (
+            <AppText variant="micro" tone="muted">
+              Nutrition {f.basisLabel}
+            </AppText>
+          ) : null}
           {edited ? (
             <AppText variant="micro" tone="accent">
               Edited nutrition (not from the database)
@@ -271,6 +302,34 @@ export default function FoodDetailScreen() {
           ) : null}
         </View>
       </View>
+
+      {!edited && f.confidence !== undefined && f.confidence < LOW_CONFIDENCE ? (
+        <Card style={{ gap: spacing.sm, borderColor: colors.warning }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+            <Ionicons name="alert-circle-outline" size={18} color={colors.warning} />
+            <AppText variant="caption" weight="600">
+              Double-check this before logging
+            </AppText>
+          </View>
+          <AppText variant="micro" tone="secondary">
+            {f.warnings && f.warnings.length > 0
+              ? f.warnings.join(' · ')
+              : 'This is low-confidence community data.'}{' '}
+            Edit the values against the package label, or look it up on the web.
+          </AppText>
+          <View style={{ flexDirection: 'row', gap: spacing.sm }}>
+            <Button title="Edit nutrition" compact variant="secondary" onPress={() => setEditOpen(true)} />
+            <Button
+              title="Search the web"
+              compact
+              variant="ghost"
+              onPress={() =>
+                Linking.openURL(webFoodLookup.searchUrl({ barcode: f.barcode, name: f.name, brand: f.brand }))
+              }
+            />
+          </View>
+        </Card>
+      ) : null}
 
       <Card style={{ gap: spacing.md }}>
         <NumberField label="Quantity" value={quantity} onChange={setQuantity} min={0.01} />
@@ -414,11 +473,3 @@ function FactRow({ label, value, unit }: { label: string; value?: number; unit: 
   );
 }
 
-function scale(n: Nutrition, factor: number): Nutrition {
-  const out: Nutrition = { calories: n.calories * factor };
-  for (const k of ['protein', 'carbs', 'fat', 'fiber', 'sugar', 'sodium', 'cholesterol'] as const) {
-    const v = n[k];
-    if (v !== undefined) out[k] = v * factor;
-  }
-  return out;
-}

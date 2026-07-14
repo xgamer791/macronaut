@@ -11,6 +11,7 @@ interface OffProduct {
   image_front_url?: string;
   serving_size?: string;
   serving_quantity?: number | string;
+  serving_quantity_unit?: string;
   nutriments?: Record<string, number | string | undefined>;
 }
 
@@ -49,7 +50,11 @@ function toProviderFood(p: OffProduct): ProviderFood | null {
   const per100 = nutritionFrom(p.nutriments, '100g');
   const perServing = nutritionFrom(p.nutriments, 'serving');
   if (!per100 && !perServing) return null;
-  const gramsPerServing = num(p.serving_quantity);
+  // Grams-per-serving is only meaningful when the serving unit is a mass.
+  // For liquids OFF gives ml; the normalizer handles the ml case separately.
+  const unit = p.serving_quantity_unit?.toLowerCase();
+  const rawQty = num(p.serving_quantity);
+  const gramsPerServing = unit === undefined || unit === 'g' ? rawQty : undefined;
   return {
     provider: 'off',
     id: p.code,
@@ -61,7 +66,8 @@ function toProviderFood(p: OffProduct): ProviderFood | null {
     nutritionPer100g: per100,
     nutritionPerServing: perServing,
     gramsPerServing,
-    servingLabel: p.serving_size || (gramsPerServing ? `${gramsPerServing} g` : undefined),
+    servingUnit: unit,
+    servingLabel: p.serving_size || (rawQty ? `${rawQty} ${unit ?? 'g'}` : undefined),
   };
 }
 
@@ -84,7 +90,7 @@ export const offProvider: FoodProvider = {
   async search(query, opts: SearchOptions = {}) {
     // Branded products only — OFF has no generic/reference foods.
     if (opts.filter === 'generic') return [];
-    const url = `${SEARCH_BASE}/cgi/search.pl?search_terms=${encodeURIComponent(query)}&search_simple=1&action=process&json=1&page_size=${opts.limit ?? 25}&fields=code,product_name,brands,image_front_small_url,serving_size,serving_quantity,nutriments`;
+    const url = `${SEARCH_BASE}/cgi/search.pl?search_terms=${encodeURIComponent(query)}&search_simple=1&action=process&json=1&page_size=${opts.limit ?? 25}&fields=code,product_name,brands,image_front_small_url,serving_size,serving_quantity,serving_quantity_unit,nutriments`;
     const json = await request<{ products?: OffProduct[] }>(url, opts.signal);
     return (json.products ?? [])
       .map(toProviderFood)
@@ -92,7 +98,7 @@ export const offProvider: FoodProvider = {
   },
 
   async getByBarcode(code, signal) {
-    const url = `${SEARCH_BASE}/api/v2/product/${encodeURIComponent(code)}.json?fields=code,product_name,brands,image_front_small_url,serving_size,serving_quantity,nutriments`;
+    const url = `${SEARCH_BASE}/api/v2/product/${encodeURIComponent(code)}.json?fields=code,product_name,brands,image_front_small_url,serving_size,serving_quantity,serving_quantity_unit,nutriments`;
     try {
       const json = await request<{ status: number; product?: OffProduct }>(url, signal);
       if (json.status !== 1 || !json.product) return null;

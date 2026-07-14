@@ -19,6 +19,15 @@ export interface ProviderFood {
   nutritionPerServing?: Nutrition;
   gramsPerServing?: number;
   servingLabel?: string;
+  /** Raw OFF serving unit ('g' | 'ml' | 'oz' …), when provided. */
+  servingUnit?: string;
+  // --- Enrichment set by the lookup pipeline (normalize + validate + score) ---
+  /** 0..1 accuracy confidence. */
+  confidence?: number;
+  /** What the displayed nutrition describes. */
+  servingBasis?: 'serving' | '100g' | '100ml' | 'container' | 'unknown';
+  /** Human-readable validation warnings (empty when clean). */
+  warnings?: string[];
 }
 
 export type SearchFilter = 'all' | 'branded' | 'generic';

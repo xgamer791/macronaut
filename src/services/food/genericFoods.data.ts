@@ -4,8 +4,8 @@ import { Nutrition } from '@/domain/types';
  *
  * Source: USDA FoodData Central, SR Legacy release 2021-10-28
  * https://fdc.nal.usda.gov/fdc-datasets/FoodData_Central_sr_legacy_food_json_2021-10-28.zip
- * Extraction: scripts/README in docs/generic-foods-validation.md
  * Traceability snapshot: docs/generic-foods-source.json
+ * Validation report: docs/generic-foods-validation.md
  *
  * Every value below is copied verbatim (per 100 g) from the named SR Legacy
  * record — nothing is estimated, averaged or merged across preparations.
@@ -13,16 +13,11 @@ import { Nutrition } from '@/domain/types';
 
 export interface VerifiedGenericFood {
   id: string;
-  /** Friendly display name. */
   name: string;
   aliases: string[];
-  /** Preparation / cooking state, verbatim category. */
   prep: string;
-  /** USDA FoodData Central id of the exact source record. */
   fdcId: number;
-  /** USDA SR NDB number. */
   ndbNumber: number;
-  /** Exact SR Legacy description of the source record. */
   srDescription: string;
   /** Nutrition per 100 g, verbatim from the source record. */
   n: Nutrition;
@@ -3199,7 +3194,11 @@ export const VERIFIED_GENERIC_FOODS: VerifiedGenericFood[] = [
     "aliases": [
       "oats",
       "oatmeal",
-      "rolled oats"
+      "rolled oats",
+      "old fashioned oats",
+      "quick oats",
+      "steel cut oats",
+      "dry oats"
     ],
     "prep": "dry",
     "fdcId": 173904,
@@ -3381,6 +3380,1036 @@ export const VERIFIED_GENERIC_FOODS: VerifiedGenericFood[] = [
         "vitamin B6": {
           "amount": 0.286,
           "unit": "mg"
+        }
+      }
+    }
+  },
+  {
+    "id": "oats-cooked",
+    "name": "Oatmeal, cooked with water",
+    "aliases": [
+      "oatmeal cooked",
+      "cooked oats",
+      "porridge"
+    ],
+    "prep": "cooked",
+    "fdcId": 171675,
+    "ndbNumber": 8180,
+    "srDescription": "Cereals, oats, regular and quick and instant, unenriched, cooked with water (includes boiling and microwaving), with salt",
+    "n": {
+      "calories": 71,
+      "protein": 2.54,
+      "fiber": 1.7,
+      "sodium": 71,
+      "cholesterol": 0,
+      "sugar": 0.27,
+      "fat": 1.52,
+      "carbs": 12,
+      "micros": {
+        "iron": {
+          "amount": 0.9,
+          "unit": "mg"
+        },
+        "magnesium": {
+          "amount": 27,
+          "unit": "mg"
+        },
+        "vitamin A": {
+          "amount": 0,
+          "unit": "µg"
+        },
+        "vitamin C": {
+          "amount": 0,
+          "unit": "mg"
+        },
+        "vitamin B12": {
+          "amount": 0,
+          "unit": "µg"
+        },
+        "vitamin B6": {
+          "amount": 0.005,
+          "unit": "mg"
+        },
+        "calcium": {
+          "amount": 9,
+          "unit": "mg"
+        },
+        "potassium": {
+          "amount": 70,
+          "unit": "mg"
+        },
+        "zinc": {
+          "amount": 1,
+          "unit": "mg"
+        }
+      }
+    }
+  },
+  {
+    "id": "greek-yogurt-nonfat",
+    "name": "Greek yogurt, plain, nonfat",
+    "aliases": [
+      "greek yogurt",
+      "greek yogurt nonfat",
+      "plain greek yogurt",
+      "yogurt"
+    ],
+    "prep": "nonfat",
+    "fdcId": 170894,
+    "ndbNumber": 1256,
+    "srDescription": "Yogurt, Greek, plain, nonfat (Includes foods for USDA's Food Distribution Program)",
+    "n": {
+      "calories": 59,
+      "fiber": 0,
+      "protein": 10.2,
+      "cholesterol": 5,
+      "sodium": 36,
+      "fat": 0.39,
+      "carbs": 3.6,
+      "sugar": 3.24,
+      "micros": {
+        "magnesium": {
+          "amount": 11,
+          "unit": "mg"
+        },
+        "vitamin C": {
+          "amount": 0,
+          "unit": "mg"
+        },
+        "vitamin B12": {
+          "amount": 0.75,
+          "unit": "µg"
+        },
+        "iron": {
+          "amount": 0.07,
+          "unit": "mg"
+        },
+        "vitamin A": {
+          "amount": 1,
+          "unit": "µg"
+        },
+        "vitamin D": {
+          "amount": 0,
+          "unit": "µg"
+        },
+        "calcium": {
+          "amount": 110,
+          "unit": "mg"
+        },
+        "potassium": {
+          "amount": 141,
+          "unit": "mg"
+        },
+        "zinc": {
+          "amount": 0.52,
+          "unit": "mg"
+        },
+        "vitamin B6": {
+          "amount": 0.063,
+          "unit": "mg"
+        }
+      }
+    }
+  },
+  {
+    "id": "greek-yogurt-whole",
+    "name": "Greek yogurt, plain, whole milk",
+    "aliases": [
+      "greek yogurt whole",
+      "whole milk greek yogurt",
+      "greek yogurt",
+      "yogurt"
+    ],
+    "prep": "whole milk",
+    "fdcId": 171304,
+    "ndbNumber": 1293,
+    "srDescription": "Yogurt, Greek, plain, whole milk",
+    "n": {
+      "calories": 97,
+      "protein": 9,
+      "fiber": 0,
+      "sodium": 35,
+      "cholesterol": 13,
+      "sugar": 4,
+      "fat": 5,
+      "carbs": 3.98,
+      "micros": {
+        "iron": {
+          "amount": 0,
+          "unit": "mg"
+        },
+        "magnesium": {
+          "amount": 11,
+          "unit": "mg"
+        },
+        "vitamin A": {
+          "amount": 2,
+          "unit": "µg"
+        },
+        "vitamin D": {
+          "amount": 0,
+          "unit": "µg"
+        },
+        "vitamin C": {
+          "amount": 0,
+          "unit": "mg"
+        },
+        "vitamin B12": {
+          "amount": 0.75,
+          "unit": "µg"
+        },
+        "calcium": {
+          "amount": 100,
+          "unit": "mg"
+        },
+        "potassium": {
+          "amount": 141,
+          "unit": "mg"
+        },
+        "zinc": {
+          "amount": 0.52,
+          "unit": "mg"
+        },
+        "vitamin B6": {
+          "amount": 0.063,
+          "unit": "mg"
+        }
+      }
+    }
+  },
+  {
+    "id": "greek-yogurt-lowfat",
+    "name": "Greek yogurt, plain, lowfat",
+    "aliases": [
+      "greek yogurt lowfat",
+      "low fat greek yogurt",
+      "greek yogurt",
+      "yogurt"
+    ],
+    "prep": "lowfat",
+    "fdcId": 170903,
+    "ndbNumber": 1287,
+    "srDescription": "Yogurt, Greek, plain, lowfat",
+    "n": {
+      "calories": 73,
+      "fat": 1.92,
+      "carbs": 3.94,
+      "sugar": 3.56,
+      "protein": 9.95,
+      "fiber": 0,
+      "sodium": 34,
+      "cholesterol": 10,
+      "micros": {
+        "calcium": {
+          "amount": 115,
+          "unit": "mg"
+        },
+        "potassium": {
+          "amount": 141,
+          "unit": "mg"
+        },
+        "zinc": {
+          "amount": 0.6,
+          "unit": "mg"
+        },
+        "vitamin B6": {
+          "amount": 0.055,
+          "unit": "mg"
+        },
+        "iron": {
+          "amount": 0.04,
+          "unit": "mg"
+        },
+        "magnesium": {
+          "amount": 11,
+          "unit": "mg"
+        },
+        "vitamin A": {
+          "amount": 90,
+          "unit": "µg"
+        },
+        "vitamin D": {
+          "amount": 0,
+          "unit": "µg"
+        },
+        "vitamin C": {
+          "amount": 0.8,
+          "unit": "mg"
+        },
+        "vitamin B12": {
+          "amount": 0.52,
+          "unit": "µg"
+        }
+      }
+    }
+  },
+  {
+    "id": "milk-whole",
+    "name": "Milk, whole, 3.25% milkfat",
+    "aliases": [
+      "whole milk",
+      "milk"
+    ],
+    "prep": "whole",
+    "fdcId": 171265,
+    "ndbNumber": 1077,
+    "srDescription": "Milk, whole, 3.25% milkfat, with added vitamin D",
+    "n": {
+      "calories": 61,
+      "cholesterol": 10,
+      "fat": 3.25,
+      "sugar": 5.05,
+      "carbs": 4.8,
+      "fiber": 0,
+      "sodium": 43,
+      "protein": 3.15,
+      "micros": {
+        "vitamin A": {
+          "amount": 46,
+          "unit": "µg"
+        },
+        "vitamin D": {
+          "amount": 1.3,
+          "unit": "µg"
+        },
+        "iron": {
+          "amount": 0.03,
+          "unit": "mg"
+        },
+        "magnesium": {
+          "amount": 10,
+          "unit": "mg"
+        },
+        "vitamin C": {
+          "amount": 0,
+          "unit": "mg"
+        },
+        "vitamin B12": {
+          "amount": 0.45,
+          "unit": "µg"
+        },
+        "vitamin B6": {
+          "amount": 0.036,
+          "unit": "mg"
+        },
+        "calcium": {
+          "amount": 113,
+          "unit": "mg"
+        },
+        "potassium": {
+          "amount": 132,
+          "unit": "mg"
+        },
+        "zinc": {
+          "amount": 0.37,
+          "unit": "mg"
+        }
+      }
+    }
+  },
+  {
+    "id": "milk-2percent",
+    "name": "Milk, reduced fat, 2% milkfat",
+    "aliases": [
+      "2% milk",
+      "reduced fat milk",
+      "milk"
+    ],
+    "prep": "2% milkfat",
+    "fdcId": 170870,
+    "ndbNumber": 1080,
+    "srDescription": "Milk, reduced fat, fluid, 2% milkfat, with added nonfat milk solids and vitamin A and vitamin D",
+    "n": {
+      "calories": 51,
+      "cholesterol": 8,
+      "protein": 3.48,
+      "fiber": 0,
+      "sodium": 52,
+      "fat": 1.92,
+      "carbs": 4.97,
+      "micros": {
+        "vitamin D": {
+          "amount": 1,
+          "unit": "µg"
+        },
+        "vitamin A": {
+          "amount": 56,
+          "unit": "µg"
+        },
+        "vitamin C": {
+          "amount": 1,
+          "unit": "mg"
+        },
+        "vitamin B12": {
+          "amount": 0.38,
+          "unit": "µg"
+        },
+        "iron": {
+          "amount": 0.05,
+          "unit": "mg"
+        },
+        "magnesium": {
+          "amount": 14,
+          "unit": "mg"
+        },
+        "vitamin B6": {
+          "amount": 0.045,
+          "unit": "mg"
+        },
+        "calcium": {
+          "amount": 128,
+          "unit": "mg"
+        },
+        "potassium": {
+          "amount": 162,
+          "unit": "mg"
+        },
+        "zinc": {
+          "amount": 0.4,
+          "unit": "mg"
+        }
+      }
+    }
+  },
+  {
+    "id": "milk-skim",
+    "name": "Milk, nonfat (skim), calcium fortified",
+    "aliases": [
+      "skim milk",
+      "nonfat milk",
+      "fat free milk",
+      "milk"
+    ],
+    "prep": "nonfat",
+    "fdcId": 169868,
+    "ndbNumber": 42290,
+    "srDescription": "Milk, fluid, nonfat, calcium fortified (fat free or skim)",
+    "n": {
+      "calories": 35,
+      "sugar": 4.85,
+      "fat": 0.18,
+      "carbs": 4.85,
+      "fiber": 0,
+      "sodium": 52,
+      "protein": 3.4,
+      "cholesterol": 2,
+      "micros": {
+        "calcium": {
+          "amount": 204,
+          "unit": "mg"
+        },
+        "potassium": {
+          "amount": 166,
+          "unit": "mg"
+        },
+        "zinc": {
+          "amount": 0.4,
+          "unit": "mg"
+        },
+        "vitamin B6": {
+          "amount": 0.04,
+          "unit": "mg"
+        },
+        "vitamin C": {
+          "amount": 1,
+          "unit": "mg"
+        },
+        "vitamin B12": {
+          "amount": 0.38,
+          "unit": "µg"
+        },
+        "iron": {
+          "amount": 0.04,
+          "unit": "mg"
+        },
+        "magnesium": {
+          "amount": 11,
+          "unit": "mg"
+        },
+        "vitamin D": {
+          "amount": 1.2,
+          "unit": "µg"
+        },
+        "vitamin A": {
+          "amount": 137,
+          "unit": "µg"
+        }
+      }
+    }
+  },
+  {
+    "id": "almond-milk-unsweetened",
+    "name": "Almond milk, unsweetened, shelf stable",
+    "aliases": [
+      "almond milk",
+      "unsweetened almond milk"
+    ],
+    "prep": "unsweetened",
+    "fdcId": 174832,
+    "ndbNumber": 14091,
+    "srDescription": "Beverages, almond milk, unsweetened, shelf stable",
+    "n": {
+      "calories": 15,
+      "sugar": 0.81,
+      "fiber": 0.2,
+      "sodium": 72,
+      "cholesterol": 0,
+      "protein": 0.4,
+      "fat": 0.96,
+      "carbs": 1.31,
+      "micros": {
+        "iron": {
+          "amount": 0.28,
+          "unit": "mg"
+        },
+        "magnesium": {
+          "amount": 6,
+          "unit": "mg"
+        },
+        "vitamin A": {
+          "amount": 0,
+          "unit": "µg"
+        },
+        "vitamin D": {
+          "amount": 1,
+          "unit": "µg"
+        },
+        "vitamin C": {
+          "amount": 0,
+          "unit": "mg"
+        },
+        "vitamin B12": {
+          "amount": 0,
+          "unit": "µg"
+        },
+        "zinc": {
+          "amount": 0.06,
+          "unit": "mg"
+        },
+        "vitamin B6": {
+          "amount": 0,
+          "unit": "mg"
+        },
+        "calcium": {
+          "amount": 184,
+          "unit": "mg"
+        },
+        "potassium": {
+          "amount": 67,
+          "unit": "mg"
+        }
+      }
+    }
+  },
+  {
+    "id": "whey-protein-isolate",
+    "name": "Whey protein powder isolate",
+    "aliases": [
+      "whey protein",
+      "protein powder",
+      "whey isolate",
+      "whey protein isolate",
+      "whey"
+    ],
+    "prep": "powder",
+    "fdcId": 173177,
+    "ndbNumber": 14058,
+    "srDescription": "Beverages, Whey protein powder isolate",
+    "n": {
+      "calories": 359,
+      "fat": 1.16,
+      "carbs": 29.1,
+      "sugar": 1.16,
+      "cholesterol": 12,
+      "protein": 58.1,
+      "fiber": 0,
+      "sodium": 372,
+      "micros": {
+        "calcium": {
+          "amount": 698,
+          "unit": "mg"
+        },
+        "potassium": {
+          "amount": 872,
+          "unit": "mg"
+        },
+        "zinc": {
+          "amount": 8.72,
+          "unit": "mg"
+        },
+        "vitamin B6": {
+          "amount": 1.16,
+          "unit": "mg"
+        },
+        "vitamin D": {
+          "amount": 0,
+          "unit": "µg"
+        },
+        "vitamin C": {
+          "amount": 34.9,
+          "unit": "mg"
+        },
+        "vitamin B12": {
+          "amount": 3.49,
+          "unit": "µg"
+        },
+        "iron": {
+          "amount": 1.26,
+          "unit": "mg"
+        },
+        "magnesium": {
+          "amount": 233,
+          "unit": "mg"
+        },
+        "vitamin A": {
+          "amount": 872,
+          "unit": "µg"
+        }
+      }
+    }
+  },
+  {
+    "id": "banana",
+    "name": "Banana, raw",
+    "aliases": [
+      "banana",
+      "bananas"
+    ],
+    "prep": "raw",
+    "fdcId": 173944,
+    "ndbNumber": 9040,
+    "srDescription": "Bananas, raw",
+    "n": {
+      "calories": 89,
+      "carbs": 22.8,
+      "cholesterol": 0,
+      "fiber": 2.6,
+      "sodium": 1,
+      "protein": 1.09,
+      "sugar": 12.2,
+      "fat": 0.33,
+      "micros": {
+        "vitamin A": {
+          "amount": 3,
+          "unit": "µg"
+        },
+        "vitamin B12": {
+          "amount": 0,
+          "unit": "µg"
+        },
+        "vitamin D": {
+          "amount": 0,
+          "unit": "µg"
+        },
+        "vitamin C": {
+          "amount": 8.7,
+          "unit": "mg"
+        },
+        "iron": {
+          "amount": 0.26,
+          "unit": "mg"
+        },
+        "magnesium": {
+          "amount": 27,
+          "unit": "mg"
+        },
+        "calcium": {
+          "amount": 5,
+          "unit": "mg"
+        },
+        "potassium": {
+          "amount": 358,
+          "unit": "mg"
+        },
+        "zinc": {
+          "amount": 0.15,
+          "unit": "mg"
+        },
+        "vitamin B6": {
+          "amount": 0.367,
+          "unit": "mg"
+        }
+      }
+    }
+  },
+  {
+    "id": "apple",
+    "name": "Apple, raw, with skin",
+    "aliases": [
+      "apple",
+      "apples"
+    ],
+    "prep": "raw",
+    "fdcId": 171688,
+    "ndbNumber": 9003,
+    "srDescription": "Apples, raw, with skin (Includes foods for USDA's Food Distribution Program)",
+    "n": {
+      "calories": 52,
+      "carbs": 13.8,
+      "fat": 0.17,
+      "sugar": 10.4,
+      "fiber": 2.4,
+      "sodium": 1,
+      "protein": 0.26,
+      "cholesterol": 0,
+      "micros": {
+        "vitamin B6": {
+          "amount": 0.041,
+          "unit": "mg"
+        },
+        "calcium": {
+          "amount": 6,
+          "unit": "mg"
+        },
+        "potassium": {
+          "amount": 107,
+          "unit": "mg"
+        },
+        "zinc": {
+          "amount": 0.04,
+          "unit": "mg"
+        },
+        "vitamin A": {
+          "amount": 3,
+          "unit": "µg"
+        },
+        "iron": {
+          "amount": 0.12,
+          "unit": "mg"
+        },
+        "magnesium": {
+          "amount": 5,
+          "unit": "mg"
+        },
+        "vitamin B12": {
+          "amount": 0,
+          "unit": "µg"
+        },
+        "vitamin C": {
+          "amount": 4.6,
+          "unit": "mg"
+        },
+        "vitamin D": {
+          "amount": 0,
+          "unit": "µg"
+        }
+      }
+    }
+  },
+  {
+    "id": "broccoli",
+    "name": "Broccoli, raw",
+    "aliases": [
+      "broccoli"
+    ],
+    "prep": "raw",
+    "fdcId": 170379,
+    "ndbNumber": 11090,
+    "srDescription": "Broccoli, raw",
+    "n": {
+      "calories": 34,
+      "sugar": 1.7,
+      "carbs": 6.64,
+      "fat": 0.37,
+      "protein": 2.82,
+      "fiber": 2.6,
+      "sodium": 33,
+      "cholesterol": 0,
+      "micros": {
+        "calcium": {
+          "amount": 47,
+          "unit": "mg"
+        },
+        "potassium": {
+          "amount": 316,
+          "unit": "mg"
+        },
+        "zinc": {
+          "amount": 0.41,
+          "unit": "mg"
+        },
+        "vitamin B6": {
+          "amount": 0.175,
+          "unit": "mg"
+        },
+        "iron": {
+          "amount": 0.73,
+          "unit": "mg"
+        },
+        "magnesium": {
+          "amount": 21,
+          "unit": "mg"
+        },
+        "vitamin C": {
+          "amount": 89.2,
+          "unit": "mg"
+        },
+        "vitamin B12": {
+          "amount": 0,
+          "unit": "µg"
+        },
+        "vitamin A": {
+          "amount": 31,
+          "unit": "µg"
+        },
+        "vitamin D": {
+          "amount": 0,
+          "unit": "µg"
+        }
+      }
+    }
+  },
+  {
+    "id": "spinach",
+    "name": "Spinach, raw",
+    "aliases": [
+      "spinach"
+    ],
+    "prep": "raw",
+    "fdcId": 168462,
+    "ndbNumber": 11457,
+    "srDescription": "Spinach, raw",
+    "n": {
+      "calories": 23,
+      "protein": 2.86,
+      "sodium": 79,
+      "cholesterol": 0,
+      "fiber": 2.2,
+      "sugar": 0.42,
+      "fat": 0.39,
+      "carbs": 3.63,
+      "micros": {
+        "calcium": {
+          "amount": 99,
+          "unit": "mg"
+        },
+        "potassium": {
+          "amount": 558,
+          "unit": "mg"
+        },
+        "zinc": {
+          "amount": 0.53,
+          "unit": "mg"
+        },
+        "vitamin B6": {
+          "amount": 0.195,
+          "unit": "mg"
+        },
+        "iron": {
+          "amount": 2.71,
+          "unit": "mg"
+        },
+        "magnesium": {
+          "amount": 79,
+          "unit": "mg"
+        },
+        "vitamin C": {
+          "amount": 28.1,
+          "unit": "mg"
+        },
+        "vitamin B12": {
+          "amount": 0,
+          "unit": "µg"
+        },
+        "vitamin A": {
+          "amount": 469,
+          "unit": "µg"
+        },
+        "vitamin D": {
+          "amount": 0,
+          "unit": "µg"
+        }
+      }
+    }
+  },
+  {
+    "id": "blueberries",
+    "name": "Blueberries, raw",
+    "aliases": [
+      "blueberries",
+      "blueberry"
+    ],
+    "prep": "raw",
+    "fdcId": 171711,
+    "ndbNumber": 9050,
+    "srDescription": "Blueberries, raw",
+    "n": {
+      "calories": 57,
+      "sodium": 1,
+      "carbs": 14.5,
+      "cholesterol": 0,
+      "sugar": 9.96,
+      "fat": 0.33,
+      "fiber": 2.4,
+      "protein": 0.74,
+      "micros": {
+        "potassium": {
+          "amount": 77,
+          "unit": "mg"
+        },
+        "vitamin C": {
+          "amount": 9.7,
+          "unit": "mg"
+        },
+        "vitamin B12": {
+          "amount": 0,
+          "unit": "µg"
+        },
+        "zinc": {
+          "amount": 0.16,
+          "unit": "mg"
+        },
+        "vitamin B6": {
+          "amount": 0.052,
+          "unit": "mg"
+        },
+        "calcium": {
+          "amount": 6,
+          "unit": "mg"
+        },
+        "iron": {
+          "amount": 0.28,
+          "unit": "mg"
+        },
+        "magnesium": {
+          "amount": 6,
+          "unit": "mg"
+        },
+        "vitamin A": {
+          "amount": 3,
+          "unit": "µg"
+        },
+        "vitamin D": {
+          "amount": 0,
+          "unit": "µg"
+        }
+      }
+    }
+  },
+  {
+    "id": "strawberries",
+    "name": "Strawberries, raw",
+    "aliases": [
+      "strawberries",
+      "strawberry"
+    ],
+    "prep": "raw",
+    "fdcId": 167762,
+    "ndbNumber": 9316,
+    "srDescription": "Strawberries, raw",
+    "n": {
+      "calories": 32,
+      "fat": 0.3,
+      "fiber": 2,
+      "protein": 0.67,
+      "sodium": 1,
+      "sugar": 4.89,
+      "carbs": 7.68,
+      "cholesterol": 0,
+      "micros": {
+        "vitamin B6": {
+          "amount": 0.047,
+          "unit": "mg"
+        },
+        "zinc": {
+          "amount": 0.14,
+          "unit": "mg"
+        },
+        "magnesium": {
+          "amount": 13,
+          "unit": "mg"
+        },
+        "vitamin C": {
+          "amount": 58.8,
+          "unit": "mg"
+        },
+        "potassium": {
+          "amount": 153,
+          "unit": "mg"
+        },
+        "calcium": {
+          "amount": 16,
+          "unit": "mg"
+        },
+        "iron": {
+          "amount": 0.41,
+          "unit": "mg"
+        },
+        "vitamin A": {
+          "amount": 1,
+          "unit": "µg"
+        },
+        "vitamin B12": {
+          "amount": 0,
+          "unit": "µg"
+        },
+        "vitamin D": {
+          "amount": 0,
+          "unit": "µg"
+        }
+      }
+    }
+  },
+  {
+    "id": "avocado",
+    "name": "Avocado, raw",
+    "aliases": [
+      "avocado",
+      "avocados"
+    ],
+    "prep": "raw",
+    "fdcId": 171705,
+    "ndbNumber": 9037,
+    "srDescription": "Avocados, raw, all commercial varieties",
+    "n": {
+      "calories": 160,
+      "protein": 2,
+      "fiber": 6.7,
+      "sodium": 7,
+      "fat": 14.7,
+      "sugar": 0.66,
+      "cholesterol": 0,
+      "carbs": 8.53,
+      "micros": {
+        "vitamin C": {
+          "amount": 10,
+          "unit": "mg"
+        },
+        "vitamin A": {
+          "amount": 7,
+          "unit": "µg"
+        },
+        "iron": {
+          "amount": 0.55,
+          "unit": "mg"
+        },
+        "magnesium": {
+          "amount": 29,
+          "unit": "mg"
+        },
+        "vitamin B6": {
+          "amount": 0.257,
+          "unit": "mg"
+        },
+        "calcium": {
+          "amount": 12,
+          "unit": "mg"
+        },
+        "potassium": {
+          "amount": 485,
+          "unit": "mg"
+        },
+        "zinc": {
+          "amount": 0.64,
+          "unit": "mg"
+        },
+        "vitamin B12": {
+          "amount": 0,
+          "unit": "µg"
+        },
+        "vitamin D": {
+          "amount": 0,
+          "unit": "µg"
         }
       }
     }
