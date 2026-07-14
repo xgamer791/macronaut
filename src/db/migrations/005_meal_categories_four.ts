@@ -36,7 +36,7 @@ export async function up(db: Database): Promise<void> {
   }
 
   // Canonical order for the four built-ins.
-  const order: Array<[string, string, number]> = [
+  const order: [string, string, number][] = [
     ['breakfast', 'Breakfast', 0],
     ['lunch', 'Lunch', 1],
     ['dinner', 'Dinner', 2],
