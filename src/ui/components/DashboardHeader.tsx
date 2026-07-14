@@ -171,7 +171,6 @@ export function DashboardHeader({ date, onDateChange, right }: DashboardHeaderPr
               name={hasNotes ? 'document-text' : 'document-text-outline'}
               size={22}
               color={hasNotes ? colors.accent : colors.textPrimary}
-              style={styles.headerIcon}
             />
           </Pressable>
           <Pressable
@@ -186,9 +185,8 @@ export function DashboardHeader({ date, onDateChange, right }: DashboardHeaderPr
           >
             <Ionicons
               name="fitness-outline"
-              size={22}
+              size={28}
               color={colors.textPrimary}
-              style={[styles.headerIcon, styles.activityIcon]}
             />
           </Pressable>
           {right ? <View style={styles.right}>{right}</View> : null}
@@ -599,15 +597,6 @@ const styles = StyleSheet.create({
     height: touchTarget,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  headerIcon: {
-    width: 22,
-    height: 22,
-    textAlign: 'center',
-  },
-  /** Fitness glyph draws larger than document — scale to match optical size. */
-  activityIcon: {
-    transform: [{ scale: 0.86 }],
   },
   titlePress: {
     flex: 1,
