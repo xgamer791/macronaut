@@ -1,8 +1,7 @@
-import { Ionicons } from '@expo/vector-icons';
 import { useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
 import React, { useMemo, useState } from 'react';
-import { Pressable, View } from 'react-native';
+import { View } from 'react-native';
 import { classifyDay } from '@/domain/goals';
 import { roundForDisplay, sumNutrition } from '@/domain/nutrition';
 import { useRepos } from '@/state/AppProvider';
@@ -17,11 +16,12 @@ import {
 } from '@/state/queries';
 import { useUiStore } from '@/state/uiStore';
 import { DiaryEntry } from '@/repositories/types';
-import { addDays, formatDayKey, todayKey } from '@/utils/date';
+import { formatDayKey } from '@/utils/date';
 import {
   AppText,
   Button,
   Card,
+  DashboardHeader,
   DatePickSheet,
   FoodImage,
   ListRow,
@@ -30,14 +30,12 @@ import {
   SegmentedControl,
   Sheet,
 } from '@/ui/components';
-import { useTheme } from '@/ui/theme/ThemeProvider';
-import { spacing, touchTarget } from '@/ui/theme/tokens';
+import { spacing } from '@/ui/theme/tokens';
 
 type CopySource = { kind: 'meal'; meal: string } | { kind: 'day' } | null;
 
 export default function DiaryScreen() {
   const router = useRouter();
-  const { colors } = useTheme();
   const qc = useQueryClient();
   const { diary, goals, savedMeals } = useRepos();
   const invalidate = useInvalidateDiary();
@@ -108,41 +106,7 @@ export default function DiaryScreen() {
 
   return (
     <Screen tabBarSpace>
-      {/* Date navigator */}
-      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Previous day"
-          onPress={() => setDate(addDays(date, -1))}
-          style={{ minWidth: touchTarget, minHeight: touchTarget, alignItems: 'center', justifyContent: 'center' }}
-        >
-          <Ionicons name="chevron-back" size={22} color={colors.textPrimary} />
-        </Pressable>
-        <View style={{ alignItems: 'center' }}>
-          <AppText variant="heading" weight="600" display>
-            {formatDayKey(date)}
-          </AppText>
-          {date !== todayKey() ? (
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Back to today"
-              onPress={() => setDate(todayKey())}
-            >
-              <AppText variant="micro" tone="accent" weight="600">
-                Back to today
-              </AppText>
-            </Pressable>
-          ) : null}
-        </View>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Next day"
-          onPress={() => setDate(addDays(date, 1))}
-          style={{ minWidth: touchTarget, minHeight: touchTarget, alignItems: 'center', justifyContent: 'center' }}
-        >
-          <Ionicons name="chevron-forward" size={22} color={colors.textPrimary} />
-        </Pressable>
-      </View>
+      <DashboardHeader date={date} onDateChange={setDate} />
 
       {/* Summary strip */}
       <Card style={{ flexDirection: 'row', justifyContent: 'space-between' }}>

@@ -12,11 +12,12 @@ import {
 } from '@/state/queries';
 import { useUiStore } from '@/state/uiStore';
 import { useQuery } from '@tanstack/react-query';
-import { formatDayKey, todayKey } from '@/utils/date';
+import { formatDayKey } from '@/utils/date';
 import {
   AppText,
   Button,
   Card,
+  DashboardHeader,
   FoodImage,
   ListRow,
   MacroBar,
@@ -30,14 +31,14 @@ import { spacing } from '@/ui/theme/tokens';
 export default function TodayScreen() {
   const router = useRouter();
   const { colors } = useTheme();
-  const today = todayKey();
-  const progress = useDayProgress(today);
-  const week = useWeekProgress(today);
-  const entries = useDiaryEntries(today);
-  const categories = useMealCategories();
-  const { history } = useRepos();
+  const date = useUiStore((s) => s.selectedDate);
   const setSelectedDate = useUiStore((s) => s.setSelectedDate);
   const setTargetMeal = useUiStore((s) => s.setTargetMeal);
+  const progress = useDayProgress(date);
+  const week = useWeekProgress(date);
+  const entries = useDiaryEntries(date);
+  const categories = useMealCategories();
+  const { history } = useRepos();
 
   const recents = useQuery({ queryKey: keys.recents, queryFn: () => history.recentFoods(5) });
   const frequents = useQuery({
@@ -57,14 +58,7 @@ export default function TodayScreen() {
 
   return (
     <Screen tabBarSpace>
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' }}>
-        <AppText variant="title" weight="600" display>
-          Today
-        </AppText>
-        <AppText variant="caption" tone="secondary">
-          {formatDayKey(today) === 'Today' ? new Date().toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' }) : formatDayKey(today)}
-        </AppText>
-      </View>
+      <DashboardHeader date={date} onDateChange={setSelectedDate} />
 
       <Card>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xl }}>
@@ -138,7 +132,7 @@ export default function TodayScreen() {
           <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 6, height: 56 }}>
             {week.days.map((d) => {
               const ratio = d.target.calories > 0 ? d.consumed.calories / d.target.calories : 0;
-              const isToday = d.date === today;
+              const isSelected = d.date === date;
               return (
                 <View key={d.date} style={{ flex: 1, alignItems: 'center', gap: 3 }}>
                   <View
@@ -155,7 +149,11 @@ export default function TodayScreen() {
                           : colors.track,
                     }}
                   />
-                  <AppText variant="micro" tone={isToday ? 'accent' : 'muted'} weight={isToday ? '600' : '400'}>
+                  <AppText
+                    variant="micro"
+                    tone={isSelected ? 'accent' : 'muted'}
+                    weight={isSelected ? '600' : '400'}
+                  >
                     {d.date.slice(8)}
                   </AppText>
                 </View>
@@ -180,7 +178,7 @@ export default function TodayScreen() {
             accessibilityRole="button"
             accessibilityLabel="Open diary"
             onPress={() => {
-              setSelectedDate(today);
+              setSelectedDate(date);
               router.push('/diary');
             }}
             style={{ minHeight: 44, justifyContent: 'center' }}
@@ -198,7 +196,7 @@ export default function TodayScreen() {
             title={cat.name}
             value={`${Math.round(mealTotals.get(cat.id) ?? 0)} kcal`}
             onPress={() => {
-              setSelectedDate(today);
+              setSelectedDate(date);
               setTargetMeal(cat.id);
               router.push('/add');
             }}
@@ -213,7 +211,7 @@ export default function TodayScreen() {
           variant="secondary"
           style={{ flex: 1 }}
           onPress={() => {
-            setSelectedDate(today);
+            setSelectedDate(date);
             router.push('/manual-entry');
           }}
         />
