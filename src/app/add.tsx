@@ -695,9 +695,6 @@ const styles = StyleSheet.create({
   stack: {
     gap: spacing.sm,
   },
-  stackSm: {
-    gap: spacing.sm,
-  },
   wrapRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
