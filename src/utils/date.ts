@@ -88,3 +88,69 @@ export function formatDayKey(key: DayKey, today: DayKey = todayKey()): string {
 export function shortWeekdayLabel(key: DayKey): string {
   return WEEKDAY_LABELS[weekdayOf(key)];
 }
+
+/** Single-letter weekday (S M T W T F S). */
+export function weekdayLetter(key: DayKey): string {
+  return WEEKDAY_LABELS[weekdayOf(key)][0];
+}
+
+const FULL_MONTH_LABELS = [
+  'January',
+  'February',
+  'March',
+  'April',
+  'May',
+  'June',
+  'July',
+  'August',
+  'September',
+  'October',
+  'November',
+  'December',
+];
+
+/** First day of the month containing `key`. */
+export function monthStartOf(key: DayKey): DayKey {
+  const d = parseDayKey(key);
+  return toDayKey(new Date(d.getFullYear(), d.getMonth(), 1));
+}
+
+/** Shift by whole calendar months; clamps to the 1st of the target month. */
+export function addMonths(key: DayKey, months: number): DayKey {
+  const d = parseDayKey(key);
+  return toDayKey(new Date(d.getFullYear(), d.getMonth() + months, 1));
+}
+
+export function formatMonthYear(key: DayKey): string {
+  const d = parseDayKey(key);
+  return `${FULL_MONTH_LABELS[d.getMonth()]} ${d.getFullYear()}`;
+}
+
+/** Weekday letter row for a week-start preference (7 chars). */
+export function weekdayLetters(weekStart: WeekStart): string[] {
+  const labels =
+    weekStart === 'sunday'
+      ? WEEKDAY_LABELS
+      : [...WEEKDAY_LABELS.slice(1), WEEKDAY_LABELS[0]];
+  return labels.map((l) => l[0]);
+}
+
+/** 6×7 month grid aligned to `weekStart`. Leading/trailing cells are null. */
+export function monthCalendarDays(monthKey: DayKey, weekStart: WeekStart): (DayKey | null)[] {
+  const start = monthStartOf(monthKey);
+  const d = parseDayKey(start);
+  const year = d.getFullYear();
+  const month = d.getMonth();
+  const firstWeekday = weekdayOf(start);
+  const startOffset = weekStart === 'sunday' ? firstWeekday : (firstWeekday + 6) % 7;
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const cells: (DayKey | null)[] = [];
+  for (let i = 0; i < startOffset; i++) cells.push(null);
+  for (let day = 1; day <= daysInMonth; day++) {
+    cells.push(toDayKey(new Date(year, month, day)));
+  }
+  while (cells.length % 7 !== 0 || cells.length < 42) {
+    cells.push(null);
+  }
+  return cells;
+}
