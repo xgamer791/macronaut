@@ -78,8 +78,11 @@ export default function TodayScreen() {
             </View>
           </ProgressRing>
           <View style={{ flex: 1, gap: 6 }}>
-            <Row label="Goal" value={Math.round(target).toLocaleString()} />
-            <Row label="Food" value={Math.round(consumed).toLocaleString()} />
+            <Row label="Calorie Goal" value={Math.round(target).toLocaleString()} />
+            <Row
+              label="Protein Goal"
+              value={Math.round(progress?.target.protein ?? 0).toLocaleString()}
+            />
             <Row
               label={over ? 'Over by' : 'Remaining'}
               value={Math.round(Math.abs(remaining)).toLocaleString()}

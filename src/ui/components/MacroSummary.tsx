@@ -7,7 +7,7 @@ import { radius, spacing } from '@/ui/theme/tokens';
 import { AppText } from './AppText';
 
 /** Explicit track thickness (dp/css px) for the Protein/Carbs/Fat bars. */
-const TRACK_HEIGHT = 11;
+const TRACK_HEIGHT = 9;
 
 export interface MacroColumn {
   label: string;
