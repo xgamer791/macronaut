@@ -2,23 +2,18 @@ import { useRouter } from 'expo-router';
 import React from 'react';
 import { Pressable, View } from 'react-native';
 import { roundForDisplay } from '@/domain/nutrition';
-import { useRepos } from '@/state/AppProvider';
 import {
-  keys,
   useDayProgress,
   useDiaryEntries,
   useMealCategories,
   useWeekProgress,
 } from '@/state/queries';
 import { useUiStore } from '@/state/uiStore';
-import { useQuery } from '@tanstack/react-query';
 import { formatDayKey } from '@/utils/date';
 import {
   AppText,
   Card,
   DashboardHeader,
-  FoodImage,
-  ListRow,
   MacroSummary,
   MealLogList,
   ProgressRing,
@@ -38,13 +33,6 @@ export default function TodayScreen() {
   const week = useWeekProgress(date);
   const entries = useDiaryEntries(date);
   const categories = useMealCategories();
-  const { history } = useRepos();
-
-  const recents = useQuery({ queryKey: keys.recents, queryFn: () => history.recentFoods(5) });
-  const frequents = useQuery({
-    queryKey: keys.frequents(),
-    queryFn: () => history.frequentFoods(5),
-  });
 
   const consumed = progress?.consumed.calories ?? 0;
   const target = progress?.target.calories ?? 0;
@@ -206,40 +194,6 @@ export default function TodayScreen() {
           router.push('/diary');
         }}
       />
-
-      {(recents.data?.length ?? 0) > 0 ? (
-        <>
-          <SectionHeader title="Recent" />
-          <Card padded={false} style={{ paddingHorizontal: spacing.lg, paddingVertical: spacing.xs }}>
-            {recents.data!.map((r) => (
-              <ListRow
-                key={r.foodKey}
-                left={r.imageUrl ? <FoodImage uri={r.imageUrl} size={36} /> : undefined}
-                title={r.name}
-                subtitle="Recently logged"
-                onPress={() => router.push('/add')}
-              />
-            ))}
-          </Card>
-        </>
-      ) : null}
-
-      {(frequents.data?.length ?? 0) > 0 ? (
-        <>
-          <SectionHeader title="Frequent" />
-          <Card padded={false} style={{ paddingHorizontal: spacing.lg, paddingVertical: spacing.xs }}>
-            {frequents.data!.map((f) => (
-              <ListRow
-                key={f.foodKey}
-                left={f.imageUrl ? <FoodImage uri={f.imageUrl} size={36} /> : undefined}
-                title={f.name}
-                subtitle={`Logged ${f.count} time${f.count === 1 ? '' : 's'}`}
-                onPress={() => router.push('/add')}
-              />
-            ))}
-          </Card>
-        </>
-      ) : null}
     </Screen>
   );
 }
