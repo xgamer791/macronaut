@@ -106,19 +106,16 @@ export default function TodayScreen() {
             label: 'Protein',
             consumed: progress?.consumed.protein ?? 0,
             target: progress?.target.protein,
-            color: colors.protein,
           },
           {
             label: 'Carbs',
             consumed: progress?.consumed.carbs ?? 0,
             target: progress?.target.carbs,
-            color: colors.carbs,
           },
           {
             label: 'Fat',
             consumed: progress?.consumed.fat ?? 0,
             target: progress?.target.fat,
-            color: colors.fat,
           },
         ]}
       />
