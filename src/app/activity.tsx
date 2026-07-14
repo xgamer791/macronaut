@@ -23,6 +23,7 @@ import {
 import {
   AppText,
   BarChart,
+  BarEntranceProvider,
   Button,
   Card,
   Chip,
@@ -51,6 +52,14 @@ function isActivityType(v: string | undefined): v is ActivityType {
 
 /** Activity hub: today log, burn charts, type mix, and improvement highlights. */
 export default function ActivityScreen() {
+  return (
+    <BarEntranceProvider pageKey="activity">
+      <ActivityBody />
+    </BarEntranceProvider>
+  );
+}
+
+function ActivityBody() {
   const router = useRouter();
   const { colors } = useTheme();
   const { activity } = useRepos();
