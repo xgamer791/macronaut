@@ -17,11 +17,16 @@ const TAB_META: Record<string, { label: string; icon: IconName; iconActive: Icon
   settings: { label: 'Settings', icon: 'settings-outline', iconActive: 'settings' },
 };
 
-/** Previous FAB diameter was 52 — grow 20% for stronger presence. */
+/** Original FAB was 52px — grow the real diameter 20% (not a Y-translate fake). */
 const FAB_SIZE = Math.round(52 * 1.2); // 62
 const FAB_ICON = Math.round(28 * 1.2); // 34
-/** Clear air between FAB bottom edge and the top of the tab bar. */
-const FAB_AIR_GAP = 15;
+/**
+ * Previous incorrect lift used a 15px air gap above the bar. Double that as
+ * cutout padding between the FAB edge and the nav-bar fill. Screen tabBarSpace
+ * stays 96 — page content is not pushed upward.
+ */
+const CUTOUT_GAP = 15 * 2; // 30
+const CUTOUT_SIZE = FAB_SIZE + CUTOUT_GAP * 2; // 122
 
 /** Bottom tab bar with a center Add FAB that opens the add-food hub. */
 export function TabBar({ state, navigation }: BottomTabBarProps) {
@@ -80,24 +85,42 @@ export function TabBar({ state, navigation }: BottomTabBarProps) {
     >
       {left.map(renderTab)}
 
-      {/* Spacer keeps Diary / Progress evenly spaced; FAB floats above the bar. */}
+      {/* flex:1 keeps Diary / Progress evenly spaced with the other tabs. */}
       <View style={styles.fabSlot} pointerEvents="box-none">
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Add food"
-          onPress={() => router.push('/add')}
-          style={({ pressed }) => [
-            styles.fab,
-            {
-              backgroundColor: colors.accent,
-              borderColor: colors.background,
-              shadowColor: '#000',
-              transform: [{ scale: pressed ? 0.94 : 1 }],
-            },
-          ]}
-        >
-          <Ionicons name="add" size={FAB_ICON} color={colors.onAccent} />
-        </Pressable>
+        {/*
+          Shared anchor at the bar top (half the FAB above the edge — same
+          cradle idea as the original 52px / -22 button, scaled to size).
+          The floating air gap comes from the enlarged cutout, not from
+          translating the button further up into page content.
+        */}
+        <View style={styles.fabAnchor} pointerEvents="box-none">
+          <View
+            pointerEvents="none"
+            style={[
+              styles.cutout,
+              {
+                backgroundColor: colors.background,
+                borderColor: colors.border,
+              },
+            ]}
+          />
+
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Add food"
+            onPress={() => router.push('/add')}
+            style={({ pressed }) => [
+              styles.fab,
+              {
+                backgroundColor: colors.accent,
+                shadowColor: '#000',
+                transform: [{ scale: pressed ? 0.94 : 1 }],
+              },
+            ]}
+          >
+            <Ionicons name="add" size={FAB_ICON} color={colors.onAccent} />
+          </Pressable>
+        </View>
       </View>
 
       {right.map(renderTab)}
@@ -111,6 +134,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderTopWidth: StyleSheet.hairlineWidth,
     paddingHorizontal: spacing.sm,
+    overflow: 'visible',
     zIndex: 20,
   },
   tab: {
@@ -118,25 +142,49 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 2,
     paddingVertical: spacing.sm,
+    zIndex: 3,
   },
   fabSlot: {
-    width: FAB_SIZE + spacing.lg,
+    flex: 1,
     alignItems: 'center',
-    justifyContent: 'flex-start',
+    justifyContent: 'center',
+    overflow: 'visible',
+    zIndex: 2,
+  },
+  fabAnchor: {
+    width: FAB_SIZE,
+    height: FAB_SIZE,
+    alignItems: 'center',
+    justifyContent: 'center',
+    // Cradle on the bar top — do not add an extra upward air-gap translate.
+    marginTop: -(FAB_SIZE / 2),
+    overflow: 'visible',
+  },
+  /**
+   * Page-colored notch concentric with the FAB. CUTOUT_GAP (30) of air between
+   * the button edge and the nav-bar fill — larger cutout, same button Y.
+   */
+  cutout: {
+    position: 'absolute',
+    width: CUTOUT_SIZE,
+    height: CUTOUT_SIZE,
+    borderRadius: CUTOUT_SIZE / 2,
+    top: (FAB_SIZE - CUTOUT_SIZE) / 2,
+    left: (FAB_SIZE - CUTOUT_SIZE) / 2,
+    borderWidth: StyleSheet.hairlineWidth,
+    zIndex: 1,
   },
   fab: {
-    position: 'absolute',
-    top: -(FAB_SIZE + FAB_AIR_GAP),
     width: FAB_SIZE,
     height: FAB_SIZE,
     borderRadius: FAB_SIZE / 2,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 4,
-    // Soft floating shadow
-    shadowOpacity: 0.32,
-    shadowRadius: 14,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 12,
+    zIndex: 2,
+    // Soft elevated shadow — larger blur, soft opacity, subtle downward offset
+    shadowOpacity: 0.28,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 10 },
+    elevation: 14,
   },
 });
