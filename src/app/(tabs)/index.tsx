@@ -77,8 +77,14 @@ export default function TodayScreen() {
               </AppText>
             </View>
           </ProgressRing>
-          <View style={{ flex: 1, gap: 8 }}>
-            <AppText variant="heading" weight="600" display style={{ marginBottom: 2 }}>
+          <View style={{ flex: 1, gap: 10 }}>
+            <AppText
+              variant="heading"
+              weight="600"
+              display
+              tone="primary"
+              style={{ fontSize: 20, lineHeight: 24, letterSpacing: -0.2, marginBottom: 4 }}
+            >
               Daily Goals
             </AppText>
             <Row label="Calorie Goal" value={Math.round(target).toLocaleString()} />
