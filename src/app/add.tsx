@@ -269,34 +269,47 @@ export default function AddScreen() {
         <View style={styles.headerSpacer} />
       </View>
 
-      {/* Pill search */}
-      <View
-        style={[
-          styles.searchPill,
-          { backgroundColor: colors.surface, borderColor: colors.borderStrong },
-        ]}
-      >
-        <Ionicons name="search" size={18} color={colors.textMuted} />
-        <TextInput
-          accessibilityLabel="Search foods"
-          value={query}
-          onChangeText={setQuery}
-          placeholder="Search foods, brands, flavors…"
-          placeholderTextColor={colors.textMuted}
-          autoFocus={false}
-          returnKeyType="search"
-          style={[type.body, styles.searchInput, { color: colors.textPrimary }]}
-        />
-        {query.length > 0 ? (
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Clear search"
-            onPress={() => setQuery('')}
-            hitSlop={8}
-          >
-            <Ionicons name="close-circle" size={18} color={colors.textMuted} />
-          </Pressable>
-        ) : null}
+      {/* Pill search + barcode */}
+      <View style={styles.searchRow}>
+        <View
+          style={[
+            styles.searchPill,
+            { backgroundColor: colors.surface, borderColor: colors.borderStrong, flex: 1 },
+          ]}
+        >
+          <Ionicons name="search" size={18} color={colors.textMuted} />
+          <TextInput
+            accessibilityLabel="Search foods"
+            value={query}
+            onChangeText={setQuery}
+            placeholder="Search foods, brands, flavors…"
+            placeholderTextColor={colors.textMuted}
+            autoFocus={false}
+            returnKeyType="search"
+            style={[type.body, styles.searchInput, { color: colors.textPrimary }]}
+          />
+          {query.length > 0 ? (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Clear search"
+              onPress={() => setQuery('')}
+              hitSlop={8}
+            >
+              <Ionicons name="close-circle" size={18} color={colors.textMuted} />
+            </Pressable>
+          ) : null}
+        </View>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Scan barcode"
+          onPress={() => router.push('/scan')}
+          style={[
+            styles.barcodeBtn,
+            { backgroundColor: colors.surfaceRaised, borderColor: colors.borderStrong },
+          ]}
+        >
+          <Ionicons name="barcode-outline" size={22} color={colors.textPrimary} />
+        </Pressable>
       </View>
 
       {/* Underline tabs */}
@@ -335,9 +348,9 @@ export default function AddScreen() {
             <>
               <View style={styles.quickRow}>
                 <QuickTile
-                  icon="barcode-outline"
-                  label="Barcode scan"
-                  onPress={() => router.push('/scan')}
+                  icon="sparkles-outline"
+                  label="AI food scan"
+                  onPress={() => router.push('/ai-scan')}
                 />
                 <QuickTile
                   icon="flash-outline"
@@ -622,6 +635,11 @@ const styles = StyleSheet.create({
   headerSpacer: {
     width: 40,
   },
+  searchRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
   searchPill: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -630,6 +648,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     borderRadius: radius.full,
     borderWidth: StyleSheet.hairlineWidth,
+  },
+  barcodeBtn: {
+    width: 48,
+    height: 48,
+    borderRadius: radius.lg,
+    borderWidth: StyleSheet.hairlineWidth,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   searchInput: {
     flex: 1,

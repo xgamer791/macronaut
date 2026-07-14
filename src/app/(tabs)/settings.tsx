@@ -39,10 +39,15 @@ export default function SettingsScreen() {
 
   const units = useSetting<UnitSystem>('unitSystem', 'us');
   const weekStart = useSetting<WeekStart>('weekStart', 'monday');
+  const savedGrokKey = useSetting<string>('grokApiKey', '');
 
   const [newMealOpen, setNewMealOpen] = useState(false);
   const [newMealName, setNewMealName] = useState('');
   const [confirmReset, setConfirmReset] = useState<null | 'onboarding' | 'all'>(null);
+  /** null = show stored key; string = local edits not yet saved */
+  const [draftGrokKey, setDraftGrokKey] = useState<string | null>(null);
+  const [showGrokKey, setShowGrokKey] = useState(false);
+  const grokKey = draftGrokKey ?? savedGrokKey.data ?? '';
 
   async function setUnits(u: UnitSystem) {
     await settings.setUnitSystem(u);
@@ -145,6 +150,61 @@ export default function SettingsScreen() {
             onChange={setMode}
           />
         </View>
+      </Card>
+
+      <SectionHeader title="AI food scan" />
+      <Card style={{ gap: spacing.md }}>
+        <AppText variant="caption" tone="secondary">
+          Paid feature — for now, paste your personal xAI Grok API key. It stays on this device and
+          is only sent to xAI when you run an AI food scan.
+        </AppText>
+        <TextField
+          label="Grok API key"
+          value={grokKey}
+          onChangeText={setDraftGrokKey}
+          placeholder="xai-…"
+          autoCapitalize="none"
+          autoCorrect={false}
+          secureTextEntry={!showGrokKey}
+        />
+        <View style={{ flexDirection: 'row', gap: spacing.sm }}>
+          <Button
+            title={showGrokKey ? 'Hide key' : 'Show key'}
+            variant="ghost"
+            compact
+            onPress={() => setShowGrokKey((v) => !v)}
+          />
+          <Button
+            title="Save key"
+            compact
+            onPress={async () => {
+              await settings.set('grokApiKey', grokKey.trim());
+              setDraftGrokKey(null);
+              qc.invalidateQueries({ queryKey: keys.setting('grokApiKey') });
+            }}
+          />
+          {grokKey.trim() ? (
+            <Button
+              title="Clear"
+              variant="ghost"
+              compact
+              onPress={async () => {
+                setDraftGrokKey(null);
+                await settings.set('grokApiKey', '');
+                qc.invalidateQueries({ queryKey: keys.setting('grokApiKey') });
+              }}
+            />
+          ) : null}
+        </View>
+        {(savedGrokKey.data ?? '').trim() ? (
+          <AppText variant="micro" tone="accent">
+            Key saved on this device
+          </AppText>
+        ) : (
+          <AppText variant="micro" tone="muted">
+            Get a key from console.x.ai
+          </AppText>
+        )}
       </Card>
 
       <SectionHeader title="Meal categories" />
