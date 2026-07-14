@@ -3,6 +3,7 @@ import { DayKey, weekDays } from '@/utils/date';
 import { DayProgress, WeekProgress, dayProgress, weekProgress } from '@/domain/aggregation';
 import { GoalConfig } from '@/domain/goals';
 import { WeekStart } from '@/domain/types';
+import { NewActivityEntry } from '@/repositories/activityRepo';
 import { NewDiaryEntry } from '@/repositories/diaryRepo';
 import { DiaryEntry } from '@/repositories/types';
 import { useRepos } from './AppProvider';
@@ -12,6 +13,8 @@ import { useRepos } from './AppProvider';
 export const keys = {
   diary: (date: DayKey) => ['diary', date] as const,
   diaryRange: (from: DayKey, to: DayKey) => ['diary-range', from, to] as const,
+  activity: (date: DayKey) => ['activity', date] as const,
+  activityRange: (from: DayKey, to: DayKey) => ['activity-range', from, to] as const,
   goals: ['goals'] as const,
   marks: ['marks'] as const,
   setting: (key: string) => ['setting', key] as const,
@@ -34,6 +37,14 @@ export function useInvalidateDiary() {
   };
 }
 
+export function useInvalidateActivity() {
+  const qc = useQueryClient();
+  return () => {
+    qc.invalidateQueries({ queryKey: ['activity'] });
+    qc.invalidateQueries({ queryKey: ['activity-range'] });
+  };
+}
+
 export function useDiaryEntries(date: DayKey) {
   const { diary } = useRepos();
   return useQuery({ queryKey: keys.diary(date), queryFn: () => diary.entriesForDate(date) });
@@ -44,6 +55,19 @@ export function useDiaryRange(from: DayKey, to: DayKey) {
   return useQuery({
     queryKey: keys.diaryRange(from, to),
     queryFn: () => diary.entriesForRange(from, to),
+  });
+}
+
+export function useActivityEntries(date: DayKey) {
+  const { activity } = useRepos();
+  return useQuery({ queryKey: keys.activity(date), queryFn: () => activity.entriesForDate(date) });
+}
+
+export function useActivityRange(from: DayKey, to: DayKey) {
+  const { activity } = useRepos();
+  return useQuery({
+    queryKey: keys.activityRange(from, to),
+    queryFn: () => activity.entriesForRange(from, to),
   });
 }
 
@@ -114,19 +138,50 @@ export function useDeleteDiaryEntries() {
   });
 }
 
-/** Compute a day's progress from its entries + the goal version in effect. */
+export function useAddActivityEntry() {
+  const { activity } = useRepos();
+  const invalidate = useInvalidateActivity();
+  return useMutation({
+    mutationFn: (entry: NewActivityEntry) => activity.add(entry),
+    onSuccess: invalidate,
+  });
+}
+
+export function useUpdateActivityEntry() {
+  const { activity } = useRepos();
+  const invalidate = useInvalidateActivity();
+  return useMutation({
+    mutationFn: ({ id, patch }: { id: string; patch: Partial<NewActivityEntry> }) =>
+      activity.update(id, patch),
+    onSuccess: invalidate,
+  });
+}
+
+export function useDeleteActivityEntry() {
+  const { activity } = useRepos();
+  const invalidate = useInvalidateActivity();
+  return useMutation({
+    mutationFn: (id: string) => activity.remove(id),
+    onSuccess: invalidate,
+  });
+}
+
+/** Compute a day's progress from food + activity burn + the goal in effect. */
 export function useDayProgress(date: DayKey): DayProgress | null {
   const entries = useDiaryEntries(date);
+  const activities = useActivityEntries(date);
   const configs = useGoalConfigs();
   const marks = useDayTypeMarks();
-  if (!entries.data || !configs.data || !marks.data) return null;
+  if (!entries.data || !activities.data || !configs.data || !marks.data) return null;
   const config = pickConfig(date, configs.data);
   if (!config) return null;
+  const burned = activities.data.reduce((sum, a) => sum + a.caloriesBurned, 0);
   return dayProgress(
     date,
     entries.data.map((e: DiaryEntry) => e.nutrition),
     config,
     marks.data,
+    burned,
   );
 }
 
@@ -135,16 +190,21 @@ export function useWeekProgress(date: DayKey): WeekProgress | null {
   const weekStart = useWeekStart();
   const days = weekDays(date, weekStart);
   const range = useDiaryRange(days[0], days[6]);
+  const activityRange = useActivityRange(days[0], days[6]);
   const configs = useGoalConfigs();
   const marks = useDayTypeMarks();
-  if (!range.data || !configs.data || !marks.data) return null;
+  if (!range.data || !activityRange.data || !configs.data || !marks.data) return null;
   const config = pickConfig(date, configs.data);
   if (!config) return null;
   const byDay: Record<DayKey, { calories: number }[]> = {};
   for (const e of range.data) {
     (byDay[e.date] ??= []).push(e.nutrition);
   }
-  return weekProgress(days, byDay, config, marks.data);
+  const burnedByDay: Record<DayKey, number> = {};
+  for (const a of activityRange.data) {
+    burnedByDay[a.date] = (burnedByDay[a.date] ?? 0) + a.caloriesBurned;
+  }
+  return weekProgress(days, byDay, config, marks.data, burnedByDay);
 }
 
 function pickConfig(date: DayKey, configs: GoalConfig[]): GoalConfig | null {

@@ -3,6 +3,7 @@ import React from 'react';
 import { Pressable, View } from 'react-native';
 import { roundForDisplay } from '@/domain/nutrition';
 import {
+  useActivityEntries,
   useDayProgress,
   useDiaryEntries,
   useMealCategories,
@@ -11,6 +12,7 @@ import {
 import { useUiStore } from '@/state/uiStore';
 import { formatDayKey } from '@/utils/date';
 import {
+  ActivityLogList,
   AppText,
   Card,
   DashboardHeader,
@@ -22,6 +24,7 @@ import {
 } from '@/ui/components';
 import { useTheme } from '@/ui/theme/ThemeProvider';
 import { spacing } from '@/ui/theme/tokens';
+import { ActivityType } from '@/repositories/types';
 
 export default function TodayScreen() {
   const router = useRouter();
@@ -32,16 +35,23 @@ export default function TodayScreen() {
   const progress = useDayProgress(date);
   const week = useWeekProgress(date);
   const entries = useDiaryEntries(date);
+  const activities = useActivityEntries(date);
   const categories = useMealCategories();
 
   const consumed = progress?.consumed.calories ?? 0;
+  const burned = progress?.burned ?? 0;
   const target = progress?.target.calories ?? 0;
-  const remaining = target - consumed;
+  const remaining = progress?.caloriesRemaining ?? target - consumed;
   const over = remaining < 0;
 
   const mealTotals = new Map<string, number>();
   for (const e of entries.data ?? []) {
     mealTotals.set(e.meal, (mealTotals.get(e.meal) ?? 0) + e.nutrition.calories);
+  }
+
+  const burnedByType = new Map<ActivityType, number>();
+  for (const a of activities.data ?? []) {
+    burnedByType.set(a.activityType, (burnedByType.get(a.activityType) ?? 0) + a.caloriesBurned);
   }
 
   return (
@@ -84,6 +94,9 @@ export default function TodayScreen() {
               label="Fat Goal"
               value={Math.round(progress?.target.fat ?? 0).toLocaleString()}
             />
+            {burned > 0 ? (
+              <Row label="Exercise" value={`+${Math.round(burned).toLocaleString()}`} emphasized />
+            ) : null}
           </View>
         </View>
       </Card>
@@ -122,20 +135,20 @@ export default function TodayScreen() {
           </View>
           <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 6, height: 56 }}>
             {week.days.map((d) => {
-              const ratio = d.target.calories > 0 ? d.consumed.calories / d.target.calories : 0;
+              const ratio = d.target.calories > 0 ? d.netCalories / d.target.calories : 0;
               const isSelected = d.date === date;
               return (
                 <View key={d.date} style={{ flex: 1, alignItems: 'center', gap: 3 }}>
                   <View
                     accessible
-                    accessibilityLabel={`${formatDayKey(d.date)}: ${Math.round(d.consumed.calories)} of ${Math.round(d.target.calories)} calories`}
+                    accessibilityLabel={`${formatDayKey(d.date)}: ${Math.round(d.consumed.calories)} food, ${Math.round(d.burned)} burned, of ${Math.round(d.target.calories)} calories`}
                     style={{
                       width: '100%',
-                      height: Math.max(Math.min(ratio, 1.2) * 44, 3),
+                      height: Math.max(Math.min(Math.max(ratio, 0), 1.2) * 44, 3),
                       borderRadius: 3,
                       backgroundColor: d.overCalories
                         ? colors.danger
-                        : d.consumed.calories > 0
+                        : d.consumed.calories > 0 || d.burned > 0
                           ? colors.accent
                           : colors.track,
                     }}
@@ -163,7 +176,7 @@ export default function TodayScreen() {
       ) : null}
 
       <SectionHeader
-        title="Diary"
+        title="Meals"
         right={
           <Pressable
             accessibilityRole="button"
@@ -192,6 +205,33 @@ export default function TodayScreen() {
           setSelectedDate(date);
           setTargetMeal(mealId);
           router.push('/diary');
+        }}
+      />
+
+      <SectionHeader
+        title="Activity"
+        right={
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Open activity tracking"
+            onPress={() => router.push('/activity')}
+            style={{ minHeight: 44, justifyContent: 'center' }}
+          >
+            <AppText variant="caption" tone="secondary" weight="600">
+              View all
+            </AppText>
+          </Pressable>
+        }
+      />
+      <ActivityLogList
+        burnedByType={burnedByType}
+        onLog={(type) => {
+          setSelectedDate(date);
+          router.push({ pathname: '/log-activity', params: { type } });
+        }}
+        onOpenType={(type) => {
+          setSelectedDate(date);
+          router.push({ pathname: '/activity', params: { type } });
         }}
       />
     </Screen>

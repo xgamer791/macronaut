@@ -47,13 +47,14 @@ export default function WeekDetailScreen() {
       <View style={{ flexDirection: 'row', gap: spacing.md }}>
         <StatTile label="Weekly target" value={Math.round(week.weeklyTarget.calories).toLocaleString()} />
         <StatTile label="Consumed" value={Math.round(week.weeklyConsumed.calories).toLocaleString()} />
+        <StatTile label="Burned" value={Math.round(week.weeklyBurned).toLocaleString()} />
+      </View>
+
+      <View style={{ flexDirection: 'row', gap: spacing.md }}>
         <StatTile
           label={over ? 'Over by' : 'Remaining'}
           value={Math.abs(Math.round(week.weeklyRemaining)).toLocaleString()}
         />
-      </View>
-
-      <View style={{ flexDirection: 'row', gap: spacing.md }}>
         <StatTile
           label="Average per day"
           value={Math.round(week.averagePerDay.calories).toLocaleString()}

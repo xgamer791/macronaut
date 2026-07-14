@@ -1,11 +1,10 @@
 import { useRouter } from 'expo-router';
 import React, { useMemo, useState } from 'react';
 import { View } from 'react-native';
-import { roundForDisplay } from '@/domain/nutrition';
 import { GoalConfig, resolveTargetForDate } from '@/domain/goals';
 import { MacroKey } from '@/domain/types';
-import { useDayTypeMarks, useDiaryRange, useGoalConfigs } from '@/state/queries';
-import { DiaryEntry } from '@/repositories/types';
+import { useActivityRange, useDayTypeMarks, useDiaryRange, useGoalConfigs } from '@/state/queries';
+import { ActivityEntry, DiaryEntry } from '@/repositories/types';
 import {
   addDays,
   DayKey,
@@ -24,16 +23,16 @@ import {
   DatePickSheet,
   EmptyState,
   Screen,
-  SegmentedControl,
   StatTile,
 } from '@/ui/components';
 import { spacing } from '@/ui/theme/tokens';
 
 type Range = '7' | '30' | '90' | 'custom';
-type Metric = 'calories' | 'protein' | 'carbs' | 'fat' | 'fiber';
+type Metric = 'calories' | 'burned' | 'protein' | 'carbs' | 'fat' | 'fiber';
 
 const METRIC_LABEL: Record<Metric, string> = {
-  calories: 'Calories',
+  calories: 'Net kcal',
+  burned: 'Burned',
   protein: 'Protein',
   carbs: 'Carbs',
   fat: 'Fat',
@@ -54,15 +53,25 @@ export default function ProgressScreen() {
   const to = range === 'custom' ? customTo : today;
 
   const entries = useDiaryRange(from, to);
+  const activities = useActivityRange(from, to);
   const configs = useGoalConfigs();
   const marks = useDayTypeMarks();
 
   const stats = useMemo(() => {
-    if (!entries.data || !configs.data || configs.data.length === 0 || !marks.data) return null;
-    return computeStats(rangeDays(from, to), entries.data, configs.data, marks.data, metric);
-  }, [entries.data, configs.data, marks.data, from, to, metric]);
+    if (!entries.data || !activities.data || !configs.data || configs.data.length === 0 || !marks.data)
+      return null;
+    return computeStats(
+      rangeDays(from, to),
+      entries.data,
+      activities.data,
+      configs.data,
+      marks.data,
+      metric,
+    );
+  }, [entries.data, activities.data, configs.data, marks.data, from, to, metric]);
 
   const anyLogged = (stats?.daysLogged ?? 0) > 0;
+  const isKcal = metric === 'calories' || metric === 'burned';
 
   return (
     <Screen tabBarSpace>
@@ -96,14 +105,11 @@ export default function ProgressScreen() {
         </View>
       ) : null}
 
-      <SegmentedControl<Metric>
-        options={(Object.keys(METRIC_LABEL) as Metric[]).map((m) => ({
-          value: m,
-          label: METRIC_LABEL[m],
-        }))}
-        value={metric}
-        onChange={setMetric}
-      />
+      <View style={{ flexDirection: 'row', gap: spacing.sm, flexWrap: 'wrap' }}>
+        {(Object.keys(METRIC_LABEL) as Metric[]).map((m) => (
+          <Chip key={m} label={METRIC_LABEL[m]} selected={metric === m} onPress={() => setMetric(m)} />
+        ))}
+      </View>
 
       {!stats ? (
         <AppText variant="caption" tone="muted" align="center">
@@ -112,14 +118,14 @@ export default function ProgressScreen() {
       ) : !anyLogged ? (
         <EmptyState
           title="No data in this period"
-          body="Log some food and your trends will appear here."
+          body="Log food or workouts and your trends will appear here."
         />
       ) : (
         <>
           <View style={{ flexDirection: 'row', gap: spacing.md }}>
             <StatTile
               label={`Avg ${METRIC_LABEL[metric].toLowerCase()}/day`}
-              value={`${Math.round(stats.average).toLocaleString()}${metric === 'calories' ? '' : ' g'}`}
+              value={`${Math.round(stats.average).toLocaleString()}${isKcal ? '' : ' g'}`}
               detail={`over ${stats.daysLogged} logged day${stats.daysLogged === 1 ? '' : 's'}`}
             />
             <StatTile
@@ -132,7 +138,7 @@ export default function ProgressScreen() {
           <Card>
             <BarChart
               data={stats.bars}
-              unit={metric === 'calories' ? '' : ' g'}
+              unit={isKcal ? '' : ' g'}
               accessibilityLabel={`${METRIC_LABEL[metric]} per day from ${from} to ${to}`}
             />
           </Card>
@@ -149,7 +155,7 @@ export default function ProgressScreen() {
                   </AppText>
                   <AppText variant="caption" weight="600">
                     {Math.round(w.average).toLocaleString()}
-                    {metric === 'calories' ? '' : ' g'}
+                    {isKcal ? '' : ' g'}
                   </AppText>
                 </View>
               ))}
@@ -205,6 +211,7 @@ interface Stats {
 function computeStats(
   days: DayKey[],
   entries: DiaryEntry[],
+  activities: ActivityEntry[],
   configs: GoalConfig[],
   marks: Record<string, 'training' | 'rest'>,
   metric: Metric,
@@ -215,6 +222,10 @@ function computeStats(
     list.push(e);
     byDay.set(e.date, list);
   }
+  const burnByDay = new Map<DayKey, number>();
+  for (const a of activities) {
+    burnByDay.set(a.date, (burnByDay.get(a.date) ?? 0) + a.caloriesBurned);
+  }
 
   const configFor = (date: DayKey) => {
     let chosen = configs[0];
@@ -222,8 +233,11 @@ function computeStats(
     return chosen;
   };
 
-  const value = (list: DiaryEntry[], key: Metric) =>
-    list.reduce((sum, e) => sum + (key === 'calories' ? e.nutrition.calories : (e.nutrition[key as MacroKey] ?? 0)), 0);
+  const macroValue = (list: DiaryEntry[], key: MacroKey | 'calories') =>
+    list.reduce(
+      (sum, e) => sum + (key === 'calories' ? e.nutrition.calories : (e.nutrition[key] ?? 0)),
+      0,
+    );
 
   let sum = 0;
   let logged = 0;
@@ -233,24 +247,36 @@ function computeStats(
 
   for (const d of days) {
     const list = byDay.get(d) ?? [];
-    const v = value(list, metric);
+    const burned = burnByDay.get(d) ?? 0;
+    const food = macroValue(list, 'calories');
+    const v =
+      metric === 'burned'
+        ? burned
+        : metric === 'calories'
+          ? food - burned
+          : macroValue(list, metric);
     const target = resolveTargetForDate(d, configFor(d), marks);
-    const goal = metric === 'calories' ? target.calories : (target[metric as MacroKey] ?? 0);
+    const goal =
+      metric === 'burned'
+        ? undefined
+        : metric === 'calories'
+          ? target.calories
+          : (target[metric] ?? 0);
     const dt = parseDayKey(d);
     bars.push({
       key: d,
       label: days.length <= 7 ? shortWeekdayLabel(d) : `${dt.getMonth() + 1}/${dt.getDate()}`,
-      value: v,
-      goal: goal > 0 ? goal : undefined,
+      value: Math.max(0, v),
+      goal: goal && goal > 0 ? goal : undefined,
       detail:
-        list.length > 0
-          ? `${list.length} entr${list.length === 1 ? 'y' : 'ies'} · P ${roundForDisplay(value(list, 'protein'))} · C ${roundForDisplay(value(list, 'carbs'))} · F ${roundForDisplay(value(list, 'fat'))}`
+        list.length > 0 || burned > 0
+          ? `Food ${Math.round(food)} · burned ${Math.round(burned)} · net ${Math.round(food - burned)}`
           : 'Nothing logged',
     });
-    if (v > 0) {
+    if (list.length > 0 || burned > 0) {
       sum += v;
       logged++;
-      if (goal <= 0 || v <= goal) within++;
+      if (metric === 'burned' || !goal || goal <= 0 || v <= goal) within++;
       const monthLabel = `${dt.toLocaleString(undefined, { month: 'short' })} wk${Math.ceil(dt.getDate() / 7)}`;
       const bucket = weekBuckets.get(monthLabel) ?? { total: 0, count: 0 };
       bucket.total += v;

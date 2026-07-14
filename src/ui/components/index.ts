@@ -1,4 +1,5 @@
 export { AppText } from './AppText';
+export { ActivityLogList } from './ActivityLogList';
 export { Button } from './Button';
 export { Card } from './Card';
 export { Chip } from './Chip';

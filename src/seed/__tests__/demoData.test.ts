@@ -1,4 +1,5 @@
 import { createTestDb } from '@/db/__tests__/testDb';
+import { createActivityRepo } from '@/repositories/activityRepo';
 import { createDiaryRepo } from '@/repositories/diaryRepo';
 import { createFoodRepo } from '@/repositories/foodRepo';
 import { createGoalRepo } from '@/repositories/goalRepo';
@@ -15,6 +16,7 @@ describe('demo data', () => {
     const repos: Repos = {
       db,
       diary: createDiaryRepo(db),
+      activity: createActivityRepo(db),
       food: createFoodRepo(db),
       goals: createGoalRepo(db),
       savedMeals: createSavedMealRepo(db),

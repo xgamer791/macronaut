@@ -19,6 +19,7 @@ describe('dayProgress', () => {
   it('computes consumed, remaining and over state', () => {
     const p = dayProgress('2026-07-06', [meal(600), meal(500)], config);
     expect(p.consumed.calories).toBe(1100);
+    expect(p.burned).toBe(0);
     expect(p.caloriesRemaining).toBe(900);
     expect(p.overCalories).toBe(false);
   });
@@ -27,6 +28,14 @@ describe('dayProgress', () => {
     const p = dayProgress('2026-07-06', [meal(2500)], config);
     expect(p.caloriesRemaining).toBe(-500);
     expect(p.overCalories).toBe(true);
+  });
+
+  it('credits exercise burn toward remaining calories', () => {
+    const p = dayProgress('2026-07-06', [meal(2200)], config, {}, 400);
+    expect(p.burned).toBe(400);
+    expect(p.netCalories).toBe(1800);
+    expect(p.caloriesRemaining).toBe(200);
+    expect(p.overCalories).toBe(false);
   });
 });
 
