@@ -1,215 +1,201 @@
-import { CameraView, useCameraPermissions } from 'expo-camera';
+import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import React, { useRef, useState } from 'react';
 import { Platform, View } from 'react-native';
+import { ProviderFood } from '@/services/food/types';
 import { useFoodSearchService } from '@/state/foodSearch';
 import { goBackOrHome } from '@/utils/navigation';
 import {
   AppText,
   Button,
-  Card,
   EmptyState,
   ListRow,
-  Screen,
+  ScannerOverlay,
+  ScannerView,
   Sheet,
   TextField,
 } from '@/ui/components';
-import { useTheme } from '@/ui/theme/ThemeProvider';
-import { radius, spacing } from '@/ui/theme/tokens';
-import { ProviderFood } from '@/services/food/types';
+import { spacing } from '@/ui/theme/tokens';
 
-/** Barcode scanning: camera on native; manual entry + demo scan on web
- * (browser camera barcode decoding isn't supported by expo-camera). */
+type ScanState = 'scanning' | 'detected' | 'success';
+
+/** Full-screen live barcode scanner. Detection is automatic and continuous;
+ * a successful scan vibrates, plays the confirmation and opens the product.
+ * Lookup fans out across every configured provider before giving up. */
 export default function ScanScreen() {
   const router = useRouter();
-  const { colors } = useTheme();
   const svc = useFoodSearchService();
-  const [permission, requestPermission] = useCameraPermissions();
 
-  const [manualCode, setManualCode] = useState('');
-  const [status, setStatus] = useState<'idle' | 'looking' | 'unknown' | 'offline'>('idle');
+  const [state, setState] = useState<ScanState>('scanning');
+  const [torchOn, setTorchOn] = useState(false);
+  const [torchSupported, setTorchSupported] = useState(false);
+  const [cameraError, setCameraError] = useState<'denied' | 'unavailable' | null>(null);
   const [lastCode, setLastCode] = useState<string | null>(null);
+  const [notFound, setNotFound] = useState(false);
+  const [offline, setOffline] = useState(false);
   const [candidates, setCandidates] = useState<ProviderFood[]>([]);
-  const [candidatesOpen, setCandidatesOpen] = useState(false);
-  // Lock prevents rapid repeated scans of the same code.
-  const scanLock = useRef(false);
+  const [manualOpen, setManualOpen] = useState(false);
+  const [manualCode, setManualCode] = useState('');
+  const lock = useRef(false);
 
-  const isWeb = Platform.OS === 'web';
-
-  async function handleCode(code: string) {
-    if (scanLock.current || !code.trim()) return;
-    scanLock.current = true;
-    setLastCode(code);
-    setStatus('looking');
-    try {
-      const result = await svc.lookupBarcode(code.trim());
-      if (result.custom) {
-        router.replace({ pathname: '/food/[provider]/[id]', params: { provider: 'custom', id: result.custom } });
-        return;
-      }
-      if (result.food) {
-        if (result.candidates && result.candidates.length > 0) {
-          // Best match first, but let the user pick another.
-          setCandidates([result.food, ...result.candidates]);
-          setCandidatesOpen(true);
-          setStatus('idle');
-        } else {
-          router.replace({
-            pathname: '/food/[provider]/[id]',
-            params: { provider: result.food.provider, id: result.food.id },
-          });
-        }
-        return;
-      }
-      if (result.offline) {
-        setStatus('offline');
-        return;
-      }
-      // Unknown barcode: offer text-search candidates for manual selection.
-      const search = await svc.search(code.trim(), { limit: 6 });
-      if (search.foods.filter((f) => f.provider !== 'local').length > 0) {
-        setCandidates(search.foods.filter((f) => f.provider !== 'local'));
-        setCandidatesOpen(true);
-        setStatus('idle');
-      } else {
-        setStatus('unknown');
-      }
-    } finally {
-      // Release the lock after a pause so a still-visible barcode doesn't
-      // instantly re-trigger.
-      setTimeout(() => {
-        scanLock.current = false;
-      }, 1500);
+  function buzz() {
+    if (Platform.OS === 'web') {
+      (navigator as Navigator & { vibrate?: (ms: number) => void }).vibrate?.(80);
+    } else {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
     }
   }
 
-  const needsPermission = !isWeb && permission !== null && !permission.granted;
+  async function handleCode(code: string) {
+    const clean = code.trim();
+    if (lock.current || !clean) return;
+    lock.current = true; // duplicate-scan guard — released only on failure paths
+    setLastCode(clean);
+    setNotFound(false);
+    setOffline(false);
+    buzz();
+    setState('detected');
+
+    const result = await svc.lookupBarcode(clean);
+
+    if (result.custom) {
+      setState('success');
+      setTimeout(() => {
+        router.replace({ pathname: '/food/[provider]/[id]', params: { provider: 'custom', id: result.custom! } });
+      }, 450);
+      return;
+    }
+    if (result.food) {
+      if (result.candidates && result.candidates.length > 0) {
+        setCandidates([result.food, ...result.candidates]);
+        setState('scanning');
+        return; // sheet open; lock stays until choice or dismiss
+      }
+      setState('success');
+      const f = result.food;
+      setTimeout(() => {
+        router.replace({ pathname: '/food/[provider]/[id]', params: { provider: f.provider, id: f.id } });
+      }, 450);
+      return;
+    }
+
+    // Nothing matched across ALL providers.
+    setOffline(result.offline);
+    setNotFound(!result.offline);
+    setState('scanning');
+    setTimeout(() => {
+      lock.current = false;
+    }, 2000);
+  }
+
+  const scannerActive = !cameraError && candidates.length === 0 && !notFound && !offline;
 
   return (
-    <Screen>
-      <AppText variant="title" weight="600" display>
-        Scan a barcode
-      </AppText>
+    <View style={{ flex: 1, backgroundColor: '#000' }}>
+      {scannerActive ? (
+        <>
+          <ScannerView
+            onCode={handleCode}
+            torch={torchOn}
+            onTorchSupport={setTorchSupported}
+            onError={setCameraError}
+          />
+          <ScannerOverlay
+            state={state}
+            torchSupported={torchSupported}
+            torchOn={torchOn}
+            onToggleTorch={() => setTorchOn((t) => !t)}
+            onCancel={() => goBackOrHome(router)}
+          />
+          <View style={{ position: 'absolute', bottom: 40, left: 0, right: 0, alignItems: 'center' }}>
+            <Button
+              title="Enter code manually"
+              variant="ghost"
+              compact
+              onPress={() => setManualOpen(true)}
+            />
+          </View>
+        </>
+      ) : null}
 
-      {!isWeb && permission?.granted ? (
-        <View style={{ borderRadius: radius.lg, overflow: 'hidden', height: 320 }}>
-          <CameraView
-            style={{ flex: 1 }}
-            barcodeScannerSettings={{
-              barcodeTypes: ['ean13', 'ean8', 'upc_a', 'upc_e', 'code128'],
-            }}
-            onBarcodeScanned={({ data }) => handleCode(data)}
-          />
-          <View
-            pointerEvents="none"
-            style={{
-              position: 'absolute',
-              top: '25%',
-              left: '15%',
-              right: '15%',
-              bottom: '25%',
-              borderWidth: 2,
-              borderColor: colors.accent,
-              borderRadius: radius.md,
-            }}
-          />
-          <AppText
-            variant="caption"
-            align="center"
-            style={{ position: 'absolute', bottom: 12, left: 0, right: 0, color: '#fff' }}
-          >
-            Line the barcode up inside the frame
+      {cameraError ? (
+        <View style={{ flex: 1, justifyContent: 'center', padding: spacing.xl, gap: spacing.lg }}>
+          <AppText variant="heading" weight="600" align="center" style={{ color: '#fff' }}>
+            {cameraError === 'denied' ? 'Camera access needed' : 'Camera unavailable'}
           </AppText>
+          <AppText variant="caption" align="center" style={{ color: 'rgba(255,255,255,0.7)' }}>
+            {cameraError === 'denied'
+              ? 'Macronaut uses the camera only to read food barcodes — nothing is recorded or uploaded. Enable camera access in your browser or system settings, then try again.'
+              : 'No camera was found on this device. You can still enter the barcode number below.'}
+          </AppText>
+          <Button title="Enter code manually" variant="secondary" onPress={() => setManualOpen(true)} />
+          <Button title="Cancel" variant="ghost" onPress={() => goBackOrHome(router)} />
         </View>
       ) : null}
 
-      {needsPermission ? (
-        <Card style={{ gap: spacing.md }}>
-          <AppText variant="body" weight="600">
-            Camera access needed
-          </AppText>
-          <AppText variant="caption" tone="secondary">
-            Macronaut uses the camera only to read food barcodes so you can log packaged foods
-            quickly. Nothing is recorded or uploaded.
-          </AppText>
-          {permission?.canAskAgain ? (
-            <Button title="Allow camera" onPress={() => requestPermission()} />
-          ) : (
-            <AppText variant="caption" tone="danger">
-              Camera permission was declined. Enable it in system Settings, or type the barcode
-              below.
-            </AppText>
-          )}
-        </Card>
+      {notFound && lastCode ? (
+        <View style={{ flex: 1, justifyContent: 'center', padding: spacing.lg }}>
+          <EmptyState
+            title="Barcode not found"
+            body={`${lastCode} isn't in USDA or Open Food Facts yet. Create it once and it scans instantly next time.`}
+            actionTitle="Create custom food with this barcode"
+            onAction={() => router.replace({ pathname: '/custom-food', params: { barcode: lastCode } })}
+          />
+          <Button
+            title="Scan again"
+            variant="secondary"
+            onPress={() => {
+              setNotFound(false);
+              lock.current = false;
+            }}
+          />
+          <Button title="Cancel" variant="ghost" onPress={() => goBackOrHome(router)} />
+        </View>
       ) : null}
 
-      {isWeb ? (
-        <Card style={{ gap: spacing.sm }}>
-          <AppText variant="caption" tone="secondary">
-            Camera barcode scanning works in the iOS app. On the web, type the barcode number below
-            — or try the demo barcode.
+      {offline ? (
+        <View style={{ flex: 1, justifyContent: 'center', padding: spacing.lg, gap: spacing.md }}>
+          <AppText variant="heading" weight="600" align="center" style={{ color: '#fff' }}>
+            You&apos;re offline
           </AppText>
-          <Button title="Try demo barcode (Nutella)" variant="secondary" onPress={() => handleCode('3017620422003')} />
-        </Card>
-      ) : null}
-
-      <Card style={{ gap: spacing.md }}>
-        <TextField
-          label="Enter barcode manually"
-          value={manualCode}
-          onChangeText={setManualCode}
-          placeholder="e.g. 0123456789012"
-          keyboardType="number-pad"
-          inputMode="numeric"
-        />
-        <Button
-          title="Look up"
-          onPress={() => handleCode(manualCode)}
-          disabled={manualCode.trim().length < 6}
-          loading={status === 'looking'}
-        />
-      </Card>
-
-      {status === 'unknown' && lastCode ? (
-        <EmptyState
-          title="Barcode not found"
-          body={`No food matches ${lastCode} in USDA or Open Food Facts. Create it once and it scans instantly next time.`}
-          actionTitle="Create custom food with this barcode"
-          onAction={() =>
-            router.replace({ pathname: '/custom-food', params: { barcode: lastCode } })
-          }
-        />
-      ) : null}
-
-      {status === 'offline' ? (
-        <Card>
-          <AppText variant="caption" tone="secondary">
+          <AppText variant="caption" align="center" style={{ color: 'rgba(255,255,255,0.7)' }}>
             Barcode lookup needs an internet connection. Previously scanned foods still work
-            offline — or create a custom food for this barcode.
+            offline.
           </AppText>
-        </Card>
+          <Button
+            title="Try again"
+            variant="secondary"
+            onPress={() => {
+              setOffline(false);
+              lock.current = false;
+            }}
+          />
+          <Button title="Cancel" variant="ghost" onPress={() => goBackOrHome(router)} />
+        </View>
       ) : null}
 
-      <Button title="Cancel" variant="ghost" onPress={() => goBackOrHome(router)} />
-
-      {/* Multiple possible matches */}
-      <Sheet visible={candidatesOpen} onClose={() => setCandidatesOpen(false)} title="Select the right product">
-        {candidates.map((f) => (
+      {/* Multiple plausible products for one code */}
+      <Sheet
+        visible={candidates.length > 0}
+        onClose={() => {
+          setCandidates([]);
+          lock.current = false;
+        }}
+        title="Select the right product"
+      >
+        {candidates.map((f, i) => (
           <ListRow
             key={`${f.provider}:${f.id}`}
-            title={f.name}
-            subtitle={[f.brand, f.provider.toUpperCase()].filter(Boolean).join(' · ')}
+            title={i === 0 ? `${f.name} · Best match` : f.name}
+            subtitle={[f.brand, f.provider === 'off' ? 'Open Food Facts' : 'USDA'].filter(Boolean).join(' · ')}
             value={
               f.nutritionPerServing?.calories !== undefined
                 ? `${Math.round(f.nutritionPerServing.calories)} kcal`
                 : undefined
             }
             onPress={() => {
-              setCandidatesOpen(false);
-              router.replace({
-                pathname: '/food/[provider]/[id]',
-                params: { provider: f.provider, id: f.id },
-              });
+              setCandidates([]);
+              router.replace({ pathname: '/food/[provider]/[id]', params: { provider: f.provider, id: f.id } });
             }}
           />
         ))}
@@ -217,11 +203,31 @@ export default function ScanScreen() {
           title="None of these — create custom food"
           variant="secondary"
           onPress={() => {
-            setCandidatesOpen(false);
+            setCandidates([]);
             router.replace({ pathname: '/custom-food', params: { barcode: lastCode ?? '' } });
           }}
         />
       </Sheet>
-    </Screen>
+
+      {/* Manual fallback — for damaged barcodes, not the normal path */}
+      <Sheet visible={manualOpen} onClose={() => setManualOpen(false)} title="Enter barcode">
+        <TextField
+          value={manualCode}
+          onChangeText={setManualCode}
+          placeholder="e.g. 0123456789012"
+          keyboardType="number-pad"
+          inputMode="numeric"
+          autoFocus
+        />
+        <Button
+          title="Look up"
+          disabled={manualCode.trim().length < 6}
+          onPress={() => {
+            setManualOpen(false);
+            handleCode(manualCode);
+          }}
+        />
+      </Sheet>
+    </View>
   );
 }
