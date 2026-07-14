@@ -85,7 +85,7 @@ export function ScannerOverlay({
       >
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="Cancel scanning"
+          accessibilityLabel="Back"
           onPress={onCancel}
           style={{
             width: touchTarget,
@@ -96,7 +96,7 @@ export function ScannerOverlay({
             justifyContent: 'center',
           }}
         >
-          <Ionicons name="close" size={24} color="#fff" />
+          <Ionicons name="arrow-back" size={24} color="#fff" />
         </Pressable>
         {torchSupported ? (
           <Pressable

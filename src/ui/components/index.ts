@@ -11,6 +11,7 @@ export { MealLogList } from './MealLogList';
 export { NumberField } from './NumberField';
 export { ProgressRing } from './ProgressRing';
 export { Screen } from './Screen';
+export { ScreenHeader } from './ScreenHeader';
 export { SectionHeader } from './SectionHeader';
 export { SegmentedControl } from './SegmentedControl';
 export { Sheet } from './Sheet';
