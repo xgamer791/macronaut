@@ -94,7 +94,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
   },
   centered: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     justifyContent: 'center',
   },
 });
