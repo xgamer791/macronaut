@@ -40,6 +40,8 @@ interface LoadedFood {
   info: FoodPortionInfo;
   source: 'usda' | 'off' | 'local' | 'custom';
   sourceLabel: string;
+  /** Exact source record description (attribution). */
+  sourceDetail?: string;
   flagged?: boolean;
   favorite: boolean;
   barcode?: string;
@@ -86,13 +88,16 @@ export default function FoodDetailScreen() {
         };
       }
       if (provider === 'local') {
-        const gf = (await import('@/services/food/genericFoods')).getGenericFood(id);
-        if (!gf) return null;
+        const mod = await import('@/services/food/genericFoods');
+        const gf = mod.getGenericFood(id);
+        const rec = mod.getGenericFoodRecord(id);
+        if (!gf || !rec) return null;
         return {
           key: `local:${gf.id}`,
           name: gf.name,
           source: 'local',
-          sourceLabel: 'Standard reference food',
+          sourceLabel: `USDA SR Legacy · FDC ${rec.fdcId}`,
+          sourceDetail: rec.srDescription,
           favorite: await food.isFavorite(`local:${gf.id}`),
           info: {
             nutritionPerServing: gf.nutritionPerServing!,
@@ -254,6 +259,11 @@ export default function FoodDetailScreen() {
           <AppText variant="caption" tone="secondary">
             {[f.brand, f.sourceLabel].filter(Boolean).join(' · ')}
           </AppText>
+          {f.sourceDetail ? (
+            <AppText variant="micro" tone="muted">
+              {f.sourceDetail}
+            </AppText>
+          ) : null}
           {edited ? (
             <AppText variant="micro" tone="accent">
               Edited nutrition (not from the database)
