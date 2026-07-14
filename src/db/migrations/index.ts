@@ -5,6 +5,7 @@ import * as m003 from './003_food_confidence';
 import * as m004 from './004_food_engine';
 import * as m005 from './005_meal_categories_four';
 import * as m006 from './006_activity_entries';
+import * as m007 from './007_day_notes';
 
 export interface Migration {
   version: number;
@@ -21,6 +22,7 @@ export const migrations: Migration[] = [
   { version: 4, name: 'food_engine', up: m004.up },
   { version: 5, name: 'meal_categories_four', up: m005.up },
   { version: 6, name: 'activity_entries', up: m006.up },
+  { version: 7, name: 'day_notes', up: m007.up },
 ];
 
 export async function migrate(db: Database, list: Migration[] = migrations): Promise<number> {

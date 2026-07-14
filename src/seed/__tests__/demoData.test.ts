@@ -1,5 +1,6 @@
 import { createTestDb } from '@/db/__tests__/testDb';
 import { createActivityRepo } from '@/repositories/activityRepo';
+import { createDayNotesRepo } from '@/repositories/dayNotesRepo';
 import { createDiaryRepo } from '@/repositories/diaryRepo';
 import { createFoodRepo } from '@/repositories/foodRepo';
 import { createGoalRepo } from '@/repositories/goalRepo';
@@ -17,6 +18,7 @@ describe('demo data', () => {
       db,
       diary: createDiaryRepo(db),
       activity: createActivityRepo(db),
+      dayNotes: createDayNotesRepo(db),
       food: createFoodRepo(db),
       goals: createGoalRepo(db),
       savedMeals: createSavedMealRepo(db),

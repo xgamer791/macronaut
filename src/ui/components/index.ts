@@ -27,3 +27,7 @@ export { BarcodeScanSheet } from './BarcodeScanSheet';
 export { ScannerOverlay } from './ScannerOverlay';
 export { ScannerView } from './ScannerView';
 export { BarEntranceProvider } from '@/ui/motion/barEntrance';
+export { LiquidGlassCard } from './LiquidGlassCard';
+export { GlassPopup } from './GlassPopup';
+export { DayNotesPopup } from './DayNotesPopup';
+export { DayInfoPopup } from './DayInfoPopup';

@@ -15,6 +15,8 @@ export const keys = {
   diaryRange: (from: DayKey, to: DayKey) => ['diary-range', from, to] as const,
   activity: (date: DayKey) => ['activity', date] as const,
   activityRange: (from: DayKey, to: DayKey) => ['activity-range', from, to] as const,
+  dayNote: (date: DayKey) => ['day-note', date] as const,
+  dayNotesRange: (from: DayKey, to: DayKey) => ['day-notes-range', from, to] as const,
   goals: ['goals'] as const,
   marks: ['marks'] as const,
   setting: (key: string) => ['setting', key] as const,
@@ -43,6 +45,31 @@ export function useInvalidateActivity() {
     qc.invalidateQueries({ queryKey: ['activity'] });
     qc.invalidateQueries({ queryKey: ['activity-range'] });
   };
+}
+
+export function useDayNote(date: DayKey) {
+  const { dayNotes } = useRepos();
+  return useQuery({ queryKey: keys.dayNote(date), queryFn: () => dayNotes.get(date) });
+}
+
+export function useDayNotesRange(from: DayKey, to: DayKey) {
+  const { dayNotes } = useRepos();
+  return useQuery({
+    queryKey: keys.dayNotesRange(from, to),
+    queryFn: () => dayNotes.datesWithNotes(from, to),
+  });
+}
+
+export function useSetDayNote() {
+  const { dayNotes } = useRepos();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { date: DayKey; body: string }) => dayNotes.set(input.date, input.body),
+    onSuccess: (_data, vars) => {
+      qc.invalidateQueries({ queryKey: keys.dayNote(vars.date) });
+      qc.invalidateQueries({ queryKey: ['day-notes-range'] });
+    },
+  });
 }
 
 export function useDiaryEntries(date: DayKey) {
