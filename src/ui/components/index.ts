@@ -26,3 +26,4 @@ export { BarChart } from './BarChart';
 export { BarcodeScanSheet } from './BarcodeScanSheet';
 export { ScannerOverlay } from './ScannerOverlay';
 export { ScannerView } from './ScannerView';
+export { BarEntranceProvider } from '@/ui/motion/barEntrance';

@@ -5,18 +5,29 @@ import { caloriesFromMacros } from '@/domain/nutrition';
 import { useWeekProgress, useWeekStart } from '@/state/queries';
 import { DayKey, formatDayKey, isValidDayKey, todayKey, weekStartOf } from '@/utils/date';
 import { goBackOrHome } from '@/utils/navigation';
-import { AppText, Button, Card, Screen, ScreenHeader, StatTile } from '@/ui/components';
+import { AppText, Button, Card, BarEntranceProvider, Screen, ScreenHeader, StatTile } from '@/ui/components';
+import { useBarEntranceProgress } from '@/ui/motion/barEntrance';
 import { useTheme } from '@/ui/theme/ThemeProvider';
 import { spacing } from '@/ui/theme/tokens';
+import Animated, { useAnimatedStyle } from 'react-native-reanimated';
 
 /** Weekly goal detail: weekly target vs consumed, daily breakdown, macro
  * distribution and adherence. Values never roll between weeks. */
 export default function WeekDetailScreen() {
   const params = useLocalSearchParams<{ date?: string }>();
+  const date: DayKey = params.date && isValidDayKey(params.date) ? params.date : todayKey();
+
+  return (
+    <BarEntranceProvider pageKey={`week-detail:${date}`}>
+      <WeekDetailBody date={date} />
+    </BarEntranceProvider>
+  );
+}
+
+function WeekDetailBody({ date }: { date: DayKey }) {
   const router = useRouter();
   const { colors } = useTheme();
   const weekStart = useWeekStart();
-  const date: DayKey = params.date && isValidDayKey(params.date) ? params.date : todayKey();
   const week = useWeekProgress(date);
 
   if (!week) {
@@ -94,11 +105,7 @@ export default function WeekDetailScreen() {
           <AppText variant="caption" tone="secondary">
             Macro distribution (share of calories)
           </AppText>
-          <View style={{ flexDirection: 'row', height: 10, borderRadius: 5, overflow: 'hidden' }}>
-            <View style={{ flex: dist.p, backgroundColor: colors.protein }} />
-            <View style={{ flex: dist.c, backgroundColor: colors.carbs }} />
-            <View style={{ flex: dist.f, backgroundColor: colors.fat }} />
-          </View>
+          <MacroDistBar dist={dist} colors={colors} />
           <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
             <AppText variant="micro" tone="secondary">
               ● Protein {Math.round(dist.p * 100)}%
@@ -138,5 +145,39 @@ export default function WeekDetailScreen() {
 
       <Button title="Done" variant="secondary" onPress={() => goBackOrHome(router)} />
     </Screen>
+  );
+}
+
+function MacroDistBar({
+  dist,
+  colors,
+}: {
+  dist: { p: number; c: number; f: number };
+  colors: { protein: string; carbs: string; fat: string };
+}) {
+  const entrance = useBarEntranceProgress();
+  const style = useAnimatedStyle(() => ({
+    transform: [{ scaleX: entrance.value }],
+  }));
+
+  return (
+    <View style={{ height: 10, borderRadius: 5, overflow: 'hidden' }}>
+      <Animated.View
+        style={[
+          {
+            flexDirection: 'row',
+            height: '100%',
+            width: '100%',
+            alignSelf: 'flex-start',
+            transformOrigin: 'left center' as const,
+          },
+          style,
+        ]}
+      >
+        <View style={{ flex: dist.p, backgroundColor: colors.protein }} />
+        <View style={{ flex: dist.c, backgroundColor: colors.carbs }} />
+        <View style={{ flex: dist.f, backgroundColor: colors.fat }} />
+      </Animated.View>
+    </View>
   );
 }

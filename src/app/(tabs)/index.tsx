@@ -1,6 +1,7 @@
 import { useRouter } from 'expo-router';
 import React from 'react';
 import { Pressable, View } from 'react-native';
+import Animated, { useAnimatedStyle } from 'react-native-reanimated';
 import { roundForDisplay } from '@/domain/nutrition';
 import {
   useActivityEntries,
@@ -14,6 +15,7 @@ import { formatDayKey } from '@/utils/date';
 import {
   ActivityLogList,
   AppText,
+  BarEntranceProvider,
   Card,
   DashboardHeader,
   MacroSummary,
@@ -22,11 +24,20 @@ import {
   Screen,
   SectionHeader,
 } from '@/ui/components';
+import { useBarEntranceProgress } from '@/ui/motion/barEntrance';
 import { useTheme } from '@/ui/theme/ThemeProvider';
 import { spacing } from '@/ui/theme/tokens';
 import { ActivityType } from '@/repositories/types';
 
 export default function TodayScreen() {
+  return (
+    <BarEntranceProvider pageKey="today">
+      <TodayBody />
+    </BarEntranceProvider>
+  );
+}
+
+function TodayBody() {
   const router = useRouter();
   const { colors } = useTheme();
   const date = useUiStore((s) => s.selectedDate);
@@ -137,21 +148,19 @@ export default function TodayScreen() {
             {week.days.map((d) => {
               const ratio = d.target.calories > 0 ? d.netCalories / d.target.calories : 0;
               const isSelected = d.date === date;
+              const barHeight = Math.max(Math.min(Math.max(ratio, 0), 1.2) * 44, 3);
               return (
                 <View key={d.date} style={{ flex: 1, alignItems: 'center', gap: 3 }}>
-                  <View
-                    accessible
-                    accessibilityLabel={`${formatDayKey(d.date)}: ${Math.round(d.consumed.calories)} food, ${Math.round(d.burned)} burned, of ${Math.round(d.target.calories)} calories`}
-                    style={{
-                      width: '100%',
-                      height: Math.max(Math.min(Math.max(ratio, 0), 1.2) * 44, 3),
-                      borderRadius: 3,
-                      backgroundColor: d.overCalories
+                  <WeekMiniBar
+                    height={barHeight}
+                    color={
+                      d.overCalories
                         ? colors.danger
                         : d.consumed.calories > 0 || d.burned > 0
                           ? colors.accent
-                          : colors.track,
-                    }}
+                          : colors.track
+                    }
+                    accessibilityLabel={`${formatDayKey(d.date)}: ${Math.round(d.consumed.calories)} food, ${Math.round(d.burned)} burned, of ${Math.round(d.target.calories)} calories`}
                   />
                   <AppText
                     variant="micro"
@@ -235,6 +244,36 @@ export default function TodayScreen() {
         }}
       />
     </Screen>
+  );
+}
+
+function WeekMiniBar({
+  height,
+  color,
+  accessibilityLabel,
+}: {
+  height: number;
+  color: string;
+  accessibilityLabel: string;
+}) {
+  const entrance = useBarEntranceProgress();
+  const style = useAnimatedStyle(() => ({
+    height: Math.max(height * entrance.value, 1),
+  }));
+
+  return (
+    <Animated.View
+      accessible
+      accessibilityLabel={accessibilityLabel}
+      style={[
+        {
+          width: '100%',
+          borderRadius: 3,
+          backgroundColor: color,
+        },
+        style,
+      ]}
+    />
   );
 }
 

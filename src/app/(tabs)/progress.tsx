@@ -17,6 +17,7 @@ import {
 import {
   AppText,
   BarChart,
+  BarEntranceProvider,
   Button,
   Card,
   Chip,
@@ -40,6 +41,14 @@ const METRIC_LABEL: Record<Metric, string> = {
 };
 
 export default function ProgressScreen() {
+  return (
+    <BarEntranceProvider pageKey="progress">
+      <ProgressBody />
+    </BarEntranceProvider>
+  );
+}
+
+function ProgressBody() {
   const router = useRouter();
   const [range, setRange] = useState<Range>('7');
   const [metric, setMetric] = useState<Metric>('calories');

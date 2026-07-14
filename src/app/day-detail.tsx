@@ -5,15 +5,24 @@ import { roundForDisplay } from '@/domain/nutrition';
 import { useDayProgress } from '@/state/queries';
 import { DayKey, formatDayKey, isValidDayKey, todayKey } from '@/utils/date';
 import { goBackOrHome } from '@/utils/navigation';
-import { AppText, Button, Card, MacroBar, Screen, ScreenHeader } from '@/ui/components';
+import { AppText, Button, Card, MacroBar, BarEntranceProvider, Screen, ScreenHeader } from '@/ui/components';
 import { useTheme } from '@/ui/theme/ThemeProvider';
 
 /** Daily goal detail: consumed vs the targets in effect for one date. */
 export default function DayDetailScreen() {
   const params = useLocalSearchParams<{ date?: string }>();
+  const date: DayKey = params.date && isValidDayKey(params.date) ? params.date : todayKey();
+
+  return (
+    <BarEntranceProvider pageKey={`day-detail:${date}`}>
+      <DayDetailBody date={date} />
+    </BarEntranceProvider>
+  );
+}
+
+function DayDetailBody({ date }: { date: DayKey }) {
   const router = useRouter();
   const { colors } = useTheme();
-  const date: DayKey = params.date && isValidDayKey(params.date) ? params.date : todayKey();
   const progress = useDayProgress(date);
 
   if (!progress) {

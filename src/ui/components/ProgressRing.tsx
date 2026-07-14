@@ -1,7 +1,11 @@
 import React from 'react';
 import { View } from 'react-native';
+import Animated, { useAnimatedProps } from 'react-native-reanimated';
 import Svg, { Circle } from 'react-native-svg';
+import { useBarEntranceProgress } from '@/ui/motion/barEntrance';
 import { useTheme } from '@/ui/theme/ThemeProvider';
+
+const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
 export interface ProgressRingProps {
   /** 0..1 — values over 1 render a full ring in the over color. */
@@ -25,11 +29,17 @@ export function ProgressRing({
   accessibilityLabel,
 }: ProgressRingProps) {
   const { colors } = useTheme();
+  const entrance = useBarEntranceProgress();
   const over = progress > 1;
   const clamped = Math.min(Math.max(progress, 0), 1);
+  const targetFill = over ? 1 : clamped;
   const r = (size - strokeWidth) / 2;
   const c = 2 * Math.PI * r;
   const stroke = over ? (overColor ?? colors.warning) : (color ?? colors.accent);
+
+  const animatedProps = useAnimatedProps(() => ({
+    strokeDashoffset: c * (1 - targetFill * entrance.value),
+  }));
 
   return (
     <View
@@ -48,7 +58,7 @@ export function ProgressRing({
           strokeWidth={strokeWidth}
           fill="none"
         />
-        <Circle
+        <AnimatedCircle
           cx={size / 2}
           cy={size / 2}
           r={r}
@@ -57,7 +67,7 @@ export function ProgressRing({
           fill="none"
           strokeLinecap="round"
           strokeDasharray={`${c}`}
-          strokeDashoffset={c * (1 - (over ? 1 : clamped))}
+          animatedProps={animatedProps}
           transform={`rotate(-90 ${size / 2} ${size / 2})`}
         />
       </Svg>

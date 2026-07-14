@@ -1,7 +1,9 @@
 import { Ionicons } from '@expo/vector-icons';
 import React, { useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
+import Animated, { useAnimatedStyle } from 'react-native-reanimated';
 import { roundForDisplay } from '@/domain/nutrition';
+import { useBarEntranceProgress } from '@/ui/motion/barEntrance';
 import { useTheme } from '@/ui/theme/ThemeProvider';
 import { radius, spacing } from '@/ui/theme/tokens';
 import { AppText } from './AppText';
@@ -29,7 +31,12 @@ export interface MacroSummaryProps {
  */
 export function MacroSummary({ macros, unit = 'g' }: MacroSummaryProps) {
   const { colors } = useTheme();
+  const entrance = useBarEntranceProgress();
   const [showRemaining, setShowRemaining] = useState(false);
+
+  const fillStyle = useAnimatedStyle(() => ({
+    transform: [{ scaleX: entrance.value }],
+  }));
 
   return (
     <View
@@ -97,14 +104,14 @@ export function MacroSummary({ macros, unit = 'g' }: MacroSummaryProps) {
                   target !== undefined ? ` of ${roundForDisplay(target)}${unit}` : ''
                 }${over ? ', over target' : ''}${showRemaining ? ', showing remaining' : ''}`}
               >
-                <View
+                <Animated.View
                   style={[
                     styles.fill,
                     {
                       width: `${pct * 100}%`,
-                      // One calm accent for all macros — no warning/rainbow fills.
                       backgroundColor: colors.accent,
                     },
+                    fillStyle,
                   ]}
                 />
               </View>
@@ -159,5 +166,7 @@ const styles = StyleSheet.create({
   fill: {
     height: '100%',
     borderRadius: radius.full,
+    alignSelf: 'flex-start',
+    transformOrigin: 'left center',
   },
 });

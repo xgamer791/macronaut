@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { Pressable, View } from 'react-native';
+import Animated, { useAnimatedStyle } from 'react-native-reanimated';
 import Svg, { Line, Rect } from 'react-native-svg';
+import { useBarEntranceProgress } from '@/ui/motion/barEntrance';
 import { useTheme } from '@/ui/theme/ThemeProvider';
 import { radius, spacing } from '@/ui/theme/tokens';
 import { AppText } from './AppText';
@@ -23,6 +25,30 @@ export interface BarChartProps {
   accessibilityLabel: string;
   /** Show every nth x label to avoid collisions on dense ranges. */
   labelEvery?: number;
+}
+
+function EntranceBar({
+  height,
+  color,
+  opacity,
+}: {
+  height: number;
+  color: string;
+  opacity: number;
+}) {
+  const entrance = useBarEntranceProgress();
+  const style = useAnimatedStyle(() => ({
+    height: Math.max(height * entrance.value, height > 0 ? 0.5 : 0),
+    opacity,
+  }));
+
+  return (
+    <Animated.View style={[{ width: '100%', justifyContent: 'flex-end' }, style]}>
+      <Svg width="100%" height="100%">
+        <Rect x="0" y="0" width="100%" height="100%" rx={3} fill={color} />
+      </Svg>
+    </Animated.View>
+  );
 }
 
 /** Tappable SVG bar chart with goal line, over-target coloring, selection
@@ -85,6 +111,13 @@ export function BarChart({
           const h = Math.max((d.value / maxVal) * height, d.value > 0 ? 3 : 1);
           const over = d.goal !== undefined && d.goal > 0 && d.value > d.goal;
           const isSel = selected === d.key;
+          const color = over
+            ? colors.danger
+            : isSel
+              ? colors.textPrimary
+              : d.value > 0
+                ? colors.accent
+                : colors.track;
           return (
             <Pressable
               key={d.key}
@@ -93,25 +126,11 @@ export function BarChart({
               onPress={() => setSelected(isSel ? null : d.key)}
               style={{ flex: 1, height: '100%', justifyContent: 'flex-end' }}
             >
-              <Svg width="100%" height={h}>
-                <Rect
-                  x="0"
-                  y="0"
-                  width="100%"
-                  height={h}
-                  rx={3}
-                  fill={
-                    over
-                      ? colors.danger
-                      : isSel
-                        ? colors.textPrimary
-                        : d.value > 0
-                          ? colors.accent
-                          : colors.track
-                  }
-                  opacity={selected && !isSel ? 0.45 : 1}
-                />
-              </Svg>
+              <EntranceBar
+                height={h}
+                color={color}
+                opacity={selected && !isSel ? 0.45 : 1}
+              />
             </Pressable>
           );
         })}
