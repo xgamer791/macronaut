@@ -38,7 +38,7 @@ export default function DiaryScreen() {
   const router = useRouter();
   const { colors } = useTheme();
   const qc = useQueryClient();
-  const { diary, goals } = useRepos();
+  const { diary, goals, savedMeals } = useRepos();
   const invalidate = useInvalidateDiary();
 
   const date = useUiStore((s) => s.selectedDate);
@@ -251,6 +251,27 @@ export default function DiaryScreen() {
                     compact
                     variant="ghost"
                     onPress={() => setCopySource({ kind: 'meal', meal: cat.id })}
+                  />
+                  <Button
+                    title="Save as meal"
+                    compact
+                    variant="ghost"
+                    onPress={async () => {
+                      const created = await savedMeals.create({
+                        name: `${cat.name} · ${formatDayKey(date)}`,
+                        servings: 1,
+                        items: list.map((e) => ({
+                          name: e.name,
+                          quantity: e.quantity,
+                          unit: e.unit,
+                          nutrition: e.nutrition,
+                          sourceType: e.sourceType,
+                          sourceId: e.sourceId,
+                        })),
+                      });
+                      qc.invalidateQueries({ queryKey: ['saved-meals'] });
+                      router.push({ pathname: '/meal-editor', params: { id: created.id } });
+                    }}
                   />
                   <Button
                     title="Clear"

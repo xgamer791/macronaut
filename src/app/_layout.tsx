@@ -45,6 +45,11 @@ function ThemedApp() {
         <Stack.Screen name="add" options={{ presentation: 'modal' }} />
         <Stack.Screen name="manual-entry" options={{ presentation: 'modal' }} />
         <Stack.Screen name="goals" />
+        <Stack.Screen name="scan" options={{ presentation: 'modal' }} />
+        <Stack.Screen name="custom-food" options={{ presentation: 'modal' }} />
+        <Stack.Screen name="log-collection" options={{ presentation: 'modal' }} />
+        <Stack.Screen name="meal-editor" options={{ presentation: 'modal' }} />
+        <Stack.Screen name="recipe-editor" options={{ presentation: 'modal' }} />
       </Stack>
     </ThemeProvider>
   );
