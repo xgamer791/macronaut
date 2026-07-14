@@ -7,7 +7,11 @@ export interface DayProgress {
   date: DayKey;
   consumed: Nutrition;
   target: NutrientTargets;
-  /** calories remaining (target − consumed); negative = over. */
+  /** Exercise calories burned (manual / future Apple Watch). */
+  burned: number;
+  /** Food − exercise. */
+  netCalories: number;
+  /** calories remaining (target − food + burned); negative = over. */
   caloriesRemaining: number;
   overCalories: boolean;
 }
@@ -17,15 +21,20 @@ export function dayProgress(
   entries: Nutrition[],
   config: GoalConfig,
   marks: DayTypeMarks = {},
+  burned = 0,
 ): DayProgress {
   const consumed = sumNutrition(entries);
   const target = resolveTargetForDate(date, config, marks);
+  const safeBurned = Math.max(0, burned);
+  const netCalories = consumed.calories - safeBurned;
   return {
     date,
     consumed,
     target,
-    caloriesRemaining: target.calories - consumed.calories,
-    overCalories: consumed.calories > target.calories,
+    burned: safeBurned,
+    netCalories,
+    caloriesRemaining: target.calories - consumed.calories + safeBurned,
+    overCalories: netCalories > target.calories,
   };
 }
 
@@ -35,9 +44,10 @@ export interface WeekProgress {
    * daily targets. Never rolls between weeks. */
   weeklyTarget: NutrientTargets;
   weeklyConsumed: Nutrition;
+  weeklyBurned: number;
   weeklyRemaining: number;
   averagePerDay: Nutrition;
-  /** Days with any logged food that landed within the calorie target. */
+  /** Days with any logged food that landed within the calorie target (net). */
   daysOverCalories: number;
   daysUnderCalories: number;
   daysLogged: number;
@@ -55,8 +65,11 @@ export function weekProgress(
   entriesByDay: Record<DayKey, Nutrition[]>,
   config: GoalConfig,
   marks: DayTypeMarks = {},
+  burnedByDay: Record<DayKey, number> = {},
 ): WeekProgress {
-  const days = weekDates.map((d) => dayProgress(d, entriesByDay[d] ?? [], config, marks));
+  const days = weekDates.map((d) =>
+    dayProgress(d, entriesByDay[d] ?? [], config, marks, burnedByDay[d] ?? 0),
+  );
 
   const summedDailyTargets = sumNutrition(days.map((d) => d.target));
   const weeklyTarget =
@@ -65,7 +78,8 @@ export function weekProgress(
       : summedDailyTargets;
 
   const weeklyConsumed = sumNutrition(days.map((d) => d.consumed));
-  const logged = days.filter((d) => d.consumed.calories > 0);
+  const weeklyBurned = days.reduce((sum, d) => sum + d.burned, 0);
+  const logged = days.filter((d) => d.consumed.calories > 0 || d.burned > 0);
   const over = logged.filter((d) => d.overCalories).length;
 
   const averagePerDay =
@@ -85,7 +99,8 @@ export function weekProgress(
     days,
     weeklyTarget,
     weeklyConsumed,
-    weeklyRemaining: weeklyTarget.calories - weeklyConsumed.calories,
+    weeklyBurned,
+    weeklyRemaining: weeklyTarget.calories - weeklyConsumed.calories + weeklyBurned,
     averagePerDay,
     daysOverCalories: over,
     daysUnderCalories: logged.length - over,

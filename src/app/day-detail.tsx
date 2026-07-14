@@ -45,8 +45,8 @@ export default function DayDetailScreen() {
         Compared against the goal that was in effect on this date.
       </AppText>
 
-      <Card style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-        <View style={{ alignItems: 'center' }}>
+      <Card style={{ flexDirection: 'row', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
+        <View style={{ alignItems: 'center', minWidth: 72 }}>
           <AppText variant="micro" tone="muted">
             Consumed
           </AppText>
@@ -54,7 +54,15 @@ export default function DayDetailScreen() {
             {Math.round(progress.consumed.calories).toLocaleString()}
           </AppText>
         </View>
-        <View style={{ alignItems: 'center' }}>
+        <View style={{ alignItems: 'center', minWidth: 72 }}>
+          <AppText variant="micro" tone="muted">
+            Burned
+          </AppText>
+          <AppText variant="title" weight="600" display tone="accent">
+            {Math.round(progress.burned).toLocaleString()}
+          </AppText>
+        </View>
+        <View style={{ alignItems: 'center', minWidth: 72 }}>
           <AppText variant="micro" tone="muted">
             Goal
           </AppText>
@@ -62,7 +70,7 @@ export default function DayDetailScreen() {
             {Math.round(progress.target.calories).toLocaleString()}
           </AppText>
         </View>
-        <View style={{ alignItems: 'center' }}>
+        <View style={{ alignItems: 'center', minWidth: 72 }}>
           <AppText variant="micro" tone="muted">
             {over ? 'Over by' : 'Remaining'}
           </AppText>

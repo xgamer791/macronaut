@@ -2,6 +2,7 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { Database } from '@/db/driver';
 import { getDatabase } from '@/db';
 import { createDiaryRepo, DiaryRepo } from '@/repositories/diaryRepo';
+import { createActivityRepo, ActivityRepo } from '@/repositories/activityRepo';
 import { createFoodRepo, FoodRepo } from '@/repositories/foodRepo';
 import { createGoalRepo, GoalRepo } from '@/repositories/goalRepo';
 import {
@@ -16,6 +17,7 @@ import { createSettingsRepo, SettingsRepo } from '@/repositories/settingsRepo';
 export interface Repos {
   db: Database;
   diary: DiaryRepo;
+  activity: ActivityRepo;
   food: FoodRepo;
   goals: GoalRepo;
   savedMeals: SavedMealRepo;
@@ -44,6 +46,7 @@ export function AppProvider({
         setRepos({
           db,
           diary: createDiaryRepo(db),
+          activity: createActivityRepo(db),
           food: createFoodRepo(db),
           goals: createGoalRepo(db),
           savedMeals: createSavedMealRepo(db),

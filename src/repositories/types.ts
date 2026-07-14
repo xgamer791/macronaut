@@ -137,3 +137,29 @@ export interface HistoryItem {
   meal: string;
   loggedAt: string;
 }
+
+/** Workout taxonomy — kept stable for charts + future Apple Watch mapping. */
+export type ActivityType = 'cardio' | 'strength' | 'sports' | 'mobility' | 'other';
+
+export type ActivityIntensity = 'easy' | 'moderate' | 'hard';
+
+/** Where the workout came from. `apple_watch` / `healthkit` reserved for iOS. */
+export type ActivitySourceType = 'manual' | 'apple_watch' | 'healthkit';
+
+export interface ActivityEntry {
+  id: string;
+  date: DayKey;
+  name: string;
+  activityType: ActivityType;
+  /** Duration in minutes. */
+  durationMin?: number;
+  /** Distance in kilometers (cardio / sports). */
+  distanceKm?: number;
+  caloriesBurned: number;
+  intensity?: ActivityIntensity;
+  notes?: string;
+  sourceType: ActivitySourceType;
+  sourceId?: string;
+  createdAt: string;
+  updatedAt: string;
+}

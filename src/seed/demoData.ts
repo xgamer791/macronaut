@@ -6,7 +6,7 @@ import { addDays, todayKey } from '@/utils/date';
  * per-date day marks. Never loaded automatically — only via the guarded
  * Settings action. */
 export async function loadDemoData(repos: Repos): Promise<void> {
-  const { diary, food, savedMeals, recipes, goals, history, settings } = repos;
+  const { diary, activity, food, savedMeals, recipes, goals, history, settings } = repos;
   const today = todayKey();
 
   // Training/rest goal config effective three weeks back — so history shows
@@ -103,6 +103,20 @@ export async function loadDemoData(repos: Repos): Promise<void> {
     await history.recordLog(`custom:${customFood.id}`, customFood.name, 'breakfast');
     if (back % 3 === 0) await history.recordLog(`recipe:${recipe.id}`, recipe.name, 'lunch');
     if (back % 2 === 0) await history.recordLog(`meal:${meal.id}`, meal.name, 'breakfast');
+
+    // Workouts on most days so Activity charts have signal in demo mode.
+    if (back % 2 === 0) {
+      await activity.add({
+        date,
+        name: back % 4 === 0 ? '5k run' : 'Weight training',
+        activityType: back % 4 === 0 ? 'cardio' : 'strength',
+        durationMin: back % 4 === 0 ? 28 + (back % 5) : 40 + (back % 7),
+        distanceKm: back % 4 === 0 ? 5 : undefined,
+        caloriesBurned: back % 4 === 0 ? 290 + back * 3 : 210 + back * 2,
+        intensity: back % 4 === 0 ? 'moderate' : 'hard',
+        sourceType: 'manual',
+      });
+    }
   }
 
   await settings.set('demoDataLoaded', true);

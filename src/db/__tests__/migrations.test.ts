@@ -25,6 +25,7 @@ describe('migration runner', () => {
       'custom_foods',
       'cached_foods',
       'diary_entries',
+      'activity_entries',
       'saved_meals',
       'saved_meal_items',
       'recipes',
