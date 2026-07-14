@@ -13,7 +13,8 @@ export interface MacroColumn {
   label: string;
   consumed: number;
   target?: number;
-  color: string;
+  /** @deprecated Bars always use the app accent; kept optional for call-site compat. */
+  color?: string;
 }
 
 export interface MacroSummaryProps {
@@ -101,7 +102,8 @@ export function MacroSummary({ macros, unit = 'g' }: MacroSummaryProps) {
                     styles.fill,
                     {
                       width: `${pct * 100}%`,
-                      backgroundColor: over ? colors.danger : macro.color,
+                      // One calm accent for all macros — no warning/rainbow fills.
+                      backgroundColor: colors.accent,
                     },
                   ]}
                 />
