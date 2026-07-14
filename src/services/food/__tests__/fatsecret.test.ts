@@ -12,7 +12,7 @@ afterEach(() => {
 });
 
 function mockFetchSequence(
-  handlers: Array<(url: string, init?: RequestInit) => { status?: number; body: unknown }>,
+  handlers: ((url: string, init?: RequestInit) => { status?: number; body: unknown })[],
 ) {
   let i = 0;
   global.fetch = jest.fn(async (input: RequestInfo | URL, init?: RequestInit) => {

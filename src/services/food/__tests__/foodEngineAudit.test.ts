@@ -15,13 +15,11 @@ import {
 } from '../confidence';
 import { resolveConflicts } from '../conflict';
 import { createFoodSearchService } from '../foodSearchService';
-import { dedupeByIdentity, groupRankedFoods } from '../grouping';
+import { dedupeByIdentity } from '../grouping';
 import { mergeBestImage } from '../merge';
 import { normalizeFood } from '../normalize';
 import { validateNutrition } from '../nutritionValidation';
 import { offProvider } from '../openFoodFacts';
-import { detectPreparationState } from '../preparation';
-import { rankFoods } from '../ranking';
 import { searchRestaurantFoods } from '../restaurantFoods';
 import { searchGenericFoods } from '../genericFoods';
 import { FoodProvider, ProviderFood, confidenceLevelFromScore } from '../types';
@@ -34,7 +32,6 @@ const results: { name: string; pass: boolean; evidence: string }[] = [];
 function check(name: string, pass: boolean, evidence: string) {
   results.push({ name, pass, evidence });
   const tag = pass ? 'PASS' : 'FAIL';
-  // eslint-disable-next-line no-console
   console.log(`[${tag}] ${name} — ${evidence}`);
   if (!pass) throw new Error(`AUDIT FAIL: ${name} — ${evidence}`);
 }
