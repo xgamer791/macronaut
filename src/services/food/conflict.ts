@@ -28,6 +28,7 @@ const CATEGORY_PRIORITY: Record<FoodCategory, number> = {
 
 /** Provider preference within a category (higher wins). */
 const PROVIDER_PRIORITY: Record<ProviderId, number> = {
+  custom: 7, // user's own food wins barcode/identity conflicts for them
   local: 6,
   restaurant: 5,
   usda: 4,
@@ -38,6 +39,7 @@ const PROVIDER_PRIORITY: Record<ProviderId, number> = {
 
 function inferCategory(food: ProviderFood): FoodCategory {
   if (food.category) return food.category;
+  if (food.provider === 'custom') return 'custom';
   if (food.provider === 'restaurant' || food.restaurant) return 'restaurant';
   if (food.provider === 'local' || food.isGeneric) return 'generic';
   if (food.brand || food.barcode || food.provider === 'off' || food.provider === 'nutritionix') {

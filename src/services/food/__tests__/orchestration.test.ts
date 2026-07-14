@@ -85,6 +85,33 @@ describe('foodSearchService orchestration', () => {
     expect(res.lowConfidence).toBe(false);
   });
 
+  it('includes user-submitted custom foods in My Foods group', async () => {
+    const repo = createFoodRepo(await createTestDb());
+    const created = await repo.addCustomFood({
+      name: 'Gym Protein Shake',
+      brand: 'Homemade',
+      barcode: '0123456789012',
+      servingQty: 1,
+      servingUnit: 'serving',
+      gramsPerServing: 350,
+      nutrition: { calories: 220, protein: 40, carbs: 8, fat: 3 },
+      favorite: true,
+    });
+    const svc = createFoodSearchService(repo, [
+      stub('usda'),
+      stub('off'),
+      stub('nutritionix'),
+      stub('fatsecret'),
+    ]);
+    const res = await svc.search('protein shake');
+    expect(res.groups.myFoods.some((f) => f.id === created.id)).toBe(true);
+    expect(res.foods.some((f) => f.provider === 'custom' && f.id === created.id)).toBe(true);
+
+    const byCode = await svc.lookupBarcode('0123456789012');
+    expect(byCode.custom).toBe(created.id);
+    expect(byCode.autoSelected).toBe(true);
+  });
+
   it('prefetchLikely returns bundled hits without network providers', async () => {
     const repo = createFoodRepo(await createTestDb());
     const svc = createFoodSearchService(repo, []);

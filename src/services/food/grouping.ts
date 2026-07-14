@@ -15,6 +15,7 @@ export interface GroupedFoods {
 
 function inferCategory(food: ProviderFood): FoodCategory {
   if (food.category) return food.category;
+  if (food.provider === 'custom') return 'custom';
   if (food.provider === 'restaurant' || food.restaurant) return 'restaurant';
   if (food.provider === 'local' || (food.isGeneric && food.provider === 'usda')) return 'generic';
   if (food.provider === 'usda' && food.isGeneric) return 'generic';

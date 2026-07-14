@@ -14,6 +14,12 @@ describe('detectPreparationState', () => {
     expect(detectPreparationState('Ground beef, pan-browned')).toBe('pan_browned');
   });
 
+  it('detects raw even when skinless is also present', () => {
+    expect(detectPreparationState('Chicken breast, skinless boneless, raw')).toBe('raw');
+    // "braised" is in the boiled/moist-heat family (still cooked, never raw).
+    expect(detectPreparationState('Chicken breast, skinless boneless, cooked (braised)')).toBe('boiled');
+  });
+
   it('detects drained / skin variants / lean ratios', () => {
     expect(detectPreparationState('Tuna, canned, drained')).toBe('drained');
     expect(detectPreparationState('Chicken thigh, skinless')).toBe('skinless');

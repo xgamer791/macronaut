@@ -16,18 +16,23 @@ const RAW_STATES: ReadonlySet<PreparationState> = new Set(['raw']);
 const MEAT_PATTERN =
   /\b(chicken|beef|pork|turkey|lamb|veal|duck|goose|bison|venison|steak|chop|loin|brisket|ribs?|wing|thigh|drumstick|breast|ground\s*(beef|turkey|pork|chicken)|hamburger|sausage|bacon|ham|meat|fish|salmon|tuna|cod|tilapia|shrimp|prawn|crab|lobster|scallop|seafood)\b/i;
 
-const PREP_PATTERNS: { state: PreparationState; re: RegExp }[] = [
+/** Cooking / form cues — checked before orthogonal skin attributes so
+ * "skinless boneless, raw" resolves to raw (never skinless alone). */
+const COOKING_PREP_PATTERNS: { state: PreparationState; re: RegExp }[] = [
   { state: 'ground_beef_ratio', re: /\b\d{2}\s*%\s*lean\b|\b(80|85|90|93|95)\s*\/\s*(20|15|10|7|5)\b|\blean\s*\/\s*fat\b/i },
   { state: 'lean_percent', re: /\b\d{2}\s*%\s*lean\b|\blean\b/i },
   { state: 'pan_browned', re: /\bpan[- ]?browned\b|\bbrowned\b|\bpan[- ]?fried\b/i },
   { state: 'grilled', re: /\bgrilled\b|\bbroiled\b/i },
   { state: 'roasted', re: /\broasted\b|\bbaked\b/i },
-  { state: 'boiled', re: /\bboiled\b|\bpoached\b|\bstewed\b|\bsimmered\b/i },
+  { state: 'boiled', re: /\bboiled\b|\bpoached\b|\bstewed\b|\bsimmered\b|\bbraised\b/i },
   { state: 'drained', re: /\bdrained\b|\bcanned.*drained\b/i },
-  { state: 'skinless', re: /\bskinless\b|\bwithout\s+skin\b|\bno\s+skin\b/i },
-  { state: 'skin_on', re: /\bskin[- ]?on\b|\bwith\s+skin\b|\bskin\b(?!\s*less)/i },
   { state: 'raw', re: /\braw\b|\buncooked\b|\bfresh\b(?!.*cook)/i },
   { state: 'cooked', re: /\bcooked\b|\bprepared\b|\bheat(?:ed)?\b/i },
+];
+
+const SKIN_PREP_PATTERNS: { state: PreparationState; re: RegExp }[] = [
+  { state: 'skinless', re: /\bskinless\b|\bwithout\s+skin\b|\bno\s+skin\b/i },
+  { state: 'skin_on', re: /\bskin[- ]?on\b|\bwith\s+skin\b|\bskin\b(?!\s*less)/i },
 ];
 
 /** True when the text looks like a meat / seafood item. */
@@ -35,11 +40,16 @@ export function isMeatLike(text: string): boolean {
   return MEAT_PATTERN.test(text);
 }
 
-/** Detect preparation state from a food name or search query. */
+/** Detect preparation state from a food name or search query.
+ * Cooking state (raw/cooked/grilled/…) wins over skinless/skin-on so meat
+ * prep filtering never confuses "skinless, raw" with a soft skin-only match. */
 export function detectPreparationState(text: string): PreparationState {
   const t = text.trim();
   if (!t) return 'unknown';
-  for (const { state, re } of PREP_PATTERNS) {
+  for (const { state, re } of COOKING_PREP_PATTERNS) {
+    if (re.test(t)) return state;
+  }
+  for (const { state, re } of SKIN_PREP_PATTERNS) {
     if (re.test(t)) return state;
   }
   return 'unknown';
@@ -96,10 +106,15 @@ export function preparationMatches(
       return queryState === foodState;
     }
     if (queryState === 'skin_on' || queryState === 'skinless') {
-      return !isRawFamily(foodState) || queryState === foodState;
+      // Skin-only query: allow foods that are also skin-tagged or have a
+      // cooking state (raw↔cooked already rejected above).
+      if (isCookedFamily(foodState) || isRawFamily(foodState)) return true;
+      return queryState === foodState;
     }
     if (foodState === 'skin_on' || foodState === 'skinless') {
-      return true; // query cooked/raw can still match skin variants of same family
+      // Skin-only food label with no cooking cue: allow; cooking cues are
+      // detected first in detectPreparationState so this is the rare fallback.
+      return true;
     }
     if (queryState === 'drained' || foodState === 'drained') {
       return queryState === foodState;

@@ -1,7 +1,15 @@
 import { Nutrition } from '@/domain/types';
 
-/** Provider identifiers. 'local' = bundled generic-foods dataset (no network). */
-export type ProviderId = 'usda' | 'off' | 'local' | 'nutritionix' | 'fatsecret' | 'restaurant';
+/** Provider identifiers. 'local' = bundled generic-foods dataset (no network).
+ * 'custom' = user-submitted / My Foods (persisted in custom_foods). */
+export type ProviderId =
+  | 'usda'
+  | 'off'
+  | 'local'
+  | 'nutritionix'
+  | 'fatsecret'
+  | 'restaurant'
+  | 'custom';
 
 /** Confidence band derived from a 0..1 score. */
 export type ConfidenceLevel = 'verified' | 'high' | 'review' | 'low';

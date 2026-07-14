@@ -145,10 +145,14 @@ export function rankScore(food: ProviderFood, ctx: RankContext = {}): RankedFood
     }
   }
 
-  // Penalties
+  // Penalties — crowd / user-submitted data sits below lab-verified sources.
   if (food.provider === 'off' && !food.verified) {
     score -= 0.05;
     reasons.push('user-submitted source');
+  }
+  if (food.provider === 'custom' || food.category === 'custom') {
+    score -= 0.04;
+    reasons.push('user-submitted My Food');
   }
   if (macrosInconsistent(panel)) {
     score -= 0.15;

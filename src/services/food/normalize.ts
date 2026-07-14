@@ -52,6 +52,7 @@ const SOURCE_LABEL: Record<ProviderId, string> = {
   nutritionix: 'Nutritionix',
   fatsecret: 'FatSecret',
   restaurant: 'Restaurant menu',
+  custom: 'My Foods',
 };
 
 /** Resolve the per-serving panel a food should display, correctly handling
@@ -124,13 +125,15 @@ export function normalizeFood(
     dataType: raw.dataType,
     category:
       raw.category ??
-      (raw.restaurant || raw.provider === 'restaurant'
-        ? 'restaurant'
-        : raw.isGeneric || raw.provider === 'local'
-          ? 'generic'
-          : raw.brand || raw.barcode
-            ? 'packaged'
-            : undefined),
+      (raw.provider === 'custom'
+        ? 'custom'
+        : raw.restaurant || raw.provider === 'restaurant'
+          ? 'restaurant'
+          : raw.isGeneric || raw.provider === 'local'
+            ? 'generic'
+            : raw.brand || raw.barcode
+              ? 'packaged'
+              : undefined),
     validation,
     sourceLabel: raw.restaurant
       ? `${SOURCE_LABEL[raw.provider]} · ${raw.restaurant}`

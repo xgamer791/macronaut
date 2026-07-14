@@ -1,5 +1,5 @@
 import { FoodRepo } from '@/repositories/foodRepo';
-import { CachedFood } from '@/repositories/types';
+import { CachedFood, CustomFood } from '@/repositories/types';
 import { AUTO_SELECT_CONFIDENCE, confidenceLevel, LOW_CONFIDENCE, scoreConfidence } from './confidence';
 import { resolveConflicts } from './conflict';
 import { fatsecretProvider } from './fatsecret';
@@ -104,6 +104,29 @@ function cachedToProvider(cached: CachedFood): ProviderFood {
   };
 }
 
+/** Map a persisted custom food into the shared ProviderFood shape for ranking
+ * and the My Foods search section. */
+export function customFoodToProvider(food: CustomFood): ProviderFood {
+  return {
+    provider: 'custom',
+    id: food.id,
+    name: food.name,
+    brand: food.brand,
+    barcode: food.barcode,
+    imageUrl: food.imageUrl,
+    isGeneric: false,
+    category: 'custom',
+    nutritionPerServing: food.nutrition,
+    gramsPerServing: food.gramsPerServing,
+    servingLabel:
+      food.servingQty === 1
+        ? String(food.servingUnit)
+        : `${food.servingQty} ${food.servingUnit}`,
+    verified: false,
+    lastVerified: food.updatedAt,
+  };
+}
+
 function normalizeRaw(raw: ProviderFood): NormalizedFood {
   return normalizeFood(raw, {
     servingSize: raw.servingLabel,
@@ -125,6 +148,8 @@ export function createFoodSearchService(
   async function cache(foods: ProviderFood[]): Promise<void> {
     const now = new Date().toISOString();
     for (const f of foods) {
+      // Custom foods live in custom_foods — never duplicate into provider cache.
+      if (f.provider === 'custom') continue;
       const record: CachedFood = {
         provider: f.provider,
         providerId: f.id,
@@ -253,13 +278,17 @@ export function createFoodSearchService(
         };
       }
 
-      // 1) Local cache (normalized DB) — prioritize previously seen foods.
+      // 1) User-submitted My Foods — always search the local custom_foods table.
+      const customRows = await foodRepo.listCustomFoods(q).catch(() => [] as CustomFood[]);
+      const fromCustom = customRows.map((c) => normalizeRaw(customFoodToProvider(c)));
+
+      // 2) Local cache (normalized DB) — prioritize previously seen provider foods.
       const cachedRows = await foodRepo.searchCached(q, 15).catch(() => [] as CachedFood[]);
       const fromCache = cachedRows
-        .filter((c) => !c.flagged)
+        .filter((c) => !c.flagged && c.provider !== 'custom')
         .map((c) => normalizeRaw(cachedToProvider(c)));
 
-      // 2) Bundled generics + restaurant foods (instant, verified).
+      // 3) Bundled generics + restaurant foods (instant, verified).
       const bundled: NormalizedFood[] = [];
       if (opts.filter !== 'branded') {
         bundled.push(...searchGenericFoods(q).map(normalizeRaw));
@@ -268,7 +297,7 @@ export function createFoodSearchService(
         bundled.push(...searchRestaurantFoods(q).map(normalizeRaw));
       }
 
-      // 3) Parallel network providers.
+      // 4) Parallel network providers.
       const results = await Promise.allSettled(providers.map((p) => p.search(q, opts)));
       const remote: NormalizedFood[] = [];
       const failures: SearchResult['failures'] = [];
@@ -283,8 +312,8 @@ export function createFoodSearchService(
         }
       });
 
-      // 4) Normalize → prep filter → dedupe → conflict → rank → group.
-      let all = dedupeNormalized([...fromCache, ...bundled, ...remote]);
+      // 5) Normalize → prep filter → dedupe → conflict → rank → group.
+      let all = dedupeNormalized([...fromCustom, ...fromCache, ...bundled, ...remote]);
       all = filterPrep(all, q);
       const { foods, groups, autoSelected } = pipeline(all, { query: q });
 
@@ -294,7 +323,7 @@ export function createFoodSearchService(
         groups,
         autoSelected,
         failures,
-        // True when every network provider failed (bundled/cache may still return).
+        // True when every network provider failed (bundled/cache/custom may still return).
         allFailed: providers.length > 0 && failures.length === providers.length,
       };
     },
@@ -403,16 +432,21 @@ export function createFoodSearchService(
       };
     },
 
-    /** Lightweight prefetch for partial queries (cache + bundled only). */
+    /** Lightweight prefetch for partial queries (My Foods + cache + bundled). */
     async prefetchLikely(query: string): Promise<ProviderFood[]> {
       const q = query.trim();
       if (q.length < 2) return [];
+      const custom = await foodRepo.listCustomFoods(q).catch(() => [] as CustomFood[]);
       const cached = await foodRepo.searchCached(q, 8).catch(() => [] as CachedFood[]);
       const bundled = [
         ...searchGenericFoods(q, 5),
         ...searchRestaurantFoods(q, 5),
       ];
-      const foods = [...cached.filter((c) => !c.flagged).map(cachedToProvider), ...bundled];
+      const foods = [
+        ...custom.map(customFoodToProvider),
+        ...cached.filter((c) => !c.flagged && c.provider !== 'custom').map(cachedToProvider),
+        ...bundled,
+      ];
       const ranked = rankFoods(foods, { query: q });
       return ranked.slice(0, 12).map((r) => r.food);
     },

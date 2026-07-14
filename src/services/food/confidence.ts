@@ -36,6 +36,7 @@ export const SOURCE_TRUST: Record<ProviderId, number> = {
   usda: 0.85, // USDA FoodData Central
   nutritionix: 0.8, // Nutritionix licensed DB
   fatsecret: 0.78, // FatSecret platform
+  custom: 0.72, // user-submitted My Foods (known to user; not lab-verified)
   off: 0.5, // Open Food Facts (crowd-sourced)
 };
 

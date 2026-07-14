@@ -177,6 +177,23 @@ describe('data merging', () => {
     expect(imageFrom).toBe('off');
   });
 
+  it('prefers manufacturer-like URLs over Open Food Facts images', () => {
+    const mfr = normalizeFood({
+      provider: 'nutritionix',
+      id: 'n',
+      name: 'Egg Whites',
+      brand: 'Kirkland',
+      barcode: '096619833252',
+      isGeneric: false,
+      imageUrl: 'https://nix-cdn.example/media/egg-whites.png',
+      nutritionPerServing: { calories: 25, protein: 5 },
+      gramsPerServing: 46,
+    });
+    const { food, imageFrom } = mergeBestImage(base, [base, withImage, mfr]);
+    expect(food.imageUrl).toBe('https://nix-cdn.example/media/egg-whites.png');
+    expect(imageFrom).toBe('nutritionix');
+  });
+
   it('never borrows from an unrelated product', () => {
     const other = normalizeFood({ provider: 'off', id: 'z', name: 'Cola', brand: 'SodaCo', barcode: '111', isGeneric: false, imageUrl: 'https://img/c.jpg', nutritionPer100g: { calories: 42 } });
     const { food } = mergeBestImage(base, [base, other]);

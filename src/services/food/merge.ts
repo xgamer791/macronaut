@@ -19,19 +19,46 @@ function sameIdentity(a: NormalizedFood, b: NormalizedFood): boolean {
   return false;
 }
 
+/** Higher = more likely an official / manufacturer product shot. */
+export function imageUrlQuality(url: string | undefined): number {
+  if (!url) return -1;
+  const u = url.toLowerCase();
+  // Crowd-sourced OFF images are useful but weaker than manufacturer CDNs.
+  if (u.includes('openfoodfacts')) return 1;
+  if (/ferrero|nestle|kraft|pepsico|unilever|official/.test(u)) return 5;
+  if (u.includes('nutritionix') || u.includes('nix-cdn') || u.includes('fatsecret')) return 4;
+  if (u.includes('cloudinary') || u.includes('scene7') || u.includes('akamai')) return 3;
+  if (u.includes('cdn.') || u.includes('/media/') || u.includes('product')) return 3;
+  return 2;
+}
+
 /**
  * Given a chosen best-nutrition food and other candidates for the same scan,
- * borrow a product image from a same-identity candidate if the chosen one has
- * none. Returns the (possibly image-enriched) food plus a note when merged.
+ * borrow / upgrade a product image from a same-identity candidate.
+ * Prefers manufacturer-like URLs over crowd-sourced Open Food Facts images.
  */
 export function mergeBestImage(
   best: NormalizedFood,
   others: NormalizedFood[],
 ): { food: NormalizedFood; imageFrom?: string } {
-  if (best.imageUrl) return { food: best };
-  const donor = others.find((o) => o !== best && o.imageUrl && sameIdentity(best, o));
-  if (!donor) return { food: best };
-  return { food: { ...best, imageUrl: donor.imageUrl }, imageFrom: donor.provider };
+  const donors = others.filter((o) => o !== best && o.imageUrl && sameIdentity(best, o));
+  if (donors.length === 0) return { food: best };
+
+  const ranked = [...donors].sort(
+    (a, b) => imageUrlQuality(b.imageUrl) - imageUrlQuality(a.imageUrl),
+  );
+  const bestDonor = ranked[0];
+  const currentQ = imageUrlQuality(best.imageUrl);
+  const donorQ = imageUrlQuality(bestDonor.imageUrl);
+
+  // Keep existing image unless a clearly better (manufacturer-like) donor exists.
+  if (best.imageUrl && donorQ <= currentQ) return { food: best };
+  if (!bestDonor.imageUrl) return { food: best };
+
+  return {
+    food: { ...best, imageUrl: bestDonor.imageUrl },
+    imageFrom: bestDonor.provider,
+  };
 }
 
 /** True when two results independently agree on calories (±12%) — used to
