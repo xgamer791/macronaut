@@ -17,16 +17,15 @@ const TAB_META: Record<string, { label: string; icon: IconName; iconActive: Icon
   settings: { label: 'Settings', icon: 'settings-outline', iconActive: 'settings' },
 };
 
-/** Original FAB was 52px — grow the real diameter 20% (not a Y-translate fake). */
+/** Keep the enlarged Add Meal FAB (20% over the original 52px). */
 const FAB_SIZE = Math.round(52 * 1.2); // 62
 const FAB_ICON = Math.round(28 * 1.2); // 34
-/**
- * Previous incorrect lift used a 15px air gap above the bar. Double that as
- * cutout padding between the FAB edge and the nav-bar fill. Screen tabBarSpace
- * stays 96 — page content is not pushed upward.
- */
-const CUTOUT_GAP = 15 * 2; // 30
-const CUTOUT_SIZE = FAB_SIZE + CUTOUT_GAP * 2; // 122
+/** Exact air gap between FAB edge and nav-bar fill where they meet. */
+const CUTOUT_GAP = 10;
+/** Tight cradle diameter — only ~10px beyond the green button. */
+const CUTOUT_SIZE = FAB_SIZE + CUTOUT_GAP * 2; // 82
+/** How deep the U-notch dips into the bar (half-circle below the top edge). */
+const NOTCH_DEPTH = CUTOUT_SIZE / 2; // 41
 
 /** Bottom tab bar with a center Add FAB that opens the add-food hub. */
 export function TabBar({ state, navigation }: BottomTabBarProps) {
@@ -83,44 +82,32 @@ export function TabBar({ state, navigation }: BottomTabBarProps) {
         },
       ]}
     >
+      {/*
+        Shallow U-notch: a page-colored circle centered on the bar top, clipped
+        so only the portion inside the bar is visible. No halo above the bar.
+      */}
+      <View style={styles.notchClip} pointerEvents="none">
+        <View style={[styles.notchCircle, { backgroundColor: colors.background }]} />
+      </View>
+
       {left.map(renderTab)}
 
-      {/* flex:1 keeps Diary / Progress evenly spaced with the other tabs. */}
       <View style={styles.fabSlot} pointerEvents="box-none">
-        {/*
-          Shared anchor at the bar top (half the FAB above the edge — same
-          cradle idea as the original 52px / -22 button, scaled to size).
-          The floating air gap comes from the enlarged cutout, not from
-          translating the button further up into page content.
-        */}
-        <View style={styles.fabAnchor} pointerEvents="box-none">
-          <View
-            pointerEvents="none"
-            style={[
-              styles.cutout,
-              {
-                backgroundColor: colors.background,
-                borderColor: colors.border,
-              },
-            ]}
-          />
-
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Add food"
-            onPress={() => router.push('/add')}
-            style={({ pressed }) => [
-              styles.fab,
-              {
-                backgroundColor: colors.accent,
-                shadowColor: '#000',
-                transform: [{ scale: pressed ? 0.94 : 1 }],
-              },
-            ]}
-          >
-            <Ionicons name="add" size={FAB_ICON} color={colors.onAccent} />
-          </Pressable>
-        </View>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Add food"
+          onPress={() => router.push('/add')}
+          style={({ pressed }) => [
+            styles.fab,
+            {
+              backgroundColor: colors.accent,
+              shadowColor: '#000',
+              transform: [{ scale: pressed ? 0.94 : 1 }],
+            },
+          ]}
+        >
+          <Ionicons name="add" size={FAB_ICON} color={colors.onAccent} />
+        </Pressable>
       </View>
 
       {right.map(renderTab)}
@@ -137,6 +124,27 @@ const styles = StyleSheet.create({
     overflow: 'visible',
     zIndex: 20,
   },
+  /**
+   * Clips the cradle circle to the bar interior so the notch is a smooth U
+   * hugging the FAB — never a full dark disc floating over page content.
+   */
+  notchClip: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: NOTCH_DEPTH,
+    alignItems: 'center',
+    overflow: 'hidden',
+    zIndex: 1,
+  },
+  notchCircle: {
+    width: CUTOUT_SIZE,
+    height: CUTOUT_SIZE,
+    borderRadius: CUTOUT_SIZE / 2,
+    // Center on the bar top edge; upper half is clipped away by notchClip.
+    marginTop: -NOTCH_DEPTH,
+  },
   tab: {
     flex: 1,
     alignItems: 'center',
@@ -151,40 +159,19 @@ const styles = StyleSheet.create({
     overflow: 'visible',
     zIndex: 2,
   },
-  fabAnchor: {
-    width: FAB_SIZE,
-    height: FAB_SIZE,
-    alignItems: 'center',
-    justifyContent: 'center',
-    // Cradle on the bar top — do not add an extra upward air-gap translate.
-    marginTop: -(FAB_SIZE / 2),
-    overflow: 'visible',
-  },
-  /**
-   * Page-colored notch concentric with the FAB. CUTOUT_GAP (30) of air between
-   * the button edge and the nav-bar fill — larger cutout, same button Y.
-   */
-  cutout: {
-    position: 'absolute',
-    width: CUTOUT_SIZE,
-    height: CUTOUT_SIZE,
-    borderRadius: CUTOUT_SIZE / 2,
-    top: (FAB_SIZE - CUTOUT_SIZE) / 2,
-    left: (FAB_SIZE - CUTOUT_SIZE) / 2,
-    borderWidth: StyleSheet.hairlineWidth,
-    zIndex: 1,
-  },
   fab: {
     width: FAB_SIZE,
     height: FAB_SIZE,
     borderRadius: FAB_SIZE / 2,
     alignItems: 'center',
     justifyContent: 'center',
+    // Same cradle anchor as before — half above the bar top, not lifted further.
+    marginTop: -(FAB_SIZE / 2),
     zIndex: 2,
-    // Soft elevated shadow — larger blur, soft opacity, subtle downward offset
-    shadowOpacity: 0.28,
-    shadowRadius: 18,
-    shadowOffset: { width: 0, height: 10 },
-    elevation: 14,
+    // Soft shadow for float depth (replaces the old oversized dark halo).
+    shadowOpacity: 0.22,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 10,
   },
 });
