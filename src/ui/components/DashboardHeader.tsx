@@ -140,7 +140,22 @@ export function DashboardHeader({ date, onDateChange, right }: DashboardHeaderPr
   return (
     <View style={styles.root}>
       <View ref={titleRef} style={styles.titleRow} collapsable={false}>
-        <View style={styles.leftActions}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={`${title}. ${calendarOpen ? 'Close' : 'Open'} calendar`}
+          accessibilityHint="Shows a month calendar to pick a day"
+          accessibilityState={{ expanded: calendarOpen }}
+          onPress={toggleCalendar}
+          hitSlop={8}
+          style={styles.titlePress}
+        >
+          <AppText variant="title" weight="600" display style={styles.titleText} numberOfLines={1}>
+            {title}
+          </AppText>
+          <AnimatedChevron open={calendarOpen} color={colors.textPrimary} />
+        </Pressable>
+
+        <View style={styles.rightActions}>
           <Pressable
             accessibilityRole="button"
             accessibilityLabel={dayNote.data?.body ? 'Edit day notes' : 'Add day notes'}
@@ -165,29 +180,12 @@ export function DashboardHeader({ date, onDateChange, right }: DashboardHeaderPr
               router.push('/activity');
             }}
             hitSlop={6}
-            style={styles.activityLink}
+            style={styles.iconBtn}
           >
-            <AppText variant="caption" weight="600" tone="accent">
-              Activity
-            </AppText>
+            <Ionicons name="fitness-outline" size={22} color={colors.textPrimary} />
           </Pressable>
+          {right ? <View style={styles.right}>{right}</View> : null}
         </View>
-
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={`${title}. ${calendarOpen ? 'Close' : 'Open'} calendar`}
-          accessibilityHint="Shows a month calendar to pick a day"
-          accessibilityState={{ expanded: calendarOpen }}
-          onPress={toggleCalendar}
-          hitSlop={8}
-          style={styles.titlePress}
-        >
-          <AppText variant="title" weight="600" display style={styles.titleText} numberOfLines={1}>
-            {title}
-          </AppText>
-          <AnimatedChevron open={calendarOpen} color={colors.textPrimary} />
-        </Pressable>
-        {right ? <View style={styles.right}>{right}</View> : <View style={styles.rightSpacer} />}
       </View>
 
       {!isToday ? (
@@ -584,7 +582,7 @@ const styles = StyleSheet.create({
     minHeight: touchTarget,
     gap: spacing.sm,
   },
-  leftActions: {
+  rightActions: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.xs,
@@ -592,12 +590,6 @@ const styles = StyleSheet.create({
   iconBtn: {
     width: 40,
     height: touchTarget,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  activityLink: {
-    minHeight: touchTarget,
-    paddingHorizontal: spacing.xs,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -617,9 +609,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
-  },
-  rightSpacer: {
-    width: 8,
   },
   backToday: {
     alignSelf: 'flex-start',
