@@ -28,6 +28,7 @@ import {
   FoodImage,
   NumberField,
   Screen,
+  ScreenHeader,
   Sheet,
   TargetEditor,
 } from '@/ui/components';
@@ -265,37 +266,31 @@ export default function FoodDetailScreen() {
 
   return (
     <Screen>
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Back"
-          onPress={() => goBackOrHome(router)}
-          style={{ minWidth: touchTarget, minHeight: touchTarget, justifyContent: 'center' }}
-        >
-          <Ionicons name="chevron-back" size={24} color={colors.textPrimary} />
-        </Pressable>
-        <View style={{ flex: 1 }} />
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={f.favorite ? 'Remove favorite' : 'Add favorite'}
-          onPress={async () => {
-            if (f.source === 'custom') {
-              await food.setCustomFavorite(id, !f.favorite);
-            } else {
-              await food.setFavorite(f.key, !f.favorite);
-            }
-            qc.invalidateQueries({ queryKey: ['food-detail', provider, id] });
-            qc.invalidateQueries({ queryKey: keys.favorites });
-          }}
-          style={{ minWidth: touchTarget, minHeight: touchTarget, alignItems: 'center', justifyContent: 'center' }}
-        >
-          <Ionicons
-            name={f.favorite ? 'star' : 'star-outline'}
-            size={22}
-            color={f.favorite ? colors.warning : colors.textMuted}
-          />
-        </Pressable>
-      </View>
+      <ScreenHeader
+        title="Food"
+        right={
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={f.favorite ? 'Remove favorite' : 'Add favorite'}
+            onPress={async () => {
+              if (f.source === 'custom') {
+                await food.setCustomFavorite(id, !f.favorite);
+              } else {
+                await food.setFavorite(f.key, !f.favorite);
+              }
+              qc.invalidateQueries({ queryKey: ['food-detail', provider, id] });
+              qc.invalidateQueries({ queryKey: keys.favorites });
+            }}
+            style={{ minWidth: touchTarget, minHeight: touchTarget, alignItems: 'center', justifyContent: 'center' }}
+          >
+            <Ionicons
+              name={f.favorite ? 'star' : 'star-outline'}
+              size={22}
+              color={f.favorite ? colors.warning : colors.textMuted}
+            />
+          </Pressable>
+        }
+      />
 
       <View style={{ flexDirection: 'row', gap: spacing.md, alignItems: 'center' }}>
         <FoodImage uri={f.imageUrl} size={64} />

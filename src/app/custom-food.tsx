@@ -16,6 +16,7 @@ import {
   Chip,
   NumberField,
   Screen,
+  ScreenHeader,
   TargetEditor,
   TextField,
 } from '@/ui/components';
@@ -136,9 +137,7 @@ export default function CustomFoodScreen() {
 
   return (
     <Screen>
-      <AppText variant="title" weight="600" display>
-        {id ? 'Edit custom food' : 'New custom food'}
-      </AppText>
+      <ScreenHeader title={id ? 'Edit custom food' : 'New custom food'} />
 
       <TextField
         label="Name"

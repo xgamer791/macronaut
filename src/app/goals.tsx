@@ -1,4 +1,3 @@
-import { Ionicons } from '@expo/vector-icons';
 import { useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
 import React, { useMemo, useState } from 'react';
@@ -15,11 +14,11 @@ import {
   Card,
   Chip,
   Screen,
+  ScreenHeader,
   SegmentedControl,
   Sheet,
   TargetEditor,
 } from '@/ui/components';
-import { useTheme } from '@/ui/theme/ThemeProvider';
 import { spacing } from '@/ui/theme/tokens';
 
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -28,7 +27,6 @@ export default function GoalsScreen() {
   const router = useRouter();
   const { goals } = useRepos();
   const qc = useQueryClient();
-  const { colors } = useTheme();
   const configs = useGoalConfigs();
 
   const current: GoalConfig | null = useMemo(() => {
@@ -82,19 +80,7 @@ export default function GoalsScreen() {
 
   return (
     <Screen>
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Back"
-          onPress={() => goBackOrHome(router)}
-          style={{ minWidth: 44, minHeight: 44, justifyContent: 'center' }}
-        >
-          <Ionicons name="chevron-back" size={24} color={colors.textPrimary} />
-        </Pressable>
-        <AppText variant="title" weight="600" display>
-          Goals
-        </AppText>
-      </View>
+      <ScreenHeader title="Goals" />
 
       <Card>
         <AppText variant="caption" tone="secondary">

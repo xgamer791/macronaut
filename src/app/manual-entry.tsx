@@ -13,6 +13,7 @@ import {
   Card,
   NumberField,
   Screen,
+  ScreenHeader,
   Sheet,
   TextField,
 } from '@/ui/components';
@@ -100,9 +101,7 @@ export default function ManualEntryScreen() {
 
   return (
     <Screen>
-      <AppText variant="title" weight="600" display>
-        Quick add
-      </AppText>
+      <ScreenHeader title="Quick add" />
       <AppText variant="caption" tone="secondary">
         Logging to {mealName} · {formatDayKey(date)}
       </AppText>

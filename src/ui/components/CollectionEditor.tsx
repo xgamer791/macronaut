@@ -15,6 +15,7 @@ import { Card } from './Card';
 import { ListRow } from './ListRow';
 import { NumberField } from './NumberField';
 import { Screen } from './Screen';
+import { ScreenHeader } from './ScreenHeader';
 import { Sheet } from './Sheet';
 import { TextField } from './TextField';
 
@@ -145,9 +146,7 @@ export function CollectionEditor({ kind, id }: CollectionEditorProps) {
 
   return (
     <Screen>
-      <AppText variant="title" weight="600" display>
-        {id ? `Edit ${label}` : `New ${label}`}
-      </AppText>
+      <ScreenHeader title={id ? `Edit ${label}` : `New ${label}`} />
 
       <TextField
         label="Name"

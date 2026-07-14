@@ -11,7 +11,6 @@ import { useFoodSearch } from '@/state/foodSearch';
 import { keys, useMealCategories } from '@/state/queries';
 import { useUiStore } from '@/state/uiStore';
 import { formatDayKey } from '@/utils/date';
-import { goBackOrHome } from '@/utils/navigation';
 import {
   AppText,
   Button,
@@ -22,6 +21,7 @@ import {
   FoodImage,
   ListRow,
   Screen,
+  ScreenHeader,
   SegmentedControl,
   TextField,
 } from '@/ui/components';
@@ -166,19 +166,7 @@ export default function AddScreen() {
 
   return (
     <Screen>
-      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-        <AppText variant="title" weight="600" display>
-          Add food
-        </AppText>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Close"
-          onPress={() => goBackOrHome(router)}
-          style={{ minWidth: touchTarget, minHeight: touchTarget, alignItems: 'flex-end', justifyContent: 'center' }}
-        >
-          <Ionicons name="close" size={24} color={colors.textPrimary} />
-        </Pressable>
-      </View>
+      <ScreenHeader title="Add food" />
       <AppText variant="caption" tone="secondary">
         Logging to {mealName} · {formatDayKey(date)}
       </AppText>

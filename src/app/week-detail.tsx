@@ -5,7 +5,7 @@ import { caloriesFromMacros } from '@/domain/nutrition';
 import { useWeekProgress, useWeekStart } from '@/state/queries';
 import { DayKey, formatDayKey, isValidDayKey, todayKey, weekStartOf } from '@/utils/date';
 import { goBackOrHome } from '@/utils/navigation';
-import { AppText, Button, Card, Screen, StatTile } from '@/ui/components';
+import { AppText, Button, Card, Screen, ScreenHeader, StatTile } from '@/ui/components';
 import { useTheme } from '@/ui/theme/ThemeProvider';
 import { spacing } from '@/ui/theme/tokens';
 
@@ -42,9 +42,7 @@ export default function WeekDetailScreen() {
 
   return (
     <Screen>
-      <AppText variant="title" weight="600" display>
-        Week of {formatDayKey(start)}
-      </AppText>
+      <ScreenHeader title={`Week of ${formatDayKey(start)}`} />
 
       <View style={{ flexDirection: 'row', gap: spacing.md }}>
         <StatTile label="Weekly target" value={Math.round(week.weeklyTarget.calories).toLocaleString()} />

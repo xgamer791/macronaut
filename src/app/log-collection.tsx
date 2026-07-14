@@ -17,6 +17,7 @@ import {
   ListRow,
   NumberField,
   Screen,
+  ScreenHeader,
   Sheet,
 } from '@/ui/components';
 import { spacing } from '@/ui/theme/tokens';
@@ -138,6 +139,8 @@ export default function LogCollectionScreen() {
 
   return (
     <Screen>
+      <ScreenHeader title={isRecipe ? 'Log recipe' : 'Log meal'} />
+
       <View style={{ flexDirection: 'row', gap: spacing.md, alignItems: 'center' }}>
         <FoodImage uri={entity.imageUrl} size={64} />
         <View style={{ flex: 1 }}>

@@ -5,7 +5,7 @@ import { roundForDisplay } from '@/domain/nutrition';
 import { useDayProgress } from '@/state/queries';
 import { DayKey, formatDayKey, isValidDayKey, todayKey } from '@/utils/date';
 import { goBackOrHome } from '@/utils/navigation';
-import { AppText, Button, Card, MacroBar, Screen } from '@/ui/components';
+import { AppText, Button, Card, MacroBar, Screen, ScreenHeader } from '@/ui/components';
 import { useTheme } from '@/ui/theme/ThemeProvider';
 
 /** Daily goal detail: consumed vs the targets in effect for one date. */
@@ -40,9 +40,7 @@ export default function DayDetailScreen() {
 
   return (
     <Screen>
-      <AppText variant="title" weight="600" display>
-        {formatDayKey(date)}
-      </AppText>
+      <ScreenHeader title={formatDayKey(date)} />
       <AppText variant="caption" tone="secondary">
         Compared against the goal that was in effect on this date.
       </AppText>
