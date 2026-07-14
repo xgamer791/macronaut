@@ -14,3 +14,4 @@ export { SegmentedControl } from './SegmentedControl';
 export { Sheet } from './Sheet';
 export { StatTile } from './StatTile';
 export { TextField } from './TextField';
+export { TargetEditor } from './TargetEditor';
