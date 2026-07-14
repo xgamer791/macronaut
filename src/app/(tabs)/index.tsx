@@ -15,12 +15,12 @@ import { useQuery } from '@tanstack/react-query';
 import { formatDayKey } from '@/utils/date';
 import {
   AppText,
-  Button,
   Card,
   DashboardHeader,
   FoodImage,
   ListRow,
   MacroSummary,
+  MealLogList,
   ProgressRing,
   Screen,
   SectionHeader,
@@ -175,51 +175,37 @@ export default function TodayScreen() {
       ) : null}
 
       <SectionHeader
-        title="Meals"
+        title="Diary"
         right={
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Open diary"
+            accessibilityLabel="View all diary entries"
             onPress={() => {
               setSelectedDate(date);
               router.push('/diary');
             }}
             style={{ minHeight: 44, justifyContent: 'center' }}
           >
-            <AppText variant="caption" tone="accent" weight="600">
-              Open diary
+            <AppText variant="caption" tone="secondary" weight="600">
+              View all
             </AppText>
           </Pressable>
         }
       />
-      <Card padded={false} style={{ paddingHorizontal: spacing.lg, paddingVertical: spacing.xs }}>
-        {(categories.data ?? []).map((cat) => (
-          <ListRow
-            key={cat.id}
-            title={cat.name}
-            value={`${Math.round(mealTotals.get(cat.id) ?? 0)} kcal`}
-            onPress={() => {
-              setSelectedDate(date);
-              setTargetMeal(cat.id);
-              router.push('/add');
-            }}
-            accessibilityHint="Add food to this meal"
-          />
-        ))}
-      </Card>
-
-      <View style={{ flexDirection: 'row', gap: spacing.md }}>
-        <Button
-          title="Quick add"
-          variant="secondary"
-          style={{ flex: 1 }}
-          onPress={() => {
-            setSelectedDate(date);
-            router.push('/manual-entry');
-          }}
-        />
-        <Button title="Add food" style={{ flex: 1 }} onPress={() => router.push('/add')} />
-      </View>
+      <MealLogList
+        categories={categories.data ?? []}
+        mealTotals={mealTotals}
+        onLog={(mealId) => {
+          setSelectedDate(date);
+          setTargetMeal(mealId);
+          router.push('/add');
+        }}
+        onOpenMeal={(mealId) => {
+          setSelectedDate(date);
+          setTargetMeal(mealId);
+          router.push('/diary');
+        }}
+      />
 
       {(recents.data?.length ?? 0) > 0 ? (
         <>

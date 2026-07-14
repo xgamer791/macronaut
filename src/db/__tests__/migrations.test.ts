@@ -44,20 +44,34 @@ describe('migration runner', () => {
     expect(await migrate(db)).toBe(0);
   });
 
-  it('seeds the six default meal categories', async () => {
+  it('seeds then consolidates to four default meal categories', async () => {
     const db = freshDb();
     await migrate(db);
     const cats = await db.getAllAsync<{ id: string }>(
-      'SELECT id FROM meal_categories ORDER BY position',
+      'SELECT id FROM meal_categories WHERE deleted = 0 ORDER BY position',
     );
-    expect(cats.map((c) => c.id)).toEqual([
-      'breakfast',
-      'morning-snack',
-      'lunch',
-      'afternoon-snack',
-      'dinner',
-      'evening-snack',
-    ]);
+    expect(cats.map((c) => c.id)).toEqual(['breakfast', 'lunch', 'dinner', 'snacks']);
+  });
+
+  it('migration 005 remaps legacy snack diary entries to snacks', async () => {
+    const db = freshDb();
+    // Apply through v4 only so we still have the six-meal seed, then insert
+    // a legacy snack entry and finish migrations.
+    const throughV4 = migrations.filter((m) => m.version <= 4);
+    await migrate(db, throughV4);
+    await db.runAsync(
+      `INSERT INTO diary_entries (id, date, meal, name, source_type, quantity, unit, nutrition, created_at, updated_at)
+       VALUES ('e-snack', '2026-07-13', 'morning-snack', 'Yogurt', 'manual', 1, 'serving', '{"calories":120}', 'now', 'now')`,
+    );
+    await migrate(db);
+    const row = await db.getFirstAsync<{ meal: string }>(
+      `SELECT meal FROM diary_entries WHERE id = 'e-snack'`,
+    );
+    expect(row?.meal).toBe('snacks');
+    const active = await db.getAllAsync<{ id: string }>(
+      `SELECT id FROM meal_categories WHERE deleted = 0 ORDER BY position`,
+    );
+    expect(active.map((c) => c.id)).toEqual(['breakfast', 'lunch', 'dinner', 'snacks']);
   });
 
   it('a future migration preserves existing user data', async () => {

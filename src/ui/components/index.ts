@@ -7,6 +7,7 @@ export { ErrorState } from './ErrorState';
 export { ListRow } from './ListRow';
 export { MacroBar } from './MacroBar';
 export { MacroSummary } from './MacroSummary';
+export { MealLogList } from './MealLogList';
 export { NumberField } from './NumberField';
 export { ProgressRing } from './ProgressRing';
 export { Screen } from './Screen';
