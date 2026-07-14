@@ -589,7 +589,7 @@ export default function AddScreen() {
           </Pressable>
         ))}
         <AppText variant="micro" tone="muted">
-          Logging to {mealName} · {date}
+          Logging to {mealName} · {formatDayKey(date)}
         </AppText>
       </Sheet>
     </Screen>
