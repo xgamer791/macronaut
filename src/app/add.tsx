@@ -42,6 +42,14 @@ function foodSubtitle(f: ProviderFood): string {
   return [calBit, f.restaurant ?? f.brand].filter(Boolean).join(' · ');
 }
 
+function chunk<T>(items: T[], size: number): T[][] {
+  const rows: T[][] = [];
+  for (let i = 0; i < items.length; i += size) {
+    rows.push(items.slice(i, i + size));
+  }
+  return rows;
+}
+
 /** MFP-style food row: image · copy · circular + */
 function FoodPickRow({
   title,
@@ -111,13 +119,25 @@ function QuickTile({
         },
       ]}
     >
-      <View style={[styles.quickIcon, { backgroundColor: colors.accent + '18' }]}>
-        <Ionicons name={icon} size={22} color={colors.accent} />
-      </View>
-      <AppText variant="micro" weight="600" tone="secondary" align="center" numberOfLines={2}>
+      <Ionicons name={icon} size={24} color={colors.accent} />
+      <AppText variant="micro" weight="600" tone="accent" align="center" numberOfLines={2}>
         {label}
       </AppText>
     </Pressable>
+  );
+}
+
+/** Keep incomplete rows the same tile width as a full 3-up quick row. */
+function QuickTileRow({ children }: { children: React.ReactNode }) {
+  const items = React.Children.toArray(children);
+  const pads = Math.max(0, 3 - items.length);
+  return (
+    <View style={styles.quickRow}>
+      {items}
+      {Array.from({ length: pads }, (_, i) => (
+        <View key={`pad-${i}`} style={styles.quickTilePad} />
+      ))}
+    </View>
   );
 }
 
@@ -346,7 +366,7 @@ export default function AddScreen() {
         <>
           {!searching ? (
             <>
-              <View style={styles.quickRow}>
+              <QuickTileRow>
                 <QuickTile
                   icon="sparkles-outline"
                   label="AI food scan"
@@ -362,18 +382,25 @@ export default function AddScreen() {
                   label="Custom food"
                   onPress={() => router.push('/custom-food')}
                 />
-              </View>
+              </QuickTileRow>
 
               {(recentSearches.data?.length ?? 0) > 0 ? (
                 <View style={styles.stackSm}>
                   <AppText variant="caption" tone="muted">
                     Recent searches
                   </AppText>
-                  <View style={styles.wrapRow}>
-                    {recentSearches.data!.map((q) => (
-                      <Chip key={q} label={q} onPress={() => setQuery(q)} />
-                    ))}
-                  </View>
+                  {chunk(recentSearches.data!, 3).map((row) => (
+                    <QuickTileRow key={row.join('|')}>
+                      {row.map((q) => (
+                        <QuickTile
+                          key={q}
+                          icon="search-outline"
+                          label={q}
+                          onPress={() => setQuery(q)}
+                        />
+                      ))}
+                    </QuickTileRow>
+                  ))}
                 </View>
               ) : null}
 
@@ -686,6 +713,7 @@ const styles = StyleSheet.create({
   quickTile: {
     flex: 1,
     alignItems: 'center',
+    justifyContent: 'center',
     gap: spacing.sm,
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.xs,
@@ -693,12 +721,8 @@ const styles = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth,
     minHeight: 88,
   },
-  quickIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: radius.md,
-    alignItems: 'center',
-    justifyContent: 'center',
+  quickTilePad: {
+    flex: 1,
   },
   stack: {
     gap: spacing.sm,
