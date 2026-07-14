@@ -19,7 +19,7 @@ const config: ExpoConfig = {
     supportsTablet: false,
     infoPlist: {
       NSCameraUsageDescription:
-        'Macronaut uses the camera to scan food barcodes so you can log packaged foods quickly.',
+        'Macronaut uses the camera to scan barcodes and photograph meals for AI food logging.',
     },
   },
   android: {
@@ -52,7 +52,7 @@ const config: ExpoConfig = {
       'expo-camera',
       {
         cameraPermission:
-          'Macronaut uses the camera to scan food barcodes so you can log packaged foods quickly.',
+          'Macronaut uses the camera to scan barcodes and photograph meals for AI food logging.',
       },
     ],
   ],
