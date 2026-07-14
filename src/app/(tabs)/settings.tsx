@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import { Linking, Platform, View } from 'react-native';
 import { UnitSystem, WeekStart } from '@/domain/types';
+import { loadDemoData } from '@/seed/demoData';
 import { useRepos } from '@/state/AppProvider';
 import { keys, useMealCategories, useSetting } from '@/state/queries';
 import { AppearanceMode, useTheme } from '@/ui/theme/ThemeProvider';
@@ -23,9 +24,18 @@ import { spacing } from '@/ui/theme/tokens';
 export default function SettingsScreen() {
   const router = useRouter();
   const qc = useQueryClient();
-  const { settings, db } = useRepos();
+  const allRepos = useRepos();
+  const { settings, db } = allRepos;
   const { mode, setMode } = useTheme();
   const categories = useMealCategories();
+
+  // Demo data is a development/testing tool: visible in dev builds, and on
+  // the web preview via ?demo=1 — never in a normal production install.
+  const demoAvailable =
+    __DEV__ ||
+    (Platform.OS === 'web' &&
+      typeof window !== 'undefined' &&
+      window.location.search.includes('demo=1'));
 
   const units = useSetting<UnitSystem>('unitSystem', 'us');
   const weekStart = useSetting<WeekStart>('weekStart', 'monday');
@@ -149,6 +159,17 @@ export default function SettingsScreen() {
 
       <SectionHeader title="Data" />
       <Card padded={false} style={{ paddingHorizontal: spacing.lg, paddingVertical: spacing.xs }}>
+        {demoAvailable ? (
+          <ListRow
+            title="Load demo data"
+            subtitle="Development only: 2+ weeks of sample history, a recipe, a saved meal"
+            onPress={async () => {
+              const repos = allRepos;
+              await loadDemoData(repos);
+              qc.clear();
+            }}
+          />
+        ) : null}
         <ListRow
           title="Reset onboarding"
           subtitle="Redo the setup wizard. Your food data stays."
