@@ -16,7 +16,9 @@ export type ValidationWarning =
   | 'impossible-calorie-density'
   | 'protein-implausible'
   | 'missing-serving-size'
-  | 'incomplete-nutrition';
+  | 'incomplete-nutrition'
+  | 'missing-calories'
+  | 'missing-macros';
 
 export type Severity = 'ok' | 'warn' | 'suspect';
 
@@ -32,6 +34,7 @@ const SUSPECT: ValidationWarning[] = [
   'macro-mass-exceeds-serving',
   'impossible-calorie-density',
   'protein-implausible',
+  'missing-calories',
 ];
 
 /** Human-readable explanation for a warning (surfaced subtly in the UI). */
@@ -45,6 +48,8 @@ export const WARNING_LABELS: Record<ValidationWarning, string> = {
   'protein-implausible': 'Protein is implausibly high for this weight',
   'missing-serving-size': 'No serving size on record',
   'incomplete-nutrition': 'Incomplete nutrition panel',
+  'missing-calories': 'Calories are missing or zero despite macros',
+  'missing-macros': 'One or more macros (protein, carbs, fat) are missing',
 };
 
 export interface ValidateOptions {
@@ -68,13 +73,37 @@ export function validateNutrition(
   const fiber = n.fiber ?? 0;
   const sugar = n.sugar ?? 0;
 
-  const anyNegative = [n.calories, n.protein, n.carbs, n.fat, n.fiber, n.sugar].some(
-    (v) => v !== undefined && v < 0,
-  );
+  const anyNegative = [
+    n.calories,
+    n.protein,
+    n.carbs,
+    n.fat,
+    n.fiber,
+    n.sugar,
+    n.saturatedFat,
+    n.sodium,
+  ].some((v) => v !== undefined && v < 0);
   if (anyNegative) warnings.push('negative-values');
 
-  if (n.protein === undefined && n.carbs === undefined && n.fat === undefined) {
+  const macrosPresent = {
+    protein: n.protein !== undefined,
+    carbs: n.carbs !== undefined,
+    fat: n.fat !== undefined,
+  };
+  const macroCount = Number(macrosPresent.protein) + Number(macrosPresent.carbs) + Number(macrosPresent.fat);
+
+  if (macroCount === 0) {
     warnings.push('incomplete-nutrition');
+    warnings.push('missing-macros');
+  } else if (macroCount < 3) {
+    warnings.push('missing-macros');
+    warnings.push('incomplete-nutrition');
+  }
+
+  // Missing / non-finite calories when macros imply energy — flag for review.
+  const macrosImplyEnergy = protein > 0 || carbs > 0 || fat > 0;
+  if (!Number.isFinite(n.calories) || (n.calories <= 0 && macrosImplyEnergy)) {
+    warnings.push('missing-calories');
   }
 
   if (servingGrams === undefined || servingGrams <= 0) {
@@ -86,7 +115,9 @@ export function validateNutrition(
 
     // Solids can't exceed pure fat's 9 kcal/g; drinkable liquids ~4.6 kcal/ml.
     const maxDensity = opts.isLiquid ? 4.6 : 9.3;
-    if (n.calories / servingGrams > maxDensity) warnings.push('impossible-calorie-density');
+    if (n.calories > 0 && n.calories / servingGrams > maxDensity) {
+      warnings.push('impossible-calorie-density');
+    }
 
     // Solids cap ~90% protein by mass; no beverage exceeds ~20 g protein/100 ml.
     const maxProteinPer100 = opts.isLiquid ? 20 : 90;
@@ -99,18 +130,21 @@ export function validateNutrition(
 
   // Calories vs macro-derived calories (4/4/9). Fiber and sugar alcohols make
   // small deltas normal; >30% means the panel or serving basis is wrong.
+  // Large discrepancies are flagged for review and never auto-approved.
   let macroCalorieDelta: number | undefined;
-  if (n.calories > 0 && (n.protein !== undefined || n.carbs !== undefined || n.fat !== undefined)) {
+  if (n.calories > 0 && macroCount > 0) {
     const derived = caloriesFromMacros(protein, carbs, fat);
     macroCalorieDelta = Math.abs(n.calories - derived) / n.calories;
     if (macroCalorieDelta > 0.3) warnings.push('calorie-macro-mismatch');
   }
 
-  const severity: Severity = warnings.some((w) => SUSPECT.includes(w))
-    ? 'suspect'
-    : warnings.length > 0
-      ? 'warn'
-      : 'ok';
+  const largeMismatch = macroCalorieDelta !== undefined && macroCalorieDelta > 0.5;
+  const severity: Severity =
+    warnings.some((w) => SUSPECT.includes(w)) || largeMismatch
+      ? 'suspect'
+      : warnings.length > 0
+        ? 'warn'
+        : 'ok';
 
   return { warnings, severity, macroCalorieDelta };
 }

@@ -1,7 +1,7 @@
 import { FoodRepo } from '@/repositories/foodRepo';
 import { CachedFood } from '@/repositories/types';
-import { barcodeVariants } from './barcodeVariants';
-import { LOW_CONFIDENCE, scoreConfidence } from './confidence';
+import { barcodeVariants } from './barcodeNormalize';
+import { confidenceLevel, LOW_CONFIDENCE, scoreConfidence } from './confidence';
 import { getGenericFood, searchGenericFoods } from './genericFoods';
 import { mergeBestImage, nutritionAgrees } from './merge';
 import { NormalizedFood, normalizeFood } from './normalize';
@@ -10,6 +10,7 @@ import { FoodProvider, ProviderError, ProviderFood, SearchOptions } from './type
 import { usdaProvider } from './usda';
 
 export { barcodeVariants };
+export { normalizeBarcode } from './barcodeNormalize';
 
 export interface SearchResult {
   foods: ProviderFood[];
@@ -36,6 +37,7 @@ function enrich(nf: NormalizedFood, confidence: number): ProviderFood {
     id: nf.id,
     name: nf.name,
     brand: nf.brand,
+    restaurant: nf.restaurant,
     barcode: nf.barcode,
     imageUrl: nf.imageUrl,
     isGeneric: nf.isGeneric,
@@ -44,7 +46,15 @@ function enrich(nf: NormalizedFood, confidence: number): ProviderFood {
     gramsPerServing: nf.gramsPerServing,
     servingLabel: nf.servingLabel,
     servingBasis: nf.servingBasis,
+    preparationState: nf.preparationState,
+    ingredients: nf.ingredients,
+    allergens: nf.allergens,
+    verified: nf.verified,
+    lastVerified: nf.lastVerified,
+    dataType: nf.dataType,
+    category: nf.category,
     confidence,
+    confidenceLevel: confidenceLevel(confidence),
     warnings: nf.validation.warnings,
   };
 }
@@ -68,6 +78,7 @@ export function createFoodSearchService(
         providerId: f.id,
         name: f.name,
         brand: f.brand,
+        restaurant: f.restaurant,
         barcode: f.barcode,
         imageUrl: f.imageUrl,
         gramsPerServing: f.gramsPerServing,
@@ -75,6 +86,13 @@ export function createFoodSearchService(
         servingUnit: f.servingLabel,
         nutritionPer100g: f.nutritionPer100g,
         nutritionPerServing: f.nutritionPerServing,
+        preparationState: f.preparationState,
+        ingredients: f.ingredients,
+        allergens: f.allergens,
+        verified: f.verified,
+        lastVerified: f.lastVerified,
+        category: f.category,
+        sourceLabel: undefined,
         flagged: false,
         confidence: f.confidence,
         servingBasis: f.servingBasis,
@@ -90,7 +108,7 @@ export function createFoodSearchService(
     for (const f of foods) {
       const key =
         f.barcode?.replace(/^0+/, '') ||
-        `${f.name.toLowerCase().trim()}|${(f.brand ?? '').toLowerCase().trim()}`;
+        `${f.name.toLowerCase().trim()}|${(f.brand ?? '').toLowerCase().trim()}|${f.preparationState}`;
       if (seen.has(key)) continue;
       seen.add(key);
       out.push(f);
@@ -192,13 +210,20 @@ export function createFoodSearchService(
           id: cached.providerId,
           name: cached.name,
           brand: cached.brand,
+          restaurant: cached.restaurant,
           barcode: cached.barcode,
           imageUrl: cached.imageUrl,
-          isGeneric: false,
+          isGeneric: cached.category === 'generic',
           nutritionPer100g: cached.nutritionPer100g,
           nutritionPerServing: cached.nutritionPerServing,
           gramsPerServing: cached.gramsPerServing,
           servingLabel: cached.servingUnit,
+          preparationState: cached.preparationState,
+          ingredients: cached.ingredients,
+          allergens: cached.allergens,
+          verified: cached.verified,
+          lastVerified: cached.lastVerified,
+          category: cached.category,
         });
         const conf = cached.confidence ?? scoreConfidence(nf, { scannedBarcode: code }).score;
         if (conf >= LOW_CONFIDENCE) {

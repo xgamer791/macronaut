@@ -1,5 +1,6 @@
 import { Database } from '@/db/driver';
 import { Nutrition } from '@/domain/types';
+import { FoodCategory, PreparationState, ProviderId } from '@/services/food/types';
 import { CachedFood, CustomFood } from './types';
 import { newId, nowIso, safeParse } from './util';
 
@@ -58,14 +59,23 @@ interface CachedRow {
   serving_basis: string | null;
   corrected: number | null;
   cached_at: string;
+  restaurant: string | null;
+  preparation_state: string | null;
+  ingredients: string | null;
+  allergens: string | null;
+  verified: number | null;
+  last_verified: string | null;
+  category: string | null;
+  source_label: string | null;
 }
 
 function toCached(r: CachedRow): CachedFood {
   return {
-    provider: r.provider as CachedFood['provider'],
+    provider: r.provider as ProviderId,
     providerId: r.provider_id,
     name: r.name,
     brand: r.brand ?? undefined,
+    restaurant: r.restaurant ?? undefined,
     barcode: r.barcode ?? undefined,
     imageUrl: r.image_url ?? undefined,
     servingQty: r.serving_qty ?? undefined,
@@ -77,6 +87,13 @@ function toCached(r: CachedRow): CachedFood {
     nutritionPerServing: r.nutrition_per_serving
       ? safeParse<Nutrition | undefined>(r.nutrition_per_serving, undefined)
       : undefined,
+    preparationState: (r.preparation_state as PreparationState | null) ?? undefined,
+    ingredients: r.ingredients ? safeParse<string[]>(r.ingredients, []) : undefined,
+    allergens: r.allergens ? safeParse<string[]>(r.allergens, []) : undefined,
+    verified: r.verified === 1,
+    lastVerified: r.last_verified ?? undefined,
+    category: (r.category as FoodCategory | null) ?? undefined,
+    sourceLabel: r.source_label ?? undefined,
     flagged: r.flagged === 1,
     confidence: r.confidence ?? undefined,
     servingBasis: r.serving_basis ?? undefined,
@@ -117,7 +134,9 @@ export function createFoodRepo(db: Database): FoodRepo {
     FROM custom_foods`;
   const KSELECT = `SELECT provider, provider_id, name, brand, barcode, image_url, serving_qty,
     serving_unit, grams_per_serving, nutrition_per_100g, nutrition_per_serving, flagged,
-    confidence, serving_basis, corrected, cached_at
+    confidence, serving_basis, corrected, cached_at,
+    restaurant, preparation_state, ingredients, allergens, verified, last_verified,
+    category, source_label
     FROM cached_foods`;
 
   async function getCustom(id: string): Promise<CustomFood | null> {
@@ -232,8 +251,10 @@ export function createFoodRepo(db: Database): FoodRepo {
       await db.runAsync(
         `INSERT INTO cached_foods (provider, provider_id, name, brand, barcode, image_url,
           serving_qty, serving_unit, grams_per_serving, nutrition_per_100g, nutrition_per_serving,
-          flagged, confidence, serving_basis, corrected, cached_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          flagged, confidence, serving_basis, corrected, cached_at,
+          restaurant, preparation_state, ingredients, allergens, verified, last_verified,
+          category, source_label)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
          ON CONFLICT(provider, provider_id) DO UPDATE SET
            name=excluded.name, brand=excluded.brand, barcode=excluded.barcode,
            image_url=excluded.image_url, serving_qty=excluded.serving_qty,
@@ -241,6 +262,10 @@ export function createFoodRepo(db: Database): FoodRepo {
            nutrition_per_100g=excluded.nutrition_per_100g,
            nutrition_per_serving=excluded.nutrition_per_serving,
            confidence=excluded.confidence, serving_basis=excluded.serving_basis,
+           restaurant=excluded.restaurant, preparation_state=excluded.preparation_state,
+           ingredients=excluded.ingredients, allergens=excluded.allergens,
+           verified=excluded.verified, last_verified=excluded.last_verified,
+           category=excluded.category, source_label=excluded.source_label,
            cached_at=excluded.cached_at
          WHERE cached_foods.corrected = 0`,
         [
@@ -260,6 +285,14 @@ export function createFoodRepo(db: Database): FoodRepo {
           food.servingBasis ?? null,
           food.corrected ? 1 : 0,
           food.cachedAt,
+          food.restaurant ?? null,
+          food.preparationState ?? null,
+          food.ingredients ? JSON.stringify(food.ingredients) : null,
+          food.allergens ? JSON.stringify(food.allergens) : null,
+          food.verified ? 1 : 0,
+          food.lastVerified ?? null,
+          food.category ?? null,
+          food.sourceLabel ?? null,
         ],
       );
     },
@@ -282,8 +315,9 @@ export function createFoodRepo(db: Database): FoodRepo {
 
     async searchCached(query, limit = 25) {
       const rows = await db.getAllAsync<CachedRow>(
-        `${KSELECT} WHERE name LIKE ? OR brand LIKE ? ORDER BY cached_at DESC LIMIT ?`,
-        [`%${query}%`, `%${query}%`, limit],
+        `${KSELECT} WHERE name LIKE ? OR brand LIKE ? OR restaurant LIKE ?
+         ORDER BY cached_at DESC LIMIT ?`,
+        [`%${query}%`, `%${query}%`, `%${query}%`, limit],
       );
       return rows.map(toCached);
     },

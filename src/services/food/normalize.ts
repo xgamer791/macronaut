@@ -1,8 +1,14 @@
 import { Nutrition } from '@/domain/types';
 import { scaleNutrition } from '@/domain/nutrition';
+import { detectPreparationState } from './preparation';
 import { parseServing, ServingBasis, servingReferenceGrams } from './servingParser';
 import { validateNutrition, ValidationResult } from './nutritionValidation';
-import { ProviderFood, ProviderId } from './types';
+import {
+  FoodCategory,
+  PreparationState,
+  ProviderFood,
+  ProviderId,
+} from './types';
 
 /** NutritionNormalizationService — turns any provider's raw result into ONE
  * consistent internal food model with an explicit serving basis, both
@@ -15,6 +21,7 @@ export interface NormalizedFood {
   key: string;
   name: string;
   brand?: string;
+  restaurant?: string;
   barcode?: string;
   imageUrl?: string;
   isGeneric: boolean;
@@ -27,6 +34,13 @@ export interface NormalizedFood {
   servingBasis: ServingBasis;
   /** Whether the reference weight is grams or millilitres (liquids). */
   referenceGrams?: number;
+  preparationState: PreparationState;
+  ingredients?: string[];
+  allergens?: string[];
+  verified?: boolean;
+  lastVerified?: string;
+  dataType?: string;
+  category?: FoodCategory;
   validation: ValidationResult;
   sourceLabel: string;
 }
@@ -35,6 +49,9 @@ const SOURCE_LABEL: Record<ProviderId, string> = {
   usda: 'USDA FoodData Central',
   off: 'Open Food Facts',
   local: 'USDA SR Legacy (built-in)',
+  nutritionix: 'Nutritionix',
+  fatsecret: 'FatSecret',
+  restaurant: 'Restaurant menu',
 };
 
 /** Resolve the per-serving panel a food should display, correctly handling
@@ -89,6 +106,7 @@ export function normalizeFood(
     key: `${raw.provider}:${raw.id}`,
     name: raw.name,
     brand: raw.brand,
+    restaurant: raw.restaurant,
     barcode: raw.barcode,
     imageUrl: raw.imageUrl,
     isGeneric: raw.isGeneric,
@@ -98,8 +116,25 @@ export function normalizeFood(
     servingLabel: parsed.label ?? raw.servingLabel,
     servingBasis: basis,
     referenceGrams: refGrams,
+    preparationState: raw.preparationState ?? detectPreparationState(raw.name),
+    ingredients: raw.ingredients,
+    allergens: raw.allergens,
+    verified: raw.verified,
+    lastVerified: raw.lastVerified,
+    dataType: raw.dataType,
+    category:
+      raw.category ??
+      (raw.restaurant || raw.provider === 'restaurant'
+        ? 'restaurant'
+        : raw.isGeneric || raw.provider === 'local'
+          ? 'generic'
+          : raw.brand || raw.barcode
+            ? 'packaged'
+            : undefined),
     validation,
-    sourceLabel: SOURCE_LABEL[raw.provider],
+    sourceLabel: raw.restaurant
+      ? `${SOURCE_LABEL[raw.provider]} · ${raw.restaurant}`
+      : SOURCE_LABEL[raw.provider],
   };
 }
 

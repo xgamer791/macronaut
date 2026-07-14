@@ -100,6 +100,29 @@ describe('foodRepo — cached provider foods + favorites', () => {
     expect((await repo.getCachedFood('usda', '12345'))?.flagged).toBe(true);
   });
 
+  it('upserts enrichment fields (restaurant, prep, verified, category)', async () => {
+    await repo.upsertCachedFood({
+      ...cached,
+      restaurant: 'Chipotle',
+      preparationState: 'grilled',
+      ingredients: ['chicken', 'rice'],
+      allergens: ['none'],
+      verified: true,
+      lastVerified: '2026-07-01T00:00:00Z',
+      category: 'restaurant',
+      sourceLabel: 'Restaurant menu',
+      nutritionPer100g: { calories: 200, protein: 20, carbs: 10, fat: 8, saturatedFat: 2 },
+    });
+    const got = await repo.getCachedFood('usda', '12345');
+    expect(got?.restaurant).toBe('Chipotle');
+    expect(got?.preparationState).toBe('grilled');
+    expect(got?.ingredients).toEqual(['chicken', 'rice']);
+    expect(got?.verified).toBe(true);
+    expect(got?.category).toBe('restaurant');
+    expect(got?.nutritionPer100g?.saturatedFat).toBe(2);
+    expect(await repo.searchCached('chipotle')).toHaveLength(1);
+  });
+
   it('provider-food favorites round-trip', async () => {
     await repo.setFavorite('usda:12345', true);
     expect(await repo.isFavorite('usda:12345')).toBe(true);

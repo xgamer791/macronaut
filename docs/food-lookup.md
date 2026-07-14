@@ -2,58 +2,63 @@
 
 All food lookup — barcode, search, and ingredient pickers — flows through one
 centralized pipeline in `src/services/food/`. No lookup logic lives in UI
-components. Every result is normalized to a single internal model, sanity-
-checked, confidence-scored, cross-referenced across sources, and ranked before
-it reaches the screen.
+components. Every result is normalized to a single internal food model, sanity-
+checked, confidence-scored, conflict-resolved, ranked, and grouped before it
+reaches the screen.
 
 ## Services
 
 | Service | File | Responsibility |
 |---|---|---|
 | BarcodeLookupService / FoodSearchService | `foodSearchService.ts` | Orchestrates providers, dedupe, corroboration, ranking, caching. `search()` and `lookupBarcode()`. |
-| NutritionNormalizationService | `normalize.ts` | Raw provider result → one `NormalizedFood` with explicit serving basis, resolved per-serving/per-100 g, validation, attribution. |
-| ServingParserService | `servingParser.ts` | Parses OFF serving strings ("1 bottle (355 ml)", "2 scoops (60 g)") → grams/ml + basis (serving / 100 g / 100 ml / container). |
-| NutritionValidationService | `nutritionValidation.ts` | Sanity checks: macro-mass vs serving, calorie↔macro (4/4/9), calorie density, protein plausibility (liquid-aware), fiber/sugar vs carbs, negatives. |
-| FoodConfidenceService | `confidence.ts` | 0..1 score from source trust, barcode/brand/name match, completeness, validation, corroboration. `LOW_CONFIDENCE` gate. |
-| merge | `merge.ts` | Safe same-identity image borrowing + per-100 g agreement detection. Never merges unrelated products. |
-| WebFoodLookupService | `webFallback.ts` | Honest fallback: builds a targeted web search the user opens; no fabricated extraction client-side. |
-| FoodCacheService | `foodRepo.ts` (`cached_foods`) | Stores source, confidence, serving basis, barcode, image, corrected flag. |
+| NutritionNormalizationService | `normalize.ts` | Raw provider result → one `NormalizedFood` with serving basis, prep state, validation, attribution. |
+| ServingParserService | `servingParser.ts` | Parses OFF serving strings → grams/ml + basis. |
+| NutritionValidationService | `nutritionValidation.ts` | Sanity checks: negatives, missing calories/macros, macro-mass vs serving, calorie↔macro (4/4/9), density, protein plausibility. Large mismatches → suspect (no auto-approve). |
+| FoodConfidenceService | `confidence.ts` | 0..1 score from source trust (incl. restaurant / Nutritionix / FatSecret), barcode/brand/name, prep match, completeness, validation, corroboration. Bands via `confidenceLevel`. |
+| httpClient | `httpClient.ts` | Shared fetch: retries (429/5xx/network), timeout, AbortSignal, User-Agent, per-host rate limit. |
+| barcodeNormalize | `barcodeNormalize.ts` | UPC-A / EAN-8 / EAN-13 / GTIN-14 → canonical GTIN-13 + variant fan-out. |
+| preparation | `preparation.ts` | Detect raw/cooked/grill/…; meat-aware match (never raw↔cooked for meats). |
+| conflict | `conflict.ts` | Never-average resolution: branded packaged, official restaurant, USDA generic, barcode > text, newest verified. |
+| ranking | `ranking.ts` | Pure score; auto-select ≥ 0.80; never auto-select < 0.60. |
+| grouping | `grouping.ts` | `bestMatch` / USDA whole foods / packaged / restaurant / my foods; identity dedupe. |
+| internalFood | `internalFood.ts` | `InternalFood` schema + `toInternalFood()` converter. |
+| merge | `merge.ts` | Safe same-identity image borrowing + per-100 g agreement. |
+| WebFoodLookupService | `webFallback.ts` | Honest web-search fallback; no fabricated extraction. |
+| FoodCacheService | `foodRepo.ts` (`cached_foods`) | Stores source, confidence, prep, restaurant, ingredients, allergens, verified, category, serving basis. |
 
 ## Provider order & trust
 
-1. Built-in verified generics (`genericFoods.ts`, verbatim USDA SR) — trust 0.95
-2. USDA FoodData Central — trust 0.85
-3. Open Food Facts (crowd-sourced) — trust 0.50
-4. Local custom foods (barcode) — always win
-5. Web-search fallback — user-driven, verified manually
+1. Built-in verified generics (`local`) — trust 0.95
+2. Official restaurant menus (`restaurant`) — trust ~0.92
+3. USDA FoodData Central — trust 0.85
+4. Nutritionix — trust ~0.80
+5. FatSecret — trust ~0.78
+6. Open Food Facts — trust 0.50
+7. Local custom foods (barcode) — always win
+8. Web-search fallback — user-driven
 
-Curated data outranks crowd-sourced. Providers are queried **in parallel**;
-one failing never blocks the others.
+Providers are queried **in parallel**; one failing never blocks the others.
+
+## Confidence bands
+
+| Score | Level | Behavior |
+|---|---|---|
+| 0.95–1.00 | verified | Safe to auto-select |
+| 0.80–0.94 | high | Auto-select OK |
+| 0.60–0.79 | review | Show candidates / ask to confirm |
+| < 0.60 | low | Never auto-select |
 
 ## Barcode flow (`lookupBarcode`)
 
-1. Normalize the code to all common re-encodings (UPC-A/EAN-13/leading zeros).
+1. Normalize to GTIN-13 when possible; fan out UPC/EAN variants.
 2. Return the user's custom food if one carries the barcode.
-3. Serve the cache only if it scores ≥ `LOW_CONFIDENCE` and isn't flagged.
-4. Query every provider × every variant in parallel.
+3. Serve the cache only if it scores ≥ `LOW_CONFIDENCE` (0.60) and isn't flagged.
+4. Query every provider × every variant in parallel (via `httpClient`).
 5. Normalize + validate + confidence-score each hit.
-6. Rank: **exact-barcode match first**, then confidence.
+6. Rank: **exact-barcode match first**, then confidence; resolve conflicts without averaging.
 7. Borrow the best image from a same-identity result for the winner.
-8. Return best + candidates + `lowConfidence`. Low confidence → the detail
-   screen shows a review banner (edit / web search) before logging.
+8. Return best + candidates + `lowConfidence`.
 
-## Accuracy guarantees
-
-- Nutrition is never scaled against the wrong basis: per-100 g is scaled by
-  `gramsPerServing/100`; a provider's per-serving panel is used verbatim;
-  liquids (ml) are distinguished from solids (g).
-- Impossible panels (macros heavier than the serving, >9.3 kcal/g solids or
-  >4.6 kcal/ml liquids, >90 g protein/100 g solids or >20 g/100 ml liquids,
-  calorie↔macro mismatch >30%) collapse confidence and trigger a warning.
-- Crowd-sourced single-source results can't reach high confidence without
-  corroboration from a curated source.
-- User corrections (edit → save as custom with the barcode) win on the next
-  scan; flagged cache entries are re-queried live instead of reused.
-
-Everything above is covered by `__tests__/accuracy.test.ts`,
-`genericFoodsVerification.test.ts`, and `providers.test.ts`.
+Everything above is covered by `__tests__/` (accuracy, barcodeNormalize,
+preparation, conflict, ranking, grouping, internalFood, httpClient, confidence,
+providers, generic verification).

@@ -1,4 +1,6 @@
-import { MacroKey, Nutrition } from '@/domain/types';
+import { MACRO_KEYS, MacroKey, Nutrition } from '@/domain/types';
+import { foodHttp, HttpClientError } from './httpClient';
+import { detectPreparationState } from './preparation';
 import { FoodProvider, ProviderError, ProviderFood, SearchOptions } from './types';
 
 const BASE = 'https://api.nal.usda.gov/fdc/v1';
@@ -12,6 +14,7 @@ const NUTRIENT_MAP: Record<number, MacroKey | 'calories'> = {
   1004: 'fat',
   1079: 'fiber',
   2000: 'sugar',
+  1258: 'saturatedFat',
   1093: 'sodium',
   1253: 'cholesterol',
 };
@@ -61,11 +64,12 @@ function toProviderFood(food: UsdaSearchFood): ProviderFood {
   if (per100 && gramsPerServing) {
     const f = gramsPerServing / 100;
     nutritionPerServing = { calories: per100.calories * f };
-    for (const k of ['protein', 'carbs', 'fat', 'fiber', 'sugar', 'sodium', 'cholesterol'] as const) {
+    for (const k of MACRO_KEYS) {
       const v = per100[k];
       if (v !== undefined) nutritionPerServing[k] = v * f;
     }
   }
+  const category = isGeneric ? 'generic' : 'packaged';
   return {
     provider: 'usda',
     id: String(food.fdcId),
@@ -79,21 +83,31 @@ function toProviderFood(food: UsdaSearchFood): ProviderFood {
     servingLabel:
       food.householdServingFullText ||
       (gramsPerServing ? `${gramsPerServing} ${food.servingSizeUnit}` : isGeneric ? '100 g' : undefined),
+    preparationState: detectPreparationState(food.description),
+    dataType: food.dataType,
+    category,
   };
 }
 
 async function request<T>(url: string, signal?: AbortSignal): Promise<T> {
-  let res: Response;
   try {
-    res = await fetch(url, { signal });
+    const res = await foodHttp.request(url, { signal });
+    if (res.status === 403) throw new ProviderError('USDA API key rejected', 'usda', 'auth');
+    if (!res.ok) throw new ProviderError(`USDA error ${res.status}`, 'usda', 'bad-response');
+    return res.json() as Promise<T>;
   } catch (err) {
+    if (err instanceof ProviderError) throw err;
+    if (err instanceof HttpClientError) {
+      if (err.kind === 'abort') throw err;
+      if (err.kind === 'rate-limit') throw new ProviderError('USDA rate limit reached', 'usda', 'rate-limit');
+      if (err.kind === 'server' || err.kind === 'http') {
+        throw new ProviderError(`USDA error ${err.status ?? ''}`.trim(), 'usda', 'bad-response');
+      }
+      throw new ProviderError('Network request failed', 'usda', 'network');
+    }
     if ((err as Error).name === 'AbortError') throw err;
     throw new ProviderError('Network request failed', 'usda', 'network');
   }
-  if (res.status === 429) throw new ProviderError('USDA rate limit reached', 'usda', 'rate-limit');
-  if (res.status === 403) throw new ProviderError('USDA API key rejected', 'usda', 'auth');
-  if (!res.ok) throw new ProviderError(`USDA error ${res.status}`, 'usda', 'bad-response');
-  return res.json() as Promise<T>;
 }
 
 export const usdaProvider: FoodProvider = {
