@@ -64,7 +64,6 @@ export function DashboardHeader({ date, onDateChange, right }: DashboardHeaderPr
   const week = useWeekProgress(date);
   const titleRef = useRef<View>(null);
   const [calendarOpen, setCalendarOpen] = useState(false);
-  const [calendarEpoch, setCalendarEpoch] = useState(0);
   const [calendarTop, setCalendarTop] = useState(insets.top + touchTarget + CALENDAR_GAP);
 
   const completedDays = useMemo(() => {
@@ -78,29 +77,38 @@ export function DashboardHeader({ date, onDateChange, right }: DashboardHeaderPr
   const title = formatDayKey(date);
   const isToday = date === todayKey();
 
+  const closeCalendar = useCallback(() => setCalendarOpen(false), []);
+
   const openCalendar = useCallback(() => {
     void Haptics.selectionAsync();
+    const finishOpen = (top: number) => {
+      setCalendarTop(top);
+      setCalendarOpen(true);
+    };
     const node = titleRef.current;
     if (node && typeof node.measureInWindow === 'function') {
       node.measureInWindow((_x, y, _w, h) => {
-        setCalendarTop(Math.max(insets.top + spacing.sm, y + h + CALENDAR_GAP));
-        setCalendarEpoch((n) => n + 1);
-        setCalendarOpen(true);
+        finishOpen(Math.max(insets.top + spacing.sm, y + h + CALENDAR_GAP));
       });
       return;
     }
-    setCalendarTop(insets.top + touchTarget + spacing.lg + CALENDAR_GAP);
-    setCalendarEpoch((n) => n + 1);
-    setCalendarOpen(true);
+    finishOpen(insets.top + touchTarget + spacing.lg + CALENDAR_GAP);
   }, [insets.top]);
 
-  const closeCalendar = useCallback(() => setCalendarOpen(false), []);
+  const toggleCalendar = useCallback(() => {
+    if (calendarOpen) {
+      void Haptics.selectionAsync();
+      closeCalendar();
+      return;
+    }
+    openCalendar();
+  }, [calendarOpen, closeCalendar, openCalendar]);
 
-  const selectDate = useCallback(
+  /** Change the active day without dismissing the month picker. */
+  const changeDate = useCallback(
     (next: DayKey) => {
       void Haptics.selectionAsync();
       onDateChange(next);
-      setCalendarOpen(false);
     },
     [onDateChange],
   );
@@ -110,10 +118,10 @@ export function DashboardHeader({ date, onDateChange, right }: DashboardHeaderPr
       <View ref={titleRef} style={styles.titleRow} collapsable={false}>
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel={`${title}. Open calendar`}
+          accessibilityLabel={`${title}. ${calendarOpen ? 'Close' : 'Open'} calendar`}
           accessibilityHint="Shows a month calendar to pick a day"
           accessibilityState={{ expanded: calendarOpen }}
-          onPress={openCalendar}
+          onPress={toggleCalendar}
           hitSlop={8}
           style={styles.titlePress}
         >
@@ -129,7 +137,7 @@ export function DashboardHeader({ date, onDateChange, right }: DashboardHeaderPr
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Back to today"
-          onPress={() => selectDate(todayKey())}
+          onPress={() => changeDate(todayKey())}
           style={styles.backToday}
         >
           <AppText variant="micro" tone="accent" weight="600">
@@ -142,17 +150,16 @@ export function DashboardHeader({ date, onDateChange, right }: DashboardHeaderPr
         date={date}
         weekStart={weekStart}
         completedDays={completedDays}
-        onSelect={selectDate}
+        onSelect={changeDate}
       />
 
       <CalendarDropdown
-        key={calendarEpoch}
         visible={calendarOpen}
         selected={date}
         weekStart={weekStart}
         top={calendarTop}
         onClose={closeCalendar}
-        onSelect={selectDate}
+        onSelect={changeDate}
         accent={colors.accent}
         onAccent={colors.onAccent}
         textPrimary={colors.textPrimary}
@@ -380,19 +387,23 @@ function CalendarDropdown({
   // Keep the modal mounted through the exit animation (React-recommended prop→state sync).
   if (visible !== prevVisible) {
     setPrevVisible(visible);
-    if (visible) setMounted(true);
+    if (visible) {
+      setMounted(true);
+      setMonth(monthStartOf(selected));
+    }
   }
 
   useEffect(() => {
     if (visible) {
+      // Card-only spring — scrim stays steady to avoid a background flash.
       progress.value = 0;
       progress.value = withSpring(1, SPRING);
-    } else {
-      progress.value = withTiming(0, { duration: 200, easing: Easing.out(Easing.cubic) }, (finished) => {
+    } else if (mounted) {
+      progress.value = withTiming(0, { duration: 180, easing: Easing.out(Easing.cubic) }, (finished) => {
         if (finished) runOnJS(setMounted)(false);
       });
     }
-  }, [visible, progress]);
+  }, [visible, progress, mounted]);
 
   const letters = useMemo(() => weekdayLetters(weekStart), [weekStart]);
   const cells = useMemo(() => monthCalendarDays(month, weekStart), [month, weekStart]);
@@ -401,13 +412,9 @@ function CalendarDropdown({
   const cardStyle = useAnimatedStyle(() => ({
     opacity: progress.value,
     transform: [
-      { translateY: interpolate(progress.value, [0, 1], [-8, 0]) },
-      { scale: interpolate(progress.value, [0, 1], [0.97, 1]) },
+      { translateY: interpolate(progress.value, [0, 1], [-6, 0]) },
+      { scale: interpolate(progress.value, [0, 1], [0.98, 1]) },
     ],
-  }));
-
-  const scrimStyle = useAnimatedStyle(() => ({
-    opacity: interpolate(progress.value, [0, 1], [0, 1]),
   }));
 
   if (!mounted) return null;
@@ -415,14 +422,15 @@ function CalendarDropdown({
   return (
     <Modal visible={mounted} transparent animationType="none" onRequestClose={onClose}>
       <View style={styles.modalRoot} pointerEvents="box-none">
-        <Animated.View style={[StyleSheet.absoluteFill, { backgroundColor: overlay }, scrimStyle]}>
+        {/* Steady scrim — no opacity animation (prevents one-frame background flash). */}
+        <View style={[StyleSheet.absoluteFill, { backgroundColor: overlay }]}>
           <Pressable
             style={StyleSheet.absoluteFill}
             onPress={onClose}
             accessibilityRole="button"
             accessibilityLabel="Dismiss calendar"
           />
-        </Animated.View>
+        </View>
 
         <Animated.View style={[{ marginTop: top }, cardStyle]}>
           <LiquidGlassCard>
@@ -633,7 +641,8 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.16)',
-    backgroundColor: 'rgba(6, 8, 12, 0.52)',
+    // More opaque base so backdrop-filter settle doesn't flash through
+    backgroundColor: 'rgba(8, 10, 14, 0.78)',
     shadowColor: '#000',
     shadowOpacity: 0.5,
     shadowRadius: 32,
@@ -642,11 +651,11 @@ const styles = StyleSheet.create({
   },
   glassFill: {
     ...StyleSheet.absoluteFill,
-    backgroundColor: 'rgba(0, 0, 0, 0.38)',
+    backgroundColor: 'rgba(0, 0, 0, 0.22)',
   },
   glassSheen: {
     ...StyleSheet.absoluteFill,
-    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    backgroundColor: 'rgba(255, 255, 255, 0.03)',
   },
   glassHighlight: {
     position: 'absolute',
