@@ -18,7 +18,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
-  useDayNote,
+  useDayNotes,
   useDayNotesRange,
   useWeekProgress,
   useWeekStart,
@@ -74,9 +74,10 @@ export function DashboardHeader({ date, onDateChange, right }: DashboardHeaderPr
 
   const weekKeys = useMemo(() => weekDays(date, weekStart), [date, weekStart]);
   const notesWeek = useDayNotesRange(weekKeys[0], weekKeys[weekKeys.length - 1]);
-  const dayNote = useDayNote(date);
+  const dayNotes = useDayNotes(date);
 
   const notedDays = useMemo(() => new Set(notesWeek.data ?? []), [notesWeek.data]);
+  const hasNotes = (dayNotes.data?.length ?? 0) > 0;
 
   const completedDays = useMemo(() => {
     const set = new Set<DayKey>();
@@ -158,7 +159,7 @@ export function DashboardHeader({ date, onDateChange, right }: DashboardHeaderPr
         <View style={styles.rightActions}>
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel={dayNote.data?.body ? 'Edit day notes' : 'Add day notes'}
+            accessibilityLabel={hasNotes ? 'Manage day notes' : 'Add day notes'}
             onPress={() => {
               void Haptics.selectionAsync();
               setNotesOpen(true);
@@ -167,9 +168,10 @@ export function DashboardHeader({ date, onDateChange, right }: DashboardHeaderPr
             style={styles.iconBtn}
           >
             <Ionicons
-              name={dayNote.data?.body ? 'document-text' : 'document-text-outline'}
+              name={hasNotes ? 'document-text' : 'document-text-outline'}
               size={22}
-              color={dayNote.data?.body ? colors.accent : colors.textPrimary}
+              color={hasNotes ? colors.accent : colors.textPrimary}
+              style={styles.headerIcon}
             />
           </Pressable>
           <Pressable
@@ -182,7 +184,12 @@ export function DashboardHeader({ date, onDateChange, right }: DashboardHeaderPr
             hitSlop={6}
             style={styles.iconBtn}
           >
-            <Ionicons name="fitness-outline" size={22} color={colors.textPrimary} />
+            <Ionicons
+              name="fitness-outline"
+              size={22}
+              color={colors.textPrimary}
+              style={[styles.headerIcon, styles.activityIcon]}
+            />
           </Pressable>
           {right ? <View style={styles.right}>{right}</View> : null}
         </View>
@@ -592,6 +599,15 @@ const styles = StyleSheet.create({
     height: touchTarget,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  headerIcon: {
+    width: 22,
+    height: 22,
+    textAlign: 'center',
+  },
+  /** Fitness glyph draws larger than document — scale to match optical size. */
+  activityIcon: {
+    transform: [{ scale: 0.86 }],
   },
   titlePress: {
     flex: 1,

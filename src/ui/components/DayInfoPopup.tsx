@@ -3,7 +3,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { roundForDisplay } from '@/domain/nutrition';
 import {
   useActivityEntries,
-  useDayNote,
+  useDayNotes,
   useDayProgress,
 } from '@/state/queries';
 import { DayKey, formatDayKey } from '@/utils/date';
@@ -24,12 +24,13 @@ export function DayInfoPopup({
 }) {
   const progress = useDayProgress(date);
   const activities = useActivityEntries(date);
-  const note = useDayNote(date);
+  const notes = useDayNotes(date);
 
   const consumed = progress?.consumed;
   const burned = progress?.burned ?? 0;
   const target = progress?.target;
   const list = activities.data ?? [];
+  const noteList = notes.data ?? [];
 
   return (
     <GlassPopup visible={visible} onClose={onClose} accessibilityLabel="Dismiss day summary">
@@ -115,19 +116,28 @@ export function DayInfoPopup({
           </AppText>
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Edit notes"
+            accessibilityLabel="Manage notes"
             onPress={onEditNotes}
             hitSlop={8}
           >
             <AppText variant="micro" tone="accent" weight="600">
-              {note.data?.body ? 'Edit' : 'Add'}
+              {noteList.length > 0 ? 'Manage' : 'Add'}
             </AppText>
           </Pressable>
         </View>
-        {note.data?.body ? (
-          <AppText variant="caption" tone="secondary">
-            {note.data.body}
-          </AppText>
+        {noteList.length > 0 ? (
+          <View style={styles.stack}>
+            {noteList.slice(0, 3).map((n) => (
+              <AppText key={n.id} variant="caption" tone="secondary">
+                {n.body}
+              </AppText>
+            ))}
+            {noteList.length > 3 ? (
+              <AppText variant="micro" tone="muted">
+                +{noteList.length - 3} more
+              </AppText>
+            ) : null}
+          </View>
         ) : (
           <AppText variant="caption" tone="muted">
             No notes for this day
