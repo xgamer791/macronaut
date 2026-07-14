@@ -42,14 +42,6 @@ function foodSubtitle(f: ProviderFood): string {
   return [calBit, f.restaurant ?? f.brand].filter(Boolean).join(' · ');
 }
 
-function chunk<T>(items: T[], size: number): T[][] {
-  const rows: T[][] = [];
-  for (let i = 0; i < items.length; i += size) {
-    rows.push(items.slice(i, i + size));
-  }
-  return rows;
-}
-
 /** MFP-style food row: image · copy · circular + */
 function FoodPickRow({
   title,
@@ -227,10 +219,6 @@ export default function AddScreen() {
   const [mealPickerOpen, setMealPickerOpen] = useState(false);
 
   const search = useFoodSearch(query, filter);
-  const recentSearches = useQuery({
-    queryKey: ['recent-searches'],
-    queryFn: () => history.recentSearches(8),
-  });
   const recents = useQuery({ queryKey: keys.recents, queryFn: () => history.recentFoods(8) });
   const frequents = useQuery({
     queryKey: keys.frequents(meal),
@@ -383,26 +371,6 @@ export default function AddScreen() {
                   onPress={() => router.push('/custom-food')}
                 />
               </QuickTileRow>
-
-              {(recentSearches.data?.length ?? 0) > 0 ? (
-                <View style={styles.stackSm}>
-                  <AppText variant="caption" tone="muted">
-                    Recent searches
-                  </AppText>
-                  {chunk(recentSearches.data!, 3).map((row) => (
-                    <QuickTileRow key={row.join('|')}>
-                      {row.map((q) => (
-                        <QuickTile
-                          key={q}
-                          icon="search-outline"
-                          label={q}
-                          onPress={() => setQuery(q)}
-                        />
-                      ))}
-                    </QuickTileRow>
-                  ))}
-                </View>
-              ) : null}
 
               <AppText variant="heading" weight="600" display>
                 Frequently logged for {mealName}
