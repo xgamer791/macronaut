@@ -20,7 +20,7 @@ import {
   DashboardHeader,
   FoodImage,
   ListRow,
-  MacroBar,
+  MacroSummary,
   ProgressRing,
   Screen,
   SectionHeader,
@@ -90,32 +90,28 @@ export default function TodayScreen() {
         </View>
       </Card>
 
-      <Card style={{ gap: spacing.md }}>
-        <MacroBar
-          label="Protein"
-          consumed={progress?.consumed.protein ?? 0}
-          target={progress?.target.protein}
-          color={colors.protein}
-        />
-        <MacroBar
-          label="Carbs"
-          consumed={progress?.consumed.carbs ?? 0}
-          target={progress?.target.carbs}
-          color={colors.carbs}
-        />
-        <MacroBar
-          label="Fat"
-          consumed={progress?.consumed.fat ?? 0}
-          target={progress?.target.fat}
-          color={colors.fat}
-        />
-        <MacroBar
-          label="Fiber"
-          consumed={progress?.consumed.fiber ?? 0}
-          target={progress?.target.fiber}
-          color={colors.fiber}
-        />
-      </Card>
+      <MacroSummary
+        macros={[
+          {
+            label: 'Protein',
+            consumed: progress?.consumed.protein ?? 0,
+            target: progress?.target.protein,
+            color: colors.protein,
+          },
+          {
+            label: 'Carbs',
+            consumed: progress?.consumed.carbs ?? 0,
+            target: progress?.target.carbs,
+            color: colors.carbs,
+          },
+          {
+            label: 'Fat',
+            consumed: progress?.consumed.fat ?? 0,
+            target: progress?.target.fat,
+            color: colors.fat,
+          },
+        ]}
+      />
 
       {week ? (
         <Card style={{ gap: spacing.sm }}>
