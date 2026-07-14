@@ -1,4 +1,5 @@
-import { ProviderFood } from './types';
+import { detectPreparationState } from './preparation';
+import { PreparationState, ProviderFood } from './types';
 import { GENERIC_FOOD_SOURCE, VERIFIED_GENERIC_FOODS, VerifiedGenericFood } from './genericFoods.data';
 
 /** Built-in generic whole foods — every entry is verbatim USDA SR Legacy
@@ -10,6 +11,28 @@ import { GENERIC_FOOD_SOURCE, VERIFIED_GENERIC_FOODS, VerifiedGenericFood } from
 export { GENERIC_FOOD_SOURCE };
 export type { VerifiedGenericFood };
 
+/** Map curated prep labels onto the pipeline PreparationState enum. */
+function mapPrep(prep: string, name: string): PreparationState {
+  const p = prep.toLowerCase();
+  if (p === 'raw' || p.startsWith('raw')) return 'raw';
+  if (p.includes('pan-browned') || p.includes('pan browned')) return 'pan_browned';
+  if (p.includes('grill') || p.includes('broil')) return 'grilled';
+  if (p.includes('roast') || p.includes('bak')) return 'roasted';
+  if (
+    p.includes('boil') ||
+    p.includes('brais') ||
+    p.includes('steam') ||
+    p.includes('poach') ||
+    p.includes('moist heat') ||
+    p.includes('dry heat')
+  ) {
+    return 'boiled';
+  }
+  if (p.includes('cooked') || p.includes('prepared')) return 'cooked';
+  // Fall back to name detection for non-meat form labels (dry, whole, …).
+  return detectPreparationState(name);
+}
+
 function toProviderFood(e: VerifiedGenericFood): ProviderFood {
   return {
     provider: 'local',
@@ -20,6 +43,10 @@ function toProviderFood(e: VerifiedGenericFood): ProviderFood {
     nutritionPerServing: e.n,
     gramsPerServing: 100,
     servingLabel: '100 g',
+    preparationState: mapPrep(e.prep, e.name),
+    category: 'generic',
+    verified: true,
+    dataType: 'SR Legacy',
   };
 }
 

@@ -40,7 +40,7 @@ interface LoadedFood {
   brand?: string;
   imageUrl?: string;
   info: FoodPortionInfo;
-  source: 'usda' | 'off' | 'local' | 'custom';
+  source: string;
   sourceLabel: string;
   /** Exact source record description (attribution). */
   sourceDetail?: string;
@@ -111,6 +111,27 @@ export default function FoodDetailScreen() {
             nutritionPerServing: gf.nutritionPerServing!,
             gramsPerServing: gf.gramsPerServing,
             servingLabel: gf.servingLabel,
+          },
+        };
+      }
+      if (provider === 'restaurant') {
+        const mod = await import('@/services/food/restaurantFoods');
+        const rf = mod.getRestaurantFood(id);
+        if (!rf || !rf.nutritionPerServing) return null;
+        return {
+          key: `restaurant:${rf.id}`,
+          name: rf.name,
+          brand: rf.restaurant,
+          source: 'restaurant',
+          sourceLabel: rf.restaurant
+            ? `Official ${rf.restaurant} nutrition`
+            : 'Official restaurant nutrition',
+          confidence: rf.confidence ?? 0.92,
+          favorite: await food.isFavorite(`restaurant:${rf.id}`),
+          info: {
+            nutritionPerServing: rf.nutritionPerServing,
+            gramsPerServing: rf.gramsPerServing,
+            servingLabel: rf.servingLabel,
           },
         };
       }

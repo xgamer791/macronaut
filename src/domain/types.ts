@@ -10,6 +10,7 @@ export interface Nutrition {
   fat?: number;
   fiber?: number;
   sugar?: number;
+  saturatedFat?: number;
   sodium?: number;
   cholesterol?: number;
   /** Extra micronutrients keyed by canonical name, value + unit as provided. */
@@ -22,6 +23,7 @@ export const MACRO_KEYS = [
   'fat',
   'fiber',
   'sugar',
+  'saturatedFat',
   'sodium',
   'cholesterol',
 ] as const;

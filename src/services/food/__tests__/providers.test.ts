@@ -14,6 +14,7 @@ function mockFetch(payload: unknown, status = 200) {
   global.fetch = jest.fn(async () => ({
     ok: status >= 200 && status < 300,
     status,
+    headers: { get: () => null },
     json: async () => payload,
   })) as unknown as typeof fetch;
 }

@@ -1,5 +1,6 @@
 import { Nutrition } from '@/domain/types';
 import { ServingUnit } from '@/domain/serving';
+import { FoodCategory, PreparationState, ProviderId } from '@/services/food/types';
 import { DayKey } from '@/utils/date';
 
 export type SourceType = 'provider' | 'custom' | 'manual' | 'recipe' | 'saved_meal' | 'quick';
@@ -46,10 +47,11 @@ export interface CustomFood {
 }
 
 export interface CachedFood {
-  provider: 'usda' | 'off' | 'local';
+  provider: ProviderId;
   providerId: string;
   name: string;
   brand?: string;
+  restaurant?: string;
   barcode?: string;
   imageUrl?: string;
   servingQty?: number;
@@ -57,6 +59,13 @@ export interface CachedFood {
   gramsPerServing?: number;
   nutritionPer100g?: Nutrition;
   nutritionPerServing?: Nutrition;
+  preparationState?: PreparationState;
+  ingredients?: string[];
+  allergens?: string[];
+  verified?: boolean;
+  lastVerified?: string;
+  category?: FoodCategory;
+  sourceLabel?: string;
   flagged: boolean;
   /** 0..1 accuracy confidence from the lookup pipeline. */
   confidence?: number;

@@ -54,6 +54,24 @@ describe('NutritionValidationService', () => {
     ).toContain('fiber-exceeds-carbs');
   });
 
+  it('flags missing calories when macros imply energy', () => {
+    const r = validateNutrition({ calories: 0, protein: 20, carbs: 0, fat: 5 }, 100);
+    expect(r.warnings).toContain('missing-calories');
+    expect(r.severity).toBe('suspect');
+  });
+
+  it('flags missing macros clearly', () => {
+    const r = validateNutrition({ calories: 100, protein: 10 }, 100);
+    expect(r.warnings).toContain('missing-macros');
+    expect(r.warnings).toContain('incomplete-nutrition');
+  });
+
+  it('marks large calorie/macro discrepancies as suspect (no auto-approve)', () => {
+    const r = validateNutrition({ calories: 600, protein: 10, carbs: 20, fat: 3 }, 100);
+    expect(r.warnings).toContain('calorie-macro-mismatch');
+    expect(r.severity).toBe('suspect');
+  });
+
   it('flags implausible protein per 100 g', () => {
     const r = validateNutrition({ calories: 400, protein: 95, carbs: 0, fat: 0 }, 100);
     expect(r.warnings).toContain('protein-implausible');
@@ -157,6 +175,23 @@ describe('data merging', () => {
     const { food, imageFrom } = mergeBestImage(base, [base, withImage]);
     expect(food.imageUrl).toBe('https://img/e.jpg');
     expect(imageFrom).toBe('off');
+  });
+
+  it('prefers manufacturer-like URLs over Open Food Facts images', () => {
+    const mfr = normalizeFood({
+      provider: 'nutritionix',
+      id: 'n',
+      name: 'Egg Whites',
+      brand: 'Kirkland',
+      barcode: '096619833252',
+      isGeneric: false,
+      imageUrl: 'https://nix-cdn.example/media/egg-whites.png',
+      nutritionPerServing: { calories: 25, protein: 5 },
+      gramsPerServing: 46,
+    });
+    const { food, imageFrom } = mergeBestImage(base, [base, withImage, mfr]);
+    expect(food.imageUrl).toBe('https://nix-cdn.example/media/egg-whites.png');
+    expect(imageFrom).toBe('nutritionix');
   });
 
   it('never borrows from an unrelated product', () => {
