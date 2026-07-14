@@ -1,6 +1,7 @@
 import { Nutrition } from '@/domain/types';
 
-export type ProviderId = 'usda' | 'off';
+/** 'local' = the bundled generic-foods dataset (no network). */
+export type ProviderId = 'usda' | 'off' | 'local';
 
 /** Normalized food shape shared by all providers and the local cache. */
 export interface ProviderFood {

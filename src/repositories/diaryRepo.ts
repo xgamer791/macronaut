@@ -16,6 +16,7 @@ interface Row {
   quantity: number;
   unit: string;
   serving_desc: string | null;
+  image_url: string | null;
   nutrition: string;
   notes: string | null;
   created_at: string;
@@ -35,6 +36,7 @@ function rowToEntry(r: Row): DiaryEntry {
     quantity: r.quantity,
     unit: r.unit,
     servingDesc: r.serving_desc ?? undefined,
+    imageUrl: r.image_url ?? undefined,
     nutrition: safeParse<Nutrition>(r.nutrition, { calories: 0 }),
     notes: r.notes ?? undefined,
     createdAt: r.created_at,
@@ -64,7 +66,7 @@ export interface DiaryRepo {
 
 export function createDiaryRepo(db: Database): DiaryRepo {
   const SELECT = `SELECT id, date, meal, time, name, brand, source_type, source_id,
-    quantity, unit, serving_desc, nutrition, notes, created_at, updated_at FROM diary_entries`;
+    quantity, unit, serving_desc, image_url, nutrition, notes, created_at, updated_at FROM diary_entries`;
 
   async function getById(id: string): Promise<DiaryEntry> {
     const row = await db.getFirstAsync<Row>(`${SELECT} WHERE id = ?`, [id]);
@@ -77,8 +79,8 @@ export function createDiaryRepo(db: Database): DiaryRepo {
     const full: DiaryEntry = { ...entry, id: newId(), createdAt: now, updatedAt: now };
     await db.runAsync(
       `INSERT INTO diary_entries (id, date, meal, time, name, brand, source_type, source_id,
-        quantity, unit, serving_desc, nutrition, notes, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        quantity, unit, serving_desc, image_url, nutrition, notes, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         full.id,
         full.date,
@@ -91,6 +93,7 @@ export function createDiaryRepo(db: Database): DiaryRepo {
         full.quantity,
         full.unit,
         full.servingDesc ?? null,
+        full.imageUrl ?? null,
         JSON.stringify(full.nutrition),
         full.notes ?? null,
         full.createdAt,
@@ -123,7 +126,7 @@ export function createDiaryRepo(db: Database): DiaryRepo {
       const merged: DiaryEntry = { ...existing, ...patch, id, updatedAt: nowIso() };
       await db.runAsync(
         `UPDATE diary_entries SET date=?, meal=?, time=?, name=?, brand=?, source_type=?,
-          source_id=?, quantity=?, unit=?, serving_desc=?, nutrition=?, notes=?, updated_at=?
+          source_id=?, quantity=?, unit=?, serving_desc=?, image_url=?, nutrition=?, notes=?, updated_at=?
          WHERE id=?`,
         [
           merged.date,
@@ -136,6 +139,7 @@ export function createDiaryRepo(db: Database): DiaryRepo {
           merged.quantity,
           merged.unit,
           merged.servingDesc ?? null,
+          merged.imageUrl ?? null,
           JSON.stringify(merged.nutrition),
           merged.notes ?? null,
           merged.updatedAt,

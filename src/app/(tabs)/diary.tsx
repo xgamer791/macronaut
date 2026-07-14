@@ -23,6 +23,7 @@ import {
   Button,
   Card,
   DatePickSheet,
+  FoodImage,
   ListRow,
   NumberField,
   Screen,
@@ -218,6 +219,7 @@ export default function DiaryScreen() {
             {list.map((e) => (
               <ListRow
                 key={e.id}
+                left={e.imageUrl ? <FoodImage uri={e.imageUrl} size={36} /> : undefined}
                 title={e.name}
                 subtitle={e.servingDesc ?? `${e.quantity} ${e.unit}`}
                 value={`${Math.round(e.nutrition.calories)}`}

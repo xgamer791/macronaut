@@ -48,10 +48,17 @@ export default function ScanScreen() {
         return;
       }
       if (result.food) {
-        router.replace({
-          pathname: '/food/[provider]/[id]',
-          params: { provider: result.food.provider, id: result.food.id },
-        });
+        if (result.candidates && result.candidates.length > 0) {
+          // Best match first, but let the user pick another.
+          setCandidates([result.food, ...result.candidates]);
+          setCandidatesOpen(true);
+          setStatus('idle');
+        } else {
+          router.replace({
+            pathname: '/food/[provider]/[id]',
+            params: { provider: result.food.provider, id: result.food.id },
+          });
+        }
         return;
       }
       if (result.offline) {
@@ -60,8 +67,8 @@ export default function ScanScreen() {
       }
       // Unknown barcode: offer text-search candidates for manual selection.
       const search = await svc.search(code.trim(), { limit: 6 });
-      if (search.foods.length > 0) {
-        setCandidates(search.foods);
+      if (search.foods.filter((f) => f.provider !== 'local').length > 0) {
+        setCandidates(search.foods.filter((f) => f.provider !== 'local'));
         setCandidatesOpen(true);
         setStatus('idle');
       } else {

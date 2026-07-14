@@ -82,7 +82,12 @@ export function useAddDiaryEntry() {
     mutationFn: async (input: { entry: NewDiaryEntry; foodKey?: string }) => {
       const added = await diary.add(input.entry);
       if (input.foodKey) {
-        await history.recordLog(input.foodKey, input.entry.name, input.entry.meal);
+        await history.recordLog(
+          input.foodKey,
+          input.entry.name,
+          input.entry.meal,
+          input.entry.imageUrl,
+        );
       }
       return added;
     },

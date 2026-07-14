@@ -18,3 +18,4 @@ export { TargetEditor } from './TargetEditor';
 export { DatePickSheet } from './DatePickSheet';
 export { FoodImage } from './FoodImage';
 export { BarChart } from './BarChart';
+export { BarcodeScanSheet } from './BarcodeScanSheet';

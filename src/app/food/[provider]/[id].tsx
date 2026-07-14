@@ -38,7 +38,7 @@ interface LoadedFood {
   brand?: string;
   imageUrl?: string;
   info: FoodPortionInfo;
-  source: 'usda' | 'off' | 'custom';
+  source: 'usda' | 'off' | 'local' | 'custom';
   sourceLabel: string;
   flagged?: boolean;
   favorite: boolean;
@@ -82,6 +82,22 @@ export default function FoodDetailScreen() {
             nutritionPerServing: f.nutrition,
             gramsPerServing: f.gramsPerServing,
             servingLabel: `${f.servingQty} ${f.servingUnit}`,
+          },
+        };
+      }
+      if (provider === 'local') {
+        const gf = (await import('@/services/food/genericFoods')).getGenericFood(id);
+        if (!gf) return null;
+        return {
+          key: `local:${gf.id}`,
+          name: gf.name,
+          source: 'local',
+          sourceLabel: 'Standard reference food',
+          favorite: await food.isFavorite(`local:${gf.id}`),
+          info: {
+            nutritionPerServing: gf.nutritionPerServing!,
+            gramsPerServing: gf.gramsPerServing,
+            servingLabel: gf.servingLabel,
           },
         };
       }
@@ -166,6 +182,7 @@ export default function FoodDetailScreen() {
         quantity,
         unit,
         servingDesc: describePortion(quantity, unit, effectiveInfo!),
+        imageUrl: f.imageUrl,
         nutrition,
         notes: edited ? 'Edited nutrition (this entry only)' : undefined,
       },
@@ -247,6 +264,21 @@ export default function FoodDetailScreen() {
 
       <Card style={{ gap: spacing.md }}>
         <NumberField label="Quantity" value={quantity} onChange={setQuantity} min={0.01} />
+        {units.includes('g') ? (
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
+            {[100, 150, 200, 250, 300].map((grams) => (
+              <Chip
+                key={grams}
+                label={`${grams} g`}
+                selected={unit === 'g' && quantity === grams}
+                onPress={() => {
+                  setUnit('g');
+                  setQuantity(grams);
+                }}
+              />
+            ))}
+          </View>
+        ) : null}
         <View style={{ gap: spacing.xs }}>
           <AppText variant="caption" tone="secondary">
             Unit

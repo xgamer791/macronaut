@@ -1,13 +1,16 @@
+import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import React, { useState } from 'react';
-import { View } from 'react-native';
+import { Pressable, View } from 'react-native';
 import { Nutrition } from '@/domain/types';
 import { ServingUnit } from '@/domain/serving';
 import { useRepos } from '@/state/AppProvider';
+import { useFoodSearchService } from '@/state/foodSearch';
 import { goBackOrHome } from '@/utils/navigation';
 import {
   AppText,
+  BarcodeScanSheet,
   Button,
   Card,
   Chip,
@@ -16,6 +19,7 @@ import {
   TargetEditor,
   TextField,
 } from '@/ui/components';
+import { useTheme } from '@/ui/theme/ThemeProvider';
 import { spacing } from '@/ui/theme/tokens';
 
 const UNIT_CHOICES: ServingUnit[] = ['serving', 'g', 'ml', 'cup', 'piece', 'slice', 'container'];
@@ -27,6 +31,8 @@ export default function CustomFoodScreen() {
   const router = useRouter();
   const qc = useQueryClient();
   const { food } = useRepos();
+  const { colors } = useTheme();
+  const searchService = useFoodSearchService();
 
   const existing = useQuery({
     queryKey: ['custom-food-edit', id ?? 'new'],
@@ -46,6 +52,43 @@ export default function CustomFoodScreen() {
   const [nameError, setNameError] = useState<string | undefined>();
   const [hydrated, setHydrated] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [scanOpen, setScanOpen] = useState(false);
+  const [scanBusy, setScanBusy] = useState(false);
+  const [scanNote, setScanNote] = useState<string | null>(null);
+
+  /** Scan → look up across all providers → fill every available field. */
+  async function handleScannedCode(code: string) {
+    setScanBusy(true);
+    try {
+      setBarcode(code);
+      const result = await searchService.lookupBarcode(code);
+      const f = result.food;
+      if (!f) {
+        setScanNote(
+          result.offline
+            ? 'Lookup needs internet — barcode saved, fill the rest manually.'
+            : 'No product found for this barcode — barcode saved, fill the rest manually.',
+        );
+        setScanOpen(false);
+        return;
+      }
+      setName(f.name);
+      if (f.brand) setBrand(f.brand);
+      if (f.imageUrl) setImageUrl(f.imageUrl);
+      if (f.gramsPerServing) setGramsPerServing(f.gramsPerServing);
+      const per = f.nutritionPerServing ?? f.nutritionPer100g;
+      if (per) setNutrition(per);
+      if (!f.nutritionPerServing && f.nutritionPer100g) {
+        setServingQty(100);
+        setServingUnit('g');
+        setGramsPerServing(100);
+      }
+      setScanNote(`Filled from ${f.provider === 'off' ? 'Open Food Facts' : 'USDA'} — review and save.`);
+      setScanOpen(false);
+    } finally {
+      setScanBusy(false);
+    }
+  }
 
   // Hydrate the form once when editing.
   if (existing.data && !hydrated) {
@@ -110,14 +153,33 @@ export default function CustomFoodScreen() {
       />
       <TextField label="Brand (optional)" value={brand} onChangeText={setBrand} placeholder="Homemade" />
       <View style={{ flexDirection: 'row', gap: spacing.md }}>
-        <View style={{ flex: 1 }}>
-          <TextField
-            label="Barcode (optional)"
-            value={barcode}
-            onChangeText={setBarcode}
-            placeholder="0123456789012"
-            keyboardType="number-pad"
-          />
+        <View style={{ flex: 1, flexDirection: 'row', alignItems: 'flex-end', gap: spacing.sm }}>
+          <View style={{ flex: 1 }}>
+            <TextField
+              label="Barcode (optional)"
+              value={barcode}
+              onChangeText={setBarcode}
+              placeholder="0123456789012"
+              keyboardType="number-pad"
+            />
+          </View>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Scan barcode with camera"
+            onPress={() => setScanOpen(true)}
+            style={{
+              width: 44,
+              height: 44,
+              borderRadius: 8,
+              borderWidth: 1,
+              borderColor: colors.borderStrong,
+              backgroundColor: colors.surface,
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <Ionicons name="camera-outline" size={20} color={colors.textPrimary} />
+          </Pressable>
         </View>
         <View style={{ flex: 1 }}>
           <TextField
@@ -129,6 +191,11 @@ export default function CustomFoodScreen() {
           />
         </View>
       </View>
+      {scanNote ? (
+        <AppText variant="micro" tone={scanNote.startsWith('Filled') ? 'accent' : 'secondary'}>
+          {scanNote}
+        </AppText>
+      ) : null}
 
       <Card style={{ gap: spacing.md }}>
         <AppText variant="body" weight="600">
@@ -193,6 +260,13 @@ export default function CustomFoodScreen() {
         </View>
       ) : null}
       <Button title="Cancel" variant="ghost" onPress={() => goBackOrHome(router)} />
+
+      <BarcodeScanSheet
+        visible={scanOpen}
+        onClose={() => setScanOpen(false)}
+        onCode={handleScannedCode}
+        busy={scanBusy}
+      />
     </Screen>
   );
 }

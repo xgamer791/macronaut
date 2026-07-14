@@ -146,6 +146,7 @@ export default function AddScreen() {
 
           {!searching ? (
             <>
+              <Button title="Scan a barcode" onPress={() => router.push('/scan')} />
               {(recentSearches.data?.length ?? 0) > 0 ? (
                 <View style={{ gap: spacing.sm }}>
                   <AppText variant="caption" tone="muted">
@@ -166,6 +167,7 @@ export default function AddScreen() {
                   {frequents.data!.map((f) => (
                     <ListRow
                       key={f.foodKey}
+                      left={<FoodImage uri={f.imageUrl} size={36} />}
                       title={f.name}
                       subtitle={`Logged ${f.count}×`}
                       onPress={() => openHistoryItem(f.foodKey)}
@@ -179,7 +181,12 @@ export default function AddScreen() {
                     Recently logged
                   </AppText>
                   {recents.data!.map((r) => (
-                    <ListRow key={r.foodKey} title={r.name} onPress={() => openHistoryItem(r.foodKey)} />
+                    <ListRow
+                      key={r.foodKey}
+                      left={<FoodImage uri={r.imageUrl} size={36} />}
+                      title={r.name}
+                      onPress={() => openHistoryItem(r.foodKey)}
+                    />
                   ))}
                 </Card>
               ) : null}
@@ -231,7 +238,11 @@ export default function AddScreen() {
                         key={`${f.provider}:${f.id}`}
                         left={<FoodImage uri={f.imageUrl} />}
                         title={f.name}
-                        subtitle={[f.brand, f.isGeneric ? 'Generic' : null, f.provider.toUpperCase()]
+                        subtitle={[
+                          f.brand,
+                          f.isGeneric ? 'Generic' : null,
+                          f.provider === 'local' ? 'Built-in' : f.provider.toUpperCase(),
+                        ]
                           .filter(Boolean)
                           .join(' · ')}
                         value={cal !== undefined ? `${Math.round(cal)} kcal / ${per}` : undefined}

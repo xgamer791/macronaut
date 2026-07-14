@@ -16,6 +16,8 @@ export interface DiaryEntry {
   quantity: number;
   unit: string;
   servingDesc?: string;
+  /** Product image snapshotted at log time. */
+  imageUrl?: string;
   /** TOTAL nutrition for this entry (already scaled to the portion) —
    * snapshotted at log time so later food edits never rewrite history. */
   nutrition: Nutrition;
@@ -44,7 +46,7 @@ export interface CustomFood {
 }
 
 export interface CachedFood {
-  provider: 'usda' | 'off';
+  provider: 'usda' | 'off' | 'local';
   providerId: string;
   name: string;
   brand?: string;

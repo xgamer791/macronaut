@@ -17,6 +17,7 @@ import {
   AppText,
   Button,
   Card,
+  FoodImage,
   ListRow,
   MacroBar,
   ProgressRing,
@@ -224,7 +225,13 @@ export default function TodayScreen() {
           <SectionHeader title="Recent" />
           <Card padded={false} style={{ paddingHorizontal: spacing.lg, paddingVertical: spacing.xs }}>
             {recents.data!.map((r) => (
-              <ListRow key={r.foodKey} title={r.name} subtitle="Recently logged" onPress={() => router.push('/add')} />
+              <ListRow
+                key={r.foodKey}
+                left={r.imageUrl ? <FoodImage uri={r.imageUrl} size={36} /> : undefined}
+                title={r.name}
+                subtitle="Recently logged"
+                onPress={() => router.push('/add')}
+              />
             ))}
           </Card>
         </>
@@ -237,6 +244,7 @@ export default function TodayScreen() {
             {frequents.data!.map((f) => (
               <ListRow
                 key={f.foodKey}
+                left={f.imageUrl ? <FoodImage uri={f.imageUrl} size={36} /> : undefined}
                 title={f.name}
                 subtitle={`Logged ${f.count} time${f.count === 1 ? '' : 's'}`}
                 onPress={() => router.push('/add')}

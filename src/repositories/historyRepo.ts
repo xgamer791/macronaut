@@ -4,18 +4,20 @@ import { newId, nowIso } from './util';
 export interface RecentFood {
   foodKey: string;
   name: string;
+  imageUrl?: string;
   lastLoggedAt: string;
 }
 
 export interface FrequentFood {
   foodKey: string;
   name: string;
+  imageUrl?: string;
   count: number;
 }
 
 export interface HistoryRepo {
   /** Record a logging event for recents/frequents ranking. */
-  recordLog(foodKey: string, name: string, meal: string): Promise<void>;
+  recordLog(foodKey: string, name: string, meal: string, imageUrl?: string): Promise<void>;
   recentFoods(limit?: number): Promise<RecentFood[]>;
   /** Ranked by actual logging frequency; optionally biased to a meal
    * category (foods commonly logged in that meal rank first). */
@@ -27,16 +29,16 @@ export interface HistoryRepo {
 
 export function createHistoryRepo(db: Database): HistoryRepo {
   return {
-    async recordLog(foodKey, name, meal) {
+    async recordLog(foodKey, name, meal, imageUrl) {
       await db.runAsync(
-        'INSERT INTO food_log_history (id, food_key, name, meal, logged_at) VALUES (?, ?, ?, ?, ?)',
-        [newId(), foodKey, name, meal, nowIso()],
+        'INSERT INTO food_log_history (id, food_key, name, meal, logged_at, image_url) VALUES (?, ?, ?, ?, ?, ?)',
+        [newId(), foodKey, name, meal, nowIso(), imageUrl ?? null],
       );
     },
 
     async recentFoods(limit = 15) {
       return db.getAllAsync<RecentFood>(
-        `SELECT food_key as foodKey, name, MAX(logged_at) as lastLoggedAt
+        `SELECT food_key as foodKey, name, MAX(image_url) as imageUrl, MAX(logged_at) as lastLoggedAt
          FROM food_log_history GROUP BY food_key ORDER BY lastLoggedAt DESC LIMIT ?`,
         [limit],
       );
@@ -46,7 +48,7 @@ export function createHistoryRepo(db: Database): HistoryRepo {
       if (meal) {
         // Bias: rank by count within the meal first, then overall recency.
         return db.getAllAsync<FrequentFood>(
-          `SELECT food_key as foodKey, name,
+          `SELECT food_key as foodKey, name, MAX(image_url) as imageUrl,
              COUNT(*) as count,
              SUM(CASE WHEN meal = ? THEN 1 ELSE 0 END) as mealCount
            FROM food_log_history
@@ -58,7 +60,7 @@ export function createHistoryRepo(db: Database): HistoryRepo {
         );
       }
       return db.getAllAsync<FrequentFood>(
-        `SELECT food_key as foodKey, name, COUNT(*) as count
+        `SELECT food_key as foodKey, name, MAX(image_url) as imageUrl, COUNT(*) as count
          FROM food_log_history GROUP BY food_key
          ORDER BY count DESC, MAX(logged_at) DESC LIMIT ?`,
         [limit],
