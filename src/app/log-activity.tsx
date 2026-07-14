@@ -45,8 +45,8 @@ export default function LogActivityScreen() {
   const [nameError, setNameError] = useState<string | undefined>();
   const [durationMin, setDurationMin] = useState<number | undefined>(30);
   const [distanceKm, setDistanceKm] = useState<number | undefined>();
-  const [caloriesBurned, setCaloriesBurned] = useState<number | undefined>();
-  const [burnTouched, setBurnTouched] = useState(false);
+  /** Manual override; when unset, burn is derived from preset × duration. */
+  const [caloriesOverride, setCaloriesOverride] = useState<number | undefined>();
   const [intensity, setIntensity] = useState<ActivityIntensity>('moderate');
   const [notes, setNotes] = useState('');
   const [saving, setSaving] = useState(false);
@@ -63,12 +63,11 @@ export default function LogActivityScreen() {
     (p) => p.name.toLowerCase() === name.trim().toLowerCase(),
   );
 
-  useEffect(() => {
-    if (burnTouched) return;
-    if (selectedPreset && durationMin !== undefined) {
-      setCaloriesBurned(estimateBurn(selectedPreset.kcalPerMin, durationMin));
-    }
-  }, [selectedPreset, durationMin, burnTouched]);
+  const estimatedBurn =
+    selectedPreset && durationMin !== undefined
+      ? estimateBurn(selectedPreset.kcalPerMin, durationMin)
+      : undefined;
+  const caloriesBurned = caloriesOverride ?? estimatedBurn;
 
   useEffect(() => {
     let cancelled = false;
@@ -139,7 +138,7 @@ export default function LogActivityScreen() {
             selected={activityType === c.id}
             onPress={() => {
               setActivityType(c.id);
-              setBurnTouched(false);
+              setCaloriesOverride(undefined);
             }}
           />
         ))}
@@ -148,7 +147,7 @@ export default function LogActivityScreen() {
           selected={activityType === 'other'}
           onPress={() => {
             setActivityType('other');
-            setBurnTouched(false);
+            setCaloriesOverride(undefined);
           }}
         />
       </View>
@@ -163,10 +162,7 @@ export default function LogActivityScreen() {
               onPress={() => {
                 setName(p.name);
                 setNameError(undefined);
-                setBurnTouched(false);
-                if (durationMin !== undefined) {
-                  setCaloriesBurned(estimateBurn(p.kcalPerMin, durationMin));
-                }
+                setCaloriesOverride(undefined);
               }}
             />
           ))}
@@ -179,7 +175,7 @@ export default function LogActivityScreen() {
         onChangeText={(t) => {
           setName(t);
           if (t.trim()) setNameError(undefined);
-          setBurnTouched(false);
+          setCaloriesOverride(undefined);
         }}
         placeholder="Morning run"
         error={nameError}
@@ -208,10 +204,7 @@ export default function LogActivityScreen() {
       <NumberField
         label="Calories burned"
         value={caloriesBurned}
-        onChange={(v) => {
-          setCaloriesBurned(v);
-          setBurnTouched(true);
-        }}
+        onChange={setCaloriesOverride}
         min={0}
         required
       />
