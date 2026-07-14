@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import type { BottomTabBarProps } from 'expo-router/js-tabs';
 import React from 'react';
-import { Pressable, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '@/ui/theme/ThemeProvider';
 import { spacing } from '@/ui/theme/tokens';
@@ -16,6 +16,12 @@ const TAB_META: Record<string, { label: string; icon: IconName; iconActive: Icon
   progress: { label: 'Progress', icon: 'bar-chart-outline', iconActive: 'bar-chart' },
   settings: { label: 'Settings', icon: 'settings-outline', iconActive: 'settings' },
 };
+
+/** Previous FAB diameter was 52 — grow 20% for stronger presence. */
+const FAB_SIZE = Math.round(52 * 1.2); // 62
+const FAB_ICON = Math.round(28 * 1.2); // 34
+/** Clear air between FAB bottom edge and the top of the tab bar. */
+const FAB_AIR_GAP = 15;
 
 /** Bottom tab bar with a center Add FAB that opens the add-food hub. */
 export function TabBar({ state, navigation }: BottomTabBarProps) {
@@ -47,7 +53,7 @@ export function TabBar({ state, navigation }: BottomTabBarProps) {
             navigation.navigate(route.name);
           }
         }}
-        style={{ flex: 1, alignItems: 'center', gap: 2, paddingVertical: spacing.sm }}
+        style={styles.tab}
       >
         <Ionicons
           name={focused ? meta.iconActive : meta.icon}
@@ -63,39 +69,74 @@ export function TabBar({ state, navigation }: BottomTabBarProps) {
 
   return (
     <View
-      style={{
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: colors.surface,
-        borderTopWidth: 1,
-        borderTopColor: colors.border,
-        paddingBottom: insets.bottom,
-        paddingHorizontal: spacing.sm,
-      }}
+      style={[
+        styles.bar,
+        {
+          backgroundColor: colors.surface,
+          borderTopColor: colors.border,
+          paddingBottom: insets.bottom,
+        },
+      ]}
     >
       {left.map(renderTab)}
-      <View style={{ flex: 1, alignItems: 'center' }}>
+
+      {/* Spacer keeps Diary / Progress evenly spaced; FAB floats above the bar. */}
+      <View style={styles.fabSlot} pointerEvents="box-none">
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Add food"
           onPress={() => router.push('/add')}
-          style={({ pressed }) => ({
-            width: 52,
-            height: 52,
-            borderRadius: 26,
-            backgroundColor: colors.accent,
-            alignItems: 'center',
-            justifyContent: 'center',
-            marginTop: -22,
-            opacity: pressed ? 0.85 : 1,
-            borderWidth: 3,
-            borderColor: colors.background,
-          })}
+          style={({ pressed }) => [
+            styles.fab,
+            {
+              backgroundColor: colors.accent,
+              borderColor: colors.background,
+              shadowColor: '#000',
+              transform: [{ scale: pressed ? 0.94 : 1 }],
+            },
+          ]}
         >
-          <Ionicons name="add" size={28} color={colors.onAccent} />
+          <Ionicons name="add" size={FAB_ICON} color={colors.onAccent} />
         </Pressable>
       </View>
+
       {right.map(renderTab)}
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  bar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderTopWidth: StyleSheet.hairlineWidth,
+    paddingHorizontal: spacing.sm,
+    zIndex: 20,
+  },
+  tab: {
+    flex: 1,
+    alignItems: 'center',
+    gap: 2,
+    paddingVertical: spacing.sm,
+  },
+  fabSlot: {
+    width: FAB_SIZE + spacing.lg,
+    alignItems: 'center',
+    justifyContent: 'flex-start',
+  },
+  fab: {
+    position: 'absolute',
+    top: -(FAB_SIZE + FAB_AIR_GAP),
+    width: FAB_SIZE,
+    height: FAB_SIZE,
+    borderRadius: FAB_SIZE / 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 4,
+    // Soft floating shadow
+    shadowOpacity: 0.32,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 12,
+  },
+});
