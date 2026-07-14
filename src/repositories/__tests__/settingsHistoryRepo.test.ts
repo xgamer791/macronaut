@@ -26,11 +26,12 @@ describe('settingsRepo', () => {
   it('lists default meal categories and adds custom ones', async () => {
     const repo = createSettingsRepo(await createTestDb());
     const cats = await repo.getMealCategories();
-    expect(cats).toHaveLength(6);
+    expect(cats).toHaveLength(4);
+    expect(cats.map((c) => c.id)).toEqual(['breakfast', 'lunch', 'dinner', 'snacks']);
     expect(cats[0].builtin).toBe(true);
     const added = await repo.addMealCategory('Pre-workout');
     expect(added.builtin).toBe(false);
-    expect(await repo.getMealCategories()).toHaveLength(7);
+    expect(await repo.getMealCategories()).toHaveLength(5);
   });
 });
 

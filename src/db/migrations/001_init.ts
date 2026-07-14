@@ -160,6 +160,7 @@ export async function up(db: Database): Promise<void> {
   `);
 
   // Default meal categories (the standard six).
+  // Migration 005 consolidates these to Breakfast · Lunch · Dinner · Snacks.
   const defaults = [
     ['breakfast', 'Breakfast'],
     ['morning-snack', 'Morning snack'],

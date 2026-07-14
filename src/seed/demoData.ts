@@ -59,7 +59,7 @@ export async function loadDemoData(repos: Repos): Promise<void> {
 
   // 17 days of history with varied but realistic patterns; a couple of days
   // intentionally over target and two days unlogged.
-  const meals = ['breakfast', 'lunch', 'dinner', 'evening-snack'];
+  const meals = ['breakfast', 'lunch', 'dinner', 'snacks'];
   for (let back = 17; back >= 0; back--) {
     const date = addDays(today, -back);
     if (back === 6 || back === 13) continue; // unlogged days
