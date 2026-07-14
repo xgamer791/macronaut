@@ -15,3 +15,4 @@ export { Sheet } from './Sheet';
 export { StatTile } from './StatTile';
 export { TextField } from './TextField';
 export { TargetEditor } from './TargetEditor';
+export { DatePickSheet } from './DatePickSheet';

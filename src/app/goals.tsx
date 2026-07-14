@@ -8,6 +8,7 @@ import { NutrientTargets } from '@/domain/types';
 import { useRepos } from '@/state/AppProvider';
 import { keys, useGoalConfigs } from '@/state/queries';
 import { todayKey } from '@/utils/date';
+import { goBackOrHome } from '@/utils/navigation';
 import {
   AppText,
   Button,
@@ -71,7 +72,7 @@ export default function GoalsScreen() {
       const { id: _id, ...rest } = working;
       await goals.saveConfig({ ...rest, effectiveFrom: todayKey() });
       qc.invalidateQueries({ queryKey: keys.goals });
-      router.back();
+      goBackOrHome(router);
     } finally {
       setSaving(false);
     }
@@ -85,7 +86,7 @@ export default function GoalsScreen() {
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Back"
-          onPress={() => router.back()}
+          onPress={() => goBackOrHome(router)}
           style={{ minWidth: 44, minHeight: 44, justifyContent: 'center' }}
         >
           <Ionicons name="chevron-back" size={24} color={colors.textPrimary} />
