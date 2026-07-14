@@ -15,7 +15,7 @@ export const keys = {
   diaryRange: (from: DayKey, to: DayKey) => ['diary-range', from, to] as const,
   activity: (date: DayKey) => ['activity', date] as const,
   activityRange: (from: DayKey, to: DayKey) => ['activity-range', from, to] as const,
-  dayNote: (date: DayKey) => ['day-note', date] as const,
+  dayNotes: (date: DayKey) => ['day-notes', date] as const,
   dayNotesRange: (from: DayKey, to: DayKey) => ['day-notes-range', from, to] as const,
   goals: ['goals'] as const,
   marks: ['marks'] as const,
@@ -47,9 +47,9 @@ export function useInvalidateActivity() {
   };
 }
 
-export function useDayNote(date: DayKey) {
+export function useDayNotes(date: DayKey) {
   const { dayNotes } = useRepos();
-  return useQuery({ queryKey: keys.dayNote(date), queryFn: () => dayNotes.get(date) });
+  return useQuery({ queryKey: keys.dayNotes(date), queryFn: () => dayNotes.listForDate(date) });
 }
 
 export function useDayNotesRange(from: DayKey, to: DayKey) {
@@ -60,15 +60,40 @@ export function useDayNotesRange(from: DayKey, to: DayKey) {
   });
 }
 
-export function useSetDayNote() {
-  const { dayNotes } = useRepos();
+function useInvalidateDayNotes() {
   const qc = useQueryClient();
+  return (date?: DayKey) => {
+    if (date) qc.invalidateQueries({ queryKey: keys.dayNotes(date) });
+    else qc.invalidateQueries({ queryKey: ['day-notes'] });
+    qc.invalidateQueries({ queryKey: ['day-notes-range'] });
+  };
+}
+
+export function useAddDayNote() {
+  const { dayNotes } = useRepos();
+  const invalidate = useInvalidateDayNotes();
   return useMutation({
-    mutationFn: (input: { date: DayKey; body: string }) => dayNotes.set(input.date, input.body),
-    onSuccess: (_data, vars) => {
-      qc.invalidateQueries({ queryKey: keys.dayNote(vars.date) });
-      qc.invalidateQueries({ queryKey: ['day-notes-range'] });
-    },
+    mutationFn: (input: { date: DayKey; body: string }) => dayNotes.add(input.date, input.body),
+    onSuccess: (_data, vars) => invalidate(vars.date),
+  });
+}
+
+export function useUpdateDayNote() {
+  const { dayNotes } = useRepos();
+  const invalidate = useInvalidateDayNotes();
+  return useMutation({
+    mutationFn: (input: { id: string; date: DayKey; body: string }) =>
+      dayNotes.update(input.id, input.body),
+    onSuccess: (_data, vars) => invalidate(vars.date),
+  });
+}
+
+export function useDeleteDayNote() {
+  const { dayNotes } = useRepos();
+  const invalidate = useInvalidateDayNotes();
+  return useMutation({
+    mutationFn: (input: { id: string; date: DayKey }) => dayNotes.remove(input.id),
+    onSuccess: (_data, vars) => invalidate(vars.date),
   });
 }
 
