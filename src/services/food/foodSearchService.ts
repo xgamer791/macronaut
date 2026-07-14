@@ -1,21 +1,38 @@
 import { FoodRepo } from '@/repositories/foodRepo';
 import { CachedFood } from '@/repositories/types';
-import { barcodeVariants } from './barcodeNormalize';
-import { confidenceLevel, LOW_CONFIDENCE, scoreConfidence } from './confidence';
+import { AUTO_SELECT_CONFIDENCE, confidenceLevel, LOW_CONFIDENCE, scoreConfidence } from './confidence';
+import { resolveConflicts } from './conflict';
+import { fatsecretProvider } from './fatsecret';
 import { getGenericFood, searchGenericFoods } from './genericFoods';
+import { GroupedFoods, groupRankedFoods } from './grouping';
 import { mergeBestImage, nutritionAgrees } from './merge';
+import { barcodeVariants, normalizeBarcode } from './barcodeNormalize';
 import { NormalizedFood, normalizeFood } from './normalize';
+import { nutritionixProvider } from './nutritionix';
 import { offProvider } from './openFoodFacts';
+import {
+  detectPreparationState,
+  isMeatLike,
+  preparationMatches,
+} from './preparation';
+import { RankedFood, rankFoods } from './ranking';
+import { getRestaurantFood, searchRestaurantFoods } from './restaurantFoods';
 import { FoodProvider, ProviderError, ProviderFood, SearchOptions } from './types';
 import { usdaProvider } from './usda';
 
-export { barcodeVariants };
-export { normalizeBarcode } from './barcodeNormalize';
+export { barcodeVariants, normalizeBarcode };
+export type { GroupedFoods };
+
+/** Grouped search sections for the UI. */
+export type GroupedSearchResults = GroupedFoods;
 
 export interface SearchResult {
   foods: ProviderFood[];
+  groups: GroupedSearchResults;
+  /** Highest-confidence food when score >= AUTO_SELECT_CONFIDENCE. */
+  autoSelected?: ProviderFood;
   failures: { provider: string; kind: ProviderError['kind'] }[];
-  /** True when every network provider failed (generics still returned). */
+  /** True when every network provider failed (bundled data may still return). */
   allFailed: boolean;
 }
 
@@ -23,14 +40,18 @@ export interface BarcodeResult {
   custom?: string;
   food?: ProviderFood;
   candidates?: ProviderFood[];
+  groups?: GroupedSearchResults;
   /** Best result is below the confidence bar — UI must ask the user to review. */
   lowConfidence: boolean;
+  /** True when best score reaches auto-select threshold. */
+  autoSelected?: boolean;
   offline: boolean;
 }
 
-/** Attach the normalized/validated/scored enrichment onto a ProviderFood so
- * the UI (which consumes ProviderFood) gets confidence, serving basis and
- * warnings without a separate model. */
+function defaultProviders(): FoodProvider[] {
+  return [usdaProvider, nutritionixProvider, fatsecretProvider, offProvider];
+}
+
 function enrich(nf: NormalizedFood, confidence: number): ProviderFood {
   return {
     provider: nf.provider,
@@ -59,16 +80,47 @@ function enrich(nf: NormalizedFood, confidence: number): ProviderFood {
   };
 }
 
+function cachedToProvider(cached: CachedFood): ProviderFood {
+  return {
+    provider: cached.provider,
+    id: cached.providerId,
+    name: cached.name,
+    brand: cached.brand,
+    restaurant: cached.restaurant,
+    barcode: cached.barcode,
+    imageUrl: cached.imageUrl,
+    isGeneric: cached.category === 'generic' || cached.provider === 'local',
+    nutritionPer100g: cached.nutritionPer100g,
+    nutritionPerServing: cached.nutritionPerServing,
+    gramsPerServing: cached.gramsPerServing,
+    servingLabel: cached.servingUnit,
+    preparationState: cached.preparationState,
+    ingredients: cached.ingredients,
+    allergens: cached.allergens,
+    verified: cached.verified,
+    lastVerified: cached.lastVerified,
+    category: cached.category,
+    confidence: cached.confidence,
+  };
+}
+
+function normalizeRaw(raw: ProviderFood): NormalizedFood {
+  return normalizeFood(raw, {
+    servingSize: raw.servingLabel,
+    servingQuantity: raw.gramsPerServing,
+    servingUnit: raw.servingUnit,
+  });
+}
+
 /**
  * BarcodeLookupService + FoodSearchService — the ONE place all food lookup
- * lives. Every result is normalized to a consistent model, sanity-checked,
- * confidence-scored, cross-referenced across sources, and ranked before it
- * reaches the UI. Providers are pluggable via the array; the pipeline is
- * source-agnostic.
+ * lives. Pipeline: cache → bundled generics/restaurants → parallel providers →
+ * normalize → validate → confidence → prep filter → dedupe → conflict →
+ * rank → group.
  */
 export function createFoodSearchService(
   foodRepo: FoodRepo,
-  providers: FoodProvider[] = [usdaProvider, offProvider],
+  providers: FoodProvider[] = defaultProviders(),
 ) {
   async function cache(foods: ProviderFood[]): Promise<void> {
     const now = new Date().toISOString();
@@ -102,13 +154,13 @@ export function createFoodSearchService(
     }
   }
 
-  function dedupe(foods: NormalizedFood[]): NormalizedFood[] {
+  function dedupeNormalized(foods: NormalizedFood[]): NormalizedFood[] {
     const seen = new Set<string>();
     const out: NormalizedFood[] = [];
     for (const f of foods) {
       const key =
         f.barcode?.replace(/^0+/, '') ||
-        `${f.name.toLowerCase().trim()}|${(f.brand ?? '').toLowerCase().trim()}|${f.preparationState}`;
+        `${f.name.toLowerCase().trim()}|${(f.brand ?? f.restaurant ?? '').toLowerCase().trim()}|${f.preparationState}`;
       if (seen.has(key)) continue;
       seen.add(key);
       out.push(f);
@@ -116,7 +168,6 @@ export function createFoodSearchService(
     return out;
   }
 
-  /** Mark foods whose per-100g nutrition is independently corroborated. */
   function markCorroboration(foods: NormalizedFood[]): Set<NormalizedFood> {
     const corroborated = new Set<NormalizedFood>();
     for (let i = 0; i < foods.length; i++) {
@@ -130,26 +181,100 @@ export function createFoodSearchService(
     return corroborated;
   }
 
+  /** Drop meat results whose preparation conflicts with the query. */
+  function filterPrep(foods: NormalizedFood[], query: string): NormalizedFood[] {
+    const queryPrep = detectPreparationState(query);
+    if (queryPrep === 'unknown') return foods;
+    const meatQuery = isMeatLike(query);
+    return foods.filter((f) => {
+      const foodPrep = f.preparationState ?? detectPreparationState(f.name);
+      const meat = meatQuery || isMeatLike(f.name);
+      return preparationMatches(queryPrep, foodPrep, { meatLike: meat });
+    });
+  }
+
+  function pipeline(
+    normalized: NormalizedFood[],
+    ctx: { query?: string; scannedBarcode?: string },
+  ): { foods: ProviderFood[]; groups: GroupedSearchResults; autoSelected?: ProviderFood; ranked: RankedFood[] } {
+    const corroborated = markCorroboration(normalized);
+    const enriched = normalized.map((nf) => {
+      const confidence = scoreConfidence(nf, {
+        query: ctx.query,
+        scannedBarcode: ctx.scannedBarcode,
+        corroborated: corroborated.has(nf),
+      }).score;
+      return enrich(nf, confidence);
+    });
+
+    // Conflict resolve among same-ish barcode / name peers (never average).
+    const conflicted = resolveConflicts(
+      enriched.map((food) => ({
+        food,
+        barcodeMatch: Boolean(
+          ctx.scannedBarcode &&
+            food.barcode &&
+            barcodeVariants(food.barcode).some((v) => barcodeVariants(ctx.scannedBarcode!).includes(v)),
+        ),
+        verifiedAt: food.lastVerified,
+      })),
+    );
+    const candidates = conflicted
+      ? [conflicted.winner, ...conflicted.rejected]
+      : enriched;
+
+    const ranked = rankFoods(candidates, {
+      query: ctx.query,
+      scannedBarcode: ctx.scannedBarcode,
+    });
+    const groups = groupRankedFoods(ranked);
+    const foods = ranked.map((r) => r.food);
+    const top = ranked[0];
+    const autoSelected =
+      top && top.score >= AUTO_SELECT_CONFIDENCE && top.autoSelect ? top.food : undefined;
+    return { foods, groups, autoSelected, ranked };
+  }
+
   return {
     async search(query: string, opts: SearchOptions = {}): Promise<SearchResult> {
-      const locals = (opts.filter === 'branded' ? [] : searchGenericFoods(query)).map((f) =>
-        normalizeFood(f),
-      );
+      const q = query.trim();
+      if (!q) {
+        return {
+          foods: [],
+          groups: {
+            bestMatch: null,
+            usdaWholeFoods: [],
+            packagedFoods: [],
+            restaurantFoods: [],
+            myFoods: [],
+          },
+          failures: [],
+          allFailed: false,
+        };
+      }
 
-      const results = await Promise.allSettled(providers.map((p) => p.search(query, opts)));
+      // 1) Local cache (normalized DB) — prioritize previously seen foods.
+      const cachedRows = await foodRepo.searchCached(q, 15).catch(() => [] as CachedFood[]);
+      const fromCache = cachedRows
+        .filter((c) => !c.flagged)
+        .map((c) => normalizeRaw(cachedToProvider(c)));
+
+      // 2) Bundled generics + restaurant foods (instant, verified).
+      const bundled: NormalizedFood[] = [];
+      if (opts.filter !== 'branded') {
+        bundled.push(...searchGenericFoods(q).map(normalizeRaw));
+      }
+      if (opts.filter !== 'generic') {
+        bundled.push(...searchRestaurantFoods(q).map(normalizeRaw));
+      }
+
+      // 3) Parallel network providers.
+      const results = await Promise.allSettled(providers.map((p) => p.search(q, opts)));
       const remote: NormalizedFood[] = [];
       const failures: SearchResult['failures'] = [];
       results.forEach((r, i) => {
         if (r.status === 'fulfilled') {
-          remote.push(
-            ...r.value.map((raw) =>
-              normalizeFood(raw, {
-                servingSize: raw.servingLabel,
-                servingQuantity: raw.gramsPerServing,
-                servingUnit: raw.servingUnit,
-              }),
-            ),
-          );
+          remote.push(...r.value.map(normalizeRaw));
         } else {
           failures.push({
             provider: providers[i].id,
@@ -158,38 +283,22 @@ export function createFoodSearchService(
         }
       });
 
-      const all = dedupe([...locals, ...remote]);
-      const corroborated = markCorroboration(all);
-      const scored = all.map((nf) => ({
-        nf,
-        confidence: scoreConfidence(nf, { query, corroborated: corroborated.has(nf) }).score,
-      }));
+      // 4) Normalize → prep filter → dedupe → conflict → rank → group.
+      let all = dedupeNormalized([...fromCache, ...bundled, ...remote]);
+      all = filterPrep(all, q);
+      const { foods, groups, autoSelected } = pipeline(all, { query: q });
 
-      const q = query.toLowerCase().trim();
-      const rank = (s: { nf: NormalizedFood; confidence: number }): number => {
-        const name = s.nf.name.toLowerCase();
-        let r = 0;
-        if (s.nf.provider === 'local') r += 300; // verified generics lead ingredient searches
-        else if (s.nf.isGeneric) r += 120;
-        if (name === q) r += 120;
-        else if (name.startsWith(q)) r += 70;
-        else if (name.includes(q)) r += 40;
-        else {
-          const words = q.split(/\s+/);
-          r += words.filter((w) => name.includes(w)).length === words.length ? 25 : 0;
-        }
-        r += s.confidence * 60; // accuracy is a ranking signal
-        return r;
+      cache(foods.slice(0, 40));
+      return {
+        foods,
+        groups,
+        autoSelected,
+        failures,
+        // True when every network provider failed (bundled/cache may still return).
+        allFailed: providers.length > 0 && failures.length === providers.length,
       };
-      scored.sort((a, b) => rank(b) - rank(a));
-
-      const foods = scored.map((s) => enrich(s.nf, s.confidence));
-      cache(foods);
-      return { foods, failures, allFailed: failures.length === providers.length };
     },
 
-    /** Barcode lookup across every provider + code variant, validated and
-     * ranked by confidence. Best match first; the rest become candidates. */
     async lookupBarcode(code: string, signal?: AbortSignal): Promise<BarcodeResult> {
       const variants = barcodeVariants(code);
       if (variants.length === 0) return { lowConfidence: false, offline: false };
@@ -197,96 +306,119 @@ export function createFoodSearchService(
       // 1) User's own foods win outright.
       for (const v of variants) {
         const custom = await foodRepo.findCustomByBarcode(v);
-        if (custom) return { custom: custom.id, lowConfidence: false, offline: false };
+        if (custom) return { custom: custom.id, lowConfidence: false, offline: false, autoSelected: true };
       }
 
-      // 2) Trust the cache only when it scores confidently and isn't flagged.
-      //    Legacy rows without a stored confidence get scored on the fly.
+      // 2) Confident local cache.
       for (const v of variants) {
         const cached = await foodRepo.findCachedByBarcode(v);
         if (!cached || cached.provider === 'local' || cached.flagged) continue;
-        const nf = normalizeFood({
-          provider: cached.provider,
-          id: cached.providerId,
-          name: cached.name,
-          brand: cached.brand,
-          restaurant: cached.restaurant,
-          barcode: cached.barcode,
-          imageUrl: cached.imageUrl,
-          isGeneric: cached.category === 'generic',
-          nutritionPer100g: cached.nutritionPer100g,
-          nutritionPerServing: cached.nutritionPerServing,
-          gramsPerServing: cached.gramsPerServing,
-          servingLabel: cached.servingUnit,
-          preparationState: cached.preparationState,
-          ingredients: cached.ingredients,
-          allergens: cached.allergens,
-          verified: cached.verified,
-          lastVerified: cached.lastVerified,
-          category: cached.category,
-        });
+        const nf = normalizeRaw(cachedToProvider(cached));
         const conf = cached.confidence ?? scoreConfidence(nf, { scannedBarcode: code }).score;
         if (conf >= LOW_CONFIDENCE) {
-          return { food: enrich(nf, conf), lowConfidence: false, offline: false };
+          const food = enrich(nf, conf);
+          return {
+            food,
+            lowConfidence: false,
+            offline: false,
+            autoSelected: conf >= AUTO_SELECT_CONFIDENCE,
+            groups: groupRankedFoods([
+              {
+                food,
+                score: conf,
+                level: confidenceLevel(conf),
+                reasons: [],
+                autoSelect: conf >= AUTO_SELECT_CONFIDENCE,
+              },
+            ]),
+          };
         }
       }
 
-      // 3) Query every provider across every variant, in parallel.
-      const attempts = providers.flatMap((p) => variants.map((v) => ({ p, v })));
+      // 3) Providers in preferred barcode order: nutritionix → fatsecret → usda → off
+      //    (still parallel across variants for speed).
+      const order = ['nutritionix', 'fatsecret', 'usda', 'off'] as const;
+      const orderedProviders = [...providers].sort((a, b) => {
+        const ia = order.indexOf(a.id as (typeof order)[number]);
+        const ib = order.indexOf(b.id as (typeof order)[number]);
+        return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib);
+      });
+
+      const attempts = orderedProviders.flatMap((p) => variants.map((v) => ({ p, v })));
       const settled = await Promise.allSettled(attempts.map((a) => a.p.getByBarcode(a.v, signal)));
       const hits: NormalizedFood[] = [];
       let sawNetworkFailure = false;
       settled.forEach((r) => {
         if (r.status === 'fulfilled' && r.value) {
-          hits.push(
-            normalizeFood(r.value, {
-              servingSize: r.value.servingLabel,
-              servingQuantity: r.value.gramsPerServing,
-              servingUnit: r.value.servingUnit,
-            }),
-          );
-        } else if (r.status === 'rejected' && r.reason instanceof ProviderError && r.reason.kind === 'network') {
+          hits.push(normalizeRaw(r.value));
+        } else if (
+          r.status === 'rejected' &&
+          r.reason instanceof ProviderError &&
+          r.reason.kind === 'network'
+        ) {
           sawNetworkFailure = true;
         }
       });
 
-      const unique = dedupe(hits);
+      const unique = dedupeNormalized(hits);
       if (unique.length === 0) return { lowConfidence: false, offline: sawNetworkFailure };
 
-      const corroborated = markCorroboration(unique);
-      const variantSet = new Set(variants);
-      const scored = unique.map((nf) => ({
-        nf,
-        // The record actually carrying the scanned barcode is the strongest
-        // identity signal — it must outrank a higher-trust source that only
-        // matched by name.
-        barcodeMatch: nf.barcode ? barcodeVariants(nf.barcode).some((v) => variantSet.has(v)) : false,
-        confidence: scoreConfidence(nf, { scannedBarcode: code, corroborated: corroborated.has(nf) })
-          .score,
-      }));
-      // Exact-barcode matches first, then by confidence (curated beats crowd).
-      scored.sort(
-        (a, b) => Number(b.barcodeMatch) - Number(a.barcodeMatch) || b.confidence - a.confidence,
-      );
+      const { ranked } = pipeline(unique, { scannedBarcode: code });
 
-      // Give the winner the best available image from a same-identity match.
-      const merged = mergeBestImage(
-        scored[0].nf,
-        scored.map((s) => s.nf),
-      );
-      const bestFood = enrich(merged.food, scored[0].confidence);
-      const candidates = scored.slice(1).map((s) => enrich(s.nf, s.confidence));
+      // Exact barcode identity always outranks a higher-trust name collision.
+      const variantSet = new Set(variants);
+      const rankedByBarcode = [...ranked].sort((a, b) => {
+        const aMatch = a.food.barcode
+          ? barcodeVariants(a.food.barcode).some((v) => variantSet.has(v))
+          : false;
+        const bMatch = b.food.barcode
+          ? barcodeVariants(b.food.barcode).some((v) => variantSet.has(v))
+          : false;
+        return Number(bMatch) - Number(aMatch) || b.score - a.score;
+      });
+
+      const bestNf =
+        unique.find(
+          (u) =>
+            u.provider === rankedByBarcode[0].food.provider &&
+            u.id === rankedByBarcode[0].food.id,
+        ) ?? unique[0];
+      const merged = mergeBestImage(bestNf, unique);
+      const bestScore = rankedByBarcode[0]?.score ?? 0;
+      const bestFood = enrich(merged.food, bestScore);
+      if (merged.imageFrom && !rankedByBarcode[0].food.imageUrl) {
+        bestFood.imageUrl = merged.food.imageUrl;
+      }
+      const candidates = rankedByBarcode.slice(1).map((r) => r.food);
+      const orderedGroups = groupRankedFoods(rankedByBarcode);
 
       await cache([bestFood, ...candidates]);
       return {
         food: bestFood,
         candidates: candidates.length > 0 ? candidates : undefined,
-        lowConfidence: scored[0].confidence < LOW_CONFIDENCE,
+        groups: orderedGroups,
+        lowConfidence: bestScore < LOW_CONFIDENCE,
+        autoSelected: bestScore >= AUTO_SELECT_CONFIDENCE,
         offline: false,
       };
     },
 
+    /** Lightweight prefetch for partial queries (cache + bundled only). */
+    async prefetchLikely(query: string): Promise<ProviderFood[]> {
+      const q = query.trim();
+      if (q.length < 2) return [];
+      const cached = await foodRepo.searchCached(q, 8).catch(() => [] as CachedFood[]);
+      const bundled = [
+        ...searchGenericFoods(q, 5),
+        ...searchRestaurantFoods(q, 5),
+      ];
+      const foods = [...cached.filter((c) => !c.flagged).map(cachedToProvider), ...bundled];
+      const ranked = rankFoods(foods, { query: q });
+      return ranked.slice(0, 12).map((r) => r.food);
+    },
+
     getGenericFood,
+    getRestaurantFood,
   };
 }
 

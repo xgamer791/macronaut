@@ -80,6 +80,7 @@ function toProviderFood(p: OffProduct): ProviderFood | null {
     ingredients,
     allergens,
     category: 'packaged',
+    verified: false,
   };
 }
 
@@ -106,7 +107,7 @@ export const offProvider: FoodProvider = {
   async search(query, opts: SearchOptions = {}) {
     // Branded products only — OFF has no generic/reference foods.
     if (opts.filter === 'generic') return [];
-    const url = `${SEARCH_BASE}/cgi/search.pl?search_terms=${encodeURIComponent(query)}&search_simple=1&action=process&json=1&page_size=${opts.limit ?? 25}&fields=code,product_name,brands,image_front_small_url,serving_size,serving_quantity,serving_quantity_unit,nutriments,ingredients_text,allergens_tags`;
+    const url = `${SEARCH_BASE}/cgi/search.pl?search_terms=${encodeURIComponent(query)}&search_simple=1&action=process&json=1&page_size=${opts.limit ?? 25}&fields=code,product_name,brands,image_front_small_url,image_front_url,serving_size,serving_quantity,serving_quantity_unit,nutriments,ingredients_text,allergens_tags`;
     const json = await request<{ products?: OffProduct[] }>(url, opts.signal);
     return (json.products ?? [])
       .map(toProviderFood)
@@ -114,7 +115,7 @@ export const offProvider: FoodProvider = {
   },
 
   async getByBarcode(code, signal) {
-    const url = `${SEARCH_BASE}/api/v2/product/${encodeURIComponent(code)}.json?fields=code,product_name,brands,image_front_small_url,serving_size,serving_quantity,serving_quantity_unit,nutriments,ingredients_text,allergens_tags`;
+    const url = `${SEARCH_BASE}/api/v2/product/${encodeURIComponent(code)}.json?fields=code,product_name,brands,image_front_small_url,image_front_url,serving_size,serving_quantity,serving_quantity_unit,nutriments,ingredients_text,allergens_tags`;
     try {
       const json = await request<{ status: number; product?: OffProduct }>(url, signal);
       if (json.status !== 1 || !json.product) return null;

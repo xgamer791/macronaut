@@ -3,8 +3,9 @@ import { useQuery } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import { Linking, Pressable, View } from 'react-native';
+import { GroupedSearchResults } from '@/services/food/foodSearchService';
 import { webFoodLookup } from '@/services/food/webFallback';
-import { SearchFilter } from '@/services/food/types';
+import { ProviderFood, SearchFilter } from '@/services/food/types';
 import { useRepos } from '@/state/AppProvider';
 import { useFoodSearch } from '@/state/foodSearch';
 import { keys, useMealCategories } from '@/state/queries';
@@ -28,6 +29,96 @@ import { useTheme } from '@/ui/theme/ThemeProvider';
 import { spacing, touchTarget } from '@/ui/theme/tokens';
 
 type Tab = 'search' | 'foods' | 'meals' | 'recipes';
+
+function foodSubtitle(f: ProviderFood): string {
+  return [
+    f.restaurant ?? f.brand,
+    f.isGeneric ? 'Generic' : null,
+    f.provider === 'local'
+      ? 'Built-in'
+      : f.provider === 'restaurant'
+        ? 'Restaurant'
+        : f.provider.toUpperCase(),
+  ]
+    .filter(Boolean)
+    .join(' · ');
+}
+
+function FoodResultRow({
+  f,
+  onOpen,
+}: {
+  f: ProviderFood;
+  onOpen: (provider: string, id: string) => void;
+}) {
+  const cal = f.nutritionPerServing?.calories ?? f.nutritionPer100g?.calories;
+  const per = f.nutritionPerServing ? (f.servingLabel ?? 'serving') : '100 g';
+  return (
+    <ListRow
+      left={<FoodImage uri={f.imageUrl} />}
+      title={f.name}
+      subtitle={foodSubtitle(f)}
+      value={cal !== undefined ? `${Math.round(cal)} kcal / ${per}` : undefined}
+      onPress={() => onOpen(f.provider, f.id)}
+    />
+  );
+}
+
+function SearchResultSections({
+  foods,
+  groups,
+  onOpen,
+}: {
+  foods: ProviderFood[];
+  groups?: GroupedSearchResults;
+  onOpen: (provider: string, id: string) => void;
+}) {
+  const sections: { title: string; items: ProviderFood[] }[] = [];
+  if (groups) {
+    if (groups.bestMatch) sections.push({ title: 'Best match', items: [groups.bestMatch] });
+    if (groups.usdaWholeFoods.length) {
+      sections.push({
+        title: 'USDA whole foods',
+        items: groups.usdaWholeFoods.filter((f) => f.id !== groups.bestMatch?.id || f.provider !== groups.bestMatch?.provider),
+      });
+    }
+    if (groups.packagedFoods.length) {
+      sections.push({ title: 'Packaged foods', items: groups.packagedFoods });
+    }
+    if (groups.restaurantFoods.length) {
+      sections.push({ title: 'Restaurant foods', items: groups.restaurantFoods });
+    }
+    if (groups.myFoods.length) {
+      sections.push({ title: 'My foods', items: groups.myFoods });
+    }
+  }
+  const usable = sections.filter((s) => s.items.length > 0);
+  if (usable.length === 0) {
+    return (
+      <Card padded={false} style={{ paddingHorizontal: spacing.lg, paddingVertical: spacing.xs }}>
+        {foods.map((f) => (
+          <FoodResultRow key={`${f.provider}:${f.id}`} f={f} onOpen={onOpen} />
+        ))}
+      </Card>
+    );
+  }
+  return (
+    <View style={{ gap: spacing.md }}>
+      {usable.map((section) => (
+        <View key={section.title} style={{ gap: spacing.xs }}>
+          <AppText variant="caption" weight="600" tone="secondary">
+            {section.title}
+          </AppText>
+          <Card padded={false} style={{ paddingHorizontal: spacing.lg, paddingVertical: spacing.xs }}>
+            {section.items.map((f) => (
+              <FoodResultRow key={`${f.provider}:${f.id}`} f={f} onOpen={onOpen} />
+            ))}
+          </Card>
+        </View>
+      ))}
+    </View>
+  );
+}
 
 export default function AddScreen() {
   const router = useRouter();
@@ -197,7 +288,7 @@ export default function AddScreen() {
 
           {searching && search.isLoading ? (
             <AppText variant="caption" tone="muted" align="center">
-              Searching USDA, Open Food Facts and built-in foods…
+              Searching USDA, restaurant menus, Open Food Facts and built-in foods…
             </AppText>
           ) : null}
 
@@ -225,7 +316,7 @@ export default function AddScreen() {
                 <View style={{ gap: spacing.sm }}>
                   <EmptyState
                     title="No foods found"
-                    body="We checked USDA, Open Food Facts and the built-in database. Look it up on the web, or create it as a custom food."
+                    body="We checked USDA, restaurant menus, Open Food Facts and the built-in database. Look it up on the web, or create it as a custom food."
                     actionTitle="Create custom food"
                     onAction={() => router.push('/custom-food')}
                   />
@@ -236,34 +327,16 @@ export default function AddScreen() {
                   />
                 </View>
               ) : (
-                <Card padded={false} style={{ paddingHorizontal: spacing.lg, paddingVertical: spacing.xs }}>
-                  {search.data.foods.map((f) => {
-                    const cal =
-                      f.nutritionPerServing?.calories ?? f.nutritionPer100g?.calories;
-                    const per = f.nutritionPerServing ? (f.servingLabel ?? 'serving') : '100 g';
-                    return (
-                      <ListRow
-                        key={`${f.provider}:${f.id}`}
-                        left={<FoodImage uri={f.imageUrl} />}
-                        title={f.name}
-                        subtitle={[
-                          f.brand,
-                          f.isGeneric ? 'Generic' : null,
-                          f.provider === 'local' ? 'Built-in' : f.provider.toUpperCase(),
-                        ]
-                          .filter(Boolean)
-                          .join(' · ')}
-                        value={cal !== undefined ? `${Math.round(cal)} kcal / ${per}` : undefined}
-                        onPress={() =>
-                          router.push({
-                            pathname: '/food/[provider]/[id]',
-                            params: { provider: f.provider, id: f.id },
-                          })
-                        }
-                      />
-                    );
-                  })}
-                </Card>
+                <SearchResultSections
+                  foods={search.data.foods}
+                  groups={search.data.groups}
+                  onOpen={(provider, id) =>
+                    router.push({
+                      pathname: '/food/[provider]/[id]',
+                      params: { provider, id },
+                    })
+                  }
+                />
               )}
             </>
           ) : null}

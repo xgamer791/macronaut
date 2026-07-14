@@ -1,4 +1,5 @@
 import { MACRO_KEYS, MacroKey, Nutrition } from '@/domain/types';
+import { barcodeVariants, normalizeBarcode } from './barcodeNormalize';
 import { foodHttp, HttpClientError } from './httpClient';
 import { detectPreparationState } from './preparation';
 import { FoodProvider, ProviderError, ProviderFood, SearchOptions } from './types';
@@ -17,6 +18,14 @@ const NUTRIENT_MAP: Record<number, MacroKey | 'calories'> = {
   1258: 'saturatedFat',
   1093: 'sodium',
   1253: 'cholesterol',
+};
+
+/** Prefer Foundation → SR Legacy → Survey (FNDDS) → Branded. */
+const DATA_TYPE_PRIORITY: Record<string, number> = {
+  Foundation: 0,
+  'SR Legacy': 1,
+  'Survey (FNDDS)': 2,
+  Branded: 3,
 };
 
 interface UsdaSearchFood {
@@ -51,7 +60,6 @@ function nutritionPer100g(food: UsdaSearchFood): Nutrition | undefined {
 function toProviderFood(food: UsdaSearchFood): ProviderFood {
   const per100 = nutritionPer100g(food);
   const isGeneric = food.dataType !== 'Branded';
-  // Branded foods report serving size in g/ml; scale per-100g to per-serving.
   let gramsPerServing: number | undefined;
   if (
     food.servingSize &&
@@ -69,7 +77,6 @@ function toProviderFood(food: UsdaSearchFood): ProviderFood {
       if (v !== undefined) nutritionPerServing[k] = v * f;
     }
   }
-  const category = isGeneric ? 'generic' : 'packaged';
   return {
     provider: 'usda',
     id: String(food.fdcId),
@@ -85,8 +92,22 @@ function toProviderFood(food: UsdaSearchFood): ProviderFood {
       (gramsPerServing ? `${gramsPerServing} ${food.servingSizeUnit}` : isGeneric ? '100 g' : undefined),
     preparationState: detectPreparationState(food.description),
     dataType: food.dataType,
-    category,
+    category: isGeneric ? 'generic' : 'packaged',
   };
+}
+
+function sortByDataType(foods: ProviderFood[]): ProviderFood[] {
+  return [...foods].sort((a, b) => {
+    const pa = DATA_TYPE_PRIORITY[a.dataType ?? ''] ?? 9;
+    const pb = DATA_TYPE_PRIORITY[b.dataType ?? ''] ?? 9;
+    return pa - pb;
+  });
+}
+
+function barcodeMatches(gtinUpc: string | undefined, scanned: string): boolean {
+  if (!gtinUpc) return false;
+  const scannedSet = new Set(barcodeVariants(scanned));
+  return barcodeVariants(gtinUpc).some((v) => scannedSet.has(v));
 }
 
 async function request<T>(url: string, signal?: AbortSignal): Promise<T> {
@@ -115,24 +136,28 @@ export const usdaProvider: FoodProvider = {
 
   async search(query, opts: SearchOptions = {}) {
     const filter = opts.filter ?? 'all';
+    // Foundation → SR Legacy → Survey (FNDDS); Branded last / only when requested.
     const dataType =
       filter === 'branded'
         ? 'Branded'
         : filter === 'generic'
-          ? 'Foundation,SR Legacy'
-          : 'Foundation,SR Legacy,Branded';
+          ? 'Foundation,SR Legacy,Survey (FNDDS)'
+          : 'Foundation,SR Legacy,Survey (FNDDS),Branded';
     const url = `${BASE}/foods/search?api_key=${apiKey()}&query=${encodeURIComponent(query)}&dataType=${encodeURIComponent(dataType)}&pageSize=${opts.limit ?? 25}`;
     const json = await request<{ foods?: UsdaSearchFood[] }>(url, opts.signal);
-    return (json.foods ?? [])
+    const foods = (json.foods ?? [])
       .filter((f) => f.description)
       .map(toProviderFood)
       .filter((f) => f.nutritionPer100g !== undefined || f.nutritionPerServing !== undefined);
+    return sortByDataType(foods);
   },
 
   async getByBarcode(code, signal) {
-    const url = `${BASE}/foods/search?api_key=${apiKey()}&query=${encodeURIComponent(code)}&dataType=Branded&pageSize=5`;
+    const { canonical, digits } = normalizeBarcode(code);
+    const queryCode = canonical ?? digits;
+    const url = `${BASE}/foods/search?api_key=${apiKey()}&query=${encodeURIComponent(queryCode)}&dataType=Branded&pageSize=10`;
     const json = await request<{ foods?: UsdaSearchFood[] }>(url, signal);
-    const match = (json.foods ?? []).find((f) => f.gtinUpc?.replace(/^0+/, '') === code.replace(/^0+/, ''));
+    const match = (json.foods ?? []).find((f) => barcodeMatches(f.gtinUpc, code));
     return match ? toProviderFood(match) : null;
   },
 };
