@@ -143,7 +143,7 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
   },
   track: {
-    height: 16,
+    height: 11,
     borderRadius: radius.full,
     overflow: 'hidden',
     marginTop: 4,
