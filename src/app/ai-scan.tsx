@@ -1,4 +1,5 @@
 import { CameraView, useCameraPermissions } from 'expo-camera';
+import { Image } from 'expo-image';
 import { useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
@@ -11,6 +12,9 @@ import { goBackOrHome } from '@/utils/navigation';
 import { AppText, Button, Card, Screen, ScreenHeader } from '@/ui/components';
 import { useTheme } from '@/ui/theme/ThemeProvider';
 import { radius, spacing, touchTarget, type ThemeColors } from '@/ui/theme/tokens';
+
+const SCAN_DESCRIPTION =
+  'Snap a meal — Grok estimates the food, weight, and calories. Review before logging.';
 
 /**
  * Paid AI food scan — photo → Grok vision → custom food → confirm & log.
@@ -31,6 +35,8 @@ export default function AiScanScreen() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [estimate, setEstimate] = useState<GrokFoodEstimate | null>(null);
+  /** Captured meal photo — kept so results can show it above the scan description. */
+  const [photoDataUrl, setPhotoDataUrl] = useState<string | null>(null);
   const [webCameraOn, setWebCameraOn] = useState(false);
 
   const keyReady = (apiKey.data ?? '').trim().length > 0;
@@ -39,6 +45,7 @@ export default function AiScanScreen() {
     setBusy(true);
     setError(null);
     setEstimate(null);
+    setPhotoDataUrl(dataUrl);
     try {
       const result = await analyzeFoodPhoto({
         apiKey: apiKey.data ?? '',
@@ -149,12 +156,34 @@ export default function AiScanScreen() {
     );
   }
 
+  const scanDescription = (
+    <AppText variant="caption" tone="secondary">
+      {SCAN_DESCRIPTION}
+    </AppText>
+  );
+
+  /** Live camera puts the preview above the description; upload / results do the same. */
+  const analyzingPhoto = busy && !!photoDataUrl;
+  const liveCameraActive =
+    !estimate &&
+    !analyzingPhoto &&
+    ((Platform.OS === 'web' && webCameraOn) ||
+      (Platform.OS !== 'web' && !!permission?.granted));
+
   return (
     <Screen>
       <ScreenHeader title="AI food scan" />
-      <AppText variant="caption" tone="secondary">
-        Snap a meal — Grok estimates the food, weight, and calories. Review before logging.
-      </AppText>
+
+      {photoDataUrl && (estimate || analyzingPhoto || !!error) ? (
+        <Image
+          source={{ uri: photoDataUrl }}
+          style={[styles.photoPreview, { backgroundColor: colors.track }]}
+          contentFit="cover"
+          accessibilityLabel="Food photo"
+        />
+      ) : null}
+
+      {!liveCameraActive ? scanDescription : null}
 
       {error ? (
         <Card>
@@ -194,16 +223,22 @@ export default function AiScanScreen() {
             variant="secondary"
             onPress={() => {
               setEstimate(null);
+              setPhotoDataUrl(null);
               setError(null);
               setWebCameraOn(false);
             }}
           />
         </Card>
+      ) : analyzingPhoto ? (
+        <AppText variant="caption" tone="muted" align="center">
+          Analyzing with Grok…
+        </AppText>
       ) : Platform.OS === 'web' ? (
         webCameraOn ? (
           <WebLiveCamera
             busy={busy}
             colors={colors}
+            description={scanDescription}
             onCancel={() => setWebCameraOn(false)}
             onCapture={(dataUrl) => {
               setWebCameraOn(false);
@@ -295,6 +330,7 @@ export default function AiScanScreen() {
           ) : (
             <>
               <CameraView ref={cameraRef} style={styles.camera} facing="back" />
+              {scanDescription}
               <View style={styles.shutterRow}>
                 <Pressable
                   accessibilityRole="button"
@@ -326,12 +362,14 @@ export default function AiScanScreen() {
 function WebLiveCamera({
   busy,
   colors,
+  description,
   onCapture,
   onCancel,
   onUnavailable,
 }: {
   busy: boolean;
   colors: ThemeColors;
+  description: React.ReactNode;
   onCapture: (dataUrl: string) => void;
   onCancel: () => void;
   onUnavailable: () => void;
@@ -416,6 +454,7 @@ function WebLiveCamera({
   return (
     <View style={styles.cameraWrap}>
       <View ref={hostRef} style={[styles.camera, { backgroundColor: colors.surface }]} collapsable={false} />
+      {description}
       <View style={styles.webShutterRow}>
         <Button title="Cancel" variant="ghost" onPress={onCancel} disabled={busy} compact />
         <Pressable
@@ -453,6 +492,12 @@ const styles = StyleSheet.create({
   camera: {
     flex: 1,
     minHeight: 320,
+    borderRadius: radius.lg,
+    overflow: 'hidden',
+  },
+  photoPreview: {
+    width: '100%',
+    aspectRatio: 4 / 3,
     borderRadius: radius.lg,
     overflow: 'hidden',
   },
