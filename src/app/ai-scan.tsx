@@ -35,7 +35,7 @@ export default function AiScanScreen() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [estimate, setEstimate] = useState<GrokFoodEstimate | null>(null);
-  /** Captured meal photo — kept so results can show it above the scan description. */
+  /** Captured meal photo — shown above the AI estimate on the results screen. */
   const [photoDataUrl, setPhotoDataUrl] = useState<string | null>(null);
   const [webCameraOn, setWebCameraOn] = useState(false);
 
@@ -45,6 +45,7 @@ export default function AiScanScreen() {
     setBusy(true);
     setError(null);
     setEstimate(null);
+    setWebCameraOn(false);
     setPhotoDataUrl(dataUrl);
     try {
       const result = await analyzeFoodPhoto({
@@ -162,38 +163,26 @@ export default function AiScanScreen() {
     </AppText>
   );
 
-  /** Live camera puts the preview above the description; upload / results do the same. */
-  const analyzingPhoto = busy && !!photoDataUrl;
-  const liveCameraActive =
-    !estimate &&
-    !analyzingPhoto &&
-    ((Platform.OS === 'web' && webCameraOn) ||
-      (Platform.OS !== 'web' && !!permission?.granted));
+  function clearCapture() {
+    setEstimate(null);
+    setPhotoDataUrl(null);
+    setError(null);
+    setWebCameraOn(false);
+  }
 
-  return (
-    <Screen>
-      <ScreenHeader title="AI food scan" />
-
-      {photoDataUrl && (estimate || analyzingPhoto || !!error) ? (
-        <Image
-          source={{ uri: photoDataUrl }}
-          style={[styles.photoPreview, { backgroundColor: colors.track }]}
-          contentFit="cover"
-          accessibilityLabel="Food photo"
-        />
-      ) : null}
-
-      {!liveCameraActive ? scanDescription : null}
-
-      {error ? (
-        <Card>
-          <AppText variant="caption" tone="danger">
-            {error}
-          </AppText>
-        </Card>
-      ) : null}
-
-      {estimate ? (
+  // Results: photo on top of the AI description only — no camera chrome / scan blurb.
+  if (estimate) {
+    return (
+      <Screen>
+        <ScreenHeader title="AI food scan" />
+        {photoDataUrl ? (
+          <Image
+            source={{ uri: photoDataUrl }}
+            style={[styles.photoPreview, { backgroundColor: colors.track }]}
+            contentFit="cover"
+            accessibilityLabel="Food photo"
+          />
+        ) : null}
         <Card style={{ gap: spacing.md }}>
           <AppText variant="heading" weight="600" display>
             {estimate.name}
@@ -218,22 +207,59 @@ export default function AiScanScreen() {
             {estimate.notes ? ` · ${estimate.notes}` : ''}
           </AppText>
           <Button title="Save & review portion" onPress={saveAndOpen} loading={busy} />
-          <Button
-            title="Retake"
-            variant="secondary"
-            onPress={() => {
-              setEstimate(null);
-              setPhotoDataUrl(null);
-              setError(null);
-              setWebCameraOn(false);
-            }}
-          />
+          <Button title="Retake" variant="secondary" onPress={clearCapture} />
         </Card>
-      ) : analyzingPhoto ? (
+      </Screen>
+    );
+  }
+
+  // Analyzing: keep the photo; hide shutter / cancel / instructional copy.
+  if (busy && photoDataUrl) {
+    return (
+      <Screen>
+        <ScreenHeader title="AI food scan" />
+        <Image
+          source={{ uri: photoDataUrl }}
+          style={[styles.photoPreview, { backgroundColor: colors.track }]}
+          contentFit="cover"
+          accessibilityLabel="Food photo"
+        />
         <AppText variant="caption" tone="muted" align="center">
           Analyzing with Grok…
         </AppText>
-      ) : Platform.OS === 'web' ? (
+        {error ? (
+          <Card>
+            <AppText variant="caption" tone="danger">
+              {error}
+            </AppText>
+          </Card>
+        ) : null}
+      </Screen>
+    );
+  }
+
+  return (
+    <Screen>
+      <ScreenHeader title="AI food scan" />
+
+      {photoDataUrl && error ? (
+        <Image
+          source={{ uri: photoDataUrl }}
+          style={[styles.photoPreview, { backgroundColor: colors.track }]}
+          contentFit="cover"
+          accessibilityLabel="Food photo"
+        />
+      ) : null}
+
+      {error ? (
+        <Card>
+          <AppText variant="caption" tone="danger">
+            {error}
+          </AppText>
+        </Card>
+      ) : null}
+
+      {Platform.OS === 'web' ? (
         webCameraOn ? (
           <WebLiveCamera
             busy={busy}
@@ -251,82 +277,88 @@ export default function AiScanScreen() {
             }}
           />
         ) : (
-          <Card style={{ gap: spacing.md }}>
-            <AppText variant="body" weight="600">
-              Take or upload a photo
-            </AppText>
-            <AppText variant="caption" tone="secondary">
-              Snap with your camera or pick a clear plate photo (JPEG/PNG).
-            </AppText>
-            <Button
-              title={busy ? 'Analyzing…' : 'Take photo'}
-              onPress={() => {
-                if (
-                  typeof navigator !== 'undefined' &&
-                  typeof navigator.mediaDevices?.getUserMedia === 'function'
-                ) {
-                  setWebCameraOn(true);
-                  return;
-                }
-                takePhotoRef.current?.click();
-              }}
-              loading={busy}
-              disabled={busy}
-            />
-            <Button
-              title="Choose photo"
-              variant="secondary"
-              onPress={() => choosePhotoRef.current?.click()}
-              disabled={busy}
-            />
-            {typeof document !== 'undefined' ? (
-              <View style={{ height: 0, overflow: 'hidden' }}>
-                {/* capture=environment opens the device camera on mobile browsers. */}
-                <input
-                  ref={(node) => {
-                    takePhotoRef.current = node;
-                  }}
-                  type="file"
-                  accept="image/*"
-                  capture="environment"
-                  onChange={(e) => {
-                    const file = e.currentTarget.files?.[0];
-                    if (file) onWebFile(file);
-                    e.currentTarget.value = '';
-                  }}
-                />
-                {/* No capture attribute — gallery / files only. */}
-                <input
-                  ref={(node) => {
-                    choosePhotoRef.current = node;
-                  }}
-                  type="file"
-                  accept="image/jpeg,image/png,image/*"
-                  onChange={(e) => {
-                    const file = e.currentTarget.files?.[0];
-                    if (file) onWebFile(file);
-                    e.currentTarget.value = '';
-                  }}
-                />
-              </View>
-            ) : null}
-          </Card>
+          <>
+            {scanDescription}
+            <Card style={{ gap: spacing.md }}>
+              <AppText variant="body" weight="600">
+                Take or upload a photo
+              </AppText>
+              <AppText variant="caption" tone="secondary">
+                Snap with your camera or pick a clear plate photo (JPEG/PNG).
+              </AppText>
+              <Button
+                title={busy ? 'Analyzing…' : 'Take photo'}
+                onPress={() => {
+                  if (
+                    typeof navigator !== 'undefined' &&
+                    typeof navigator.mediaDevices?.getUserMedia === 'function'
+                  ) {
+                    setWebCameraOn(true);
+                    return;
+                  }
+                  takePhotoRef.current?.click();
+                }}
+                loading={busy}
+                disabled={busy}
+              />
+              <Button
+                title="Choose photo"
+                variant="secondary"
+                onPress={() => choosePhotoRef.current?.click()}
+                disabled={busy}
+              />
+              {typeof document !== 'undefined' ? (
+                <View style={{ height: 0, overflow: 'hidden' }}>
+                  {/* capture=environment opens the device camera on mobile browsers. */}
+                  <input
+                    ref={(node) => {
+                      takePhotoRef.current = node;
+                    }}
+                    type="file"
+                    accept="image/*"
+                    capture="environment"
+                    onChange={(e) => {
+                      const file = e.currentTarget.files?.[0];
+                      if (file) onWebFile(file);
+                      e.currentTarget.value = '';
+                    }}
+                  />
+                  {/* No capture attribute — gallery / files only. */}
+                  <input
+                    ref={(node) => {
+                      choosePhotoRef.current = node;
+                    }}
+                    type="file"
+                    accept="image/jpeg,image/png,image/*"
+                    onChange={(e) => {
+                      const file = e.currentTarget.files?.[0];
+                      if (file) onWebFile(file);
+                      e.currentTarget.value = '';
+                    }}
+                  />
+                </View>
+              ) : null}
+            </Card>
+          </>
         )
       ) : (
         <View style={styles.cameraWrap}>
           {!permission?.granted ? (
-            <Card style={{ gap: spacing.md }}>
-              <AppText variant="caption" tone="secondary">
-                Camera access is needed to photograph your food.
-              </AppText>
-              <Button
-                title="Enable camera"
-                onPress={async () => {
-                  const res = await requestPermission();
-                  if (!res.granted) setError('Camera permission denied');
-                }}
-              />
-            </Card>
+            <>
+              {scanDescription}
+              <Card style={{ gap: spacing.md }}>
+                <AppText variant="caption" tone="secondary">
+                  Camera access is needed to photograph your food.
+                </AppText>
+                <Button
+                  title="Enable camera"
+                  onPress={async () => {
+                    const res = await requestPermission();
+                    if (!res.granted) setError('Camera permission denied');
+                  }}
+                />
+              </Card>
+            </>
           ) : (
             <>
               <CameraView ref={cameraRef} style={styles.camera} facing="back" />
@@ -345,11 +377,6 @@ export default function AiScanScreen() {
                   <Ionicons name="camera" size={28} color={colors.onAccent} />
                 </Pressable>
               </View>
-              {busy ? (
-                <AppText variant="caption" tone="muted" align="center">
-                  Analyzing with Grok…
-                </AppText>
-              ) : null}
             </>
           )}
         </View>
