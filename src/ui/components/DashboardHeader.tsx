@@ -184,8 +184,8 @@ export function DashboardHeader({ date, onDateChange, right }: DashboardHeaderPr
             style={styles.iconBtn}
           >
             <Ionicons
-              name="fitness-outline"
-              size={34}
+              name="walk-outline"
+              size={22}
               color={colors.textPrimary}
             />
           </Pressable>
