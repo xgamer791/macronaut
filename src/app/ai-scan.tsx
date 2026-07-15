@@ -1,7 +1,7 @@
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Platform, Pressable, StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { analyzeFoodPhoto, GrokFoodEstimate } from '@/services/food/grokVision';
@@ -10,7 +10,7 @@ import { keys, useSetting } from '@/state/queries';
 import { goBackOrHome } from '@/utils/navigation';
 import { AppText, Button, Card, Screen, ScreenHeader } from '@/ui/components';
 import { useTheme } from '@/ui/theme/ThemeProvider';
-import { radius, spacing, touchTarget } from '@/ui/theme/tokens';
+import { radius, spacing, touchTarget, type ThemeColors } from '@/ui/theme/tokens';
 
 /**
  * Paid AI food scan — photo → Grok vision → custom food → confirm & log.
@@ -23,12 +23,15 @@ export default function AiScanScreen() {
   const qc = useQueryClient();
   const apiKey = useSetting<string>('grokApiKey', '');
   const cameraRef = useRef<CameraView>(null);
-  const fileRef = useRef<HTMLInputElement | null>(null);
+  /** Web: separate pickers so Take opens the camera and Choose opens the library. */
+  const takePhotoRef = useRef<HTMLInputElement | null>(null);
+  const choosePhotoRef = useRef<HTMLInputElement | null>(null);
   const [permission, requestPermission] = useCameraPermissions();
 
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [estimate, setEstimate] = useState<GrokFoodEstimate | null>(null);
+  const [webCameraOn, setWebCameraOn] = useState(false);
 
   const keyReady = (apiKey.data ?? '').trim().length > 0;
 
@@ -192,42 +195,88 @@ export default function AiScanScreen() {
             onPress={() => {
               setEstimate(null);
               setError(null);
+              setWebCameraOn(false);
             }}
           />
         </Card>
       ) : Platform.OS === 'web' ? (
-        <Card style={{ gap: spacing.md }}>
-          <AppText variant="body" weight="600">
-            Take or upload a photo
-          </AppText>
-          <AppText variant="caption" tone="secondary">
-            Use your camera or pick a clear plate photo (JPEG/PNG).
-          </AppText>
-          <Button
-            title={busy ? 'Analyzing…' : 'Choose photo'}
-            onPress={() => fileRef.current?.click()}
-            loading={busy}
-            disabled={busy}
+        webCameraOn ? (
+          <WebLiveCamera
+            busy={busy}
+            colors={colors}
+            onCancel={() => setWebCameraOn(false)}
+            onCapture={(dataUrl) => {
+              setWebCameraOn(false);
+              void runAnalysis(dataUrl);
+            }}
+            onUnavailable={() => {
+              setWebCameraOn(false);
+              // Defer so unmount finishes before the system camera input opens.
+              setTimeout(() => takePhotoRef.current?.click(), 0);
+            }}
           />
-          {typeof document !== 'undefined' ? (
-            <View style={{ height: 0, overflow: 'hidden' }}>
-              {/* Hidden web file picker — capture prefers the rear camera when available. */}
-              <input
-                ref={(node) => {
-                  fileRef.current = node;
-                }}
-                type="file"
-                accept="image/jpeg,image/png,image/*"
-                capture="environment"
-                onChange={(e) => {
-                  const file = e.currentTarget.files?.[0];
-                  if (file) onWebFile(file);
-                  e.currentTarget.value = '';
-                }}
-              />
-            </View>
-          ) : null}
-        </Card>
+        ) : (
+          <Card style={{ gap: spacing.md }}>
+            <AppText variant="body" weight="600">
+              Take or upload a photo
+            </AppText>
+            <AppText variant="caption" tone="secondary">
+              Snap with your camera or pick a clear plate photo (JPEG/PNG).
+            </AppText>
+            <Button
+              title={busy ? 'Analyzing…' : 'Take photo'}
+              onPress={() => {
+                if (
+                  typeof navigator !== 'undefined' &&
+                  typeof navigator.mediaDevices?.getUserMedia === 'function'
+                ) {
+                  setWebCameraOn(true);
+                  return;
+                }
+                takePhotoRef.current?.click();
+              }}
+              loading={busy}
+              disabled={busy}
+            />
+            <Button
+              title="Choose photo"
+              variant="secondary"
+              onPress={() => choosePhotoRef.current?.click()}
+              disabled={busy}
+            />
+            {typeof document !== 'undefined' ? (
+              <View style={{ height: 0, overflow: 'hidden' }}>
+                {/* capture=environment opens the device camera on mobile browsers. */}
+                <input
+                  ref={(node) => {
+                    takePhotoRef.current = node;
+                  }}
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  onChange={(e) => {
+                    const file = e.currentTarget.files?.[0];
+                    if (file) onWebFile(file);
+                    e.currentTarget.value = '';
+                  }}
+                />
+                {/* No capture attribute — gallery / files only. */}
+                <input
+                  ref={(node) => {
+                    choosePhotoRef.current = node;
+                  }}
+                  type="file"
+                  accept="image/jpeg,image/png,image/*"
+                  onChange={(e) => {
+                    const file = e.currentTarget.files?.[0];
+                    if (file) onWebFile(file);
+                    e.currentTarget.value = '';
+                  }}
+                />
+              </View>
+            ) : null}
+          </Card>
+        )
       ) : (
         <View style={styles.cameraWrap}>
           {!permission?.granted ? (
@@ -273,6 +322,126 @@ export default function AiScanScreen() {
   );
 }
 
+/** In-page rear camera for web AI scan; falls back via onUnavailable. */
+function WebLiveCamera({
+  busy,
+  colors,
+  onCapture,
+  onCancel,
+  onUnavailable,
+}: {
+  busy: boolean;
+  colors: ThemeColors;
+  onCapture: (dataUrl: string) => void;
+  onCancel: () => void;
+  onUnavailable: () => void;
+}) {
+  const hostRef = useRef<View>(null);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const onCaptureRef = useRef(onCapture);
+  const onUnavailableRef = useRef(onUnavailable);
+  useEffect(() => {
+    onCaptureRef.current = onCapture;
+  });
+  useEffect(() => {
+    onUnavailableRef.current = onUnavailable;
+  });
+
+  useEffect(() => {
+    let cancelled = false;
+    const host = hostRef.current as unknown as HTMLElement | null;
+    if (!host || typeof navigator === 'undefined' || !navigator.mediaDevices?.getUserMedia) {
+      onUnavailableRef.current();
+      return;
+    }
+
+    const video = document.createElement('video');
+    video.setAttribute('playsinline', 'true');
+    video.muted = true;
+    video.autoplay = true;
+    Object.assign(video.style, {
+      width: '100%',
+      height: '100%',
+      objectFit: 'cover',
+      position: 'absolute',
+      inset: '0',
+    });
+    host.appendChild(video);
+    videoRef.current = video;
+
+    (async () => {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          audio: false,
+          video: {
+            facingMode: { ideal: 'environment' },
+            width: { ideal: 1280 },
+            height: { ideal: 720 },
+          },
+        });
+        if (cancelled) {
+          stream.getTracks().forEach((t) => t.stop());
+          return;
+        }
+        streamRef.current = stream;
+        video.srcObject = stream;
+        await video.play().catch(() => {});
+      } catch {
+        if (!cancelled) onUnavailableRef.current();
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+      streamRef.current?.getTracks().forEach((t) => t.stop());
+      streamRef.current = null;
+      videoRef.current = null;
+      video.remove();
+    };
+  }, []);
+
+  function snap() {
+    const video = videoRef.current;
+    if (!video || video.videoWidth < 2) return;
+    const canvas = document.createElement('canvas');
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    ctx.drawImage(video, 0, 0);
+    onCaptureRef.current(canvas.toDataURL('image/jpeg', 0.7));
+  }
+
+  return (
+    <View style={styles.cameraWrap}>
+      <View ref={hostRef} style={[styles.camera, { backgroundColor: colors.surface }]} collapsable={false} />
+      <View style={styles.webShutterRow}>
+        <Button title="Cancel" variant="ghost" onPress={onCancel} disabled={busy} compact />
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Capture food photo"
+          disabled={busy}
+          onPress={snap}
+          style={[styles.shutter, { backgroundColor: colors.accent, opacity: busy ? 0.5 : 1 }]}
+        >
+          <Ionicons name="camera" size={28} color={colors.onAccent} />
+        </Pressable>
+        <View style={{ width: 72 }} />
+      </View>
+      {busy ? (
+        <AppText variant="caption" tone="muted" align="center">
+          Analyzing with Grok…
+        </AppText>
+      ) : (
+        <AppText variant="caption" tone="muted" align="center">
+          Point at your meal, then tap the shutter
+        </AppText>
+      )}
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   cameraWrap: {
     flex: 1,
@@ -285,10 +454,18 @@ const styles = StyleSheet.create({
     flex: 1,
     minHeight: 320,
     borderRadius: radius.lg,
+    overflow: 'hidden',
   },
   shutterRow: {
     alignItems: 'center',
     paddingVertical: spacing.md,
+  },
+  webShutterRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.sm,
   },
   shutter: {
     width: touchTarget + 12,
