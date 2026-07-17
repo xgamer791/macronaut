@@ -22,7 +22,11 @@ export function isSpeechRecognitionAvailable(): boolean {
 export async function ensureMicStream(): Promise<MediaStream> {
   if (!canHoldRecord()) throw new Error('Microphone recording is not supported in this browser');
   const live = sharedStream?.getAudioTracks().some((t) => t.readyState === 'live');
-  if (sharedStream && live) return sharedStream;
+  if (sharedStream && live) {
+    // Make sure a reused track wasn't left disabled/muted.
+    sharedStream.getAudioTracks().forEach((t) => (t.enabled = true));
+    return sharedStream;
+  }
 
   sharedStream = await navigator.mediaDevices.getUserMedia({
     audio: {
@@ -32,6 +36,7 @@ export async function ensureMicStream(): Promise<MediaStream> {
     },
     video: false,
   });
+  sharedStream.getAudioTracks().forEach((t) => (t.enabled = true));
   return sharedStream;
 }
 
@@ -71,123 +76,6 @@ export interface HoldListenSession {
   /** Stop recording and resolve with an audio blob (may be empty). */
   stop: () => Promise<Blob>;
   abort: () => void;
-}
-
-export interface LiveTranscriptSession {
-  /** Stop recognition and return the best transcript so far (or null). */
-  stop: () => Promise<string | null>;
-  abort: () => void;
-}
-
-type SpeechRecognitionLike = {
-  continuous: boolean;
-  interimResults: boolean;
-  lang: string;
-  maxAlternatives: number;
-  onresult: ((ev: {
-    resultIndex: number;
-    results: ArrayLike<{ isFinal: boolean; 0: { transcript: string } }>;
-  }) => void) | null;
-  onerror: ((ev: { error?: string }) => void) | null;
-  onend: (() => void) | null;
-  start: () => void;
-  stop: () => void;
-  abort: () => void;
-};
-
-function getSpeechRecognitionCtor(): (new () => SpeechRecognitionLike) | null {
-  if (typeof window === 'undefined') return null;
-  const w = window as Window & {
-    SpeechRecognition?: new () => SpeechRecognitionLike;
-    webkitSpeechRecognition?: new () => SpeechRecognitionLike;
-  };
-  return w.SpeechRecognition ?? w.webkitSpeechRecognition ?? null;
-}
-
-/** True when the browser can stream live transcripts while holding the mic. */
-export function canLiveTranscript(): boolean {
-  return Platform.OS === 'web' && !!getSpeechRecognitionCtor();
-}
-
-/**
- * Parallel live STT via Web Speech API — often finishes before xAI STT.
- * Returns null from stop() when unsupported or nothing was heard.
- */
-export function startLiveTranscript(): LiveTranscriptSession {
-  const Ctor = getSpeechRecognitionCtor();
-  if (!Ctor) {
-    return { stop: async () => null, abort: () => {} };
-  }
-
-  let finalText = '';
-  let interimText = '';
-  let settled = false;
-  let stopResolver: ((text: string | null) => void) | null = null;
-  let rec: SpeechRecognitionLike | null = null;
-
-  try {
-    rec = new Ctor();
-    rec.continuous = true;
-    rec.interimResults = true;
-    rec.lang = 'en-US';
-    rec.maxAlternatives = 1;
-    rec.onresult = (ev) => {
-      let interim = '';
-      for (let i = ev.resultIndex; i < ev.results.length; i++) {
-        const piece = ev.results[i][0]?.transcript ?? '';
-        if (ev.results[i].isFinal) finalText = `${finalText} ${piece}`.trim();
-        else interim += piece;
-      }
-      interimText = interim.trim();
-    };
-    rec.onerror = () => {
-      /* keep whatever we have; stop() will read it */
-    };
-    rec.onend = () => {
-      if (settled) return;
-      settled = true;
-      const text = (finalText || interimText).trim() || null;
-      stopResolver?.(text);
-      stopResolver = null;
-    };
-    rec.start();
-  } catch {
-    return { stop: async () => null, abort: () => {} };
-  }
-
-  return {
-    stop: () =>
-      new Promise((resolve) => {
-        if (settled) {
-          resolve((finalText || interimText).trim() || null);
-          return;
-        }
-        stopResolver = resolve;
-        try {
-          rec?.stop();
-        } catch {
-          settled = true;
-          resolve((finalText || interimText).trim() || null);
-        }
-        // Safari sometimes never fires onend after stop().
-        setTimeout(() => {
-          if (settled) return;
-          settled = true;
-          resolve((finalText || interimText).trim() || null);
-          stopResolver = null;
-        }, 600);
-      }),
-    abort: () => {
-      try {
-        rec?.abort();
-      } catch {
-        /* ignore */
-      }
-      settled = true;
-      stopResolver?.(null);
-      stopResolver = null;
-    },
-  };
 }
 
 /** Prefer a middle-aged / adult female American voice when available. */
