@@ -20,6 +20,7 @@ import {
 import { buildNutritionContext } from '@/services/assistant/nutritionContext';
 import {
   canHoldRecord,
+  ensureMicStream,
   speakText,
   startHoldListen,
   stopSpeaking,
@@ -27,10 +28,12 @@ import {
   type HoldListenSession,
 } from '@/services/assistant/speech';
 import { transcribeAudio } from '@/services/assistant/stt';
+import { speakWithGrokTts, stopAudioElement, unlockAudioElement } from '@/services/assistant/tts';
 import { useDiaryEntries, useDayProgress, useSetting } from '@/state/queries';
 import { useUiStore } from '@/state/uiStore';
+import { AppText } from '@/ui/components/AppText';
 import { useTheme } from '@/ui/theme/ThemeProvider';
-import { spacing, touchTarget } from '@/ui/theme/tokens';
+import { radius, spacing, touchTarget } from '@/ui/theme/tokens';
 
 type Phase = 'idle' | 'holding' | 'thinking' | 'speaking';
 
@@ -78,8 +81,9 @@ function HoldRing({
 }
 
 /**
- * Hold-to-talk mic FAB. Records audio while pressed, transcribes with xAI STT,
- * asks Grok, and speaks the answer. Failures are spoken so nothing fails silently.
+ * Hold-to-talk mic. Warms the mic first, records while held, transcribes with
+ * xAI STT, answers with Grok, and speaks via Grok TTS (with browser fallback).
+ * Status text is always visible so failures aren't silent.
  */
 export function VoiceAssistant() {
   const { colors } = useTheme();
@@ -91,11 +95,15 @@ export function VoiceAssistant() {
   const apiKey = useSetting<string>('grokApiKey', '');
 
   const [phase, setPhase] = useState<Phase>('idle');
+  const [status, setStatus] = useState<string | null>(null);
   const [history, setHistory] = useState<AssistantMessage[]>([]);
+  const [micReady, setMicReady] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
   const sessionRef = useRef<HoldListenSession | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
   const turnGen = useRef(0);
   const holdingRef = useRef(false);
+  const pressStartedAt = useRef(0);
 
   const hold = useSharedValue(0);
   const pulse = useSharedValue(0);
@@ -104,7 +112,7 @@ export function VoiceAssistant() {
 
   const keyReady = (apiKey.data ?? '').trim().length > 0;
   const recordOk = canHoldRecord();
-  const active = phase === 'holding' || phase === 'thinking' || phase === 'speaking';
+  const active = phase !== 'idle';
 
   useEffect(() => {
     return () => {
@@ -112,6 +120,7 @@ export function VoiceAssistant() {
       sessionRef.current?.abort();
       abortRef.current?.abort();
       stopSpeaking();
+      stopAudioElement();
     };
   }, []);
 
@@ -147,34 +156,51 @@ export function VoiceAssistant() {
     }
   }, [phase, hold, pulse, breathe, mode]);
 
-  async function speakAndIdle(message: string, gen: number) {
+  async function speakReply(message: string, gen: number) {
     setPhase('speaking');
-    await speakText(message);
-    if (gen === turnGen.current) setPhase('idle');
+    setStatus(message);
+    const key = apiKey.data ?? '';
+    try {
+      await speakWithGrokTts({ apiKey: key, text: message });
+    } catch {
+      // Browser TTS fallback if Grok TTS fails / is blocked.
+      await speakText(message);
+    }
+    if (gen === turnGen.current) {
+      setPhase('idle');
+      // Keep the last reply on screen briefly, then clear.
+      setTimeout(() => {
+        if (gen === turnGen.current) setStatus(null);
+      }, 4500);
+    }
   }
 
   async function runTurn(blob: Blob, gen: number) {
     if (!keyReady) {
       setPhase('idle');
+      setStatus('Add your Grok API key in Settings');
       return;
     }
-    if (!blob || blob.size < 800) {
-      await speakAndIdle("I didn't catch that. Hold the mic and ask again.", gen);
+    if (!blob || blob.size < 400) {
+      await speakReply("I didn't catch that. Hold the mic and ask again.", gen);
       return;
     }
 
     setPhase('thinking');
+    setStatus('Thinking…');
     abortRef.current?.abort();
     const controller = new AbortController();
     abortRef.current = controller;
 
     try {
+      setStatus('Transcribing…');
       const question = await transcribeAudio({
         apiKey: apiKey.data ?? '',
         blob,
         signal: controller.signal,
       });
       if (gen !== turnGen.current) return;
+      setStatus(`Heard: “${question}”`);
 
       const nutritionContext = buildNutritionContext({
         date,
@@ -196,7 +222,7 @@ export function VoiceAssistant() {
         { role: 'user', content: question },
         { role: 'assistant', content: answer },
       ]);
-      await speakAndIdle(answer, gen);
+      await speakReply(answer, gen);
     } catch (e) {
       if (controller.signal.aborted || gen !== turnGen.current) {
         setPhase('idle');
@@ -206,51 +232,89 @@ export function VoiceAssistant() {
         e instanceof Error && e.message
           ? e.message
           : 'Something went wrong with the voice assistant.';
-      // Don't speak raw API dumps — keep it short.
       const spoken =
-        msg.length > 120 || /[{}]/.test(msg)
+        msg.length > 140 || /[{}]/.test(msg)
           ? "Sorry, I couldn't get an answer. Check your Grok key and try again."
           : msg;
-      await speakAndIdle(spoken, gen);
+      setStatus(spoken);
+      await speakReply(spoken, gen);
     }
   }
 
-  function onPressIn() {
+  async function onPressIn() {
     if (phase === 'thinking' || phase === 'speaking') {
       turnGen.current += 1;
       abortRef.current?.abort();
       stopSpeaking();
+      stopAudioElement();
     }
     if (!keyReady) {
+      setStatus('Add your Grok API key in Settings');
       router.push('/settings');
       return;
     }
     if (!recordOk) {
-      void speakText('Voice recording needs a modern mobile browser with microphone access.');
+      setStatus('This browser cannot record audio');
       return;
     }
 
-    holdingRef.current = true;
+    unlockAudioElement();
     unlockSpeechPlayback();
-    stopSpeaking();
-    sessionRef.current?.abort();
-    sessionRef.current = startHoldListen();
+    pressStartedAt.current = Date.now();
+    holdingRef.current = true;
+    setStatus('Listening…');
     setPhase('holding');
+
+    try {
+      // Warm mic first so the iOS permission sheet doesn't cancel the hold.
+      if (!micReady || !streamRef.current) {
+        setStatus('Allow microphone…');
+        streamRef.current = await ensureMicStream();
+        setMicReady(true);
+        // If they already released during the permission prompt, don't record.
+        if (!holdingRef.current) {
+          setPhase('idle');
+          setStatus('Mic ready — hold to talk');
+          return;
+        }
+        setStatus('Listening…');
+      }
+
+      sessionRef.current?.abort();
+      sessionRef.current = startHoldListen(streamRef.current ?? undefined);
+    } catch (e) {
+      holdingRef.current = false;
+      setPhase('idle');
+      setStatus(e instanceof Error ? e.message : 'Microphone failed');
+    }
   }
 
   async function onPressOut() {
     if (!holdingRef.current) return;
     holdingRef.current = false;
 
+    const heldMs = Date.now() - pressStartedAt.current;
     const session = sessionRef.current;
     sessionRef.current = null;
+
+    // Released during permission / before recorder started.
     if (!session) {
       setPhase('idle');
+      if (micReady) setStatus('Mic ready — hold to talk');
+      return;
+    }
+
+    // Too short — likely an accidental tap.
+    if (heldMs < 350) {
+      session.abort();
+      setPhase('idle');
+      setStatus('Hold the mic while you talk, then release');
       return;
     }
 
     const gen = ++turnGen.current;
     setPhase('thinking');
+    setStatus('Thinking…');
     try {
       const blob = await session.stop();
       if (gen !== turnGen.current) return;
@@ -258,7 +322,8 @@ export function VoiceAssistant() {
     } catch (e) {
       if (gen !== turnGen.current) return;
       const msg = e instanceof Error ? e.message : "I couldn't record that.";
-      await speakAndIdle(msg, gen);
+      setStatus(msg);
+      await speakReply(msg, gen);
     }
   }
 
@@ -283,6 +348,17 @@ export function VoiceAssistant() {
       pointerEvents="box-none"
       style={[styles.anchor, { right: spacing.lg, bottom }, noHoldChrome]}
     >
+      {status ? (
+        <View
+          pointerEvents="none"
+          style={[styles.statusBubble, { backgroundColor: colors.surfaceRaised, borderColor: colors.border }]}
+        >
+          <AppText variant="micro" tone="secondary" numberOfLines={4}>
+            {status}
+          </AppText>
+        </View>
+      ) : null}
+
       <HoldRing pulse={pulse} delay={0} maxScale={1.85} color={colors.danger} />
       <HoldRing pulse={pulse} delay={0.3} maxScale={2.35} color={colors.danger} />
 
@@ -291,8 +367,8 @@ export function VoiceAssistant() {
           accessibilityRole="button"
           accessibilityLabel="Voice assistant"
           accessibilityHint="Hold to talk, release when finished"
-          onPressIn={onPressIn}
-          onPressOut={onPressOut}
+          onPressIn={() => void onPressIn()}
+          onPressOut={() => void onPressOut()}
           onLongPress={() => {}}
           delayLongPress={10_000}
           {...(Platform.OS === 'web'
@@ -326,11 +402,18 @@ export function VoiceAssistant() {
 const styles = StyleSheet.create({
   anchor: {
     position: 'absolute',
-    width: RING_SIZE * 2.4,
-    height: RING_SIZE * 2.4,
+    width: 220,
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'flex-end',
     zIndex: 50,
+  },
+  statusBubble: {
+    marginBottom: spacing.sm,
+    alignSelf: 'stretch',
+    borderRadius: radius.md,
+    borderWidth: 1,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
   },
   fab: {
     width: FAB_SIZE,
@@ -344,6 +427,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     minWidth: touchTarget,
     minHeight: touchTarget,
+    zIndex: 2,
   },
   holdRing: {
     position: 'absolute',
@@ -351,5 +435,6 @@ const styles = StyleSheet.create({
     height: RING_SIZE,
     borderRadius: RING_SIZE / 2,
     borderWidth: 3,
+    bottom: (FAB_SIZE - RING_SIZE) / 2,
   },
 });

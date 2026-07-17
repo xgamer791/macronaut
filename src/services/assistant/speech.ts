@@ -1,6 +1,8 @@
 import { Platform } from 'react-native';
 import * as Speech from 'expo-speech';
 
+let sharedStream: MediaStream | null = null;
+
 /** True when this environment can hold-to-record microphone audio. */
 export function canHoldRecord(): boolean {
   if (Platform.OS !== 'web' || typeof window === 'undefined') return false;
@@ -11,21 +13,46 @@ export function canHoldRecord(): boolean {
   );
 }
 
-/** @deprecated Use canHoldRecord — kept for older call sites. */
+/** @deprecated Use canHoldRecord */
 export function isSpeechRecognitionAvailable(): boolean {
-  return canHoldRecord() || getSpeechRecognitionCtor() != null;
+  return canHoldRecord();
+}
+
+/** Warm the mic (permission + stream). Safe to call repeatedly. */
+export async function ensureMicStream(): Promise<MediaStream> {
+  if (!canHoldRecord()) throw new Error('Microphone recording is not supported in this browser');
+  const live = sharedStream?.getAudioTracks().some((t) => t.readyState === 'live');
+  if (sharedStream && live) return sharedStream;
+
+  sharedStream = await navigator.mediaDevices.getUserMedia({
+    audio: {
+      echoCancellation: true,
+      noiseSuppression: true,
+      channelCount: 1,
+    },
+    video: false,
+  });
+  return sharedStream;
+}
+
+export function releaseMicStream(): void {
+  try {
+    sharedStream?.getTracks().forEach((t) => t.stop());
+  } catch {
+    /* ignore */
+  }
+  sharedStream = null;
 }
 
 /**
- * Unlock browser speechSynthesis inside a user-gesture handler (required on
- * iOS Safari after async work). Call this when the mic FAB is pressed.
+ * Unlock browser speechSynthesis inside a user-gesture handler.
+ * Prefer unlockAudioElement + Grok TTS for spoken replies.
  */
 export function unlockSpeechPlayback(): void {
   if (Platform.OS !== 'web' || typeof window === 'undefined') return;
   try {
     const synth = window.speechSynthesis;
     if (!synth) return;
-    // Resume if the engine is stuck paused (common on iOS).
     try {
       synth.resume();
     } catch {
@@ -43,17 +70,16 @@ export function unlockSpeechPlayback(): void {
 export interface HoldListenSession {
   /** Stop recording and resolve with an audio blob (may be empty). */
   stop: () => Promise<Blob>;
-  /** Cancel without waiting for audio. */
   abort: () => void;
 }
 
 function pickRecorderMime(): string | undefined {
   if (typeof MediaRecorder === 'undefined') return undefined;
   const candidates = [
-    'audio/webm;codecs=opus',
-    'audio/webm',
     'audio/mp4',
     'audio/aac',
+    'audio/webm;codecs=opus',
+    'audio/webm',
     'audio/ogg;codecs=opus',
   ];
   return candidates.find((t) => {
@@ -66,10 +92,10 @@ function pickRecorderMime(): string | undefined {
 }
 
 /**
- * Hold-to-talk recorder: start on press-in, stop() on press-out → audio Blob.
- * Uses MediaRecorder (reliable on mobile Safari) instead of Web Speech API.
+ * Hold-to-talk recorder against a live mic stream.
+ * Prefer calling ensureMicStream() before this so permission is already granted.
  */
-export function startHoldListen(): HoldListenSession {
+export function startHoldListen(stream?: MediaStream): HoldListenSession {
   if (!canHoldRecord()) {
     return {
       stop: async () => {
@@ -80,18 +106,29 @@ export function startHoldListen(): HoldListenSession {
   }
 
   let recorder: MediaRecorder | null = null;
-  let stream: MediaStream | null = null;
   const chunks: BlobPart[] = [];
   let mime = pickRecorderMime();
   let settled = false;
   let stopResolver: ((blob: Blob) => void) | null = null;
   let stopRejecter: ((err: Error) => void) | null = null;
   let started = false;
+  let localStream = stream ?? null;
+  let ownsStream = !stream;
 
   const settle = (blob: Blob) => {
     if (settled) return;
     settled = true;
-    cleanupStream();
+    // Don't stop shared tracks — only stop if we opened our own.
+    if (ownsStream) {
+      try {
+        localStream?.getTracks().forEach((t) => t.stop());
+      } catch {
+        /* ignore */
+      }
+      if (localStream === sharedStream) sharedStream = null;
+    }
+    localStream = null;
+    recorder = null;
     stopResolver?.(blob);
     stopResolver = null;
     stopRejecter = null;
@@ -100,52 +137,44 @@ export function startHoldListen(): HoldListenSession {
   const fail = (err: Error) => {
     if (settled) return;
     settled = true;
-    cleanupStream();
+    if (ownsStream) {
+      try {
+        localStream?.getTracks().forEach((t) => t.stop());
+      } catch {
+        /* ignore */
+      }
+      if (localStream === sharedStream) sharedStream = null;
+    }
+    localStream = null;
+    recorder = null;
     stopRejecter?.(err);
     stopResolver = null;
     stopRejecter = null;
   };
 
-  const cleanupStream = () => {
-    try {
-      stream?.getTracks().forEach((t) => t.stop());
-    } catch {
-      /* ignore */
-    }
-    stream = null;
-    recorder = null;
-  };
-
   const boot = (async () => {
     try {
-      stream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          channelCount: 1,
-        },
-        video: false,
-      });
+      if (!localStream) {
+        localStream = await ensureMicStream();
+        ownsStream = false; // shared
+      }
       const opts = mime ? { mimeType: mime } : undefined;
       try {
-        recorder = opts ? new MediaRecorder(stream, opts) : new MediaRecorder(stream);
+        recorder = opts ? new MediaRecorder(localStream, opts) : new MediaRecorder(localStream);
       } catch {
-        recorder = new MediaRecorder(stream);
-        mime = recorder.mimeType || mime;
+        recorder = new MediaRecorder(localStream);
       }
-      mime = recorder.mimeType || mime || 'audio/webm';
+      mime = recorder.mimeType || mime || 'audio/mp4';
 
       recorder.ondataavailable = (e) => {
         if (e.data && e.data.size > 0) chunks.push(e.data);
       };
       recorder.onerror = () => fail(new Error('Microphone recording failed'));
       recorder.onstop = () => {
-        const type = mime || 'audio/webm';
-        settle(new Blob(chunks, { type }));
+        settle(new Blob(chunks, { type: mime || 'audio/mp4' }));
       };
 
-      // timeslice keeps data flowing on Safari
-      recorder.start(250);
+      recorder.start(200);
       started = true;
     } catch (e) {
       const msg =
@@ -163,30 +192,38 @@ export function startHoldListen(): HoldListenSession {
       new Promise<Blob>(async (resolve, reject) => {
         await boot;
         if (settled) {
-          resolve(new Blob(chunks, { type: mime || 'audio/webm' }));
+          resolve(new Blob(chunks, { type: mime || 'audio/mp4' }));
           return;
         }
         stopResolver = resolve;
         stopRejecter = reject;
-        if (!recorder || !started) {
-          // Still starting — wait briefly then stop.
-          const waitStart = Date.now();
-          while (!started && !settled && Date.now() - waitStart < 2500) {
-            await new Promise((r) => setTimeout(r, 50));
-          }
+
+        const waitStart = Date.now();
+        while (!started && !settled && Date.now() - waitStart < 3000) {
+          await new Promise((r) => setTimeout(r, 40));
         }
         if (settled) return;
+
+        // Give Safari a beat to buffer audio before stop.
+        await new Promise((r) => setTimeout(r, 180));
+
         if (!recorder || recorder.state === 'inactive') {
-          settle(new Blob(chunks, { type: mime || 'audio/webm' }));
+          settle(new Blob(chunks, { type: mime || 'audio/mp4' }));
           return;
         }
         try {
-          if (recorder.state === 'recording') recorder.requestData?.();
+          if (recorder.state === 'recording') {
+            try {
+              recorder.requestData?.();
+            } catch {
+              /* ignore */
+            }
+          }
           recorder.stop();
         } catch {
-          settle(new Blob(chunks, { type: mime || 'audio/webm' }));
+          settle(new Blob(chunks, { type: mime || 'audio/mp4' }));
         }
-        setTimeout(() => settle(new Blob(chunks, { type: mime || 'audio/webm' })), 800);
+        setTimeout(() => settle(new Blob(chunks, { type: mime || 'audio/mp4' })), 1000);
       }),
     abort: () => {
       try {
@@ -199,25 +236,7 @@ export function startHoldListen(): HoldListenSession {
   };
 }
 
-type SpeechRecognitionCtor = new () => {
-  continuous: boolean;
-  interimResults: boolean;
-  lang: string;
-  start: () => void;
-  stop: () => void;
-  abort: () => void;
-};
-
-function getSpeechRecognitionCtor(): SpeechRecognitionCtor | null {
-  if (Platform.OS !== 'web' || typeof window === 'undefined') return null;
-  const w = window as unknown as {
-    SpeechRecognition?: SpeechRecognitionCtor;
-    webkitSpeechRecognition?: SpeechRecognitionCtor;
-  };
-  return w.SpeechRecognition ?? w.webkitSpeechRecognition ?? null;
-}
-
-/** Speak text aloud and resolve when finished (or on error / empty). */
+/** Fallback speak via speechSynthesis / expo-speech. */
 export function speakText(text: string): Promise<void> {
   const clean = text.trim();
   if (!clean) return Promise.resolve();
@@ -229,11 +248,9 @@ export function speakText(text: string): Promise<void> {
       settled = true;
       resolve();
     };
-
-    const fallback = setTimeout(done, Math.min(60_000, 1600 + clean.length * 55));
+    const fallback = setTimeout(done, Math.min(45_000, 1400 + clean.length * 50));
 
     try {
-      // Prefer direct speechSynthesis on web — more reliable onDone than expo wrapper.
       if (Platform.OS === 'web' && typeof window !== 'undefined' && window.speechSynthesis) {
         const synth = window.speechSynthesis;
         try {
@@ -256,12 +273,10 @@ export function speakText(text: string): Promise<void> {
         synth.speak(u);
         return;
       }
-
       Speech.stop();
       Speech.speak(clean, {
         language: 'en-US',
         rate: 1.05,
-        pitch: 1.0,
         onDone: () => {
           clearTimeout(fallback);
           done();
