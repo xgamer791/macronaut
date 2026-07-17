@@ -34,12 +34,14 @@ describe('speakWithGrokTts', () => {
       removeAttribute: jest.fn(),
     };
 
-    // @ts-expect-error test stub
-    global.Audio = jest.fn(() => fakeAudio);
-    // @ts-expect-error test stub
-    global.URL.createObjectURL = jest.fn(() => 'blob:fake');
-    // @ts-expect-error test stub
-    global.URL.revokeObjectURL = jest.fn();
+    Object.assign(globalThis, {
+      Audio: jest.fn(() => fakeAudio),
+      URL: {
+        ...URL,
+        createObjectURL: jest.fn(() => 'blob:fake'),
+        revokeObjectURL: jest.fn(),
+      },
+    });
 
     await speakWithGrokTts({ apiKey: 'xai-test', text: 'Hello there' });
     expect(global.fetch).toHaveBeenCalledWith(
