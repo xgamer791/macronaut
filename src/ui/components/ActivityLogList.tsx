@@ -259,8 +259,10 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.lg,
-    // Mockup stack: icon top-left, then title → blurb → Log anchored below.
-    justifyContent: 'space-between',
+    // Mockup stack: icon sits just above the title/blurb/Log, group centered.
+    justifyContent: 'center',
+    alignItems: 'flex-start',
+    gap: 10,
   },
   tileBodyWide: {
     flexDirection: 'row',
@@ -271,7 +273,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md + 2,
   },
   icon: {
-    marginBottom: 2,
+    marginBottom: 0,
   },
   copy: {
     gap: 4,
