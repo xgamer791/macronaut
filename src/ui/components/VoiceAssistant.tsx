@@ -30,6 +30,7 @@ import {
   type HoldListenSession,
 } from '@/services/assistant/speech';
 import { transcribeAudio } from '@/services/assistant/stt';
+import { spokenAbortError } from '@/services/assistant/agentPolicy';
 import type { ToolInvalidate } from '@/services/assistant/toolExecutor';
 import { speakWithGrokTts, stopAudioElement, unlockAudioElement } from '@/services/assistant/tts';
 import { useRepos } from '@/state/AppProvider';
@@ -304,8 +305,15 @@ export function VoiceAssistant() {
       if (gen !== turnGen.current) return;
       await answerQuestion(question, gen, controller.signal);
     } catch (e) {
-      if (controller.signal.aborted || gen !== turnGen.current) {
+      if (gen !== turnGen.current) {
         setPhase('idle');
+        return;
+      }
+      const abortMsg = spokenAbortError(e);
+      if (abortMsg || controller.signal.aborted) {
+        const spoken = abortMsg ?? 'Cancelled.';
+        setStatus(spoken);
+        await speakReply(spoken, gen);
         return;
       }
       const msg =

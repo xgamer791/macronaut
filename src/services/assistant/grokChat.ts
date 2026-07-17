@@ -1,5 +1,6 @@
 import type { Repos } from '@/state/AppProvider';
 import type { DayKey } from '@/utils/date';
+import { fetchWithTimeout, LoopGuard, spokenAbortError } from './agentPolicy';
 import {
   appendTurn,
   formatMemoryForPrompt,
@@ -25,21 +26,31 @@ interface ToolCall {
   function: { name: string; arguments: string };
 }
 
-const SYSTEM_PREAMBLE = `You are Macronaut Voice — a warm middle-aged American woman who coaches nutrition and controls the Macronaut calorie tracker app by voice.
+const SYSTEM_PREAMBLE = `You are Macronaut Voice — a warm middle-aged American woman who coaches nutrition and controls the Macronaut calorie tracker by voice.
 
-Speak in a natural American accent. Final answers must be ONE short spoken sentence (two only if needed). Plain speech, round numbers, no markdown or lists.
+SPEAKING: Final replies are ONE short spoken sentence (two if clarifying). Plain speech, round numbers, no markdown.
 
-You have tools to read and change the user's diary, notes, activities, and goals for any day — including past days. ALWAYS use tools for facts and actions; never invent logged meals or notes.
+TRUTH: Always use tools for facts and mutations. Never invent logged meals or notes.
 
-Memory rules:
-- You remember the conversation. If they say "make a note of that", "add that to my notes", or "remember that", use your previous spoken answer as the note body (call add_note).
-- Prefer add_note with body set to that previous answer when they refer to "that".
-- Use remember_fact only for durable preferences.
+DATES:
+- Omitted date → the day currently selected in the app UI.
+- "today" / "yesterday" / "N days ago" → calendar dates.
+- If a date string is unclear, call ask_user — do not guess.
 
-When logging food without full macros, estimate calories/protein/carbs/fat reasonably and say you estimated.
-Confirm actions briefly after tools succeed ("Got it — I logged the chicken bowl for lunch.").
+AMBIGUITY: If a tool returns ambiguous:true or candidates, call ask_user (or speak the clarifying question). Never pick randomly.
 
-Efficiency: finish in as few tool calls as possible. To delete a note, call delete_note with contains=<snippet> in ONE step — do not list/find first unless the user is vague.`;
+DELETES: Prefer delete_note/delete_diary_entry with contains=. If multiple match, ask which one. After a bad delete, the user can say "undo".
+
+MEMORY:
+- You remember prior turns. For "make a note of that", call add_note with body "that".
+- remember_fact for durable preferences; forget_fact to remove them.
+- undo_last_action reverses your last add/delete.
+
+AFTER WRITES: If they ask about remaining calories/macros, call get_day_summary again (don't trust the opening snapshot).
+
+LOGGING: If macros aren't given, estimate and say you estimated. Always say the meal slot and date in your confirmation.
+
+CLARIFY: Prefer ask_user over wrong actions.`;
 
 function parseApiError(status: number, body: string): string {
   if (status === 401 || status === 403) return 'Grok API key was rejected — check Settings';
@@ -63,7 +74,7 @@ async function postChat(opts: {
   const body: Record<string, unknown> = {
     model: opts.model,
     temperature: 0.2,
-    max_tokens: opts.withTools ? 500 : 120,
+    max_tokens: opts.withTools ? 600 : 140,
     messages: opts.messages,
   };
   if (opts.withReasoning) body.reasoning_effort = 'low';
@@ -72,15 +83,19 @@ async function postChat(opts: {
     body.tool_choice = 'auto';
   }
 
-  const res = await fetch('https://api.x.ai/v1/chat/completions', {
-    method: 'POST',
-    signal: opts.signal,
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${opts.key}`,
+  const res = await fetchWithTimeout(
+    'https://api.x.ai/v1/chat/completions',
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${opts.key}`,
+      },
+      body: JSON.stringify(body),
     },
-    body: JSON.stringify(body),
-  });
+    28_000,
+    opts.signal,
+  );
 
   if (!res.ok) {
     const errText = await res.text().catch(() => '');
@@ -117,7 +132,6 @@ export async function runAssistantAgent(opts: {
   repos: Repos;
   selectedDate: DayKey;
   targetMeal: string;
-  /** In-memory turns for this session (also persisted). */
   history?: AssistantMessage[];
   model?: string;
   signal?: AbortSignal;
@@ -132,7 +146,6 @@ export async function runAssistantAgent(opts: {
   const model = opts.model ?? 'grok-4.5';
   let memory = await loadAssistantMemory(opts.repos.settings);
 
-  // Prefer the richer of persisted memory vs live session history for chat turns.
   const session = opts.history ?? [];
   const priorTurns =
     memory.turns.length >= session.length
@@ -146,14 +159,16 @@ export async function runAssistantAgent(opts: {
   const memoryForPrompt: AssistantMemoryStore = {
     ...memory,
     turns: priorTurns,
-    lastAnswer: memory.lastAnswer ?? [...priorTurns].reverse().find((t) => t.role === 'assistant')?.content,
+    lastAnswer:
+      memory.lastAnswer ??
+      [...priorTurns].reverse().find((t) => t.role === 'assistant')?.content,
   };
 
   const memoryBlock = formatMemoryForPrompt(memoryForPrompt);
   const system = [
     SYSTEM_PREAMBLE,
-    `Today's selected day in the UI: ${opts.selectedDate}. Default meal slot: ${opts.targetMeal}.`,
-    `--- Snapshot ---\n${opts.nutritionContext}`,
+    `Selected day in the UI (default when date omitted): ${opts.selectedDate}. Default meal slot: ${opts.targetMeal}.`,
+    `--- Snapshot at turn start (may go stale after writes; re-fetch with get_day_summary) ---\n${opts.nutritionContext}`,
     memoryBlock ? `--- Memory ---\n${memoryBlock}` : '',
   ]
     .filter(Boolean)
@@ -161,7 +176,6 @@ export async function runAssistantAgent(opts: {
 
   const messages: ChatMessage[] = [
     { role: 'system', content: system },
-    // Recent turns as real chat messages so "that" / follow-ups resolve.
     ...priorTurns.slice(-10).map((t) => ({
       role: t.role as 'user' | 'assistant',
       content: t.content,
@@ -175,17 +189,29 @@ export async function runAssistantAgent(opts: {
   const timer = setTimeout(() => controller.abort(), 90_000);
 
   const invalidates: ToolInvalidate[] = [];
-  // Seed working memory with session history so "note that" sees the last answer.
   let workingMemory: AssistantMemoryStore = {
     ...memoryForPrompt,
     facts: memory.facts,
+    undoStack: memory.undoStack,
+    recentMutations: memory.recentMutations,
+  };
+  const loopGuard = new LoopGuard();
+  let lastToolOk: boolean | null = null;
+  let mutationCount = 0;
+
+  const finish = async (answer: string): Promise<AgentTurnResult> => {
+    workingMemory = appendTurn(workingMemory, 'user', question);
+    workingMemory = appendTurn(workingMemory, 'assistant', answer);
+    await saveAssistantMemory(opts.repos.settings, workingMemory);
+    return { answer, memory: workingMemory, invalidates };
   };
 
   try {
-    // Tool rounds + one forced final speak. Deletes/finds used to hit 6 easily.
     const maxToolRounds = 12;
     for (let step = 0; step < maxToolRounds; step++) {
-      opts.onStatus?.(step === 0 ? 'Thinking…' : 'Working…');
+      opts.onStatus?.(
+        step === 0 ? 'Thinking…' : `Working… (${step}/${maxToolRounds})`,
+      );
 
       let reply: { content: string | null; tool_calls?: ToolCall[] };
       try {
@@ -198,6 +224,8 @@ export async function runAssistantAgent(opts: {
           withTools: true,
         });
       } catch (e) {
+        const abortMsg = spokenAbortError(e);
+        if (abortMsg) return finish(abortMsg);
         const msg = e instanceof Error ? e.message : '';
         if (/reasoning|required/i.test(msg)) {
           reply = await postChat({
@@ -209,17 +237,27 @@ export async function runAssistantAgent(opts: {
             withTools: true,
           });
         } else if (/tools|tool_choice|unknown/i.test(msg) && step === 0) {
-          // Fallback: no tools — still answer with memory in the prompt.
+          // Tools unavailable — answer read-only.
+          const readOnly = [
+            {
+              role: 'system' as const,
+              content:
+                'Tools are temporarily unavailable. Answer from the snapshot only. Do not claim you changed the diary or notes.',
+            },
+            { role: 'user' as const, content: question },
+          ];
           reply = await postChat({
             key,
             model,
-            messages: messages.map((m) =>
-              m.role === 'tool' ? { role: 'user', content: m.content } : m,
-            ) as ChatMessage[],
+            messages: readOnly,
             signal: controller.signal,
             withReasoning: false,
             withTools: false,
           });
+          return finish(
+            reply.content?.trim() ||
+              "I can talk right now, but I can't change your diary until tools come back.",
+          );
         } else {
           throw e;
         }
@@ -227,16 +265,15 @@ export async function runAssistantAgent(opts: {
 
       const calls = reply.tool_calls ?? [];
       if (!calls.length) {
-        const answer =
+        let answer =
           reply.content?.trim() ||
           "Sorry, I couldn't put that into words — try asking again.";
-        workingMemory = appendTurn(workingMemory, 'user', question);
-        workingMemory = appendTurn(workingMemory, 'assistant', answer);
-        await saveAssistantMemory(opts.repos.settings, workingMemory);
-        return { answer, memory: workingMemory, invalidates };
+        if (lastToolOk === false && /saved|deleted|logged|done|got it/i.test(answer)) {
+          answer = "That didn't go through — try again, or tell me more specifically.";
+        }
+        return finish(answer);
       }
 
-      // Append assistant tool-call message, then execute each tool.
       messages.push({
         role: 'assistant',
         content: reply.content,
@@ -245,13 +282,15 @@ export async function runAssistantAgent(opts: {
 
       for (const call of calls) {
         const fnName = call.function?.name ?? '';
-        opts.onStatus?.(statusForTool(fnName));
+        opts.onStatus?.(statusForTool(fnName, step, maxToolRounds));
         let args: Record<string, unknown> = {};
         try {
           args = JSON.parse(call.function?.arguments || '{}') as Record<string, unknown>;
         } catch {
           args = {};
         }
+
+        const fp = `${fnName}:${JSON.stringify(args)}`;
         const result = await executeAssistantTool(fnName, args, {
           repos: opts.repos,
           selectedDate: opts.selectedDate,
@@ -261,70 +300,120 @@ export async function runAssistantAgent(opts: {
             workingMemory = next;
           },
         });
+
+        lastToolOk = result.ok;
+        if (result.ok) loopGuard.noteSuccess(fp);
+        else if (loopGuard.noteFailure(fp)) {
+          messages.push({
+            role: 'tool',
+            tool_call_id: call.id,
+            content: JSON.stringify({
+              ...((result.data as object) ?? {}),
+              stuck: true,
+              error: 'Identical tool call failed twice — ask the user instead of retrying.',
+            }),
+          });
+          invalidates.push(...result.invalidates);
+          const stuckAnswer =
+            result.speakNow ||
+            "I'm stuck on that action — can you say it another way?";
+          return finish(stuckAnswer);
+        }
+
         invalidates.push(...result.invalidates);
+        if (result.invalidates.some((i) => i.kind !== 'memory')) mutationCount += 1;
+
         messages.push({
           role: 'tool',
           tool_call_id: call.id,
           content: JSON.stringify(result.data),
         });
+
+        // Clarifying questions / undo spoken shortcuts end the turn immediately.
+        if (result.speakNow) {
+          return finish(result.speakNow);
+        }
+      }
+
+      // After mutations, nudge the model to re-read if needed (appended once).
+      if (mutationCount > 0 && step === 0) {
+        /* no-op: prompt already tells it to re-fetch */
       }
     }
 
-    // Soft landing: force a spoken wrap-up from tool results instead of failing.
     opts.onStatus?.('Wrapping up…');
     messages.push({
       role: 'user',
       content:
-        'Stop calling tools. In one short spoken sentence, tell me what you already completed based on the tool results above.',
+        'Stop calling tools. In one short spoken sentence, honestly say what you completed or what is still unclear. Do not claim success if tools failed.',
     });
-    const wrap = await postChat({
-      key,
-      model,
-      messages,
-      signal: controller.signal,
-      withReasoning: false,
-      withTools: false,
-    });
+    let wrap: { content: string | null };
+    try {
+      wrap = await postChat({
+        key,
+        model,
+        messages,
+        signal: controller.signal,
+        withReasoning: false,
+        withTools: false,
+      });
+    } catch (e) {
+      const abortMsg = spokenAbortError(e);
+      if (abortMsg) return finish(abortMsg);
+      throw e;
+    }
+
     const answer =
       wrap.content?.trim() ||
-      (invalidates.length
-        ? 'Done — I finished the updates I could.'
-        : "I couldn't finish that — try asking once more.");
-    workingMemory = appendTurn(workingMemory, 'user', question);
-    workingMemory = appendTurn(workingMemory, 'assistant', answer);
-    await saveAssistantMemory(opts.repos.settings, workingMemory);
-    return { answer, memory: workingMemory, invalidates };
+      (lastToolOk === false
+        ? "That didn't fully work — try asking once more."
+        : mutationCount > 0
+          ? 'I finished the updates I could.'
+          : "I couldn't finish that — try asking once more.");
+    return finish(answer);
+  } catch (e) {
+    const abortMsg = spokenAbortError(e);
+    if (abortMsg) return finish(abortMsg);
+    throw e;
   } finally {
     clearTimeout(timer);
     opts.signal?.removeEventListener('abort', onOuterAbort);
   }
 }
 
-function statusForTool(name: string): string {
+function statusForTool(name: string, step: number, max: number): string {
+  const prefix = `Step ${step + 1}/${max} · `;
   switch (name) {
     case 'add_meal':
     case 'update_diary_entry':
+    case 'delete_diary_entry':
     case 'delete_diary_entries':
-      return 'Updating diary…';
+    case 'find_diary_entries':
+      return `${prefix}Diary`;
     case 'add_note':
     case 'update_note':
     case 'delete_note':
     case 'find_notes':
     case 'list_notes':
-      return 'Updating notes…';
+      return `${prefix}Notes`;
     case 'add_activity':
     case 'delete_activity':
     case 'list_activities':
-      return 'Updating activity…';
+      return `${prefix}Activity`;
     case 'get_day_summary':
     case 'list_diary_entries':
     case 'get_goals':
-      return 'Checking your log…';
+      return `${prefix}Checking log`;
+    case 'ask_user':
+      return `${prefix}Need a detail`;
+    case 'undo_last_action':
+      return `${prefix}Undoing`;
     case 'remember_fact':
+    case 'forget_fact':
     case 'recall_memory':
-      return 'Remembering…';
+      return `${prefix}Memory`;
     default:
-      return 'Working…';
+      return `${prefix}Working`;
   }
 }
 
@@ -337,7 +426,6 @@ export async function askNutritionAssistant(opts: {
   model?: string;
   signal?: AbortSignal;
 }): Promise<string> {
-  // Legacy path without repos — plain chat only.
   const key = opts.apiKey.trim();
   if (!key) throw new Error('Add your Grok API key in Settings first');
   const question = opts.question.trim();
