@@ -23,6 +23,7 @@ import {
   speakText,
   startHoldListen,
   stopSpeaking,
+  unlockAudioContext,
   unlockSpeechPlayback,
   type HoldListenSession,
 } from '@/services/assistant/speech';
@@ -244,9 +245,9 @@ export function VoiceAssistant() {
     abortRef.current = controller;
 
     try {
-      if (!blob || blob.size < 200) {
+      if (!blob || blob.size < 1000) {
         await speakReply(
-          'I didn’t hear anything. Hold the mic, speak, then let go.',
+          'I didn’t hear anything. Hold the mic, speak clearly, then let go.',
           gen,
         );
         return;
@@ -255,6 +256,7 @@ export function VoiceAssistant() {
       const question = await transcribeAudio({
         apiKey: apiKey.data ?? '',
         blob,
+        filename: blob.type.includes('wav') ? 'voice.wav' : undefined,
         signal: controller.signal,
       });
       if (gen !== turnGen.current) return;
@@ -296,6 +298,8 @@ export function VoiceAssistant() {
 
     unlockAudioElement();
     unlockSpeechPlayback();
+    // Must resume AudioContext inside the press gesture (iOS Safari).
+    void unlockAudioContext().catch(() => {});
     pressStartedAt.current = Date.now();
     holdingRef.current = true;
     setStatus('Listening…');
@@ -305,6 +309,7 @@ export function VoiceAssistant() {
       // Warm mic first so the iOS permission sheet doesn't cancel the hold.
       if (!micReady || !streamRef.current) {
         setStatus('Allow microphone…');
+        await unlockAudioContext();
         streamRef.current = await ensureMicStream();
         setMicReady(true);
         // If they already released during the permission prompt, don't record.
@@ -314,6 +319,8 @@ export function VoiceAssistant() {
           return;
         }
         setStatus('Listening…');
+      } else {
+        await unlockAudioContext();
       }
 
       sessionRef.current?.abort();
