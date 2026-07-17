@@ -37,7 +37,9 @@ Memory rules:
 - Use remember_fact only for durable preferences.
 
 When logging food without full macros, estimate calories/protein/carbs/fat reasonably and say you estimated.
-Confirm actions briefly after tools succeed ("Got it — I logged the chicken bowl for lunch.").`;
+Confirm actions briefly after tools succeed ("Got it — I logged the chicken bowl for lunch.").
+
+Efficiency: finish in as few tool calls as possible. To delete a note, call delete_note with contains=<snippet> in ONE step — do not list/find first unless the user is vague.`;
 
 function parseApiError(status: number, body: string): string {
   if (status === 401 || status === 403) return 'Grok API key was rejected — check Settings';
@@ -170,7 +172,7 @@ export async function runAssistantAgent(opts: {
   const controller = new AbortController();
   const onOuterAbort = () => controller.abort();
   opts.signal?.addEventListener('abort', onOuterAbort);
-  const timer = setTimeout(() => controller.abort(), 45_000);
+  const timer = setTimeout(() => controller.abort(), 90_000);
 
   const invalidates: ToolInvalidate[] = [];
   // Seed working memory with session history so "note that" sees the last answer.
@@ -180,8 +182,9 @@ export async function runAssistantAgent(opts: {
   };
 
   try {
-    const maxSteps = 6;
-    for (let step = 0; step < maxSteps; step++) {
+    // Tool rounds + one forced final speak. Deletes/finds used to hit 6 easily.
+    const maxToolRounds = 12;
+    for (let step = 0; step < maxToolRounds; step++) {
       opts.onStatus?.(step === 0 ? 'Thinking…' : 'Working…');
 
       let reply: { content: string | null; tool_calls?: ToolCall[] };
@@ -267,12 +270,30 @@ export async function runAssistantAgent(opts: {
       }
     }
 
-    const fallback =
-      "I started that but ran out of steps — ask me again and I'll finish.";
+    // Soft landing: force a spoken wrap-up from tool results instead of failing.
+    opts.onStatus?.('Wrapping up…');
+    messages.push({
+      role: 'user',
+      content:
+        'Stop calling tools. In one short spoken sentence, tell me what you already completed based on the tool results above.',
+    });
+    const wrap = await postChat({
+      key,
+      model,
+      messages,
+      signal: controller.signal,
+      withReasoning: false,
+      withTools: false,
+    });
+    const answer =
+      wrap.content?.trim() ||
+      (invalidates.length
+        ? 'Done — I finished the updates I could.'
+        : "I couldn't finish that — try asking once more.");
     workingMemory = appendTurn(workingMemory, 'user', question);
-    workingMemory = appendTurn(workingMemory, 'assistant', fallback);
+    workingMemory = appendTurn(workingMemory, 'assistant', answer);
     await saveAssistantMemory(opts.repos.settings, workingMemory);
-    return { answer: fallback, memory: workingMemory, invalidates };
+    return { answer, memory: workingMemory, invalidates };
   } finally {
     clearTimeout(timer);
     opts.signal?.removeEventListener('abort', onOuterAbort);

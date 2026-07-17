@@ -291,24 +291,77 @@ export async function executeAssistantTool(
       }
 
       case 'delete_note': {
-        const id = String(rawArgs.id ?? '');
-        if (!id) return { ok: false, data: { error: 'id required' }, invalidates: [] };
-        // Find date for invalidation
-        const to = todayKey();
-        const from = addDays(to, -90);
-        const dates = await repos.dayNotes.datesWithNotes(from, to);
-        let noteDate: DayKey | undefined;
-        for (const d of dates) {
-          const notes = await repos.dayNotes.listForDate(d);
-          if (notes.some((n) => n.id === id)) {
-            noteDate = d;
-            break;
+        const idArg = typeof rawArgs.id === 'string' ? rawArgs.id.trim() : '';
+        const contains =
+          typeof rawArgs.contains === 'string' ? rawArgs.contains.trim().toLowerCase() : '';
+        const scopedDate =
+          typeof rawArgs.date === 'string' && rawArgs.date.trim()
+            ? day(rawArgs.date)
+            : undefined;
+
+        let targetId = idArg;
+        let noteDate: DayKey | undefined = scopedDate;
+        let deletedBody: string | undefined;
+
+        if (!targetId) {
+          if (!contains) {
+            return {
+              ok: false,
+              data: { error: 'Provide id or contains (text from the note) to delete' },
+              invalidates: [],
+            };
+          }
+          const to = scopedDate ?? todayKey();
+          const from = scopedDate ?? addDays(to, -90);
+          const dates = scopedDate
+            ? [scopedDate]
+            : await repos.dayNotes.datesWithNotes(from, to);
+          // Newest first so "delete the one about X" picks the latest match.
+          const matches: { id: string; date: DayKey; body: string }[] = [];
+          for (const d of [...dates].reverse()) {
+            const notes = await repos.dayNotes.listForDate(d);
+            for (const n of [...notes].reverse()) {
+              if (n.body.toLowerCase().includes(contains)) {
+                matches.push({ id: n.id, date: n.date, body: n.body });
+              }
+            }
+          }
+          if (!matches.length) {
+            return {
+              ok: false,
+              data: { error: `No note matching “${rawArgs.contains}”` },
+              invalidates: [],
+            };
+          }
+          targetId = matches[0]!.id;
+          noteDate = matches[0]!.date;
+          deletedBody = matches[0]!.body;
+        } else if (!noteDate) {
+          const to = todayKey();
+          const from = addDays(to, -90);
+          const dates = await repos.dayNotes.datesWithNotes(from, to);
+          for (const d of dates) {
+            const notes = await repos.dayNotes.listForDate(d);
+            const hit = notes.find((n) => n.id === targetId);
+            if (hit) {
+              noteDate = d;
+              deletedBody = hit.body;
+              break;
+            }
           }
         }
-        await repos.dayNotes.remove(id);
+
+        await repos.dayNotes.remove(targetId);
         return {
           ok: true,
-          data: { deleted: id, date: noteDate ?? null },
+          data: {
+            deleted: targetId,
+            date: noteDate ?? null,
+            body: deletedBody ?? null,
+            message: deletedBody
+              ? `Deleted note: ${deletedBody.slice(0, 80)}`
+              : `Deleted note ${targetId}`,
+          },
           invalidates: [{ kind: 'notes', date: noteDate }],
         };
       }
