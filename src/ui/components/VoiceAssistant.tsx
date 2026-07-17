@@ -15,17 +15,19 @@ import Animated, {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   askNutritionAssistant,
-  type AssistantMessage,
 } from '@/services/assistant/grokChat';
 import { buildNutritionContext } from '@/services/assistant/nutritionContext';
 import {
   canHoldRecord,
+  canLiveTranscript,
   ensureMicStream,
   speakText,
   startHoldListen,
+  startLiveTranscript,
   stopSpeaking,
   unlockSpeechPlayback,
   type HoldListenSession,
+  type LiveTranscriptSession,
 } from '@/services/assistant/speech';
 import { transcribeAudio } from '@/services/assistant/stt';
 import { speakWithGrokTts, stopAudioElement, unlockAudioElement } from '@/services/assistant/tts';
@@ -81,9 +83,9 @@ function HoldRing({
 }
 
 /**
- * Hold-to-talk mic. Warms the mic first, records while held, transcribes with
- * xAI STT, answers with Grok, and speaks via Grok TTS (with browser fallback).
- * Status text is always visible so failures aren't silent.
+ * Hold-to-talk mic. Warms the mic, listens with live browser STT (+ MediaRecorder
+ * fallback), answers with Grok, and speaks with an on-device female American voice
+ * (Grok Ara as backup). Status text stays visible so failures aren't silent.
  */
 export function VoiceAssistant() {
   const { colors } = useTheme();
@@ -96,10 +98,10 @@ export function VoiceAssistant() {
 
   const [phase, setPhase] = useState<Phase>('idle');
   const [status, setStatus] = useState<string | null>(null);
-  const [history, setHistory] = useState<AssistantMessage[]>([]);
   const [micReady, setMicReady] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
   const sessionRef = useRef<HoldListenSession | null>(null);
+  const liveRef = useRef<LiveTranscriptSession | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const turnGen = useRef(0);
   const holdingRef = useRef(false);
@@ -118,6 +120,7 @@ export function VoiceAssistant() {
     return () => {
       turnGen.current += 1;
       sessionRef.current?.abort();
+      liveRef.current?.abort();
       abortRef.current?.abort();
       stopSpeaking();
       stopAudioElement();
@@ -160,29 +163,46 @@ export function VoiceAssistant() {
     setPhase('speaking');
     setStatus(message);
     const key = apiKey.data ?? '';
+    // Speak immediately with an on-device female American voice (fast).
+    // If that path fails, use Grok Ara (warm American female).
     try {
-      await speakWithGrokTts({ apiKey: key, text: message });
-    } catch {
-      // Browser TTS fallback if Grok TTS fails / is blocked.
       await speakText(message);
+    } catch {
+      try {
+        await speakWithGrokTts({ apiKey: key, text: message });
+      } catch {
+        /* both paths failed — status text still shows the reply */
+      }
     }
     if (gen === turnGen.current) {
       setPhase('idle');
-      // Keep the last reply on screen briefly, then clear.
       setTimeout(() => {
         if (gen === turnGen.current) setStatus(null);
       }, 4500);
     }
   }
 
-  async function runTurn(blob: Blob, gen: number) {
+  async function answerQuestion(question: string, gen: number, signal: AbortSignal) {
+    setStatus(`Heard: “${question}”`);
+    const nutritionContext = buildNutritionContext({
+      date,
+      progress,
+      entries: entries.data ?? [],
+    });
+    const answer = await askNutritionAssistant({
+      apiKey: apiKey.data ?? '',
+      nutritionContext,
+      question,
+      signal,
+    });
+    if (gen !== turnGen.current) return;
+    await speakReply(answer, gen);
+  }
+
+  async function runTurn(blob: Blob, gen: number, liveText: string | null) {
     if (!keyReady) {
       setPhase('idle');
       setStatus('Add your Grok API key in Settings');
-      return;
-    }
-    if (!blob || blob.size < 400) {
-      await speakReply("I didn't catch that. Hold the mic and ask again.", gen);
       return;
     }
 
@@ -193,36 +213,21 @@ export function VoiceAssistant() {
     abortRef.current = controller;
 
     try {
-      setStatus('Transcribing…');
-      const question = await transcribeAudio({
-        apiKey: apiKey.data ?? '',
-        blob,
-        signal: controller.signal,
-      });
+      let question = (liveText ?? '').trim();
+      if (!question) {
+        if (!blob || blob.size < 400) {
+          await speakReply("I didn't catch that. Hold the mic and ask again.", gen);
+          return;
+        }
+        setStatus('Transcribing…');
+        question = await transcribeAudio({
+          apiKey: apiKey.data ?? '',
+          blob,
+          signal: controller.signal,
+        });
+      }
       if (gen !== turnGen.current) return;
-      setStatus(`Heard: “${question}”`);
-
-      const nutritionContext = buildNutritionContext({
-        date,
-        progress,
-        entries: entries.data ?? [],
-      });
-
-      const answer = await askNutritionAssistant({
-        apiKey: apiKey.data ?? '',
-        nutritionContext,
-        question,
-        history,
-        signal: controller.signal,
-      });
-      if (gen !== turnGen.current) return;
-
-      setHistory((h) => [
-        ...h,
-        { role: 'user', content: question },
-        { role: 'assistant', content: answer },
-      ]);
-      await speakReply(answer, gen);
+      await answerQuestion(question, gen, controller.signal);
     } catch (e) {
       if (controller.signal.aborted || gen !== turnGen.current) {
         setPhase('idle');
@@ -245,6 +250,8 @@ export function VoiceAssistant() {
     if (phase === 'thinking' || phase === 'speaking') {
       turnGen.current += 1;
       abortRef.current?.abort();
+      liveRef.current?.abort();
+      liveRef.current = null;
       stopSpeaking();
       stopAudioElement();
     }
@@ -281,9 +288,14 @@ export function VoiceAssistant() {
       }
 
       sessionRef.current?.abort();
+      liveRef.current?.abort();
       sessionRef.current = startHoldListen(streamRef.current ?? undefined);
+      // Parallel browser STT — often ready before the xAI upload finishes.
+      liveRef.current = canLiveTranscript() ? startLiveTranscript() : null;
     } catch (e) {
       holdingRef.current = false;
+      liveRef.current?.abort();
+      liveRef.current = null;
       setPhase('idle');
       setStatus(e instanceof Error ? e.message : 'Microphone failed');
     }
@@ -295,10 +307,13 @@ export function VoiceAssistant() {
 
     const heldMs = Date.now() - pressStartedAt.current;
     const session = sessionRef.current;
+    const live = liveRef.current;
     sessionRef.current = null;
+    liveRef.current = null;
 
     // Released during permission / before recorder started.
     if (!session) {
+      live?.abort();
       setPhase('idle');
       if (micReady) setStatus('Mic ready — hold to talk');
       return;
@@ -307,6 +322,7 @@ export function VoiceAssistant() {
     // Too short — likely an accidental tap.
     if (heldMs < 350) {
       session.abort();
+      live?.abort();
       setPhase('idle');
       setStatus('Hold the mic while you talk, then release');
       return;
@@ -316,9 +332,13 @@ export function VoiceAssistant() {
     setPhase('thinking');
     setStatus('Thinking…');
     try {
-      const blob = await session.stop();
+      // Prefer live transcript when available — skips the STT upload round-trip.
+      const [blob, liveText] = await Promise.all([
+        session.stop(),
+        live ? live.stop() : Promise.resolve(null),
+      ]);
       if (gen !== turnGen.current) return;
-      await runTurn(blob, gen);
+      await runTurn(blob, gen, liveText);
     } catch (e) {
       if (gen !== turnGen.current) return;
       const msg = e instanceof Error ? e.message : "I couldn't record that.";

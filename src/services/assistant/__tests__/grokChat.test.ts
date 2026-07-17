@@ -44,11 +44,12 @@ describe('askNutritionAssistant', () => {
     const body = JSON.parse(
       (global.fetch as jest.Mock).mock.calls[0][1].body as string,
     ) as { reasoning_effort?: string; max_tokens?: number };
-    expect(body.reasoning_effort).toBe('low');
-    expect(body.max_tokens).toBe(120);
+    // Fast path: no reasoning_effort, short spoken replies.
+    expect(body.reasoning_effort).toBeUndefined();
+    expect(body.max_tokens).toBe(60);
   });
 
-  it('retries without reasoning_effort on a 400', async () => {
+  it('retries with reasoning_effort when the API requires it', async () => {
     let calls = 0;
     global.fetch = jest.fn(async () => {
       calls += 1;
@@ -56,7 +57,7 @@ describe('askNutritionAssistant', () => {
         return {
           ok: false,
           status: 400,
-          text: async () => JSON.stringify({ error: { message: 'invalid reasoning' } }),
+          text: async () => JSON.stringify({ error: { message: 'reasoning_effort required' } }),
         };
       }
       return {
@@ -77,6 +78,6 @@ describe('askNutritionAssistant', () => {
     const second = JSON.parse(
       (global.fetch as jest.Mock).mock.calls[1][1].body as string,
     ) as { reasoning_effort?: string };
-    expect(second.reasoning_effort).toBeUndefined();
+    expect(second.reasoning_effort).toBe('low');
   });
 });
