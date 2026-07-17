@@ -20,6 +20,10 @@ const config: ExpoConfig = {
     infoPlist: {
       NSCameraUsageDescription:
         'Macronaut uses the camera to scan barcodes and photograph meals for AI food logging.',
+      NSMicrophoneUsageDescription:
+        'Macronaut uses the microphone so you can ask the voice assistant about calories and nutrition.',
+      NSSpeechRecognitionUsageDescription:
+        'Macronaut uses speech recognition to turn your questions into text for the voice assistant.',
     },
   },
   android: {
