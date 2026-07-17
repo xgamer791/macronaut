@@ -43,8 +43,12 @@ import { radius, spacing, touchTarget } from '@/ui/theme/tokens';
 type Phase = 'idle' | 'holding' | 'thinking' | 'speaking';
 
 const FAB_SIZE = 56;
-const RING_SIZE = FAB_SIZE + 28;
-const TAB_BAR_CLEARANCE = 96;
+/** Ring base size — kept small so pulse scales stay inside the stage. */
+const RING_SIZE = FAB_SIZE + 16;
+/** Clip box for hold rings so they never paint over the tab bar / screen edge. */
+const RING_STAGE = 88;
+/** Clearance above the tab bar; FAB sits in the bottom-right of this space. */
+const TAB_BAR_CLEARANCE = 72;
 
 const noHoldChrome: ViewStyle | undefined =
   Platform.OS === 'web'
@@ -423,7 +427,7 @@ export function VoiceAssistant() {
   const bottom = insets.bottom + TAB_BAR_CLEARANCE;
 
   const fabAnim = useAnimatedStyle(() => {
-    const pressScale = interpolate(hold.value, [0, 1], [1, 1.08]);
+    const pressScale = interpolate(hold.value, [0, 1], [1, 1.06]);
     const busyScale =
       mode.value >= 2 ? interpolate(breathe.value, [0, 1], [0.96, 1.04]) : 1;
     return { transform: [{ scale: pressScale * busyScale }] };
@@ -439,7 +443,7 @@ export function VoiceAssistant() {
   return (
     <View
       pointerEvents="box-none"
-      style={[styles.anchor, { right: spacing.lg, bottom }, noHoldChrome]}
+      style={[styles.anchor, { right: spacing.sm, bottom }, noHoldChrome]}
     >
       {status ? (
         <View
@@ -453,42 +457,45 @@ export function VoiceAssistant() {
         </View>
       ) : null}
 
-      <HoldRing pulse={pulse} delay={0} maxScale={1.85} color={colors.danger} />
-      <HoldRing pulse={pulse} delay={0.3} maxScale={2.35} color={colors.danger} />
+      {/* Clip rings so they never spill into the tab bar or off-screen. */}
+      <View pointerEvents="box-none" style={styles.ringStage}>
+        <HoldRing pulse={pulse} delay={0} maxScale={1.22} color={colors.danger} />
+        <HoldRing pulse={pulse} delay={0.28} maxScale={1.38} color={colors.danger} />
 
-      <Animated.View style={fabAnim}>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Voice assistant"
-          accessibilityHint="Hold to talk, release when finished"
-          onPressIn={() => void onPressIn()}
-          onPressOut={() => void onPressOut()}
-          onLongPress={() => {}}
-          delayLongPress={10_000}
-          {...(Platform.OS === 'web'
-            ? {
-                onContextMenu: (e: { preventDefault: () => void }) => e.preventDefault(),
-              }
-            : null)}
-          unstable_pressDelay={0}
-          style={[
-            styles.fab,
-            noHoldChrome,
-            {
-              backgroundColor: fabColor,
-              shadowColor: '#000',
-            },
-          ]}
-        >
-          <View pointerEvents="none" style={noHoldChrome}>
-            <Ionicons
-              name={phase === 'holding' ? 'mic' : active ? 'mic' : 'mic-outline'}
-              size={26}
-              color={colors.onAccent}
-            />
-          </View>
-        </Pressable>
-      </Animated.View>
+        <Animated.View style={fabAnim}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Voice assistant"
+            accessibilityHint="Hold to talk, release when finished"
+            onPressIn={() => void onPressIn()}
+            onPressOut={() => void onPressOut()}
+            onLongPress={() => {}}
+            delayLongPress={10_000}
+            {...(Platform.OS === 'web'
+              ? {
+                  onContextMenu: (e: { preventDefault: () => void }) => e.preventDefault(),
+                }
+              : null)}
+            unstable_pressDelay={0}
+            style={[
+              styles.fab,
+              noHoldChrome,
+              {
+                backgroundColor: fabColor,
+                shadowColor: '#000',
+              },
+            ]}
+          >
+            <View pointerEvents="none" style={noHoldChrome}>
+              <Ionicons
+                name={phase === 'holding' ? 'mic' : active ? 'mic' : 'mic-outline'}
+                size={26}
+                color={colors.onAccent}
+              />
+            </View>
+          </Pressable>
+        </Animated.View>
+      </View>
     </View>
   );
 }
@@ -496,8 +503,8 @@ export function VoiceAssistant() {
 const styles = StyleSheet.create({
   anchor: {
     position: 'absolute',
-    width: 220,
-    alignItems: 'center',
+    width: 200,
+    alignItems: 'flex-end',
     justifyContent: 'flex-end',
     zIndex: 50,
   },
@@ -520,6 +527,13 @@ const styles = StyleSheet.create({
     height: 6,
     borderRadius: 3,
   },
+  ringStage: {
+    width: RING_STAGE,
+    height: RING_STAGE,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
   fab: {
     width: FAB_SIZE,
     height: FAB_SIZE,
@@ -539,7 +553,9 @@ const styles = StyleSheet.create({
     width: RING_SIZE,
     height: RING_SIZE,
     borderRadius: RING_SIZE / 2,
-    borderWidth: 3,
-    bottom: (FAB_SIZE - RING_SIZE) / 2,
+    borderWidth: 2.5,
+    // Centered in the clipped stage (not tied to screen edges).
+    top: (RING_STAGE - RING_SIZE) / 2,
+    left: (RING_STAGE - RING_SIZE) / 2,
   },
 });
