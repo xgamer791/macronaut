@@ -73,6 +73,152 @@ export interface HoldListenSession {
   abort: () => void;
 }
 
+export interface LiveTranscriptSession {
+  /** Stop recognition and return the best transcript so far (or null). */
+  stop: () => Promise<string | null>;
+  abort: () => void;
+}
+
+type SpeechRecognitionLike = {
+  continuous: boolean;
+  interimResults: boolean;
+  lang: string;
+  maxAlternatives: number;
+  onresult: ((ev: {
+    resultIndex: number;
+    results: ArrayLike<{ isFinal: boolean; 0: { transcript: string } }>;
+  }) => void) | null;
+  onerror: ((ev: { error?: string }) => void) | null;
+  onend: (() => void) | null;
+  start: () => void;
+  stop: () => void;
+  abort: () => void;
+};
+
+function getSpeechRecognitionCtor(): (new () => SpeechRecognitionLike) | null {
+  if (typeof window === 'undefined') return null;
+  const w = window as Window & {
+    SpeechRecognition?: new () => SpeechRecognitionLike;
+    webkitSpeechRecognition?: new () => SpeechRecognitionLike;
+  };
+  return w.SpeechRecognition ?? w.webkitSpeechRecognition ?? null;
+}
+
+/** True when the browser can stream live transcripts while holding the mic. */
+export function canLiveTranscript(): boolean {
+  return Platform.OS === 'web' && !!getSpeechRecognitionCtor();
+}
+
+/**
+ * Parallel live STT via Web Speech API — often finishes before xAI STT.
+ * Returns null from stop() when unsupported or nothing was heard.
+ */
+export function startLiveTranscript(): LiveTranscriptSession {
+  const Ctor = getSpeechRecognitionCtor();
+  if (!Ctor) {
+    return { stop: async () => null, abort: () => {} };
+  }
+
+  let finalText = '';
+  let interimText = '';
+  let settled = false;
+  let stopResolver: ((text: string | null) => void) | null = null;
+  let rec: SpeechRecognitionLike | null = null;
+
+  try {
+    rec = new Ctor();
+    rec.continuous = true;
+    rec.interimResults = true;
+    rec.lang = 'en-US';
+    rec.maxAlternatives = 1;
+    rec.onresult = (ev) => {
+      let interim = '';
+      for (let i = ev.resultIndex; i < ev.results.length; i++) {
+        const piece = ev.results[i][0]?.transcript ?? '';
+        if (ev.results[i].isFinal) finalText = `${finalText} ${piece}`.trim();
+        else interim += piece;
+      }
+      interimText = interim.trim();
+    };
+    rec.onerror = () => {
+      /* keep whatever we have; stop() will read it */
+    };
+    rec.onend = () => {
+      if (settled) return;
+      settled = true;
+      const text = (finalText || interimText).trim() || null;
+      stopResolver?.(text);
+      stopResolver = null;
+    };
+    rec.start();
+  } catch {
+    return { stop: async () => null, abort: () => {} };
+  }
+
+  return {
+    stop: () =>
+      new Promise((resolve) => {
+        if (settled) {
+          resolve((finalText || interimText).trim() || null);
+          return;
+        }
+        stopResolver = resolve;
+        try {
+          rec?.stop();
+        } catch {
+          settled = true;
+          resolve((finalText || interimText).trim() || null);
+        }
+        // Safari sometimes never fires onend after stop().
+        setTimeout(() => {
+          if (settled) return;
+          settled = true;
+          resolve((finalText || interimText).trim() || null);
+          stopResolver = null;
+        }, 600);
+      }),
+    abort: () => {
+      try {
+        rec?.abort();
+      } catch {
+        /* ignore */
+      }
+      settled = true;
+      stopResolver?.(null);
+      stopResolver = null;
+    },
+  };
+}
+
+/** Prefer a middle-aged / adult female American voice when available. */
+function pickFemaleAmericanVoice(): SpeechSynthesisVoice | null {
+  if (typeof window === 'undefined' || !window.speechSynthesis) return null;
+  const voices = window.speechSynthesis.getVoices?.() ?? [];
+  if (!voices.length) return null;
+
+  const enUs = voices.filter((v) => /^en(-|_)US$/i.test(v.lang) || /en-US/i.test(v.lang));
+  const pool = enUs.length ? enUs : voices.filter((v) => /^en/i.test(v.lang));
+  const preferred = [
+    /samantha/i,
+    /karen/i,
+    /susan/i,
+    /moira/i,
+    /fiona/i,
+    /victoria/i,
+    /zira/i,
+    /google us english.*female/i,
+    /microsoft.*(aria|jenny|sara|guy)/i,
+    /female/i,
+  ];
+  for (const re of preferred) {
+    const hit = pool.find((v) => re.test(v.name));
+    if (hit) return hit;
+  }
+  // Avoid obviously male names when we can.
+  const notMale = pool.find((v) => !/david|mark|fred|daniel|alex|tom|male/i.test(v.name));
+  return notMale ?? pool[0] ?? null;
+}
+
 function pickRecorderMime(): string | undefined {
   if (typeof MediaRecorder === 'undefined') return undefined;
   const candidates = [
@@ -236,17 +382,22 @@ export function startHoldListen(stream?: MediaStream): HoldListenSession {
   };
 }
 
-/** Fallback speak via speechSynthesis / expo-speech. */
+/** Fallback speak via speechSynthesis / expo-speech (female American when available). */
 export function speakText(text: string): Promise<void> {
   const clean = text.trim();
   if (!clean) return Promise.resolve();
 
-  return new Promise((resolve) => {
+  return new Promise((resolve, reject) => {
     let settled = false;
     const done = () => {
       if (settled) return;
       settled = true;
       resolve();
+    };
+    const fail = (err: Error) => {
+      if (settled) return;
+      settled = true;
+      reject(err);
     };
     const fallback = setTimeout(done, Math.min(45_000, 1400 + clean.length * 50));
 
@@ -259,16 +410,28 @@ export function speakText(text: string): Promise<void> {
         } catch {
           /* ignore */
         }
+        // Voices may load async — try once more if empty.
+        let voice = pickFemaleAmericanVoice();
+        if (!voice) {
+          try {
+            synth.getVoices();
+          } catch {
+            /* ignore */
+          }
+          voice = pickFemaleAmericanVoice();
+        }
         const u = new SpeechSynthesisUtterance(clean);
         u.lang = 'en-US';
-        u.rate = 1.05;
+        u.rate = 1.08;
+        u.pitch = 1.0;
+        if (voice) u.voice = voice;
         u.onend = () => {
           clearTimeout(fallback);
           done();
         };
         u.onerror = () => {
           clearTimeout(fallback);
-          done();
+          fail(new Error('Browser speech failed'));
         };
         synth.speak(u);
         return;
@@ -276,7 +439,7 @@ export function speakText(text: string): Promise<void> {
       Speech.stop();
       Speech.speak(clean, {
         language: 'en-US',
-        rate: 1.05,
+        rate: 1.08,
         onDone: () => {
           clearTimeout(fallback);
           done();
@@ -287,12 +450,12 @@ export function speakText(text: string): Promise<void> {
         },
         onError: () => {
           clearTimeout(fallback);
-          done();
+          fail(new Error('Speech failed'));
         },
       });
-    } catch {
+    } catch (e) {
       clearTimeout(fallback);
-      done();
+      fail(e instanceof Error ? e : new Error('Speech failed'));
     }
   });
 }

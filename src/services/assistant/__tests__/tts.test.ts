@@ -48,6 +48,10 @@ describe('speakWithGrokTts', () => {
       'https://api.x.ai/v1/tts',
       expect.objectContaining({ method: 'POST' }),
     );
+    const body = JSON.parse(
+      (global.fetch as jest.Mock).mock.calls[0][1].body as string,
+    ) as { voice_id?: string };
+    expect(body.voice_id).toBe('ara');
     expect(play).toHaveBeenCalled();
   });
 });

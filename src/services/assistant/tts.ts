@@ -1,3 +1,10 @@
+/**
+ * Preferred Grok TTS voice — Ara is warm, conversational, American-female.
+ * Eve is a solid female fallback if Ara is unavailable.
+ */
+export const ASSISTANT_VOICE_ID = 'ara';
+export const ASSISTANT_VOICE_FALLBACK = 'eve';
+
 /** Speak text via xAI TTS and play it in the browser. */
 export async function speakWithGrokTts(opts: {
   apiKey: string;
@@ -9,19 +16,36 @@ export async function speakWithGrokTts(opts: {
   const text = opts.text.trim();
   if (!key || !text) return;
 
-  const res = await fetch('https://api.x.ai/v1/tts', {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${key}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
+  const voiceId = opts.voiceId ?? ASSISTANT_VOICE_ID;
+
+  const attempt = async (voice: string, withLatencyOpt: boolean) => {
+    const body: Record<string, unknown> = {
       text,
-      voice_id: opts.voiceId ?? 'eve',
+      voice_id: voice,
       language: 'en',
-    }),
-    signal: opts.signal,
-  });
+    };
+    // Lower first-byte latency when the API accepts it.
+    if (withLatencyOpt) body.optimize_streaming_latency = 2;
+
+    return fetch('https://api.x.ai/v1/tts', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${key}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(body),
+      signal: opts.signal,
+    });
+  };
+
+  let res = await attempt(voiceId, true);
+  if (!res.ok && (res.status === 400 || res.status === 404)) {
+    // Retry without latency flag, then female fallback voice.
+    res = await attempt(voiceId, false);
+    if (!res.ok && voiceId !== ASSISTANT_VOICE_FALLBACK) {
+      res = await attempt(ASSISTANT_VOICE_FALLBACK, false);
+    }
+  }
 
   if (!res.ok) {
     const errText = await res.text().catch(() => '');

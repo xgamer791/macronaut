@@ -34,8 +34,8 @@ describe('buildNutritionContext', () => {
       progress,
       entries,
     });
-    expect(text).toContain('remaining 1000');
-    expect(text).toContain('Protein');
+    expect(text).toContain('left 1000');
+    expect(text).toMatch(/P 80\/150/);
     expect(text).toContain('Chicken bowl');
   });
 
@@ -45,6 +45,6 @@ describe('buildNutritionContext', () => {
       progress: null,
       entries: [],
     });
-    expect(text).toContain('goals are not set');
+    expect(text).toContain('Goals not set');
   });
 });

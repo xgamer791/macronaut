@@ -10,38 +10,26 @@ export function buildNutritionContext(opts: {
 }): string {
   const { date, progress, entries } = opts;
   if (!progress) {
-    return `Date: ${date}. Daily goals are not set yet — remind the user to finish onboarding or set goals in Settings.`;
+    return `Date: ${date}. Goals not set — ask them to finish onboarding or open Settings.`;
   }
 
-  const proteinLeft = (progress.target.protein ?? 0) - (progress.consumed.protein ?? 0);
-  const carbsLeft = (progress.target.carbs ?? 0) - (progress.consumed.carbs ?? 0);
-  const fatLeft = (progress.target.fat ?? 0) - (progress.consumed.fat ?? 0);
-  const fiberLeft =
-    progress.target.fiber !== undefined
-      ? progress.target.fiber - (progress.consumed.fiber ?? 0)
-      : undefined;
-
+  const recent = entries.slice(-5);
   const logged =
-    entries.length === 0
-      ? 'No foods logged yet today.'
-      : entries
+    recent.length === 0
+      ? 'none yet'
+      : recent
           .map((e) => {
-            const p = e.nutrition.protein != null ? ` · P ${Math.round(e.nutrition.protein)}` : '';
-            return `- ${e.meal}: ${e.name} (${Math.round(e.nutrition.calories)} kcal${p})`;
+            const p = e.nutrition.protein != null ? ` P${Math.round(e.nutrition.protein)}` : '';
+            return `${e.name} ${Math.round(e.nutrition.calories)}kcal${p}`;
           })
-          .join('\n');
+          .join('; ');
 
   return [
-    `Date: ${date}`,
-    `Calories — target ${Math.round(progress.target.calories)}, food ${Math.round(progress.consumed.calories)}, burned ${Math.round(progress.burned)}, remaining ${Math.round(progress.caloriesRemaining)}${progress.overCalories ? ' (OVER)' : ''}.`,
-    `Protein — target ${Math.round(progress.target.protein ?? 0)} g, eaten ${Math.round(progress.consumed.protein ?? 0)} g, remaining ${Math.round(proteinLeft)} g.`,
-    `Carbs — target ${Math.round(progress.target.carbs ?? 0)} g, eaten ${Math.round(progress.consumed.carbs ?? 0)} g, remaining ${Math.round(carbsLeft)} g.`,
-    `Fat — target ${Math.round(progress.target.fat ?? 0)} g, eaten ${Math.round(progress.consumed.fat ?? 0)} g, remaining ${Math.round(fatLeft)} g.`,
-    fiberLeft !== undefined
-      ? `Fiber — target ${Math.round(progress.target.fiber ?? 0)} g, eaten ${Math.round(progress.consumed.fiber ?? 0)} g, remaining ${Math.round(fiberLeft)} g.`
-      : null,
-    `Logged foods:\n${logged}`,
-  ]
-    .filter(Boolean)
-    .join('\n');
+    `Date ${date}.`,
+    `Cal ${Math.round(progress.consumed.calories)}/${Math.round(progress.target.calories)} (left ${Math.round(progress.caloriesRemaining)}${progress.overCalories ? ' OVER' : ''}).`,
+    `P ${Math.round(progress.consumed.protein ?? 0)}/${Math.round(progress.target.protein ?? 0)}g,`,
+    `C ${Math.round(progress.consumed.carbs ?? 0)}/${Math.round(progress.target.carbs ?? 0)}g,`,
+    `F ${Math.round(progress.consumed.fat ?? 0)}/${Math.round(progress.target.fat ?? 0)}g.`,
+    `Foods: ${logged}.`,
+  ].join(' ');
 }

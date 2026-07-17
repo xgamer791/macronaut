@@ -3,10 +3,9 @@ export interface AssistantMessage {
   content: string;
 }
 
-const SYSTEM_PREAMBLE = `You are Macronaut Voice — a spoken nutrition coach inside a calorie tracker.
-Reply ONLY with what you would say out loud: 1–2 short sentences, plain speech, round numbers.
-No markdown, bullets, headers, or "Hear again" style notes.
-Cover remaining calories/macros, food ideas that fit the budget, protein tips, and food comparisons when asked.
+const SYSTEM_PREAMBLE = `You are Macronaut Voice — a warm middle-aged American woman coaching nutrition out loud.
+Speak in a natural American accent. Answer in ONE short spoken sentence (two only if needed). Plain speech, round numbers, no markdown or lists.
+Help with remaining calories/macros, food ideas, protein, and food comparisons.
 Use today's context when relevant; never invent logged meals.`;
 
 function parseApiError(status: number, body: string): string {
@@ -29,8 +28,8 @@ async function postChat(
 ): Promise<string> {
   const body: Record<string, unknown> = {
     model,
-    temperature: 0.3,
-    max_tokens: 120,
+    temperature: 0.2,
+    max_tokens: 60,
     messages,
   };
   if (withReasoning) body.reasoning_effort = 'low';
@@ -73,29 +72,29 @@ export async function askNutritionAssistant(opts: {
   const question = opts.question.trim();
   if (!question) throw new Error('Say or type a question first');
 
+  // Prefer a snappy reply — skip conversation history for turn latency.
   const model = opts.model ?? 'grok-4.5';
-  const system = `${SYSTEM_PREAMBLE}\n\n--- Today's context ---\n${opts.nutritionContext}`;
-  const prior = (opts.history ?? []).slice(-2);
+  const system = `${SYSTEM_PREAMBLE}\n\n--- Today ---\n${opts.nutritionContext}`;
 
   const messages: { role: string; content: string }[] = [
     { role: 'system', content: system },
-    ...prior.map((m) => ({ role: m.role, content: m.content })),
     { role: 'user', content: question },
   ];
 
   const controller = new AbortController();
   const onOuterAbort = () => controller.abort();
   opts.signal?.addEventListener('abort', onOuterAbort);
-  const timer = setTimeout(() => controller.abort(), 35_000);
+  const timer = setTimeout(() => controller.abort(), 20_000);
 
   try {
+    // Try without reasoning first — much faster for short spoken answers.
     try {
-      return await postChat(key, model, messages, controller.signal, true);
+      return await postChat(key, model, messages, controller.signal, false);
     } catch (e) {
-      // Older keys / models may reject reasoning_effort — retry plain.
       const msg = e instanceof Error ? e.message : '';
-      if (/reasoning|400|invalid/i.test(msg) || msg.includes('Grok error (400)')) {
-        return await postChat(key, model, messages, controller.signal, false);
+      // Some deployments require reasoning_effort — retry low once.
+      if (/reasoning|required/i.test(msg)) {
+        return await postChat(key, model, messages, controller.signal, true);
       }
       throw e;
     }
