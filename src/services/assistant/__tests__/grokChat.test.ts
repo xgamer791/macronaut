@@ -41,5 +41,10 @@ describe('askNutritionAssistant', () => {
         }),
       }),
     );
+    const body = JSON.parse(
+      (global.fetch as jest.Mock).mock.calls[0][1].body as string,
+    ) as { reasoning_effort?: string; max_tokens?: number };
+    expect(body.reasoning_effort).toBe('low');
+    expect(body.max_tokens).toBe(120);
   });
 });
