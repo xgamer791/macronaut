@@ -13,8 +13,10 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useQueryClient } from '@tanstack/react-query';
 import {
-  askNutritionAssistant,
+  runAssistantAgent,
+  type AssistantMessage,
 } from '@/services/assistant/grokChat';
 import { buildNutritionContext } from '@/services/assistant/nutritionContext';
 import {
@@ -28,8 +30,10 @@ import {
   type HoldListenSession,
 } from '@/services/assistant/speech';
 import { transcribeAudio } from '@/services/assistant/stt';
+import type { ToolInvalidate } from '@/services/assistant/toolExecutor';
 import { speakWithGrokTts, stopAudioElement, unlockAudioElement } from '@/services/assistant/tts';
-import { useDiaryEntries, useDayProgress, useSetting } from '@/state/queries';
+import { useRepos } from '@/state/AppProvider';
+import { keys, useDiaryEntries, useDayProgress, useSetting } from '@/state/queries';
 import { useUiStore } from '@/state/uiStore';
 import { AppText } from '@/ui/components/AppText';
 import { useTheme } from '@/ui/theme/ThemeProvider';
@@ -116,15 +120,18 @@ function ThinkingDots({ color }: { color: string }) {
 }
 
 /**
- * Hold-to-talk mic. Warms the mic, listens with live browser STT (+ MediaRecorder
- * fallback), answers with Grok, and speaks with an on-device female American voice
- * (Grok Ara as backup). Status text stays visible so failures aren't silent.
+ * Hold-to-talk agent. Records audio, transcribes, runs Grok with app tools
+ * (diary, notes, activity, memory), and speaks replies. Remembers prior turns
+ * so "make a note of that" works.
  */
 export function VoiceAssistant() {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const repos = useRepos();
+  const queryClient = useQueryClient();
   const date = useUiStore((s) => s.selectedDate);
+  const targetMeal = useUiStore((s) => s.targetMeal);
   const progress = useDayProgress(date);
   const entries = useDiaryEntries(date);
   const apiKey = useSetting<string>('grokApiKey', '');
@@ -138,6 +145,7 @@ export function VoiceAssistant() {
   const turnGen = useRef(0);
   const holdingRef = useRef(false);
   const pressStartedAt = useRef(0);
+  const historyRef = useRef<AssistantMessage[]>([]);
 
   const hold = useSharedValue(0);
   const pulse = useSharedValue(0);
@@ -214,6 +222,26 @@ export function VoiceAssistant() {
     }
   }
 
+  function applyInvalidations(list: ToolInvalidate[]) {
+    for (const inv of list) {
+      if (inv.kind === 'diary') {
+        if (inv.date) void queryClient.invalidateQueries({ queryKey: keys.diary(inv.date) });
+        void queryClient.invalidateQueries({ queryKey: ['diary'] });
+        void queryClient.invalidateQueries({ queryKey: ['diary-range'] });
+        void queryClient.invalidateQueries({ queryKey: keys.recents });
+        void queryClient.invalidateQueries({ queryKey: ['frequents'] });
+      } else if (inv.kind === 'activity') {
+        if (inv.date) void queryClient.invalidateQueries({ queryKey: keys.activity(inv.date) });
+        void queryClient.invalidateQueries({ queryKey: ['activity'] });
+        void queryClient.invalidateQueries({ queryKey: ['activity-range'] });
+      } else if (inv.kind === 'notes') {
+        if (inv.date) void queryClient.invalidateQueries({ queryKey: keys.dayNotes(inv.date) });
+        void queryClient.invalidateQueries({ queryKey: ['day-notes'] });
+        void queryClient.invalidateQueries({ queryKey: ['day-notes-range'] });
+      }
+    }
+  }
+
   async function answerQuestion(question: string, gen: number, signal: AbortSignal) {
     setStatus(`Heard: “${question}”`);
     const nutritionContext = buildNutritionContext({
@@ -221,14 +249,28 @@ export function VoiceAssistant() {
       progress,
       entries: entries.data ?? [],
     });
-    const answer = await askNutritionAssistant({
+    const result = await runAssistantAgent({
       apiKey: apiKey.data ?? '',
       nutritionContext,
       question,
+      repos,
+      selectedDate: date,
+      targetMeal: targetMeal || 'breakfast',
+      history: historyRef.current,
       signal,
+      onStatus: (s) => {
+        if (gen === turnGen.current) setStatus(s);
+      },
     });
     if (gen !== turnGen.current) return;
-    await speakReply(answer, gen);
+    const nextHistory: AssistantMessage[] = [
+      ...historyRef.current,
+      { role: 'user', content: question },
+      { role: 'assistant', content: result.answer },
+    ];
+    historyRef.current = nextHistory.slice(-20);
+    applyInvalidations(result.invalidates);
+    await speakReply(result.answer, gen);
   }
 
   async function runTurn(blob: Blob, gen: number) {
