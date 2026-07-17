@@ -47,4 +47,36 @@ describe('askNutritionAssistant', () => {
     expect(body.reasoning_effort).toBe('low');
     expect(body.max_tokens).toBe(120);
   });
+
+  it('retries without reasoning_effort on a 400', async () => {
+    let calls = 0;
+    global.fetch = jest.fn(async () => {
+      calls += 1;
+      if (calls === 1) {
+        return {
+          ok: false,
+          status: 400,
+          text: async () => JSON.stringify({ error: { message: 'invalid reasoning' } }),
+        };
+      }
+      return {
+        ok: true,
+        json: async () => ({
+          choices: [{ message: { content: 'About 500 calories left.' } }],
+        }),
+      };
+    }) as unknown as typeof fetch;
+
+    const answer = await askNutritionAssistant({
+      apiKey: 'xai-test',
+      nutritionContext: 'remaining 500',
+      question: 'Calories left?',
+    });
+    expect(answer).toContain('500');
+    expect(calls).toBe(2);
+    const second = JSON.parse(
+      (global.fetch as jest.Mock).mock.calls[1][1].body as string,
+    ) as { reasoning_effort?: string };
+    expect(second.reasoning_effort).toBeUndefined();
+  });
 });

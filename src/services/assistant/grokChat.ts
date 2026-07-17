@@ -20,6 +20,44 @@ function parseApiError(status: number, body: string): string {
   }
 }
 
+async function postChat(
+  key: string,
+  model: string,
+  messages: { role: string; content: string }[],
+  signal: AbortSignal,
+  withReasoning: boolean,
+): Promise<string> {
+  const body: Record<string, unknown> = {
+    model,
+    temperature: 0.3,
+    max_tokens: 120,
+    messages,
+  };
+  if (withReasoning) body.reasoning_effort = 'low';
+
+  const res = await fetch('https://api.x.ai/v1/chat/completions', {
+    method: 'POST',
+    signal,
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${key}`,
+    },
+    body: JSON.stringify(body),
+  });
+
+  if (!res.ok) {
+    const errText = await res.text().catch(() => '');
+    throw new Error(parseApiError(res.status, errText));
+  }
+
+  const data = (await res.json()) as {
+    choices?: { message?: { content?: string } }[];
+  };
+  const text = data.choices?.[0]?.message?.content?.trim();
+  if (!text) throw new Error('Empty Grok response');
+  return text;
+}
+
 /** Ask Grok a nutrition question with the user's daily diary context. */
 export async function askNutritionAssistant(opts: {
   apiKey: string;
@@ -37,8 +75,6 @@ export async function askNutritionAssistant(opts: {
 
   const model = opts.model ?? 'grok-4.5';
   const system = `${SYSTEM_PREAMBLE}\n\n--- Today's context ---\n${opts.nutritionContext}`;
-
-  // Keep history tiny — long chats slow the round trip.
   const prior = (opts.history ?? []).slice(-2);
 
   const messages: { role: string; content: string }[] = [
@@ -50,37 +86,19 @@ export async function askNutritionAssistant(opts: {
   const controller = new AbortController();
   const onOuterAbort = () => controller.abort();
   opts.signal?.addEventListener('abort', onOuterAbort);
-  const timer = setTimeout(() => controller.abort(), 45_000);
+  const timer = setTimeout(() => controller.abort(), 35_000);
 
   try {
-    const res = await fetch('https://api.x.ai/v1/chat/completions', {
-      method: 'POST',
-      signal: controller.signal,
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${key}`,
-      },
-      body: JSON.stringify({
-        model,
-        temperature: 0.3,
-        max_tokens: 120,
-        // Default is "high" and feels very slow for voice turn-taking.
-        reasoning_effort: 'low',
-        messages,
-      }),
-    });
-
-    if (!res.ok) {
-      const errText = await res.text().catch(() => '');
-      throw new Error(parseApiError(res.status, errText));
+    try {
+      return await postChat(key, model, messages, controller.signal, true);
+    } catch (e) {
+      // Older keys / models may reject reasoning_effort — retry plain.
+      const msg = e instanceof Error ? e.message : '';
+      if (/reasoning|400|invalid/i.test(msg) || msg.includes('Grok error (400)')) {
+        return await postChat(key, model, messages, controller.signal, false);
+      }
+      throw e;
     }
-
-    const data = (await res.json()) as {
-      choices?: { message?: { content?: string } }[];
-    };
-    const text = data.choices?.[0]?.message?.content?.trim();
-    if (!text) throw new Error('Empty Grok response');
-    return text;
   } finally {
     clearTimeout(timer);
     opts.signal?.removeEventListener('abort', onOuterAbort);
