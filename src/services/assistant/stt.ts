@@ -19,12 +19,27 @@ export async function transcribeAudio(opts: {
   const name = opts.filename ?? guessFilename(opts.blob.type);
   form.append('file', opts.blob, name);
 
-  const res = await fetch('https://api.x.ai/v1/stt', {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${key}` },
-    body: form,
-    signal: opts.signal,
-  });
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 25_000);
+  const onOuter = () => controller.abort();
+  opts.signal?.addEventListener('abort', onOuter);
+  let res: Response;
+  try {
+    res = await fetch('https://api.x.ai/v1/stt', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${key}` },
+      body: form,
+      signal: controller.signal,
+    });
+  } catch (e) {
+    if (e instanceof DOMException && e.name === 'AbortError') {
+      throw new Error('Transcription timed out — try a shorter hold');
+    }
+    throw e;
+  } finally {
+    clearTimeout(timer);
+    opts.signal?.removeEventListener('abort', onOuter);
+  }
 
   if (!res.ok) {
     const errText = await res.text().catch(() => '');
