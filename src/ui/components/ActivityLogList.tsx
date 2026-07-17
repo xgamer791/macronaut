@@ -259,8 +259,8 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.lg,
-    justifyContent: 'center',
-    gap: spacing.sm,
+    // Mockup stack: icon top-left, then title → blurb → Log anchored below.
+    justifyContent: 'space-between',
   },
   tileBodyWide: {
     flexDirection: 'row',
@@ -271,20 +271,20 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md + 2,
   },
   icon: {
-    marginBottom: 0,
+    marginBottom: 2,
   },
   copy: {
-    gap: 5,
+    gap: 4,
   },
   copyWide: {
     flex: 1,
     minWidth: 0,
   },
-  // ~30% larger than body 15/21, micro 11/15, caption 13/18.
+  // Heading ~5% under the prior 20/27 size; body/log stay at the enlarged scale.
   title: {
     color: '#FFFFFF',
-    fontSize: 20,
-    lineHeight: 27,
+    fontSize: 19,
+    lineHeight: 26,
   },
   subtitle: {
     color: 'rgba(230,234,238,0.88)',
@@ -297,7 +297,7 @@ const styles = StyleSheet.create({
   },
   logLink: {
     alignSelf: 'flex-start',
-    marginTop: 6,
+    marginTop: 8,
     minHeight: 28,
     justifyContent: 'center',
   },
