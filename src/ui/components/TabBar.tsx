@@ -20,12 +20,6 @@ const TAB_META: Record<string, { label: string; icon: IconName; iconActive: Icon
 /** Keep the enlarged Add Meal FAB (20% over the original 52px). */
 const FAB_SIZE = Math.round(52 * 1.2); // 62
 const FAB_ICON = Math.round(28 * 1.2); // 34
-/** Exact air gap between FAB edge and nav-bar fill where they meet. */
-const CUTOUT_GAP = 10;
-/** Tight cradle diameter — only ~10px beyond the green button. */
-const CUTOUT_SIZE = FAB_SIZE + CUTOUT_GAP * 2; // 82
-/** How deep the U-notch dips into the bar (half-circle below the top edge). */
-const NOTCH_DEPTH = CUTOUT_SIZE / 2; // 41
 
 /** Bottom tab bar with a center Add FAB that opens the add-food hub. */
 export function TabBar({ state, navigation }: BottomTabBarProps) {
@@ -82,14 +76,6 @@ export function TabBar({ state, navigation }: BottomTabBarProps) {
         },
       ]}
     >
-      {/*
-        Shallow U-notch: a page-colored circle centered on the bar top, clipped
-        so only the portion inside the bar is visible. No halo above the bar.
-      */}
-      <View style={styles.notchClip} pointerEvents="none">
-        <View style={[styles.notchCircle, { backgroundColor: colors.background }]} />
-      </View>
-
       {left.map(renderTab)}
 
       <View style={styles.fabSlot} pointerEvents="box-none">
@@ -124,27 +110,6 @@ const styles = StyleSheet.create({
     overflow: 'visible',
     zIndex: 20,
   },
-  /**
-   * Clips the cradle circle to the bar interior so the notch is a smooth U
-   * hugging the FAB — never a full dark disc floating over page content.
-   */
-  notchClip: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    height: NOTCH_DEPTH,
-    alignItems: 'center',
-    overflow: 'hidden',
-    zIndex: 1,
-  },
-  notchCircle: {
-    width: CUTOUT_SIZE,
-    height: CUTOUT_SIZE,
-    borderRadius: CUTOUT_SIZE / 2,
-    // Center on the bar top edge; upper half is clipped away by notchClip.
-    marginTop: -NOTCH_DEPTH,
-  },
   tab: {
     flex: 1,
     alignItems: 'center',
@@ -165,10 +130,9 @@ const styles = StyleSheet.create({
     borderRadius: FAB_SIZE / 2,
     alignItems: 'center',
     justifyContent: 'center',
-    // Same cradle anchor as before — half above the bar top, not lifted further.
+    // Half above the bar top so it floats without a cutout cradle.
     marginTop: -(FAB_SIZE / 2),
     zIndex: 2,
-    // Soft shadow for float depth (replaces the old oversized dark halo).
     shadowOpacity: 0.22,
     shadowRadius: 12,
     shadowOffset: { width: 0, height: 6 },
