@@ -179,13 +179,13 @@ function MosaicTile({
         <Ionicons name={icon} size={iconSize} color={accent} style={styles.icon} />
 
         <View style={[styles.copy, variant === 'wide' && styles.copyWide]}>
-          <AppText variant="body" weight="700" numberOfLines={1} style={{ color: '#FFFFFF' }}>
+          <AppText variant="body" weight="700" numberOfLines={1} style={styles.title}>
             {name}
           </AppText>
           <AppText
             variant="micro"
             numberOfLines={variant === 'half' ? 1 : 2}
-            style={{ color: 'rgba(230,234,238,0.88)' }}
+            style={styles.subtitle}
           >
             {subtitle}
           </AppText>
@@ -201,7 +201,7 @@ function MosaicTile({
               }}
               style={styles.logLink}
             >
-              <AppText variant="caption" weight="700" style={{ color: accent }}>
+              <AppText variant="caption" weight="700" style={[styles.logLabel, { color: accent }]}>
                 Log
               </AppText>
             </Pressable>
@@ -259,7 +259,8 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.lg,
-    justifyContent: 'space-between',
+    justifyContent: 'center',
+    gap: spacing.sm,
   },
   tileBodyWide: {
     flexDirection: 'row',
@@ -270,18 +271,33 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md + 2,
   },
   icon: {
-    marginBottom: 2,
+    marginBottom: 0,
   },
   copy: {
-    gap: 4,
+    gap: 5,
   },
   copyWide: {
     flex: 1,
     minWidth: 0,
   },
+  // ~30% larger than body 15/21, micro 11/15, caption 13/18.
+  title: {
+    color: '#FFFFFF',
+    fontSize: 20,
+    lineHeight: 27,
+  },
+  subtitle: {
+    color: 'rgba(230,234,238,0.88)',
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  logLabel: {
+    fontSize: 17,
+    lineHeight: 23,
+  },
   logLink: {
     alignSelf: 'flex-start',
-    marginTop: 8,
+    marginTop: 6,
     minHeight: 28,
     justifyContent: 'center',
   },
