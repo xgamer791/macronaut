@@ -79,6 +79,41 @@ function HoldRing({
   );
 }
 
+function ThinkingDot({
+  t,
+  delay,
+  color,
+}: {
+  t: SharedValue<number>;
+  delay: number;
+  color: string;
+}) {
+  const style = useAnimatedStyle(() => {
+    const p = (t.value + delay) % 1;
+    return {
+      opacity: interpolate(p, [0, 0.25, 0.5, 1], [0.25, 1, 0.25, 0.25]),
+      transform: [{ translateY: interpolate(p, [0, 0.25, 0.5, 1], [0, -3, 0, 0]) }],
+    };
+  });
+  return <Animated.View style={[styles.thinkingDot, { backgroundColor: color }, style]} />;
+}
+
+/** Animated three-dot "thinking" indicator. */
+function ThinkingDots({ color }: { color: string }) {
+  const t = useSharedValue(0);
+  useEffect(() => {
+    t.value = 0;
+    t.value = withRepeat(withTiming(1, { duration: 1100, easing: Easing.linear }), -1, false);
+  }, [t]);
+  return (
+    <View pointerEvents="none" style={styles.thinkingRow}>
+      <ThinkingDot t={t} delay={0} color={color} />
+      <ThinkingDot t={t} delay={0.18} color={color} />
+      <ThinkingDot t={t} delay={0.36} color={color} />
+    </View>
+  );
+}
+
 /**
  * Hold-to-talk mic. Warms the mic, listens with live browser STT (+ MediaRecorder
  * fallback), answers with Grok, and speaks with an on-device female American voice
@@ -158,13 +193,14 @@ export function VoiceAssistant() {
     setPhase('speaking');
     setStatus(message);
     const key = apiKey.data ?? '';
-    // Speak immediately with an on-device female American voice (fast).
-    // If that path fails, use Grok Ara (warm American female).
+    // Grok Ara (warm middle-aged American woman) plays through the audio element
+    // we unlocked on press — the reliable path on iOS Safari after async work.
+    // Browser speechSynthesis is only a fallback because it's often blocked here.
     try {
-      await speakText(message);
+      await speakWithGrokTts({ apiKey: key, text: message });
     } catch {
       try {
-        await speakWithGrokTts({ apiKey: key, text: message });
+        await speakText(message);
       } catch {
         /* both paths failed — status text still shows the reply */
       }
@@ -356,6 +392,7 @@ export function VoiceAssistant() {
           <AppText variant="micro" tone="secondary" numberOfLines={4}>
             {status}
           </AppText>
+          {phase === 'thinking' ? <ThinkingDots color={colors.accent} /> : null}
         </View>
       ) : null}
 
@@ -414,6 +451,17 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs,
+  },
+  thinkingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 4,
+  },
+  thinkingDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
   },
   fab: {
     width: FAB_SIZE,
