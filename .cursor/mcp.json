@@ -1,0 +1,61 @@
+{
+  "mcpServers": {
+    "asana": {
+      "url": "https://mcp.asana.com/sse"
+    },
+    "context7": {
+      "command": "npx",
+      "args": ["-y", "@upstash/context7-mcp"]
+    },
+    "firebase": {
+      "command": "npx",
+      "args": ["-y", "firebase-tools@latest", "mcp"]
+    },
+    "github": {
+      "url": "https://api.githubcopilot.com/mcp/",
+      "headers": {
+        "Authorization": "Bearer ${env:GITHUB_PERSONAL_ACCESS_TOKEN}"
+      }
+    },
+    "gitlab": {
+      "url": "https://gitlab.com/api/v4/mcp"
+    },
+    "greptile": {
+      "url": "https://api.greptile.com/mcp",
+      "headers": {
+        "Authorization": "Bearer ${env:GREPTILE_API_KEY}"
+      }
+    },
+    "linear": {
+      "url": "https://mcp.linear.app/mcp"
+    },
+    "playwright": {
+      "command": "npx",
+      "args": ["@playwright/mcp@latest"]
+    },
+    "serena": {
+      "command": "uvx",
+      "args": [
+        "--from",
+        "git+https://github.com/oraios/serena",
+        "serena",
+        "start-mcp-server"
+      ]
+    },
+    "terraform": {
+      "command": "docker",
+      "args": [
+        "run",
+        "-i",
+        "--rm",
+        "-e",
+        "TFE_TOKEN=${env:TFE_TOKEN}",
+        "hashicorp/terraform-mcp-server:0.4.0"
+      ]
+    },
+    "laravel-boost": {
+      "command": "php",
+      "args": ["artisan", "boost:mcp"]
+    }
+  }
+}
