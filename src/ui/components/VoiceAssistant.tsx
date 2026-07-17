@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Platform, Pressable, StyleSheet, View, type ViewStyle } from 'react-native';
 import Animated, {
   Easing,
   interpolate,
@@ -38,6 +38,21 @@ const RING_SIZE = FAB_SIZE + 28;
 /** Sit above the tab bar (bar ~64 + cradle + safe area cushion). */
 const TAB_BAR_CLEARANCE = 96;
 
+/** Kill iOS/Android/web long-press menus so hold-to-talk isn't interrupted. */
+const noHoldChrome: ViewStyle | undefined =
+  Platform.OS === 'web'
+    ? ({
+        userSelect: 'none',
+        // WebKit / RN-web hold chrome
+        ...({
+          WebkitUserSelect: 'none',
+          WebkitTouchCallout: 'none',
+          WebkitUserDrag: 'none',
+          touchAction: 'none',
+        } as ViewStyle),
+      } as ViewStyle)
+    : undefined;
+
 function HoldRing({
   pulse,
   delay,
@@ -65,8 +80,9 @@ function HoldRing({
 }
 
 /**
- * Bottom-right mic FAB — hold to talk. While pressed, glowing rings pulse
- * around the button so recording is obvious; release to send and hear the reply.
+ * Bottom-right mic FAB — hold to talk. While pressed, rings pulse around the
+ * button; release to send and hear the reply. Native long-press chrome is
+ * disabled so the OS hold menu can't steal the gesture.
  */
 export function VoiceAssistant() {
   const { colors } = useTheme();
@@ -120,7 +136,7 @@ export function VoiceAssistant() {
       );
     } else if (phase === 'thinking' || phase === 'speaking') {
       mode.value = 2;
-      hold.value = withSpring(0.55, { damping: 16, stiffness: 180 });
+      hold.value = withSpring(0.35, { damping: 16, stiffness: 180 });
       pulse.value = withTiming(0, { duration: 200 });
       breathe.value = withRepeat(
         withTiming(1, { duration: 900, easing: Easing.inOut(Easing.quad) }),
@@ -174,7 +190,6 @@ export function VoiceAssistant() {
 
   function onPressIn() {
     if (phase === 'thinking' || phase === 'speaking') {
-      // Cancel in-flight reply and start a new hold.
       turnGen.current += 1;
       abortRef.current?.abort();
       stopSpeaking();
@@ -222,35 +237,24 @@ export function VoiceAssistant() {
   const bottom = insets.bottom + TAB_BAR_CLEARANCE;
 
   const fabAnim = useAnimatedStyle(() => {
-    const pressScale = interpolate(hold.value, [0, 1], [1, 1.12]);
+    const pressScale = interpolate(hold.value, [0, 1], [1, 1.06]);
     const busyScale =
       mode.value >= 2 ? interpolate(breathe.value, [0, 1], [0.96, 1.04]) : 1;
     return { transform: [{ scale: pressScale * busyScale }] };
   });
-
-  const glowStyle = useAnimatedStyle(() => ({
-    opacity: interpolate(hold.value, [0, 1], [0, 0.55]),
-    transform: [{ scale: interpolate(hold.value, [0, 1], [0.85, 1.35]) }],
-  }));
 
   const fabColor =
     phase === 'holding'
       ? colors.danger
       : phase === 'thinking'
         ? colors.warning
-        : phase === 'speaking'
-          ? colors.accent
-          : colors.accent;
+        : colors.accent;
 
   return (
     <View
       pointerEvents="box-none"
-      style={[styles.anchor, { right: spacing.lg, bottom }]}
+      style={[styles.anchor, { right: spacing.lg, bottom }, noHoldChrome]}
     >
-      <Animated.View
-        pointerEvents="none"
-        style={[styles.glow, { backgroundColor: colors.danger }, glowStyle]}
-      />
       <HoldRing pulse={pulse} delay={0} maxScale={1.85} color={colors.danger} />
       <HoldRing pulse={pulse} delay={0.3} maxScale={2.35} color={colors.danger} />
 
@@ -261,21 +265,33 @@ export function VoiceAssistant() {
           accessibilityHint="Hold to talk, release when finished"
           onPressIn={onPressIn}
           onPressOut={onPressOut}
-          // Keep the press if the finger slides slightly off the button.
+          onLongPress={() => {
+            /* swallow — disable OS long-press action */
+          }}
+          delayLongPress={10_000}
+          // Prevent the browser context menu on long-press (RN web).
+          {...(Platform.OS === 'web'
+            ? {
+                onContextMenu: (e: { preventDefault: () => void }) => e.preventDefault(),
+              }
+            : null)}
           unstable_pressDelay={0}
           style={[
             styles.fab,
+            noHoldChrome,
             {
               backgroundColor: fabColor,
               shadowColor: '#000',
             },
           ]}
         >
-          <Ionicons
-            name={phase === 'holding' ? 'mic' : active ? 'mic' : 'mic-outline'}
-            size={26}
-            color={colors.onAccent}
-          />
+          <View pointerEvents="none" style={noHoldChrome}>
+            <Ionicons
+              name={phase === 'holding' ? 'mic' : active ? 'mic' : 'mic-outline'}
+              size={26}
+              color={colors.onAccent}
+            />
+          </View>
         </Pressable>
       </Animated.View>
     </View>
@@ -303,12 +319,6 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     minWidth: touchTarget,
     minHeight: touchTarget,
-  },
-  glow: {
-    position: 'absolute',
-    width: FAB_SIZE + 18,
-    height: FAB_SIZE + 18,
-    borderRadius: (FAB_SIZE + 18) / 2,
   },
   holdRing: {
     position: 'absolute',
