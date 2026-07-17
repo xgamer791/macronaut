@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
-import { Modal, Pressable, StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 import Animated, {
   Easing,
   interpolate,
@@ -20,41 +20,25 @@ import {
 import { buildNutritionContext } from '@/services/assistant/nutritionContext';
 import {
   isSpeechRecognitionAvailable,
-  listenOnce,
   speakText,
+  startHoldListen,
   stopSpeaking,
+  unlockSpeechPlayback,
+  type HoldListenSession,
 } from '@/services/assistant/speech';
 import { useDiaryEntries, useDayProgress, useSetting } from '@/state/queries';
 import { useUiStore } from '@/state/uiStore';
 import { useTheme } from '@/ui/theme/ThemeProvider';
 import { spacing, touchTarget } from '@/ui/theme/tokens';
 
-type Phase = 'idle' | 'listening' | 'thinking' | 'speaking';
+type Phase = 'idle' | 'holding' | 'thinking' | 'speaking';
 
 const FAB_SIZE = 56;
-const MIC_IDLE = 96;
-const MIC_LISTEN = 128;
+const RING_SIZE = FAB_SIZE + 28;
 /** Sit above the tab bar (bar ~64 + cradle + safe area cushion). */
 const TAB_BAR_CLEARANCE = 96;
 
-function WaveBar({
-  index,
-  wave,
-  color,
-}: {
-  index: number;
-  wave: SharedValue<number>;
-  color: string;
-}) {
-  const style = useAnimatedStyle(() => {
-    const t = (wave.value + index * 0.14) % 1;
-    const height = interpolate(t, [0, 0.5, 1], [12, 34 + index * 3, 12]);
-    return { height };
-  });
-  return <Animated.View style={[styles.waveBar, { backgroundColor: color }, style]} />;
-}
-
-function PulseRing({
+function HoldRing({
   pulse,
   delay,
   maxScale,
@@ -66,18 +50,23 @@ function PulseRing({
   color: string;
 }) {
   const style = useAnimatedStyle(() => {
-    const t = Math.max(0, (pulse.value - delay) / (1 - delay));
+    const t = Math.max(0, (pulse.value - delay) / Math.max(0.001, 1 - delay));
     return {
-      opacity: interpolate(t, [0, 0.12, 1], [0.5, 0.35, 0]),
+      opacity: interpolate(t, [0, 0.08, 0.2, 1], [0, 0.7, 0.4, 0]),
       transform: [{ scale: interpolate(t, [0, 1], [1, maxScale]) }],
     };
   });
-  return <Animated.View style={[styles.ring, { borderColor: color }, style]} />;
+  return (
+    <Animated.View
+      pointerEvents="none"
+      style={[styles.holdRing, { borderColor: color }, style]}
+    />
+  );
 }
 
 /**
- * Bottom-right mic FAB. Tap opens a minimal listening overlay: one expanding
- * microphone with pulse rings — no copy, no text fields.
+ * Bottom-right mic FAB — hold to talk. While pressed, glowing rings pulse
+ * around the button so recording is obvious; release to send and hear the reply.
  */
 export function VoiceAssistant() {
   const { colors } = useTheme();
@@ -88,71 +77,70 @@ export function VoiceAssistant() {
   const entries = useDiaryEntries(date);
   const apiKey = useSetting<string>('grokApiKey', '');
 
-  const [open, setOpen] = useState(false);
   const [phase, setPhase] = useState<Phase>('idle');
   const [history, setHistory] = useState<AssistantMessage[]>([]);
   const abortRef = useRef<AbortController | null>(null);
-  const listenGen = useRef(0);
+  const sessionRef = useRef<HoldListenSession | null>(null);
+  const turnGen = useRef(0);
+  const holdingRef = useRef(false);
 
-  const expand = useSharedValue(0);
+  const hold = useSharedValue(0);
   const pulse = useSharedValue(0);
-  const wave = useSharedValue(0);
-  /** 0 idle overlay, 1 listening, 2 thinking/speaking */
+  const breathe = useSharedValue(0);
+  /** 0 idle · 1 holding · 2 thinking/speaking */
   const mode = useSharedValue(0);
 
   const keyReady = (apiKey.data ?? '').trim().length > 0;
   const speechOk = isSpeechRecognitionAvailable();
+  const active = phase === 'holding' || phase === 'thinking' || phase === 'speaking';
 
   useEffect(() => {
     return () => {
+      turnGen.current += 1;
+      sessionRef.current?.abort();
       abortRef.current?.abort();
       stopSpeaking();
     };
   }, []);
 
   useEffect(() => {
-    if (phase === 'listening') {
+    if (phase === 'holding') {
       mode.value = 1;
-      expand.value = withSpring(1, { damping: 13, stiffness: 150 });
+      hold.value = withSpring(1, { damping: 14, stiffness: 180 });
       pulse.value = 0;
       pulse.value = withRepeat(
-        withTiming(1, { duration: 1500, easing: Easing.out(Easing.quad) }),
+        withTiming(1, { duration: 1200, easing: Easing.out(Easing.quad) }),
         -1,
         false,
       );
-      wave.value = withRepeat(
-        withTiming(1, { duration: 650, easing: Easing.inOut(Easing.sin) }),
+      breathe.value = withRepeat(
+        withTiming(1, { duration: 700, easing: Easing.inOut(Easing.sin) }),
         -1,
         true,
       );
     } else if (phase === 'thinking' || phase === 'speaking') {
       mode.value = 2;
-      expand.value = withSpring(0.72, { damping: 16, stiffness: 180 });
+      hold.value = withSpring(0.55, { damping: 16, stiffness: 180 });
       pulse.value = withTiming(0, { duration: 200 });
-      wave.value = withRepeat(
-        withTiming(1, { duration: 850, easing: Easing.inOut(Easing.quad) }),
+      breathe.value = withRepeat(
+        withTiming(1, { duration: 900, easing: Easing.inOut(Easing.quad) }),
         -1,
         true,
       );
     } else {
       mode.value = 0;
-      expand.value = withSpring(0, { damping: 16, stiffness: 200 });
-      pulse.value = withTiming(0, { duration: 180 });
-      wave.value = withTiming(0, { duration: 180 });
+      hold.value = withSpring(0, { damping: 16, stiffness: 200 });
+      pulse.value = withTiming(0, { duration: 160 });
+      breathe.value = withTiming(0, { duration: 160 });
     }
-  }, [phase, expand, pulse, wave, mode]);
-
-  function closeOverlay() {
-    listenGen.current += 1;
-    abortRef.current?.abort();
-    stopSpeaking();
-    setOpen(false);
-    setPhase('idle');
-  }
+  }, [phase, hold, pulse, breathe, mode]);
 
   async function runQuestion(question: string, gen: number) {
     const q = question.trim();
-    if (!q || !keyReady) return;
+    if (!q || !keyReady) {
+      setPhase('idle');
+      return;
+    }
 
     setPhase('thinking');
     abortRef.current?.abort();
@@ -173,130 +161,142 @@ export function VoiceAssistant() {
         history,
         signal: controller.signal,
       });
-      if (gen !== listenGen.current) return;
+      if (gen !== turnGen.current) return;
       setHistory((h) => [...h, { role: 'user', content: q }, { role: 'assistant', content: answer }]);
       setPhase('speaking');
-      speakText(answer);
-      setTimeout(() => {
-        if (gen === listenGen.current) closeOverlay();
-      }, 900);
+      await speakText(answer);
+      if (gen === turnGen.current) setPhase('idle');
     } catch {
-      if (controller.signal.aborted || gen !== listenGen.current) return;
-      closeOverlay();
+      if (controller.signal.aborted || gen !== turnGen.current) return;
+      setPhase('idle');
     }
   }
 
-  async function startListening() {
+  function onPressIn() {
+    if (phase === 'thinking' || phase === 'speaking') {
+      // Cancel in-flight reply and start a new hold.
+      turnGen.current += 1;
+      abortRef.current?.abort();
+      stopSpeaking();
+    }
     if (!keyReady) {
       router.push('/settings');
       return;
     }
     if (!speechOk) return;
 
-    const gen = ++listenGen.current;
-    setOpen(true);
-    setPhase('listening');
+    holdingRef.current = true;
+    unlockSpeechPlayback();
     stopSpeaking();
-
-    try {
-      const { transcript } = await listenOnce({ timeoutMs: 20_000 });
-      if (gen !== listenGen.current) return;
-      await runQuestion(transcript, gen);
-    } catch {
-      if (gen !== listenGen.current) return;
-      closeOverlay();
-    }
+    sessionRef.current?.abort();
+    sessionRef.current = startHoldListen();
+    setPhase('holding');
   }
 
-  function onFabPress() {
-    if (open) {
-      closeOverlay();
+  async function onPressOut() {
+    if (!holdingRef.current) return;
+    holdingRef.current = false;
+
+    const session = sessionRef.current;
+    sessionRef.current = null;
+    if (!session) {
+      setPhase('idle');
       return;
     }
-    void startListening();
+
+    const gen = ++turnGen.current;
+    try {
+      const transcript = await session.stop();
+      if (gen !== turnGen.current) return;
+      if (!transcript.trim()) {
+        setPhase('idle');
+        return;
+      }
+      await runQuestion(transcript, gen);
+    } catch {
+      if (gen !== turnGen.current) return;
+      setPhase('idle');
+    }
   }
 
   const bottom = insets.bottom + TAB_BAR_CLEARANCE;
 
-  const micStyle = useAnimatedStyle(() => {
-    const size = interpolate(expand.value, [0, 1], [MIC_IDLE, MIC_LISTEN]);
-    const breathe =
-      mode.value >= 2 ? interpolate(wave.value, [0, 1], [0.95, 1.05]) : 1;
-    return {
-      width: size,
-      height: size,
-      borderRadius: size / 2,
-      transform: [{ scale: breathe }],
-    };
+  const fabAnim = useAnimatedStyle(() => {
+    const pressScale = interpolate(hold.value, [0, 1], [1, 1.12]);
+    const busyScale =
+      mode.value >= 2 ? interpolate(breathe.value, [0, 1], [0.96, 1.04]) : 1;
+    return { transform: [{ scale: pressScale * busyScale }] };
   });
 
-  const micColor =
-    phase === 'listening' ? colors.danger : phase === 'thinking' ? colors.warning : colors.accent;
+  const glowStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(hold.value, [0, 1], [0, 0.55]),
+    transform: [{ scale: interpolate(hold.value, [0, 1], [0.85, 1.35]) }],
+  }));
+
+  const fabColor =
+    phase === 'holding'
+      ? colors.danger
+      : phase === 'thinking'
+        ? colors.warning
+        : phase === 'speaking'
+          ? colors.accent
+          : colors.accent;
 
   return (
-    <>
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel="Voice assistant"
-        accessibilityHint="Starts listening for a nutrition question"
-        onPress={onFabPress}
-        style={({ pressed }) => [
-          styles.fab,
-          {
-            right: spacing.lg,
-            bottom,
-            backgroundColor: open ? colors.danger : colors.accent,
-            opacity: pressed ? 0.9 : 1,
-            transform: [{ scale: pressed ? 0.94 : 1 }],
-            shadowColor: '#000',
-          },
-        ]}
-      >
-        <Ionicons name={open ? 'close' : 'mic-outline'} size={26} color={colors.onAccent} />
-      </Pressable>
+    <View
+      pointerEvents="box-none"
+      style={[styles.anchor, { right: spacing.lg, bottom }]}
+    >
+      <Animated.View
+        pointerEvents="none"
+        style={[styles.glow, { backgroundColor: colors.danger }, glowStyle]}
+      />
+      <HoldRing pulse={pulse} delay={0} maxScale={1.85} color={colors.danger} />
+      <HoldRing pulse={pulse} delay={0.3} maxScale={2.35} color={colors.danger} />
 
-      <Modal visible={open} transparent animationType="fade" onRequestClose={closeOverlay}>
+      <Animated.View style={fabAnim}>
         <Pressable
-          style={[styles.overlay, { backgroundColor: colors.overlay }]}
-          onPress={closeOverlay}
           accessibilityRole="button"
-          accessibilityLabel="Cancel voice assistant"
+          accessibilityLabel="Voice assistant"
+          accessibilityHint="Hold to talk, release when finished"
+          onPressIn={onPressIn}
+          onPressOut={onPressOut}
+          // Keep the press if the finger slides slightly off the button.
+          unstable_pressDelay={0}
+          style={[
+            styles.fab,
+            {
+              backgroundColor: fabColor,
+              shadowColor: '#000',
+            },
+          ]}
         >
-          <View style={styles.micWrap} pointerEvents="none">
-            {phase === 'listening' ? (
-              <>
-                <PulseRing pulse={pulse} delay={0} maxScale={2.15} color={colors.danger} />
-                <PulseRing pulse={pulse} delay={0.28} maxScale={2.7} color={colors.danger} />
-              </>
-            ) : null}
-
-            <Animated.View style={[styles.micButton, { backgroundColor: micColor }, micStyle]}>
-              {phase === 'listening' ? (
-                <View style={styles.waveRow}>
-                  {[0, 1, 2, 3, 4].map((i) => (
-                    <WaveBar key={i} index={i} wave={wave} color={colors.onAccent} />
-                  ))}
-                </View>
-              ) : (
-                <Ionicons name="mic" size={42} color={colors.onAccent} />
-              )}
-            </Animated.View>
-          </View>
+          <Ionicons
+            name={phase === 'holding' ? 'mic' : active ? 'mic' : 'mic-outline'}
+            size={26}
+            color={colors.onAccent}
+          />
         </Pressable>
-      </Modal>
-    </>
+      </Animated.View>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  fab: {
+  anchor: {
     position: 'absolute',
+    width: RING_SIZE * 2.4,
+    height: RING_SIZE * 2.4,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 50,
+  },
+  fab: {
     width: FAB_SIZE,
     height: FAB_SIZE,
     borderRadius: FAB_SIZE / 2,
     alignItems: 'center',
     justifyContent: 'center',
-    zIndex: 50,
     elevation: 8,
     shadowOpacity: 0.28,
     shadowRadius: 8,
@@ -304,41 +304,17 @@ const styles = StyleSheet.create({
     minWidth: touchTarget,
     minHeight: touchTarget,
   },
-  overlay: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  micWrap: {
-    width: 300,
-    height: 300,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  ring: {
+  glow: {
     position: 'absolute',
-    width: MIC_LISTEN,
-    height: MIC_LISTEN,
-    borderRadius: MIC_LISTEN / 2,
+    width: FAB_SIZE + 18,
+    height: FAB_SIZE + 18,
+    borderRadius: (FAB_SIZE + 18) / 2,
+  },
+  holdRing: {
+    position: 'absolute',
+    width: RING_SIZE,
+    height: RING_SIZE,
+    borderRadius: RING_SIZE / 2,
     borderWidth: 3,
-  },
-  micButton: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOpacity: 0.35,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 10,
-  },
-  waveRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    height: 40,
-  },
-  waveBar: {
-    width: 5,
-    borderRadius: 3,
   },
 });

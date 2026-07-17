@@ -3,10 +3,11 @@ export interface AssistantMessage {
   content: string;
 }
 
-const SYSTEM_PREAMBLE = `You are Macronaut Voice — a concise, friendly nutrition assistant inside a calorie tracking app.
-Answer questions about the user's remaining calories and macros, suggest foods that fit their remaining budget, compare foods (e.g. chicken thigh vs drumstick), and give practical protein/carb/fat advice.
-Use the live daily context below when relevant. If data is missing, say so briefly.
-Keep answers short and speakable (2–5 sentences unless they ask for detail). Use plain language and round numbers. Do not invent the user's log — only use the provided context for their day. General nutrition facts are fine when comparing foods.`;
+const SYSTEM_PREAMBLE = `You are Macronaut Voice — a spoken nutrition coach inside a calorie tracker.
+Reply ONLY with what you would say out loud: 1–2 short sentences, plain speech, round numbers.
+No markdown, bullets, headers, or "Hear again" style notes.
+Cover remaining calories/macros, food ideas that fit the budget, protein tips, and food comparisons when asked.
+Use today's context when relevant; never invent logged meals.`;
 
 function parseApiError(status: number, body: string): string {
   if (status === 401 || status === 403) return 'Grok API key was rejected — check Settings';
@@ -37,16 +38,19 @@ export async function askNutritionAssistant(opts: {
   const model = opts.model ?? 'grok-4.5';
   const system = `${SYSTEM_PREAMBLE}\n\n--- Today's context ---\n${opts.nutritionContext}`;
 
+  // Keep history tiny — long chats slow the round trip.
+  const prior = (opts.history ?? []).slice(-2);
+
   const messages: { role: string; content: string }[] = [
     { role: 'system', content: system },
-    ...(opts.history ?? []).map((m) => ({ role: m.role, content: m.content })),
+    ...prior.map((m) => ({ role: m.role, content: m.content })),
     { role: 'user', content: question },
   ];
 
   const controller = new AbortController();
   const onOuterAbort = () => controller.abort();
   opts.signal?.addEventListener('abort', onOuterAbort);
-  const timer = setTimeout(() => controller.abort(), 60_000);
+  const timer = setTimeout(() => controller.abort(), 45_000);
 
   try {
     const res = await fetch('https://api.x.ai/v1/chat/completions', {
@@ -58,7 +62,10 @@ export async function askNutritionAssistant(opts: {
       },
       body: JSON.stringify({
         model,
-        temperature: 0.4,
+        temperature: 0.3,
+        max_tokens: 120,
+        // Default is "high" and feels very slow for voice turn-taking.
+        reasoning_effort: 'low',
         messages,
       }),
     });
