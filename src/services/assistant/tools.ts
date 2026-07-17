@@ -171,13 +171,19 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
     type: 'function',
     function: {
       name: 'delete_note',
-      description: 'Delete a note by id. Call find_notes or list_notes first if you need the id.',
+      description:
+        'Delete a note. Prefer matching by text with `contains` (one step). Or pass `id` if you already have it. If several match, deletes the most recent match unless `date` is set.',
       parameters: {
         type: 'object',
         properties: {
-          id: { type: 'string' },
+          id: { type: 'string', description: 'Note id if known' },
+          contains: {
+            type: 'string',
+            description:
+              'Text snippet from the note body to match (case-insensitive). Use this when the user says which note to delete by content.',
+          },
+          date: dateProp,
         },
-        required: ['id'],
       },
     },
   },
