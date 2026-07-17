@@ -1,7 +1,17 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
+import { Modal, Pressable, StyleSheet, View } from 'react-native';
+import Animated, {
+  Easing,
+  interpolate,
+  type SharedValue,
+  useAnimatedStyle,
+  useSharedValue,
+  withRepeat,
+  withSpring,
+  withTiming,
+} from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   askNutritionAssistant,
@@ -17,22 +27,57 @@ import {
 import { useDiaryEntries, useDayProgress, useSetting } from '@/state/queries';
 import { useUiStore } from '@/state/uiStore';
 import { useTheme } from '@/ui/theme/ThemeProvider';
-import { radius, spacing, touchTarget } from '@/ui/theme/tokens';
-import { AppText } from './AppText';
-import { Button } from './Button';
-import { Sheet } from './Sheet';
-import { TextField } from './TextField';
+import { spacing, touchTarget } from '@/ui/theme/tokens';
 
 type Phase = 'idle' | 'listening' | 'thinking' | 'speaking';
 
 const FAB_SIZE = 56;
+const MIC_IDLE = 96;
+const MIC_LISTEN = 128;
 /** Sit above the tab bar (bar ~64 + cradle + safe area cushion). */
 const TAB_BAR_CLEARANCE = 96;
 
+function WaveBar({
+  index,
+  wave,
+  color,
+}: {
+  index: number;
+  wave: SharedValue<number>;
+  color: string;
+}) {
+  const style = useAnimatedStyle(() => {
+    const t = (wave.value + index * 0.14) % 1;
+    const height = interpolate(t, [0, 0.5, 1], [12, 34 + index * 3, 12]);
+    return { height };
+  });
+  return <Animated.View style={[styles.waveBar, { backgroundColor: color }, style]} />;
+}
+
+function PulseRing({
+  pulse,
+  delay,
+  maxScale,
+  color,
+}: {
+  pulse: SharedValue<number>;
+  delay: number;
+  maxScale: number;
+  color: string;
+}) {
+  const style = useAnimatedStyle(() => {
+    const t = Math.max(0, (pulse.value - delay) / (1 - delay));
+    return {
+      opacity: interpolate(t, [0, 0.12, 1], [0.5, 0.35, 0]),
+      transform: [{ scale: interpolate(t, [0, 1], [1, maxScale]) }],
+    };
+  });
+  return <Animated.View style={[styles.ring, { borderColor: color }, style]} />;
+}
+
 /**
- * Bottom-right mic FAB + sheet. Tap to enable the microphone, speak a nutrition
- * question, and get a Grok answer grounded in today's remaining calories/macros.
- * Uses the same on-device Grok API key as AI food scan.
+ * Bottom-right mic FAB. Tap opens a minimal listening overlay: one expanding
+ * microphone with pulse rings — no copy, no text fields.
  */
 export function VoiceAssistant() {
   const { colors } = useTheme();
@@ -45,14 +90,18 @@ export function VoiceAssistant() {
 
   const [open, setOpen] = useState(false);
   const [phase, setPhase] = useState<Phase>('idle');
-  const [draft, setDraft] = useState('');
-  const [error, setError] = useState<string | null>(null);
   const [history, setHistory] = useState<AssistantMessage[]>([]);
   const abortRef = useRef<AbortController | null>(null);
+  const listenGen = useRef(0);
+
+  const expand = useSharedValue(0);
+  const pulse = useSharedValue(0);
+  const wave = useSharedValue(0);
+  /** 0 idle overlay, 1 listening, 2 thinking/speaking */
+  const mode = useSharedValue(0);
 
   const keyReady = (apiKey.data ?? '').trim().length > 0;
   const speechOk = isSpeechRecognitionAvailable();
-  const busy = phase === 'listening' || phase === 'thinking';
 
   useEffect(() => {
     return () => {
@@ -61,25 +110,51 @@ export function VoiceAssistant() {
     };
   }, []);
 
-  function closeSheet() {
+  useEffect(() => {
+    if (phase === 'listening') {
+      mode.value = 1;
+      expand.value = withSpring(1, { damping: 13, stiffness: 150 });
+      pulse.value = 0;
+      pulse.value = withRepeat(
+        withTiming(1, { duration: 1500, easing: Easing.out(Easing.quad) }),
+        -1,
+        false,
+      );
+      wave.value = withRepeat(
+        withTiming(1, { duration: 650, easing: Easing.inOut(Easing.sin) }),
+        -1,
+        true,
+      );
+    } else if (phase === 'thinking' || phase === 'speaking') {
+      mode.value = 2;
+      expand.value = withSpring(0.72, { damping: 16, stiffness: 180 });
+      pulse.value = withTiming(0, { duration: 200 });
+      wave.value = withRepeat(
+        withTiming(1, { duration: 850, easing: Easing.inOut(Easing.quad) }),
+        -1,
+        true,
+      );
+    } else {
+      mode.value = 0;
+      expand.value = withSpring(0, { damping: 16, stiffness: 200 });
+      pulse.value = withTiming(0, { duration: 180 });
+      wave.value = withTiming(0, { duration: 180 });
+    }
+  }, [phase, expand, pulse, wave, mode]);
+
+  function closeOverlay() {
+    listenGen.current += 1;
     abortRef.current?.abort();
     stopSpeaking();
     setOpen(false);
     setPhase('idle');
-    setError(null);
   }
 
-  async function runQuestion(question: string) {
+  async function runQuestion(question: string, gen: number) {
     const q = question.trim();
-    if (!q) return;
-    if (!keyReady) {
-      setError('Add your Grok API key in Settings to use the voice assistant.');
-      return;
-    }
+    if (!q || !keyReady) return;
 
-    setError(null);
     setPhase('thinking');
-    setDraft('');
     abortRef.current?.abort();
     const controller = new AbortController();
     abortRef.current = controller;
@@ -98,200 +173,117 @@ export function VoiceAssistant() {
         history,
         signal: controller.signal,
       });
+      if (gen !== listenGen.current) return;
       setHistory((h) => [...h, { role: 'user', content: q }, { role: 'assistant', content: answer }]);
       setPhase('speaking');
       speakText(answer);
-      setPhase('idle');
-    } catch (e) {
-      if (controller.signal.aborted) {
-        setPhase('idle');
-        return;
-      }
-      setError(e instanceof Error ? e.message : 'Assistant failed');
-      setPhase('idle');
+      setTimeout(() => {
+        if (gen === listenGen.current) closeOverlay();
+      }, 900);
+    } catch {
+      if (controller.signal.aborted || gen !== listenGen.current) return;
+      closeOverlay();
     }
   }
 
   async function startListening() {
     if (!keyReady) {
-      setOpen(true);
-      setError('Add your Grok API key in Settings to use the voice assistant.');
+      router.push('/settings');
       return;
     }
-    if (!speechOk) {
-      setOpen(true);
-      setError('Microphone voice input needs Chrome (or another browser with speech recognition). You can still type below.');
-      return;
-    }
+    if (!speechOk) return;
 
+    const gen = ++listenGen.current;
     setOpen(true);
-    setError(null);
     setPhase('listening');
     stopSpeaking();
 
     try {
-      const { transcript } = await listenOnce();
-      setDraft(transcript);
-      await runQuestion(transcript);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Microphone failed');
-      setPhase('idle');
+      const { transcript } = await listenOnce({ timeoutMs: 20_000 });
+      if (gen !== listenGen.current) return;
+      await runQuestion(transcript, gen);
+    } catch {
+      if (gen !== listenGen.current) return;
+      closeOverlay();
     }
   }
 
   function onFabPress() {
-    if (open && phase === 'listening') return;
+    if (open) {
+      closeOverlay();
+      return;
+    }
     void startListening();
   }
 
   const bottom = insets.bottom + TAB_BAR_CLEARANCE;
-  const lastAssistant = [...history].reverse().find((m) => m.role === 'assistant');
-  const lastUser = [...history].reverse().find((m) => m.role === 'user');
+
+  const micStyle = useAnimatedStyle(() => {
+    const size = interpolate(expand.value, [0, 1], [MIC_IDLE, MIC_LISTEN]);
+    const breathe =
+      mode.value >= 2 ? interpolate(wave.value, [0, 1], [0.95, 1.05]) : 1;
+    return {
+      width: size,
+      height: size,
+      borderRadius: size / 2,
+      transform: [{ scale: breathe }],
+    };
+  });
+
+  const micColor =
+    phase === 'listening' ? colors.danger : phase === 'thinking' ? colors.warning : colors.accent;
 
   return (
     <>
       <Pressable
         accessibilityRole="button"
         accessibilityLabel="Voice assistant"
-        accessibilityHint="Opens the microphone so you can ask about calories and nutrition"
+        accessibilityHint="Starts listening for a nutrition question"
         onPress={onFabPress}
         style={({ pressed }) => [
           styles.fab,
           {
             right: spacing.lg,
             bottom,
-            backgroundColor: phase === 'listening' ? colors.danger : colors.accent,
+            backgroundColor: open ? colors.danger : colors.accent,
             opacity: pressed ? 0.9 : 1,
             transform: [{ scale: pressed ? 0.94 : 1 }],
             shadowColor: '#000',
           },
         ]}
       >
-        {phase === 'thinking' ? (
-          <ActivityIndicator color={colors.onAccent} />
-        ) : (
-          <Ionicons
-            name={phase === 'listening' ? 'mic' : 'mic-outline'}
-            size={26}
-            color={colors.onAccent}
-          />
-        )}
+        <Ionicons name={open ? 'close' : 'mic-outline'} size={26} color={colors.onAccent} />
       </Pressable>
 
-      <Sheet visible={open} onClose={closeSheet} title="Voice assistant">
-        <AppText variant="caption" tone="secondary">
-          Ask about remaining calories, protein, or what to eat next. Uses your Grok API key from
-          Settings.
-        </AppText>
+      <Modal visible={open} transparent animationType="fade" onRequestClose={closeOverlay}>
+        <Pressable
+          style={[styles.overlay, { backgroundColor: colors.overlay }]}
+          onPress={closeOverlay}
+          accessibilityRole="button"
+          accessibilityLabel="Cancel voice assistant"
+        >
+          <View style={styles.micWrap} pointerEvents="none">
+            {phase === 'listening' ? (
+              <>
+                <PulseRing pulse={pulse} delay={0} maxScale={2.15} color={colors.danger} />
+                <PulseRing pulse={pulse} delay={0.28} maxScale={2.7} color={colors.danger} />
+              </>
+            ) : null}
 
-        {!keyReady ? (
-          <Button
-            title="Add Grok API key"
-            onPress={() => {
-              closeSheet();
-              router.push('/settings');
-            }}
-          />
-        ) : null}
-
-        <View style={styles.statusRow}>
-          <View
-            style={[
-              styles.pulse,
-              {
-                backgroundColor:
-                  phase === 'listening'
-                    ? colors.danger
-                    : phase === 'thinking'
-                      ? colors.warning
-                      : colors.accent,
-              },
-            ]}
-          />
-          <AppText variant="caption" tone="secondary">
-            {phase === 'listening'
-              ? 'Listening… speak now'
-              : phase === 'thinking'
-                ? 'Thinking…'
-                : phase === 'speaking'
-                  ? 'Speaking answer…'
-                  : speechOk
-                    ? 'Tap the mic to speak, or type below'
-                    : 'Type a question (voice needs Chrome)'}
-          </AppText>
-        </View>
-
-        {error ? (
-          <AppText variant="caption" tone="danger">
-            {error}
-          </AppText>
-        ) : null}
-
-        {lastUser ? (
-          <View style={{ gap: spacing.xs }}>
-            <AppText variant="micro" tone="muted">
-              You
-            </AppText>
-            <AppText variant="body">{lastUser.content}</AppText>
+            <Animated.View style={[styles.micButton, { backgroundColor: micColor }, micStyle]}>
+              {phase === 'listening' ? (
+                <View style={styles.waveRow}>
+                  {[0, 1, 2, 3, 4].map((i) => (
+                    <WaveBar key={i} index={i} wave={wave} color={colors.onAccent} />
+                  ))}
+                </View>
+              ) : (
+                <Ionicons name="mic" size={42} color={colors.onAccent} />
+              )}
+            </Animated.View>
           </View>
-        ) : null}
-
-        {lastAssistant ? (
-          <View style={{ gap: spacing.xs }}>
-            <AppText variant="micro" tone="muted">
-              Assistant
-            </AppText>
-            <AppText variant="body">{lastAssistant.content}</AppText>
-            <Button
-              title="Hear again"
-              variant="ghost"
-              compact
-              onPress={() => speakText(lastAssistant.content)}
-            />
-          </View>
-        ) : null}
-
-        <TextField
-          label="Or type a question"
-          value={draft}
-          onChangeText={setDraft}
-          placeholder="How many calories do I have left?"
-          editable={!busy}
-          onSubmitEditing={() => void runQuestion(draft)}
-        />
-
-        <View style={{ flexDirection: 'row', gap: spacing.sm }}>
-          <Button
-            title={phase === 'listening' ? 'Listening…' : 'Speak'}
-            onPress={() => void startListening()}
-            loading={phase === 'listening'}
-            disabled={busy && phase !== 'listening'}
-            compact
-          />
-          <Button
-            title="Ask"
-            variant="secondary"
-            onPress={() => void runQuestion(draft)}
-            loading={phase === 'thinking'}
-            disabled={busy || !draft.trim()}
-            compact
-          />
-          {history.length ? (
-            <Button
-              title="Clear"
-              variant="ghost"
-              compact
-              disabled={busy}
-              onPress={() => {
-                stopSpeaking();
-                setHistory([]);
-                setDraft('');
-                setError(null);
-              }}
-            />
-          ) : null}
-        </View>
-      </Sheet>
+        </Pressable>
+      </Modal>
     </>
   );
 }
@@ -312,14 +304,41 @@ const styles = StyleSheet.create({
     minWidth: touchTarget,
     minHeight: touchTarget,
   },
-  statusRow: {
+  overlay: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  micWrap: {
+    width: 300,
+    height: 300,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  ring: {
+    position: 'absolute',
+    width: MIC_LISTEN,
+    height: MIC_LISTEN,
+    borderRadius: MIC_LISTEN / 2,
+    borderWidth: 3,
+  },
+  micButton: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOpacity: 0.35,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 10,
+  },
+  waveRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.sm,
+    gap: 6,
+    height: 40,
   },
-  pulse: {
-    width: 10,
-    height: 10,
-    borderRadius: radius.full,
+  waveBar: {
+    width: 5,
+    borderRadius: 3,
   },
 });
