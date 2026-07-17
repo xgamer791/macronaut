@@ -19,13 +19,14 @@ import {
 } from '@/services/assistant/grokChat';
 import { buildNutritionContext } from '@/services/assistant/nutritionContext';
 import {
-  isSpeechRecognitionAvailable,
+  canHoldRecord,
   speakText,
   startHoldListen,
   stopSpeaking,
   unlockSpeechPlayback,
   type HoldListenSession,
 } from '@/services/assistant/speech';
+import { transcribeAudio } from '@/services/assistant/stt';
 import { useDiaryEntries, useDayProgress, useSetting } from '@/state/queries';
 import { useUiStore } from '@/state/uiStore';
 import { useTheme } from '@/ui/theme/ThemeProvider';
@@ -35,15 +36,12 @@ type Phase = 'idle' | 'holding' | 'thinking' | 'speaking';
 
 const FAB_SIZE = 56;
 const RING_SIZE = FAB_SIZE + 28;
-/** Sit above the tab bar (bar ~64 + cradle + safe area cushion). */
 const TAB_BAR_CLEARANCE = 96;
 
-/** Kill iOS/Android/web long-press menus so hold-to-talk isn't interrupted. */
 const noHoldChrome: ViewStyle | undefined =
   Platform.OS === 'web'
     ? ({
         userSelect: 'none',
-        // WebKit / RN-web hold chrome
         ...({
           WebkitUserSelect: 'none',
           WebkitTouchCallout: 'none',
@@ -80,9 +78,8 @@ function HoldRing({
 }
 
 /**
- * Bottom-right mic FAB — hold to talk. While pressed, rings pulse around the
- * button; release to send and hear the reply. Native long-press chrome is
- * disabled so the OS hold menu can't steal the gesture.
+ * Hold-to-talk mic FAB. Records audio while pressed, transcribes with xAI STT,
+ * asks Grok, and speaks the answer. Failures are spoken so nothing fails silently.
  */
 export function VoiceAssistant() {
   const { colors } = useTheme();
@@ -103,11 +100,10 @@ export function VoiceAssistant() {
   const hold = useSharedValue(0);
   const pulse = useSharedValue(0);
   const breathe = useSharedValue(0);
-  /** 0 idle · 1 holding · 2 thinking/speaking */
   const mode = useSharedValue(0);
 
   const keyReady = (apiKey.data ?? '').trim().length > 0;
-  const speechOk = isSpeechRecognitionAvailable();
+  const recordOk = canHoldRecord();
   const active = phase === 'holding' || phase === 'thinking' || phase === 'speaking';
 
   useEffect(() => {
@@ -151,10 +147,19 @@ export function VoiceAssistant() {
     }
   }, [phase, hold, pulse, breathe, mode]);
 
-  async function runQuestion(question: string, gen: number) {
-    const q = question.trim();
-    if (!q || !keyReady) {
+  async function speakAndIdle(message: string, gen: number) {
+    setPhase('speaking');
+    await speakText(message);
+    if (gen === turnGen.current) setPhase('idle');
+  }
+
+  async function runTurn(blob: Blob, gen: number) {
+    if (!keyReady) {
       setPhase('idle');
+      return;
+    }
+    if (!blob || blob.size < 800) {
+      await speakAndIdle("I didn't catch that. Hold the mic and ask again.", gen);
       return;
     }
 
@@ -163,28 +168,50 @@ export function VoiceAssistant() {
     const controller = new AbortController();
     abortRef.current = controller;
 
-    const nutritionContext = buildNutritionContext({
-      date,
-      progress,
-      entries: entries.data ?? [],
-    });
-
     try {
+      const question = await transcribeAudio({
+        apiKey: apiKey.data ?? '',
+        blob,
+        signal: controller.signal,
+      });
+      if (gen !== turnGen.current) return;
+
+      const nutritionContext = buildNutritionContext({
+        date,
+        progress,
+        entries: entries.data ?? [],
+      });
+
       const answer = await askNutritionAssistant({
         apiKey: apiKey.data ?? '',
         nutritionContext,
-        question: q,
+        question,
         history,
         signal: controller.signal,
       });
       if (gen !== turnGen.current) return;
-      setHistory((h) => [...h, { role: 'user', content: q }, { role: 'assistant', content: answer }]);
-      setPhase('speaking');
-      await speakText(answer);
-      if (gen === turnGen.current) setPhase('idle');
-    } catch {
-      if (controller.signal.aborted || gen !== turnGen.current) return;
-      setPhase('idle');
+
+      setHistory((h) => [
+        ...h,
+        { role: 'user', content: question },
+        { role: 'assistant', content: answer },
+      ]);
+      await speakAndIdle(answer, gen);
+    } catch (e) {
+      if (controller.signal.aborted || gen !== turnGen.current) {
+        setPhase('idle');
+        return;
+      }
+      const msg =
+        e instanceof Error && e.message
+          ? e.message
+          : 'Something went wrong with the voice assistant.';
+      // Don't speak raw API dumps — keep it short.
+      const spoken =
+        msg.length > 120 || /[{}]/.test(msg)
+          ? "Sorry, I couldn't get an answer. Check your Grok key and try again."
+          : msg;
+      await speakAndIdle(spoken, gen);
     }
   }
 
@@ -198,7 +225,10 @@ export function VoiceAssistant() {
       router.push('/settings');
       return;
     }
-    if (!speechOk) return;
+    if (!recordOk) {
+      void speakText('Voice recording needs a modern mobile browser with microphone access.');
+      return;
+    }
 
     holdingRef.current = true;
     unlockSpeechPlayback();
@@ -220,24 +250,22 @@ export function VoiceAssistant() {
     }
 
     const gen = ++turnGen.current;
+    setPhase('thinking');
     try {
-      const transcript = await session.stop();
+      const blob = await session.stop();
       if (gen !== turnGen.current) return;
-      if (!transcript.trim()) {
-        setPhase('idle');
-        return;
-      }
-      await runQuestion(transcript, gen);
-    } catch {
+      await runTurn(blob, gen);
+    } catch (e) {
       if (gen !== turnGen.current) return;
-      setPhase('idle');
+      const msg = e instanceof Error ? e.message : "I couldn't record that.";
+      await speakAndIdle(msg, gen);
     }
   }
 
   const bottom = insets.bottom + TAB_BAR_CLEARANCE;
 
   const fabAnim = useAnimatedStyle(() => {
-    const pressScale = interpolate(hold.value, [0, 1], [1, 1.06]);
+    const pressScale = interpolate(hold.value, [0, 1], [1, 1.08]);
     const busyScale =
       mode.value >= 2 ? interpolate(breathe.value, [0, 1], [0.96, 1.04]) : 1;
     return { transform: [{ scale: pressScale * busyScale }] };
@@ -265,11 +293,8 @@ export function VoiceAssistant() {
           accessibilityHint="Hold to talk, release when finished"
           onPressIn={onPressIn}
           onPressOut={onPressOut}
-          onLongPress={() => {
-            /* swallow — disable OS long-press action */
-          }}
+          onLongPress={() => {}}
           delayLongPress={10_000}
-          // Prevent the browser context menu on long-press (RN web).
           {...(Platform.OS === 'web'
             ? {
                 onContextMenu: (e: { preventDefault: () => void }) => e.preventDefault(),
