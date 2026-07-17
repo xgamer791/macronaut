@@ -154,22 +154,32 @@ function MosaicTile({
         { opacity: pressed ? 0.92 : 1 },
       ]}
     >
-      <Image source={image} style={StyleSheet.absoluteFill} contentFit="cover" accessible={false} />
+      {/* Photo sits back; grey wash + gradient keep text readable like the mockup. */}
+      <Image
+        source={image}
+        style={[StyleSheet.absoluteFill, styles.photo]}
+        contentFit="cover"
+        accessible={false}
+      />
+      <View style={[StyleSheet.absoluteFill, styles.greyWash]} />
       <LinearGradient
         colors={
           variant === 'wide'
-            ? ['rgba(8,10,12,0.92)', 'rgba(8,10,12,0.55)', 'rgba(8,10,12,0.25)']
-            : ['rgba(8,10,12,0.88)', 'rgba(8,10,12,0.45)', 'rgba(8,10,12,0.2)']
+            ? ['rgba(18,22,26,0.82)', 'rgba(18,22,26,0.45)', 'rgba(18,22,26,0.2)']
+            : ['rgba(18,22,26,0.55)', 'rgba(18,22,26,0.35)', 'rgba(18,22,26,0.72)']
         }
         start={{ x: 0, y: 0 }}
-        end={variant === 'wide' ? { x: 1, y: 0 } : { x: 0, y: 1 }}
+        end={variant === 'wide' ? { x: 1, y: 0 } : { x: 0.15, y: 1 }}
         style={StyleSheet.absoluteFill}
       />
 
       <View style={[styles.tileBody, variant === 'wide' && styles.tileBodyWide]}>
-        <View style={[styles.iconBadge, { backgroundColor: accent + '33' }]}>
-          <Ionicons name={icon} size={variant === 'half' ? 18 : 22} color={accent} />
-        </View>
+        <Ionicons
+          name={icon}
+          size={variant === 'half' ? 28 : 34}
+          color={accent}
+          style={styles.icon}
+        />
 
         <View style={[styles.copy, variant === 'wide' && styles.copyWide]}>
           <AppText variant="body" weight="700" numberOfLines={1} style={{ color: '#FFFFFF' }}>
@@ -178,7 +188,7 @@ function MosaicTile({
           <AppText
             variant="micro"
             numberOfLines={variant === 'half' ? 1 : 2}
-            style={{ color: 'rgba(255,255,255,0.72)' }}
+            style={{ color: 'rgba(230,234,238,0.88)' }}
           >
             {subtitle}
           </AppText>
@@ -229,8 +239,14 @@ const styles = StyleSheet.create({
   tile: {
     borderRadius: radius.lg,
     overflow: 'hidden',
-    backgroundColor: '#12161A',
+    backgroundColor: '#1A1F24',
     minHeight: touchTarget,
+  },
+  photo: {
+    opacity: 0.55,
+  },
+  greyWash: {
+    backgroundColor: 'rgba(160, 168, 176, 0.22)',
   },
   tileTall: {
     flex: 1,
@@ -241,11 +257,12 @@ const styles = StyleSheet.create({
   },
   tileWide: {
     width: '100%',
-    minHeight: 88,
+    minHeight: 96,
   },
   tileBody: {
     flex: 1,
-    padding: spacing.md,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.lg,
     justifyContent: 'space-between',
   },
   tileBodyWide: {
@@ -253,16 +270,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.md,
     justifyContent: 'flex-start',
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md + 2,
   },
-  iconBadge: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
+  icon: {
+    marginBottom: 2,
   },
   copy: {
-    gap: 3,
+    gap: 4,
   },
   copyWide: {
     flex: 1,
@@ -270,7 +285,7 @@ const styles = StyleSheet.create({
   },
   logLink: {
     alignSelf: 'flex-start',
-    marginTop: 6,
+    marginTop: 8,
     minHeight: 28,
     justifyContent: 'center',
   },
@@ -280,5 +295,6 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
+    marginRight: 2,
   },
 });
