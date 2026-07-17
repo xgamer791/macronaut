@@ -34,7 +34,8 @@ const BLURBS: Record<ActivityType, string> = {
 
 /**
  * Mosaic / bento Activity shortcuts on Today — photo tiles, not meal-style rows.
- * Layout: tall Cardio | Strength + Sports stacked | full-width Mobility.
+ * Layout: tall Cardio | Strength + Sports stacked (squares) | full-width Mobility.
+ * Cardio height matches the Strength + Sports stack via row stretch.
  */
 export function ActivityLogList({ burnedByType, onLog, onOpenType }: ActivityLogListProps) {
   const { colors } = useTheme();
@@ -113,7 +114,6 @@ export function ActivityLogList({ burnedByType, onLog, onOpenType }: ActivityLog
 }
 
 function MosaicTile({
-  type,
   name,
   icon,
   blurb,
@@ -140,6 +140,8 @@ function MosaicTile({
   showChevron?: boolean;
 }) {
   const subtitle = kcal > 0 ? `${kcal} kcal burned` : blurb;
+  // 30% larger than the previous 28 / 34 sizes.
+  const iconSize = variant === 'half' ? 36 : 44;
 
   return (
     <Pressable
@@ -174,12 +176,7 @@ function MosaicTile({
       />
 
       <View style={[styles.tileBody, variant === 'wide' && styles.tileBodyWide]}>
-        <Ionicons
-          name={icon}
-          size={variant === 'half' ? 28 : 34}
-          color={accent}
-          style={styles.icon}
-        />
+        <Ionicons name={icon} size={iconSize} color={accent} style={styles.icon} />
 
         <View style={[styles.copy, variant === 'wide' && styles.copyWide]}>
           <AppText variant="body" weight="700" numberOfLines={1} style={{ color: '#FFFFFF' }}>
@@ -221,16 +218,15 @@ function MosaicTile({
   );
 }
 
-const ROW_HEIGHT = 196;
-
 const styles = StyleSheet.create({
   mosaic: {
     gap: spacing.sm,
   },
   topRow: {
     flexDirection: 'row',
+    // Stretch Cardio to the height of the Strength + Sports stack.
+    alignItems: 'stretch',
     gap: spacing.sm,
-    height: ROW_HEIGHT,
   },
   stack: {
     flex: 1,
@@ -250,10 +246,10 @@ const styles = StyleSheet.create({
   },
   tileTall: {
     flex: 1,
-    height: ROW_HEIGHT,
   },
   tileHalf: {
-    flex: 1,
+    width: '100%',
+    aspectRatio: 1,
   },
   tileWide: {
     width: '100%',
