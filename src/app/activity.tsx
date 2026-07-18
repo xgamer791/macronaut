@@ -69,7 +69,6 @@ function ActivityBody() {
   const { activity } = useRepos();
   const params = useLocalSearchParams<{ type?: string }>();
   const date = useUiStore((s) => s.selectedDate);
-  const setSelectedDate = useUiStore((s) => s.setSelectedDate);
   const progress = useDayProgress(date);
   const todayEntries = useActivityEntries(date);
   const removeEntry = useDeleteActivityEntry();
@@ -181,7 +180,7 @@ function ActivityBody() {
     });
 
   return (
-    <Screen>
+    <Screen style={{ flexGrow: 1, justifyContent: 'center' }}>
       <ScreenHeader
         title="Activity"
         right={
@@ -200,7 +199,7 @@ function ActivityBody() {
         <ProgressRing
           progress={ringProgress}
           size={188}
-          strokeWidth={14}
+          strokeWidth={18}
           accessibilityLabel={`${Math.round(burnedToday)} kilocalories burned today`}
         >
           <View style={{ alignItems: 'center', gap: 2 }}>
@@ -226,14 +225,28 @@ function ActivityBody() {
         </View>
       </View>
 
-      <View style={{ flexDirection: 'row', gap: spacing.sm, flexWrap: 'wrap' }}>
-        <Chip label="All" selected={typeFilter === 'all'} onPress={() => setTypeFilter('all')} />
+      <View
+        style={{
+          flexDirection: 'row',
+          gap: spacing.sm,
+          flexWrap: 'wrap',
+          justifyContent: 'center',
+          padding: 5,
+        }}
+      >
+        <Chip
+          label="All"
+          selected={typeFilter === 'all'}
+          onPress={() => setTypeFilter('all')}
+          style={{ paddingHorizontal: spacing.md + 5, paddingVertical: 12 }}
+        />
         {ACTIVITY_CATEGORIES.map((c) => (
           <Chip
             key={c.id}
             label={c.name}
             selected={typeFilter === c.id}
             onPress={() => setTypeFilter(c.id)}
+            style={{ paddingHorizontal: spacing.md + 5, paddingVertical: 12 }}
           />
         ))}
       </View>
@@ -382,7 +395,6 @@ function ActivityBody() {
       ) : null}
 
       <Button title="Log activity" onPress={goLog} />
-      <Button title="Jump to today" variant="ghost" onPress={() => setSelectedDate(todayKey())} />
     </Screen>
   );
 }

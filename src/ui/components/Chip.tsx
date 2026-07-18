@@ -1,5 +1,5 @@
 import React from 'react';
-import { Pressable } from 'react-native';
+import { Pressable, StyleProp, ViewStyle } from 'react-native';
 import { useTheme } from '@/ui/theme/ThemeProvider';
 import { radius, spacing } from '@/ui/theme/tokens';
 import { AppText } from './AppText';
@@ -8,9 +8,10 @@ export interface ChipProps {
   label: string;
   selected?: boolean;
   onPress?: () => void;
+  style?: StyleProp<ViewStyle>;
 }
 
-export function Chip({ label, selected = false, onPress }: ChipProps) {
+export function Chip({ label, selected = false, onPress, style }: ChipProps) {
   const { colors } = useTheme();
   return (
     <Pressable
@@ -18,17 +19,20 @@ export function Chip({ label, selected = false, onPress }: ChipProps) {
       accessibilityLabel={label}
       accessibilityState={{ selected }}
       onPress={onPress}
-      style={({ pressed }) => ({
-        paddingHorizontal: spacing.md,
-        paddingVertical: 7,
-        borderRadius: radius.full,
-        borderWidth: 1,
-        minHeight: 32,
-        justifyContent: 'center',
-        borderColor: selected ? colors.textPrimary : colors.borderStrong,
-        backgroundColor: selected ? colors.textPrimary : 'transparent',
-        opacity: pressed ? 0.8 : 1,
-      })}
+      style={({ pressed }) => [
+        {
+          paddingHorizontal: spacing.md,
+          paddingVertical: 7,
+          borderRadius: radius.full,
+          borderWidth: 1,
+          minHeight: 32,
+          justifyContent: 'center',
+          borderColor: selected ? colors.textPrimary : colors.borderStrong,
+          backgroundColor: selected ? colors.textPrimary : 'transparent',
+          opacity: pressed ? 0.8 : 1,
+        },
+        style,
+      ]}
     >
       <AppText
         variant="caption"
