@@ -244,13 +244,23 @@ function TodayBody() {
                 setTargetMeal(cat.id);
                 router.push(logged ? '/diary' : '/add');
               }}
-              style={[
-                styles.mealCard,
-                { backgroundColor: colors.surface, borderColor: colors.border },
-              ]}
+              style={styles.mealCard}
             >
+              <Image source={image} style={StyleSheet.absoluteFill} contentFit="cover" />
+              <LinearGradient
+                colors={['rgba(8,12,16,0.72)', 'rgba(8,12,16,0.25)', 'rgba(8,12,16,0.55)']}
+                start={{ x: 0, y: 0.5 }}
+                end={{ x: 1, y: 0.5 }}
+                style={StyleSheet.absoluteFill}
+              />
               <View style={styles.mealCopy}>
-                <AppText variant="heading" weight="700" display numberOfLines={1}>
+                <AppText
+                  variant="heading"
+                  weight="700"
+                  display
+                  numberOfLines={1}
+                  style={{ color: '#FFFFFF' }}
+                >
                   {cat.name}
                 </AppText>
                 {logged ? (
@@ -268,21 +278,18 @@ function TodayBody() {
                   </View>
                 )}
               </View>
-              <View style={styles.mealPhotoWrap}>
-                <Image source={image} style={styles.mealPhoto} contentFit="cover" />
-                <View
-                  style={[
-                    styles.mealBadge,
-                    {
-                      backgroundColor: logged ? colors.accent : 'transparent',
-                      borderColor: colors.accent,
-                    },
-                  ]}
-                >
-                  {logged ? (
-                    <Ionicons name="checkmark" size={18} color={colors.onAccent} />
-                  ) : null}
-                </View>
+              <View
+                style={[
+                  styles.mealBadge,
+                  {
+                    backgroundColor: logged ? colors.accent : 'transparent',
+                    borderColor: colors.accent,
+                  },
+                ]}
+              >
+                {logged ? (
+                  <Ionicons name="checkmark" size={18} color={colors.onAccent} />
+                ) : null}
               </View>
             </Pressable>
           );
@@ -400,18 +407,16 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   mealCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    height: 132,
     borderRadius: radius.xl,
-    borderWidth: 1,
-    padding: spacing.md,
-    gap: spacing.md,
-    minHeight: 112,
+    overflow: 'hidden',
+    justifyContent: 'center',
+    paddingHorizontal: spacing.lg,
   },
   mealCopy: {
-    flex: 1,
     gap: spacing.sm,
-    minWidth: 0,
+    maxWidth: '58%',
+    zIndex: 2,
   },
   loggedRow: {
     flexDirection: 'row',
@@ -424,29 +429,20 @@ const styles = StyleSheet.create({
     borderRadius: radius.full,
     paddingHorizontal: spacing.md,
     paddingVertical: 6,
-  },
-  mealPhotoWrap: {
-    width: 96,
-    height: 96,
-    borderRadius: radius.lg,
-    overflow: 'visible',
-  },
-  mealPhoto: {
-    width: 96,
-    height: 96,
-    borderRadius: radius.lg,
+    backgroundColor: 'rgba(8,12,16,0.35)',
   },
   mealBadge: {
     position: 'absolute',
-    right: -6,
+    right: spacing.lg,
     top: '50%',
-    marginTop: -16,
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    borderWidth: 2,
+    marginTop: -18,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    borderWidth: 2.5,
     alignItems: 'center',
     justifyContent: 'center',
+    zIndex: 3,
   },
   backToday: {
     alignSelf: 'center',
