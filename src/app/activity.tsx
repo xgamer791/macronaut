@@ -228,17 +228,17 @@ function ActivityBody() {
       <View
         style={{
           flexDirection: 'row',
-          gap: spacing.sm,
-          flexWrap: 'wrap',
+          flexWrap: 'nowrap',
           justifyContent: 'center',
-          padding: 5,
+          alignItems: 'center',
+          gap: 4,
         }}
       >
         <Chip
           label="All"
           selected={typeFilter === 'all'}
           onPress={() => setTypeFilter('all')}
-          style={{ paddingHorizontal: spacing.md + 5, paddingVertical: 12 }}
+          style={{ paddingHorizontal: 8, paddingVertical: 6, minHeight: 28, flexShrink: 1 }}
         />
         {ACTIVITY_CATEGORIES.map((c) => (
           <Chip
@@ -246,7 +246,7 @@ function ActivityBody() {
             label={c.name}
             selected={typeFilter === c.id}
             onPress={() => setTypeFilter(c.id)}
-            style={{ paddingHorizontal: spacing.md + 5, paddingVertical: 12 }}
+            style={{ paddingHorizontal: 8, paddingVertical: 6, minHeight: 28, flexShrink: 1 }}
           />
         ))}
       </View>
