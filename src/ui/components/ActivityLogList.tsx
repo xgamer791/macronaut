@@ -32,11 +32,7 @@ const BLURBS: Record<ActivityType, string> = {
   other: 'Move your way',
 };
 
-/**
- * Mosaic / bento Activity shortcuts on Today — photo tiles, not meal-style rows.
- * Layout: tall Cardio | Strength + Sports stacked (squares) | full-width Mobility.
- * Cardio height matches the Strength + Sports stack via row stretch.
- */
+/** 2×2 square grid: Strength | Cardio / Sports | Mobility */
 export function ActivityLogList({ burnedByType, onLog, onOpenType }: ActivityLogListProps) {
   const { colors } = useTheme();
   const byId = Object.fromEntries(ACTIVITY_CATEGORIES.map((c) => [c.id, c])) as Record<
@@ -44,119 +40,95 @@ export function ActivityLogList({ burnedByType, onLog, onOpenType }: ActivityLog
     (typeof ACTIVITY_CATEGORIES)[number]
   >;
 
-  const cardio = byId.cardio;
   const strength = byId.strength;
+  const cardio = byId.cardio;
   const sports = byId.sports;
   const mobility = byId.mobility;
 
   return (
-    <View style={styles.mosaic}>
-      <View style={styles.topRow}>
-        <MosaicTile
-          type="cardio"
+    <View style={styles.grid}>
+      <View style={styles.row}>
+        <SquareTile
+          name={strength.name}
+          icon={strength.icon}
+          blurb={BLURBS.strength}
+          kcal={Math.round(burnedByType.get('strength') ?? 0)}
+          image={TILE_IMAGES.strength}
+          accent={colors.accent}
+          onPress={() => onLog('strength')}
+          onLog={() => onLog('strength')}
+          subtitleLines={2}
+        />
+        <SquareTile
           name={cardio.name}
           icon={cardio.icon}
           blurb={BLURBS.cardio}
           kcal={Math.round(burnedByType.get('cardio') ?? 0)}
           image={TILE_IMAGES.cardio}
-          variant="tall"
           accent={colors.accent}
-          onAccent={colors.onAccent}
           onPress={() => onLog('cardio')}
           onLog={() => onLog('cardio')}
+          subtitleLines={2}
         />
-        <View style={styles.stack}>
-          <MosaicTile
-            type="strength"
-            name={strength.name}
-            icon={strength.icon}
-            blurb={BLURBS.strength}
-            kcal={Math.round(burnedByType.get('strength') ?? 0)}
-            image={TILE_IMAGES.strength}
-            variant="half"
-            accent={colors.accent}
-            onAccent={colors.onAccent}
-            onPress={() => onLog('strength')}
-            onLog={() => onLog('strength')}
-          />
-          <MosaicTile
-            type="sports"
-            name={sports.name}
-            icon={sports.icon}
-            blurb={BLURBS.sports}
-            kcal={Math.round(burnedByType.get('sports') ?? 0)}
-            image={TILE_IMAGES.sports}
-            variant="half"
-            accent={colors.accent}
-            onAccent={colors.onAccent}
-            onPress={() => onLog('sports')}
-            onLog={() => onLog('sports')}
-          />
-        </View>
       </View>
-
-      <MosaicTile
-        type="mobility"
-        name={mobility.name}
-        icon={mobility.icon}
-        blurb={BLURBS.mobility}
-        kcal={Math.round(burnedByType.get('mobility') ?? 0)}
-        image={TILE_IMAGES.mobility}
-        variant="wide"
-        accent={colors.accent}
-        onAccent={colors.onAccent}
-        onPress={() => (onOpenType ?? onLog)('mobility')}
-        onLog={() => onLog('mobility')}
-        showChevron
-      />
+      <View style={styles.row}>
+        <SquareTile
+          name={sports.name}
+          icon={sports.icon}
+          blurb={BLURBS.sports}
+          kcal={Math.round(burnedByType.get('sports') ?? 0)}
+          image={TILE_IMAGES.sports}
+          accent={colors.accent}
+          onPress={() => onLog('sports')}
+          onLog={() => onLog('sports')}
+          subtitleLines={2}
+        />
+        <SquareTile
+          name={mobility.name}
+          icon={mobility.icon}
+          blurb={BLURBS.mobility}
+          kcal={Math.round(burnedByType.get('mobility') ?? 0)}
+          image={TILE_IMAGES.mobility}
+          accent={colors.accent}
+          onPress={() => (onOpenType ?? onLog)('mobility')}
+          onLog={() => onLog('mobility')}
+          subtitleLines={1}
+        />
+      </View>
     </View>
   );
 }
 
-function MosaicTile({
+function SquareTile({
   name,
   icon,
   blurb,
   kcal,
   image,
-  variant,
   accent,
-  onAccent,
   onPress,
   onLog,
-  showChevron,
+  subtitleLines,
 }: {
-  type: ActivityType;
   name: string;
   icon: (typeof ACTIVITY_CATEGORIES)[number]['icon'];
   blurb: string;
   kcal: number;
   image: ImageSource;
-  variant: 'tall' | 'half' | 'wide';
   accent: string;
-  onAccent: string;
   onPress: () => void;
   onLog: () => void;
-  showChevron?: boolean;
+  subtitleLines: 1 | 2;
 }) {
   const subtitle = kcal > 0 ? `${kcal} kcal burned` : blurb;
-  // 30% larger than the previous 28 / 34 sizes.
-  const iconSize = variant === 'half' ? 36 : 44;
 
   return (
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={`${name}. ${subtitle}. Log activity`}
       onPress={onPress}
-      style={({ pressed }) => [
-        styles.tile,
-        variant === 'tall' && styles.tileTall,
-        variant === 'half' && styles.tileHalf,
-        variant === 'wide' && styles.tileWide,
-        { opacity: pressed ? 0.92 : 1 },
-      ]}
+      style={({ pressed }) => [styles.tile, { opacity: pressed ? 0.92 : 1 }]}
     >
-      {/* Photo sits back; grey wash + gradient keep text readable like the mockup. */}
       <Image
         source={image}
         style={[StyleSheet.absoluteFill, styles.photo]}
@@ -165,75 +137,54 @@ function MosaicTile({
       />
       <View style={[StyleSheet.absoluteFill, styles.greyWash]} />
       <LinearGradient
-        colors={
-          variant === 'wide'
-            ? ['rgba(18,22,26,0.82)', 'rgba(18,22,26,0.45)', 'rgba(18,22,26,0.2)']
-            : ['rgba(18,22,26,0.55)', 'rgba(18,22,26,0.35)', 'rgba(18,22,26,0.72)']
-        }
+        colors={['rgba(18,22,26,0.55)', 'rgba(18,22,26,0.35)', 'rgba(18,22,26,0.72)']}
         start={{ x: 0, y: 0 }}
-        end={variant === 'wide' ? { x: 1, y: 0 } : { x: 0.15, y: 1 }}
+        end={{ x: 0.15, y: 1 }}
         style={StyleSheet.absoluteFill}
       />
 
-      <View style={[styles.tileBody, variant === 'wide' && styles.tileBodyWide]}>
-        <Ionicons name={icon} size={iconSize} color={accent} style={styles.icon} />
+      <View style={styles.tileBody}>
+        <Ionicons name={icon} size={36} color={accent} style={styles.icon} />
 
-        <View style={[styles.copy, variant === 'wide' && styles.copyWide]}>
+        <View style={styles.copy}>
           <AppText variant="body" weight="700" numberOfLines={1} style={styles.title}>
             {name}
           </AppText>
-          <AppText
-            variant="micro"
-            // Mobility stays one line; Cardio / Strength / Sports wrap to two.
-            numberOfLines={variant === 'wide' ? 1 : 2}
-            style={styles.subtitle}
-          >
+          <AppText variant="micro" numberOfLines={subtitleLines} style={styles.subtitle}>
             {subtitle}
           </AppText>
 
-          {!showChevron ? (
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={`Log ${name}`}
-              hitSlop={8}
-              onPress={(e) => {
-                e.stopPropagation?.();
-                onLog();
-              }}
-              style={styles.logLink}
-            >
-              <AppText variant="caption" weight="700" style={[styles.logLabel, { color: accent }]}>
-                Log
-              </AppText>
-            </Pressable>
-          ) : null}
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={`Log ${name}`}
+            hitSlop={8}
+            onPress={(e) => {
+              e.stopPropagation?.();
+              onLog();
+            }}
+            style={styles.logLink}
+          >
+            <AppText variant="caption" weight="700" style={[styles.logLabel, { color: accent }]}>
+              Log
+            </AppText>
+          </Pressable>
         </View>
-
-        {showChevron ? (
-          <View style={[styles.chevron, { backgroundColor: accent }]}>
-            <Ionicons name="chevron-forward" size={16} color={onAccent} />
-          </View>
-        ) : null}
       </View>
     </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
-  mosaic: {
+  grid: {
     gap: spacing.sm,
   },
-  topRow: {
+  row: {
     flexDirection: 'row',
-    // Stretch Cardio to the height of the Strength + Sports stack.
-    alignItems: 'stretch',
-    gap: spacing.sm,
-  },
-  stack: {
-    flex: 1,
     gap: spacing.sm,
   },
   tile: {
+    flex: 1,
+    aspectRatio: 1,
     borderRadius: radius.lg,
     overflow: 'hidden',
     backgroundColor: '#1A1F24',
@@ -245,33 +196,13 @@ const styles = StyleSheet.create({
   greyWash: {
     backgroundColor: 'rgba(160, 168, 176, 0.22)',
   },
-  tileTall: {
-    flex: 1,
-  },
-  tileHalf: {
-    width: '100%',
-    aspectRatio: 1,
-  },
-  tileWide: {
-    width: '100%',
-    minHeight: 96,
-  },
   tileBody: {
     flex: 1,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.lg,
-    // Mockup stack: icon sits just above the title/blurb/Log, group centered.
     justifyContent: 'center',
     alignItems: 'flex-start',
     gap: 10,
-  },
-  tileBodyWide: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-    justifyContent: 'flex-start',
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md + 2,
   },
   icon: {
     marginBottom: 0,
@@ -279,17 +210,11 @@ const styles = StyleSheet.create({
   copy: {
     gap: 4,
   },
-  copyWide: {
-    flex: 1,
-    minWidth: 0,
-  },
-  // Heading ~5% under the prior 20/27 size; body/log stay at the enlarged scale.
   title: {
     color: '#FFFFFF',
     fontSize: 19,
     lineHeight: 26,
   },
-  // ~5% under the prior 17/24 body under the title.
   subtitle: {
     color: 'rgba(230,234,238,0.88)',
     fontSize: 16,
@@ -304,13 +229,5 @@ const styles = StyleSheet.create({
     marginTop: 8,
     minHeight: 28,
     justifyContent: 'center',
-  },
-  chevron: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 2,
   },
 });
