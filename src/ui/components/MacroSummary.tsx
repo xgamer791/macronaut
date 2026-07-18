@@ -7,6 +7,7 @@ import { useBarEntranceProgress } from '@/ui/motion/barEntrance';
 import { useTheme } from '@/ui/theme/ThemeProvider';
 import { radius, spacing } from '@/ui/theme/tokens';
 import { AppText } from './AppText';
+import { Card } from './Card';
 
 /** Explicit track thickness (dp/css px) for the Protein/Carbs/Fat bars. */
 const TRACK_HEIGHT = 9;
@@ -39,15 +40,7 @@ export function MacroSummary({ macros, unit = 'g' }: MacroSummaryProps) {
   }));
 
   return (
-    <View
-      style={[
-        styles.card,
-        {
-          backgroundColor: colors.surface,
-          borderColor: colors.border,
-        },
-      ]}
-    >
+    <Card style={styles.card}>
       <Pressable
         accessibilityRole="button"
         accessibilityLabel={showRemaining ? 'Show consumed amounts' : 'Show remaining amounts'}
@@ -119,17 +112,12 @@ export function MacroSummary({ macros, unit = 'g' }: MacroSummaryProps) {
           );
         })}
       </View>
-    </View>
+    </Card>
   );
 }
 
 const styles = StyleSheet.create({
   card: {
-    borderWidth: StyleSheet.hairlineWidth,
-    borderRadius: radius.lg,
-    paddingTop: spacing.lg,
-    paddingBottom: spacing.lg,
-    paddingHorizontal: spacing.md,
     position: 'relative',
   },
   swap: {
