@@ -27,8 +27,8 @@ export function Chip({ label, selected = false, onPress, style }: ChipProps) {
           borderWidth: 1,
           minHeight: 32,
           justifyContent: 'center',
-          borderColor: selected ? colors.textPrimary : colors.borderStrong,
-          backgroundColor: selected ? colors.textPrimary : 'transparent',
+          borderColor: selected ? colors.textPrimary : colors.border,
+          backgroundColor: selected ? colors.textPrimary : colors.surface,
           opacity: pressed ? 0.8 : 1,
         },
         style,
@@ -37,6 +37,8 @@ export function Chip({ label, selected = false, onPress, style }: ChipProps) {
       <AppText
         variant="caption"
         weight={selected ? '600' : '400'}
+        align="center"
+        numberOfLines={1}
         style={{ color: selected ? colors.surface : colors.textSecondary }}
       >
         {label}
