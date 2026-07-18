@@ -196,8 +196,8 @@ export default function LogActivityScreen() {
           </AppText>
           <AppText
             variant="caption"
-            style={{ color: 'rgba(235,240,245,0.9)', maxWidth: 260 }}
-            numberOfLines={2}
+            style={{ color: 'rgba(235,240,245,0.9)' }}
+            numberOfLines={1}
           >
             {HERO_BLURBS[activityType]}
           </AppText>
