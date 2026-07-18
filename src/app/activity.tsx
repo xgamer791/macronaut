@@ -2,6 +2,7 @@ import * as Haptics from 'expo-haptics';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
+import Animated, { useAnimatedStyle } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ACTIVITY_CATEGORIES, computeImprovements } from '@/domain/activity';
@@ -10,7 +11,6 @@ import {
   useActivityEntries,
   useActivityRange,
   useDeleteActivityEntry,
-  useDayProgress,
 } from '@/state/queries';
 import { useUiStore } from '@/state/uiStore';
 import { ActivityEntry, ActivityType } from '@/repositories/types';
@@ -21,6 +21,8 @@ import {
   rangeDays,
   shortWeekdayLabel,
   todayKey,
+  weekDays,
+  weekdayLetter,
 } from '@/utils/date';
 import {
   AppText,
@@ -32,20 +34,17 @@ import {
   EmptyState,
   ListRow,
   MonthCalendarPopup,
-  ProgressRing,
   Screen,
   ScreenHeader,
   StatTile,
 } from '@/ui/components';
+import { useBarEntranceProgress } from '@/ui/motion/barEntrance';
 import { useTheme } from '@/ui/theme/ThemeProvider';
 import { spacing, touchTarget } from '@/ui/theme/tokens';
 
 const CALENDAR_GAP = 8;
 
 type Range = '7' | '30' | '90';
-
-/** Soft visual target for the burn ring fill (not a stored goal). */
-const BURN_RING_TARGET = 400;
 
 const TYPE_LABEL: Record<ActivityType, string> = {
   cardio: 'Cardio',
@@ -59,7 +58,7 @@ function isActivityType(v: string | undefined): v is ActivityType {
   return !!v && v in TYPE_LABEL;
 }
 
-/** Activity hub — burn-ring hero, today’s log, collapsible trends. */
+/** Activity hub — week burn chart, today’s log, collapsible trends. */
 export default function ActivityScreen() {
   return (
     <BarEntranceProvider pageKey="activity">
@@ -76,7 +75,6 @@ function ActivityBody() {
   const params = useLocalSearchParams<{ type?: string }>();
   const date = useUiStore((s) => s.selectedDate);
   const setSelectedDate = useUiStore((s) => s.setSelectedDate);
-  const progress = useDayProgress(date);
   const todayEntries = useActivityEntries(date);
   const removeEntry = useDeleteActivityEntry();
   const todayRowRef = useRef<View>(null);
@@ -127,6 +125,24 @@ function ActivityBody() {
   const today = todayKey();
   const from = addDays(today, -(Number(range) - 1));
   const rangeQuery = useActivityRange(from, today);
+
+  // Fixed Mon→Sun week for the hero burn chart.
+  const weekKeys = useMemo(() => weekDays(date, 'monday'), [date]);
+  const weekQuery = useActivityRange(weekKeys[0], weekKeys[6]);
+  const weekBars = useMemo(() => {
+    const byDay: Record<DayKey, number> = {};
+    for (const e of weekQuery.data ?? []) {
+      if (typeFilter !== 'all' && e.activityType !== typeFilter) continue;
+      byDay[e.date] = (byDay[e.date] ?? 0) + e.caloriesBurned;
+    }
+    return weekKeys.map((d) => ({
+      date: d,
+      burned: byDay[d] ?? 0,
+      letter: weekdayLetter(d),
+    }));
+  }, [weekQuery.data, weekKeys, typeFilter]);
+  const weekBurned = weekBars.reduce((s, d) => s + d.burned, 0);
+  const maxWeekBurned = Math.max(...weekBars.map((d) => d.burned), 1);
 
   const filteredToday = useMemo(() => {
     const list = todayEntries.data ?? [];
@@ -214,11 +230,6 @@ function ActivityBody() {
     };
   }, [activity, todayEntries.data]);
 
-  const burnedToday = progress?.burned ?? 0;
-  const netFood = progress?.netCalories ?? 0;
-  const left = Math.abs(Math.round(progress?.caloriesRemaining ?? 0));
-  const ringProgress = burnedToday / BURN_RING_TARGET;
-
   const goLog = () =>
     router.push({
       pathname: '/log-activity',
@@ -242,35 +253,56 @@ function ActivityBody() {
       />
 
       <View style={{ flexGrow: 1, justifyContent: 'center', gap: spacing.lg }}>
-      <View style={{ alignItems: 'center', gap: spacing.md, paddingVertical: spacing.sm }}>
-        <ProgressRing
-          progress={ringProgress}
-          size={188}
-          strokeWidth={18}
-          accessibilityLabel={`${Math.round(burnedToday)} kilocalories burned today`}
-        >
-          <View style={{ alignItems: 'center', gap: 2 }}>
-            <AppText variant="hero" weight="600" display>
-              {Math.round(burnedToday).toLocaleString()}
-            </AppText>
-            <AppText variant="caption" tone="muted">
-              kcal burned
-            </AppText>
-          </View>
-        </ProgressRing>
-
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
-          <AppText variant="body" tone="secondary">
-            Left {left.toLocaleString()}
+      <Card style={{ gap: spacing.sm }}>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' }}>
+          <AppText variant="caption" tone="secondary">
+            Calories burned
           </AppText>
-          <AppText variant="body" tone="muted">
-            ·
-          </AppText>
-          <AppText variant="body" tone="secondary">
-            Net {Math.round(netFood).toLocaleString()}
+          <AppText variant="caption" tone="secondary">
+            Mon–Sun
           </AppText>
         </View>
-      </View>
+        <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 6 }}>
+          <AppText variant="title" weight="600" display style={{ color: colors.accent }}>
+            {Math.round(weekBurned).toLocaleString()}
+          </AppText>
+          <AppText variant="caption" tone="secondary">
+            kcal
+          </AppText>
+        </View>
+        <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 6, height: 56 }}>
+          {weekBars.map((d) => {
+            const isSelected = d.date === date;
+            const ratio = d.burned / maxWeekBurned;
+            const barHeight = Math.max(Math.min(Math.max(ratio, 0), 1) * 44, 3);
+            return (
+              <Pressable
+                key={d.date}
+                accessibilityRole="button"
+                accessibilityLabel={`${formatDayKey(d.date)}: ${Math.round(d.burned)} kcal burned`}
+                accessibilityState={{ selected: isSelected }}
+                onPress={() => {
+                  void Haptics.selectionAsync();
+                  setSelectedDate(d.date);
+                }}
+                style={{ flex: 1, alignItems: 'center', gap: 3 }}
+              >
+                <BurnWeekBar
+                  height={barHeight}
+                  color={d.burned > 0 ? colors.accent : colors.track}
+                />
+                <AppText
+                  variant="micro"
+                  tone={isSelected ? 'accent' : 'muted'}
+                  weight={isSelected ? '600' : '400'}
+                >
+                  {d.letter}
+                </AppText>
+              </Pressable>
+            );
+          })}
+        </View>
+      </Card>
 
       {/* Pills + Today share the same left/right edges (mockup alignment). */}
       <View style={{ gap: spacing.md }}>
@@ -481,6 +513,27 @@ function ActivityBody() {
         onSelect={pickDate}
       />
     </Screen>
+  );
+}
+
+/** Same entrance bar treatment as Today’s week strip — always accent green (no red). */
+function BurnWeekBar({ height, color }: { height: number; color: string }) {
+  const entrance = useBarEntranceProgress();
+  const style = useAnimatedStyle(() => ({
+    height: Math.max(height * entrance.value, 1),
+  }));
+
+  return (
+    <Animated.View
+      style={[
+        {
+          width: '100%',
+          borderRadius: 3,
+          backgroundColor: color,
+        },
+        style,
+      ]}
+    />
   );
 }
 
