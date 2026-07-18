@@ -154,20 +154,12 @@ function SquareTile({
             {subtitle}
           </AppText>
 
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={`Log ${name}`}
-            hitSlop={8}
-            onPress={(e) => {
-              e.stopPropagation?.();
-              onLog();
-            }}
-            style={styles.logLink}
-          >
+          {/* View (not Pressable) — nested <button> is invalid on web. Whole tile logs. */}
+          <View style={styles.logLink} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
             <AppText variant="caption" weight="700" style={[styles.logLabel, { color: accent }]}>
               Log
             </AppText>
-          </Pressable>
+          </View>
         </View>
       </View>
     </Pressable>
