@@ -5,7 +5,6 @@ import { MealCategory } from '@/repositories/types';
 import { useTheme } from '@/ui/theme/ThemeProvider';
 import { radius, spacing, touchTarget } from '@/ui/theme/tokens';
 import { AppText } from './AppText';
-import { LiquidGlassCard } from './LiquidGlassCard';
 
 const MEAL_ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
   breakfast: 'cafe-outline',
@@ -28,25 +27,24 @@ export interface MealLogListProps {
  * Used on the Today screen Meals/Diary section.
  */
 export function MealLogList({ categories, mealTotals, onLog, onOpenMeal }: MealLogListProps) {
-  const { colors, resolved } = useTheme();
+  const { colors } = useTheme();
 
   return (
     <View style={styles.list}>
       {categories.map((cat) => {
         const icon = MEAL_ICONS[cat.id] ?? 'restaurant-outline';
         const kcal = Math.round(mealTotals.get(cat.id) ?? 0);
-        const row = (
+        return (
           <Pressable
+            key={cat.id}
             accessibilityRole="button"
             accessibilityLabel={`${cat.name}, ${kcal} kcal. Log food`}
             onPress={() => onLog(cat.id)}
             style={[
               styles.card,
-              resolved === 'light' && {
+              {
                 backgroundColor: colors.surface,
                 borderColor: colors.border,
-                borderWidth: StyleSheet.hairlineWidth,
-                borderRadius: radius.lg,
               },
             ]}
           >
@@ -88,15 +86,6 @@ export function MealLogList({ categories, mealTotals, onLog, onOpenMeal }: MealL
             </Pressable>
           </Pressable>
         );
-
-        if (resolved === 'dark') {
-          return (
-            <LiquidGlassCard key={cat.id} padded={false}>
-              {row}
-            </LiquidGlassCard>
-          );
-        }
-        return <View key={cat.id}>{row}</View>;
       })}
     </View>
   );
@@ -112,6 +101,8 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.md,
+    borderRadius: radius.lg,
+    borderWidth: StyleSheet.hairlineWidth,
     minHeight: touchTarget + 12,
   },
   iconWrap: {
