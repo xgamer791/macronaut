@@ -289,11 +289,11 @@ const styles = StyleSheet.create({
     fontSize: 19,
     lineHeight: 26,
   },
-  // ~20% larger than the prior 14/20 body under the title.
+  // ~5% under the prior 17/24 body under the title.
   subtitle: {
     color: 'rgba(230,234,238,0.88)',
-    fontSize: 17,
-    lineHeight: 24,
+    fontSize: 16,
+    lineHeight: 23,
   },
   logLabel: {
     fontSize: 17,
