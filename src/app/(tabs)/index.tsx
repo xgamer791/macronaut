@@ -451,16 +451,18 @@ const styles = StyleSheet.create({
   },
   greetingLine: {
     color: 'rgba(242,244,247,0.92)',
-    fontSize: 20,
-    lineHeight: 26,
+    fontFamily: fonts.displayMedium,
+    fontSize: 22,
+    lineHeight: 28,
     fontWeight: '500',
   },
   nameLine: {
     color: '#FFFFFF',
-    fontSize: 40,
-    lineHeight: 46,
+    fontFamily: fonts.display,
+    fontSize: 42,
+    lineHeight: 48,
     fontWeight: '700',
-    letterSpacing: -0.6,
+    letterSpacing: -0.8,
   },
   statsRow: {
     flexDirection: 'row',
