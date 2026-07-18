@@ -263,26 +263,28 @@ function TodayBody() {
                 >
                   {cat.name}
                 </AppText>
-                {logged ? (
-                  <View style={styles.loggedRow}>
-                    <AppText variant="caption" weight="600" style={{ color: colors.accent }}>
-                      Logged
-                    </AppText>
-                    <Ionicons name="checkmark-circle" size={16} color={colors.accent} />
-                  </View>
-                ) : (
-                  <View style={[styles.logPill, { borderColor: colors.accent }]}>
-                    <AppText variant="caption" weight="600" style={{ color: colors.accent }}>
-                      Log
-                    </AppText>
-                  </View>
-                )}
+                <View style={styles.mealStatusSlot}>
+                  {logged ? (
+                    <View style={styles.loggedRow}>
+                      <AppText variant="caption" weight="600" style={{ color: colors.accent }}>
+                        Logged
+                      </AppText>
+                      <Ionicons name="checkmark-circle" size={16} color={colors.accent} />
+                    </View>
+                  ) : (
+                    <View style={[styles.logPill, { borderColor: colors.accent }]}>
+                      <AppText variant="caption" weight="600" style={{ color: colors.accent }}>
+                        Log
+                      </AppText>
+                    </View>
+                  )}
+                </View>
               </View>
               <View
                 style={[
                   styles.mealBadge,
                   {
-                    backgroundColor: logged ? colors.accent : 'transparent',
+                    backgroundColor: logged ? colors.accent : 'rgba(8,12,16,0.25)',
                     borderColor: colors.accent,
                   },
                 ]}
@@ -407,16 +409,20 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   mealCard: {
-    height: 132,
+    height: 140,
     borderRadius: radius.xl,
     overflow: 'hidden',
-    justifyContent: 'center',
     paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.lg,
   },
   mealCopy: {
-    gap: spacing.sm,
-    maxWidth: '58%',
+    flex: 1,
+    maxWidth: '62%',
+    justifyContent: 'space-between',
     zIndex: 2,
+  },
+  mealStatusSlot: {
+    alignSelf: 'flex-start',
   },
   loggedRow: {
     flexDirection: 'row',
@@ -434,8 +440,7 @@ const styles = StyleSheet.create({
   mealBadge: {
     position: 'absolute',
     right: spacing.lg,
-    top: '50%',
-    marginTop: -18,
+    top: spacing.lg,
     width: 36,
     height: 36,
     borderRadius: 18,
