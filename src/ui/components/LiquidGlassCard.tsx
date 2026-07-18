@@ -4,6 +4,9 @@ import { GlassView, isGlassEffectAPIAvailable } from 'expo-glass-effect';
 import { spacing } from '@/ui/theme/tokens';
 
 const GLASS_RADIUS = 22;
+/** Same stroke on every side — avoid hairline + top highlight stacking. */
+const GLASS_BORDER = 1;
+const GLASS_BORDER_COLOR = 'rgba(255, 255, 255, 0.14)';
 
 export interface LiquidGlassCardProps {
   children: React.ReactNode;
@@ -16,7 +19,7 @@ export interface LiquidGlassCardProps {
 
 /**
  * Clean liquid-glass surface — native GlassView on iOS 26+, CSS blur elsewhere.
- * Light fill, thin rim, soft top specular — no muddy overlays.
+ * Uniform 1px rim on all sides (no thicker top highlight).
  */
 export function LiquidGlassCard({
   children,
@@ -57,12 +60,7 @@ export function LiquidGlassCard({
         style,
       ]}
     >
-      {/* Soft depth fill */}
       <View pointerEvents="none" style={styles.glassFill} />
-      {/* Top specular — liquid glass highlight */}
-      <View pointerEvents="none" style={styles.glassHighlight} />
-      {/* Gentle bottom fade for depth without mud */}
-      <View pointerEvents="none" style={styles.glassDepth} />
       <View style={[styles.inner, pad, contentStyle]}>{children}</View>
     </View>
   );
@@ -72,14 +70,18 @@ const styles = StyleSheet.create({
   glassNative: {
     borderRadius: GLASS_RADIUS,
     overflow: 'hidden',
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
+    borderWidth: GLASS_BORDER,
+    borderColor: GLASS_BORDER_COLOR,
   },
   glassWeb: {
     borderRadius: GLASS_RADIUS,
     overflow: 'hidden',
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(255, 255, 255, 0.14)',
+    borderWidth: GLASS_BORDER,
+    borderTopWidth: GLASS_BORDER,
+    borderRightWidth: GLASS_BORDER,
+    borderBottomWidth: GLASS_BORDER,
+    borderLeftWidth: GLASS_BORDER,
+    borderColor: GLASS_BORDER_COLOR,
     backgroundColor: 'rgba(22, 28, 34, 0.42)',
     shadowColor: '#000',
     shadowOpacity: 0.28,
@@ -90,23 +92,6 @@ const styles = StyleSheet.create({
   glassFill: {
     ...StyleSheet.absoluteFill,
     backgroundColor: 'rgba(255, 255, 255, 0.03)',
-  },
-  glassHighlight: {
-    position: 'absolute',
-    top: 0,
-    left: 12,
-    right: 12,
-    height: StyleSheet.hairlineWidth * 2,
-    borderRadius: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.35)',
-  },
-  glassDepth: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
-    height: '45%',
-    backgroundColor: 'rgba(0, 0, 0, 0.12)',
   },
   inner: {
     position: 'relative',
