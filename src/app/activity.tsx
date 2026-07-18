@@ -29,6 +29,7 @@ import {
   Chip,
   EmptyState,
   ListRow,
+  ProgressRing,
   Screen,
   ScreenHeader,
   StatTile,
@@ -37,6 +38,9 @@ import { useTheme } from '@/ui/theme/ThemeProvider';
 import { spacing } from '@/ui/theme/tokens';
 
 type Range = '7' | '30' | '90';
+
+/** Soft visual target for the burn ring fill (not a stored goal). */
+const BURN_RING_TARGET = 400;
 
 const TYPE_LABEL: Record<ActivityType, string> = {
   cardio: 'Cardio',
@@ -50,7 +54,7 @@ function isActivityType(v: string | undefined): v is ActivityType {
   return !!v && v in TYPE_LABEL;
 }
 
-/** Activity hub: today log, burn charts, type mix, and improvement highlights. */
+/** Activity hub — burn-ring hero, today’s log, collapsible trends. */
 export default function ActivityScreen() {
   return (
     <BarEntranceProvider pageKey="activity">
@@ -73,6 +77,7 @@ function ActivityBody() {
   const filterType: ActivityType | 'all' = isActivityType(params.type) ? params.type : 'all';
   const [range, setRange] = useState<Range>('7');
   const [typeFilter, setTypeFilter] = useState<ActivityType | 'all'>(filterType);
+  const [trendsOpen, setTrendsOpen] = useState(false);
 
   const today = todayKey();
   const from = addDays(today, -(Number(range) - 1));
@@ -165,6 +170,15 @@ function ActivityBody() {
   }, [activity, todayEntries.data]);
 
   const burnedToday = progress?.burned ?? 0;
+  const netFood = progress?.netCalories ?? 0;
+  const left = Math.abs(Math.round(progress?.caloriesRemaining ?? 0));
+  const ringProgress = burnedToday / BURN_RING_TARGET;
+
+  const goLog = () =>
+    router.push({
+      pathname: '/log-activity',
+      params: typeFilter === 'all' ? undefined : { type: typeFilter },
+    });
 
   return (
     <Screen>
@@ -174,12 +188,7 @@ function ActivityBody() {
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="Log activity"
-            onPress={() =>
-              router.push({
-                pathname: '/log-activity',
-                params: typeFilter === 'all' ? undefined : { type: typeFilter },
-              })
-            }
+            onPress={goLog}
             style={{ minWidth: 44, minHeight: 44, alignItems: 'flex-end', justifyContent: 'center' }}
           >
             <Ionicons name="add" size={28} color={colors.accent} />
@@ -187,21 +196,34 @@ function ActivityBody() {
         }
       />
 
-      <AppText variant="caption" tone="secondary">
-        Track cardio, strength, and more. Burned calories raise your daily remaining. Designed for
-        future Apple Watch sync on iOS.
-      </AppText>
+      <View style={{ alignItems: 'center', gap: spacing.md, paddingVertical: spacing.sm }}>
+        <ProgressRing
+          progress={ringProgress}
+          size={188}
+          strokeWidth={14}
+          accessibilityLabel={`${Math.round(burnedToday)} kilocalories burned today`}
+        >
+          <View style={{ alignItems: 'center', gap: 2 }}>
+            <AppText variant="hero" weight="600" display>
+              {Math.round(burnedToday).toLocaleString()}
+            </AppText>
+            <AppText variant="caption" tone="muted">
+              kcal burned
+            </AppText>
+          </View>
+        </ProgressRing>
 
-      <View style={{ flexDirection: 'row', gap: spacing.md }}>
-        <StatTile label="Burned today" value={Math.round(burnedToday).toLocaleString()} />
-        <StatTile
-          label="Net food"
-          value={Math.round(progress?.netCalories ?? 0).toLocaleString()}
-        />
-        <StatTile
-          label="Left"
-          value={Math.abs(Math.round(progress?.caloriesRemaining ?? 0)).toLocaleString()}
-        />
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+          <AppText variant="body" tone="secondary">
+            Left {left.toLocaleString()}
+          </AppText>
+          <AppText variant="body" tone="muted">
+            ·
+          </AppText>
+          <AppText variant="body" tone="secondary">
+            Net {Math.round(netFood).toLocaleString()}
+          </AppText>
+        </View>
       </View>
 
       <View style={{ flexDirection: 'row', gap: spacing.sm, flexWrap: 'wrap' }}>
@@ -224,13 +246,6 @@ function ActivityBody() {
         <EmptyState
           title="No workouts yet"
           body="Log a session to see burn, pace improvements, and charts."
-          actionTitle="Log activity"
-          onAction={() =>
-            router.push({
-              pathname: '/log-activity',
-              params: typeFilter === 'all' ? undefined : { type: typeFilter },
-            })
-          }
         />
       ) : (
         <Card padded={false} style={{ paddingHorizontal: spacing.lg, paddingVertical: spacing.xs }}>
@@ -285,69 +300,89 @@ function ActivityBody() {
         </>
       ) : null}
 
-      <View style={{ flexDirection: 'row', gap: spacing.sm }}>
-        {(['7', '30', '90'] as const).map((r) => (
-          <Chip key={r} label={`${r}d`} selected={range === r} onPress={() => setRange(r)} />
-        ))}
-      </View>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityState={{ expanded: trendsOpen }}
+        accessibilityLabel={trendsOpen ? 'Hide trends' : 'Show trends'}
+        onPress={() => setTrendsOpen((o) => !o)}
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          minHeight: 44,
+        }}
+      >
+        <AppText variant="heading" weight="600" display>
+          Trends
+        </AppText>
+        <Ionicons
+          name={trendsOpen ? 'chevron-up' : 'chevron-down'}
+          size={22}
+          color={colors.textSecondary}
+        />
+      </Pressable>
 
-      <View style={{ flexDirection: 'row', gap: spacing.md }}>
-        <StatTile label="Burned" value={Math.round(rangeTotals.burned).toLocaleString()} />
-        <StatTile label="Minutes" value={Math.round(rangeTotals.minutes).toLocaleString()} />
-        <StatTile label="Active days" value={String(rangeTotals.activeDays)} />
-      </View>
+      {trendsOpen ? (
+        <View style={{ gap: spacing.lg }}>
+          <View style={{ flexDirection: 'row', gap: spacing.sm }}>
+            {(['7', '30', '90'] as const).map((r) => (
+              <Chip key={r} label={`${r}d`} selected={range === r} onPress={() => setRange(r)} />
+            ))}
+          </View>
 
-      <AppText variant="heading" weight="600" display>
-        Calories burned
-      </AppText>
-      <Card>
-        {rangeTotals.sessions === 0 ? (
-          <AppText variant="caption" tone="muted" align="center">
-            Charts fill in as you log workouts.
-          </AppText>
-        ) : (
-          <BarChart data={chart} accessibilityLabel={`Calories burned over the last ${range} days`} />
-        )}
-      </Card>
+          <View style={{ flexDirection: 'row', gap: spacing.md }}>
+            <StatTile label="Burned" value={Math.round(rangeTotals.burned).toLocaleString()} />
+            <StatTile label="Minutes" value={Math.round(rangeTotals.minutes).toLocaleString()} />
+            <StatTile label="Active days" value={String(rangeTotals.activeDays)} />
+          </View>
 
-      <AppText variant="heading" weight="600" display>
-        Minutes active
-      </AppText>
-      <Card>
-        {rangeTotals.minutes === 0 ? (
-          <AppText variant="caption" tone="muted" align="center">
-            Add durations to unlock this chart.
-          </AppText>
-        ) : (
-          <BarChart data={durationChart} accessibilityLabel={`Active minutes over the last ${range} days`} />
-        )}
-      </Card>
-
-      {typeBreakdown.length > 0 ? (
-        <>
           <AppText variant="heading" weight="600" display>
-            Burn by type
+            Calories burned
           </AppText>
           <Card>
-            <BarChart data={typeBreakdown} accessibilityLabel="Calories burned by activity type" />
+            {rangeTotals.sessions === 0 ? (
+              <AppText variant="caption" tone="muted" align="center">
+                Charts fill in as you log workouts.
+              </AppText>
+            ) : (
+              <BarChart
+                data={chart}
+                accessibilityLabel={`Calories burned over the last ${range} days`}
+              />
+            )}
           </Card>
-        </>
+
+          <AppText variant="heading" weight="600" display>
+            Minutes active
+          </AppText>
+          <Card>
+            {rangeTotals.minutes === 0 ? (
+              <AppText variant="caption" tone="muted" align="center">
+                Add durations to unlock this chart.
+              </AppText>
+            ) : (
+              <BarChart
+                data={durationChart}
+                accessibilityLabel={`Active minutes over the last ${range} days`}
+              />
+            )}
+          </Card>
+
+          {typeBreakdown.length > 0 ? (
+            <>
+              <AppText variant="heading" weight="600" display>
+                Burn by type
+              </AppText>
+              <Card>
+                <BarChart data={typeBreakdown} accessibilityLabel="Calories burned by activity type" />
+              </Card>
+            </>
+          ) : null}
+        </View>
       ) : null}
 
-      <Button
-        title="Log activity"
-        onPress={() =>
-          router.push({
-            pathname: '/log-activity',
-            params: typeFilter === 'all' ? undefined : { type: typeFilter },
-          })
-        }
-      />
-      <Button
-        title="Jump to today"
-        variant="ghost"
-        onPress={() => setSelectedDate(todayKey())}
-      />
+      <Button title="Log activity" onPress={goLog} />
+      <Button title="Jump to today" variant="ghost" onPress={() => setSelectedDate(todayKey())} />
     </Screen>
   );
 }
