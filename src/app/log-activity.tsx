@@ -415,6 +415,7 @@ const styles = StyleSheet.create({
   hero: {
     width: '100%',
     flexShrink: 0,
+    overflow: 'hidden',
   },
   header: {
     flexDirection: 'row',
@@ -438,7 +439,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: spacing.lg,
     right: spacing.lg,
-    bottom: spacing.md + 18,
+    bottom: spacing.md,
     gap: 2,
   },
   heroIconRing: {
@@ -454,12 +455,10 @@ const styles = StyleSheet.create({
   chipScroll: {
     flexGrow: 0,
     flexShrink: 0,
-    // Negative margin pulls chips into the hero fade without leaving a gap below.
-    marginTop: -20,
   },
   chipRow: {
     paddingHorizontal: spacing.lg,
-    paddingTop: spacing.xs,
+    paddingTop: spacing.sm,
     paddingBottom: spacing.sm,
     gap: spacing.sm,
   },
