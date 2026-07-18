@@ -56,7 +56,7 @@ export default function LogActivityScreen() {
   const router = useRouter();
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
-  const { width } = useWindowDimensions();
+  const { width, height: windowHeight } = useWindowDimensions();
   const params = useLocalSearchParams<{ type?: string; name?: string }>();
   const addEntry = useAddActivityEntry();
   const date = useUiStore((s) => s.selectedDate);
@@ -121,89 +121,97 @@ export default function LogActivityScreen() {
     }
   }
 
-  const heroHeight = Math.round(width * 0.92);
+  // Fill the viewport: ~32% hero, fixed chips, panel grows to the bottom.
+  const heroHeight = Math.round(
+    Math.min(Math.max(windowHeight * 0.32, 200), width * 0.68),
+  );
 
   return (
-    <View style={[styles.root, { backgroundColor: colors.background }]}>
-      <ScrollView
-        bounces={false}
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: insets.bottom + spacing.xl }}
-      >
-        {/* —— Hero —— */}
-        <View style={{ height: heroHeight, width: '100%' }}>
-          <Image
-            source={heroImage}
-            style={StyleSheet.absoluteFill}
-            contentFit="cover"
-            transition={200}
-          />
-          <LinearGradient
-            colors={['rgba(8,12,16,0.35)', 'rgba(8,12,16,0.15)', 'rgba(8,12,16,0.92)']}
-            locations={[0, 0.45, 1]}
-            style={StyleSheet.absoluteFill}
-          />
+    <View
+      style={[
+        styles.root,
+        {
+          backgroundColor: colors.background,
+          paddingBottom: Math.max(insets.bottom, spacing.sm),
+        },
+      ]}
+    >
+      {/* —— Hero —— */}
+      <View style={[styles.hero, { height: heroHeight }]}>
+        <Image
+          source={heroImage}
+          style={StyleSheet.absoluteFill}
+          contentFit="cover"
+          transition={200}
+        />
+        <LinearGradient
+          colors={['rgba(8,12,16,0.35)', 'rgba(8,12,16,0.15)', 'rgba(8,12,16,0.92)']}
+          locations={[0, 0.45, 1]}
+          style={StyleSheet.absoluteFill}
+        />
 
-          {/* Header over hero */}
-          <View style={[styles.header, { paddingTop: insets.top + spacing.sm }]}>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Close"
-              onPress={() => goBackOrHome(router)}
-              hitSlop={8}
-              style={styles.headerBtn}
-            >
-              <Ionicons name="close" size={26} color="#FFFFFF" />
-            </Pressable>
-            <AppText
-              variant="heading"
-              weight="600"
-              display
-              style={styles.headerTitle}
-              numberOfLines={1}
-            >
-              Log Activity
-            </AppText>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Save workout"
-              disabled={saving}
-              onPress={save}
-              hitSlop={8}
-              style={styles.headerBtn}
-            >
-              <Ionicons
-                name="checkmark"
-                size={28}
-                color={saving ? colors.textMuted : colors.accent}
-              />
-            </Pressable>
-          </View>
-
-          {/* Hero copy */}
-          <View style={styles.heroCopy}>
-            <View style={[styles.heroIconRing, { borderColor: colors.accent }]}>
-              <Ionicons name={category.icon} size={22} color={colors.accent} />
-            </View>
-            <AppText variant="title" weight="700" display style={{ color: '#FFFFFF' }}>
-              {category.name}
-            </AppText>
-            <AppText
-              variant="body"
-              style={{ color: 'rgba(235,240,245,0.9)', maxWidth: 260 }}
-              numberOfLines={2}
-            >
-              {HERO_BLURBS[activityType]}
-            </AppText>
-          </View>
+        {/* Header over hero */}
+        <View style={[styles.header, { paddingTop: insets.top + spacing.xs }]}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Close"
+            onPress={() => goBackOrHome(router)}
+            hitSlop={8}
+            style={styles.headerBtn}
+          >
+            <Ionicons name="close" size={26} color="#FFFFFF" />
+          </Pressable>
+          <AppText
+            variant="heading"
+            weight="600"
+            display
+            style={styles.headerTitle}
+            numberOfLines={1}
+          >
+            Log Activity
+          </AppText>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Save workout"
+            disabled={saving}
+            onPress={save}
+            hitSlop={8}
+            style={styles.headerBtn}
+          >
+            <Ionicons
+              name="checkmark"
+              size={28}
+              color={saving ? colors.textMuted : colors.accent}
+            />
+          </Pressable>
         </View>
 
-        {/* —— Type photo chips —— */}
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.chipRow}
-        >
+        {/* Hero copy */}
+        <View style={styles.heroCopy}>
+          <View style={[styles.heroIconRing, { borderColor: colors.accent }]}>
+            <Ionicons name={category.icon} size={20} color={colors.accent} />
+          </View>
+          <AppText variant="title" weight="700" display style={{ color: '#FFFFFF' }}>
+            {category.name}
+          </AppText>
+          <AppText
+            variant="caption"
+            style={{ color: 'rgba(235,240,245,0.9)', maxWidth: 260 }}
+            numberOfLines={2}
+          >
+            {HERO_BLURBS[activityType]}
+          </AppText>
+        </View>
+      </View>
+
+      {/* —— Type photo chips —— */}
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        bounces={false}
+        style={styles.chipScroll}
+        contentContainerStyle={styles.chipRow}
+      >
           {ACTIVITY_CATEGORIES.map((c) => {
             const typeId = c.id as Exclude<ActivityType, 'other'>;
             const selected = activityType === typeId;
@@ -256,146 +264,145 @@ export default function LogActivityScreen() {
           })}
         </ScrollView>
 
-        {/* —— Details panel —— */}
-        <View style={[styles.panel, { backgroundColor: colors.surface }]}>
+      {/* —— Details panel (fills remaining viewport height) —— */}
+      <View style={[styles.panel, { backgroundColor: colors.surface }]}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Edit calories"
+          onPress={() => setCalorieEdit((v) => !v)}
+          style={styles.calRow}
+        >
+          <View style={{ flex: 1, gap: 2 }}>
+            <AppText variant="micro" tone="muted" weight="600" style={styles.caps}>
+              Calories
+            </AppText>
+            <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 8 }}>
+              <AppText
+                variant="hero"
+                weight="600"
+                display
+                style={{ color: colors.accent, fontSize: 36, lineHeight: 42 }}
+              >
+                {Math.round(caloriesBurned).toLocaleString()}
+              </AppText>
+              <AppText variant="body" style={{ color: colors.accent }}>
+                kcal
+              </AppText>
+            </View>
+          </View>
+          <Ionicons name="flame" size={26} color={colors.accent} />
+        </Pressable>
+
+        {calorieEdit ? (
+          <NumberField
+            label="Adjust calories"
+            value={caloriesBurned}
+            onChange={setCaloriesOverride}
+            min={0}
+          />
+        ) : null}
+
+        <View style={[styles.splitRow, { borderColor: colors.border }]}>
+          <View style={styles.splitCell}>
+            <AppText variant="micro" tone="muted" weight="600" style={styles.caps}>
+              Duration
+            </AppText>
+            <View style={styles.splitValue}>
+              <Ionicons name="time-outline" size={18} color={colors.accent} />
+              <TextInput
+                accessibilityLabel="Duration in minutes"
+                keyboardType="number-pad"
+                value={durationMin !== undefined ? String(durationMin) : ''}
+                onChangeText={(t) => {
+                  if (t === '') {
+                    setDurationMin(undefined);
+                    return;
+                  }
+                  const n = Number(t);
+                  if (Number.isFinite(n) && n >= 0) setDurationMin(Math.round(n));
+                }}
+                placeholder="0"
+                placeholderTextColor={colors.textMuted}
+                style={[styles.durationInput, { color: colors.textPrimary }]}
+              />
+              <AppText variant="caption" tone="muted">
+                min
+              </AppText>
+            </View>
+          </View>
+
+          <View style={[styles.vRule, { backgroundColor: colors.borderStrong }]} />
+
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Edit calories"
-            onPress={() => setCalorieEdit((v) => !v)}
-            style={styles.calRow}
+            accessibilityLabel={`Intensity ${INTENSITY_LABEL[intensity]}`}
+            onPress={() => setIntensityOpen((o) => !o)}
+            style={styles.splitCell}
           >
-            <View style={{ flex: 1, gap: 4 }}>
-              <AppText variant="micro" tone="muted" weight="600" style={styles.caps}>
-                Calories
-              </AppText>
-              <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 8 }}>
-                <AppText
-                  variant="hero"
-                  weight="600"
-                  display
-                  style={{ color: colors.accent, fontSize: 40, lineHeight: 46 }}
-                >
-                  {Math.round(caloriesBurned).toLocaleString()}
-                </AppText>
-                <AppText variant="body" style={{ color: colors.accent }}>
-                  kcal
-                </AppText>
-              </View>
-            </View>
-            <Ionicons name="flame" size={28} color={colors.accent} />
-          </Pressable>
-
-          {calorieEdit ? (
-            <NumberField
-              label="Adjust calories"
-              value={caloriesBurned}
-              onChange={setCaloriesOverride}
-              min={0}
-            />
-          ) : null}
-
-          <View style={[styles.splitRow, { borderColor: colors.border }]}>
-            <View style={styles.splitCell}>
-              <AppText variant="micro" tone="muted" weight="600" style={styles.caps}>
-                Duration
-              </AppText>
-              <View style={styles.splitValue}>
-                <Ionicons name="time-outline" size={18} color={colors.accent} />
-                <TextInput
-                  accessibilityLabel="Duration in minutes"
-                  keyboardType="number-pad"
-                  value={durationMin !== undefined ? String(durationMin) : ''}
-                  onChangeText={(t) => {
-                    if (t === '') {
-                      setDurationMin(undefined);
-                      return;
-                    }
-                    const n = Number(t);
-                    if (Number.isFinite(n) && n >= 0) setDurationMin(Math.round(n));
-                  }}
-                  placeholder="0"
-                  placeholderTextColor={colors.textMuted}
-                  style={[styles.durationInput, { color: colors.textPrimary }]}
-                />
-                <AppText variant="caption" tone="muted">
-                  min
-                </AppText>
-              </View>
-            </View>
-
-            <View style={[styles.vRule, { backgroundColor: colors.borderStrong }]} />
-
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={`Intensity ${INTENSITY_LABEL[intensity]}`}
-              onPress={() => setIntensityOpen((o) => !o)}
-              style={styles.splitCell}
-            >
-              <AppText variant="micro" tone="muted" weight="600" style={styles.caps}>
-                Intensity
-              </AppText>
-              <View style={styles.splitValue}>
-                <Ionicons name="cellular-outline" size={18} color={colors.accent} />
-                <AppText variant="body" weight="600">
-                  {INTENSITY_LABEL[intensity]}
-                </AppText>
-                <Ionicons name="chevron-down" size={16} color={colors.textMuted} />
-              </View>
-            </Pressable>
-          </View>
-
-          {intensityOpen ? (
-            <View style={styles.intensityMenu}>
-              {(['easy', 'moderate', 'hard'] as ActivityIntensity[]).map((level) => (
-                <Pressable
-                  key={level}
-                  onPress={() => {
-                    setIntensity(level);
-                    setIntensityOpen(false);
-                  }}
-                  style={[
-                    styles.intensityOption,
-                    intensity === level && { backgroundColor: colors.accent + '22' },
-                  ]}
-                >
-                  <AppText
-                    variant="body"
-                    weight={intensity === level ? '600' : '400'}
-                    style={{ color: intensity === level ? colors.accent : colors.textPrimary }}
-                  >
-                    {INTENSITY_LABEL[level]}
-                  </AppText>
-                </Pressable>
-              ))}
-            </View>
-          ) : null}
-
-          <View style={{ gap: spacing.xs }}>
             <AppText variant="micro" tone="muted" weight="600" style={styles.caps}>
-              Notes (optional)
+              Intensity
             </AppText>
-            <TextInput
-              accessibilityLabel="Notes"
-              value={notes}
-              onChangeText={(t) => setNotes(t.slice(0, 150))}
-              placeholder="How did it go?"
-              placeholderTextColor={colors.textMuted}
-              multiline
-              style={[
-                styles.notes,
-                {
-                  color: colors.textPrimary,
-                  borderColor: colors.borderStrong,
-                  backgroundColor: colors.background,
-                },
-              ]}
-            />
-            <AppText variant="micro" tone="muted" align="right">
-              {notes.length}/150
-            </AppText>
-          </View>
+            <View style={styles.splitValue}>
+              <Ionicons name="cellular-outline" size={18} color={colors.accent} />
+              <AppText variant="body" weight="600">
+                {INTENSITY_LABEL[intensity]}
+              </AppText>
+              <Ionicons name="chevron-down" size={16} color={colors.textMuted} />
+            </View>
+          </Pressable>
         </View>
-      </ScrollView>
+
+        {intensityOpen ? (
+          <View style={styles.intensityMenu}>
+            {(['easy', 'moderate', 'hard'] as ActivityIntensity[]).map((level) => (
+              <Pressable
+                key={level}
+                onPress={() => {
+                  setIntensity(level);
+                  setIntensityOpen(false);
+                }}
+                style={[
+                  styles.intensityOption,
+                  intensity === level && { backgroundColor: colors.accent + '22' },
+                ]}
+              >
+                <AppText
+                  variant="body"
+                  weight={intensity === level ? '600' : '400'}
+                  style={{ color: intensity === level ? colors.accent : colors.textPrimary }}
+                >
+                  {INTENSITY_LABEL[level]}
+                </AppText>
+              </Pressable>
+            ))}
+          </View>
+        ) : null}
+
+        <View style={styles.notesBlock}>
+          <AppText variant="micro" tone="muted" weight="600" style={styles.caps}>
+            Notes (optional)
+          </AppText>
+          <TextInput
+            accessibilityLabel="Notes"
+            value={notes}
+            onChangeText={(t) => setNotes(t.slice(0, 150))}
+            placeholder="How did it go?"
+            placeholderTextColor={colors.textMuted}
+            multiline
+            style={[
+              styles.notes,
+              {
+                color: colors.textPrimary,
+                borderColor: colors.borderStrong,
+                backgroundColor: colors.background,
+              },
+            ]}
+          />
+          <AppText variant="micro" tone="muted" align="right">
+            {notes.length}/150
+          </AppText>
+        </View>
+      </View>
     </View>
   );
 }
@@ -403,6 +410,11 @@ export default function LogActivityScreen() {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
+    overflow: 'hidden',
+  },
+  hero: {
+    width: '100%',
+    flexShrink: 0,
   },
   header: {
     flexDirection: 'row',
@@ -426,28 +438,33 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: spacing.lg,
     right: spacing.lg,
-    bottom: spacing.lg + 4,
-    gap: 8,
+    bottom: spacing.md + 18,
+    gap: 2,
   },
   heroIconRing: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
     borderWidth: 2,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 4,
+    marginBottom: 2,
+  },
+  // Keep the chip row from stealing vertical flex space (RN ScrollView default).
+  chipScroll: {
+    flexGrow: 0,
+    flexShrink: 0,
+    // Negative margin pulls chips into the hero fade without leaving a gap below.
+    marginTop: -20,
   },
   chipRow: {
     paddingHorizontal: spacing.lg,
-    paddingTop: spacing.sm,
-    paddingBottom: spacing.md,
+    paddingTop: spacing.xs,
+    paddingBottom: spacing.sm,
     gap: spacing.sm,
-    // Sit the photo chips into the hero fade, like the mockup.
-    marginTop: -28,
   },
   typeChip: {
-    height: 132,
+    height: 88,
     borderRadius: radius.lg,
     overflow: 'hidden',
     borderWidth: 2,
@@ -457,9 +474,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#1A1F24',
   },
   chipIcon: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
     alignItems: 'center',
     justifyContent: 'center',
     alignSelf: 'flex-start',
@@ -469,15 +486,24 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
   },
   panel: {
+    flex: 1,
+    minHeight: 0,
     marginHorizontal: spacing.lg,
+    marginBottom: spacing.xs,
     borderRadius: radius.xl,
-    padding: spacing.lg,
-    gap: spacing.lg,
+    padding: spacing.md,
+    gap: spacing.sm,
+  },
+  notesBlock: {
+    flex: 1,
+    minHeight: 0,
+    gap: spacing.xs,
   },
   calRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
+    flexShrink: 0,
   },
   caps: {
     textTransform: 'uppercase',
@@ -488,11 +514,12 @@ const styles = StyleSheet.create({
     alignItems: 'stretch',
     borderTopWidth: StyleSheet.hairlineWidth,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    paddingVertical: spacing.md,
+    paddingVertical: spacing.sm,
+    flexShrink: 0,
   },
   splitCell: {
     flex: 1,
-    gap: 8,
+    gap: 6,
     paddingHorizontal: spacing.xs,
   },
   splitValue: {
@@ -512,7 +539,7 @@ const styles = StyleSheet.create({
   },
   intensityMenu: {
     gap: 4,
-    marginTop: -spacing.sm,
+    flexShrink: 0,
   },
   intensityOption: {
     paddingVertical: spacing.sm,
@@ -520,7 +547,8 @@ const styles = StyleSheet.create({
     borderRadius: radius.sm,
   },
   notes: {
-    minHeight: 88,
+    flex: 1,
+    minHeight: 64,
     borderWidth: 1,
     borderRadius: radius.md,
     paddingHorizontal: spacing.md,
