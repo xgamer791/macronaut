@@ -92,7 +92,7 @@ export function ActivityLogList({ burnedByType, onLog, onOpenType }: ActivityLog
           accent={colors.accent}
           onPress={() => (onOpenType ?? onLog)('mobility')}
           onLog={() => onLog('mobility')}
-          subtitleLines={1}
+          subtitleLines={2}
         />
       </View>
     </View>
@@ -210,10 +210,11 @@ const styles = StyleSheet.create({
   copy: {
     gap: 4,
   },
+  // ~6% under the prior 19/26 header size.
   title: {
     color: '#FFFFFF',
-    fontSize: 19,
-    lineHeight: 26,
+    fontSize: 18,
+    lineHeight: 24,
   },
   subtitle: {
     color: 'rgba(230,234,238,0.88)',
