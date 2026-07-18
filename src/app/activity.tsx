@@ -1,6 +1,6 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useMemo, useState } from 'react';
-import { Pressable, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { ACTIVITY_CATEGORIES, computeImprovements } from '@/domain/activity';
 import { useRepos } from '@/state/AppProvider';
@@ -27,6 +27,7 @@ import {
   Button,
   Card,
   Chip,
+  DatePickSheet,
   EmptyState,
   ListRow,
   ProgressRing,
@@ -69,6 +70,7 @@ function ActivityBody() {
   const { activity } = useRepos();
   const params = useLocalSearchParams<{ type?: string }>();
   const date = useUiStore((s) => s.selectedDate);
+  const setSelectedDate = useUiStore((s) => s.setSelectedDate);
   const progress = useDayProgress(date);
   const todayEntries = useActivityEntries(date);
   const removeEntry = useDeleteActivityEntry();
@@ -77,6 +79,7 @@ function ActivityBody() {
   const [range, setRange] = useState<Range>('7');
   const [typeFilter, setTypeFilter] = useState<ActivityType | 'all'>(filterType);
   const [trendsOpen, setTrendsOpen] = useState(false);
+  const [datePickerOpen, setDatePickerOpen] = useState(false);
 
   const today = todayKey();
   const from = addDays(today, -(Number(range) - 1));
@@ -226,35 +229,61 @@ function ActivityBody() {
         </View>
       </View>
 
-      <View
-        style={{
-          flexDirection: 'row',
-          flexWrap: 'nowrap',
-          justifyContent: 'center',
-          alignItems: 'center',
-          gap: 4,
-        }}
-      >
-        <Chip
-          label="All"
-          selected={typeFilter === 'all'}
-          onPress={() => setTypeFilter('all')}
-          style={{ paddingHorizontal: 8, paddingVertical: 6, minHeight: 28, flexShrink: 1 }}
-        />
-        {ACTIVITY_CATEGORIES.map((c) => (
+      {/* Pills + Today share the same left/right edges (mockup alignment). */}
+      <View style={{ gap: spacing.md }}>
+        <View
+          style={{
+            flexDirection: 'row',
+            flexWrap: 'nowrap',
+            alignItems: 'center',
+            gap: 6,
+          }}
+        >
           <Chip
-            key={c.id}
-            label={c.name}
-            selected={typeFilter === c.id}
-            onPress={() => setTypeFilter(c.id)}
-            style={{ paddingHorizontal: 8, paddingVertical: 6, minHeight: 28, flexShrink: 1 }}
+            label="All"
+            selected={typeFilter === 'all'}
+            onPress={() => setTypeFilter('all')}
+            style={styles.typeChip}
           />
-        ))}
-      </View>
+          {ACTIVITY_CATEGORIES.map((c) => (
+            <Chip
+              key={c.id}
+              label={c.name}
+              selected={typeFilter === c.id}
+              onPress={() => setTypeFilter(c.id)}
+              style={styles.typeChip}
+            />
+          ))}
+        </View>
 
-      <AppText variant="heading" weight="600" display>
-        Today · {formatDayKey(date)}
-      </AppText>
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            minHeight: 44,
+          }}
+        >
+          <AppText variant="heading" weight="600" display>
+            {date === todayKey() ? 'Today' : formatDayKey(date)}
+          </AppText>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Choose date"
+            accessibilityHint="Opens a date picker"
+            hitSlop={8}
+            onPress={() => setDatePickerOpen(true)}
+            style={{
+              minWidth: 44,
+              minHeight: 44,
+              alignItems: 'flex-end',
+              justifyContent: 'center',
+            }}
+          >
+            <Ionicons name="calendar-outline" size={22} color={colors.textPrimary} />
+          </Pressable>
+        </View>
+      </View>
 
       {filteredToday.length === 0 ? (
         <EmptyState
@@ -397,6 +426,23 @@ function ActivityBody() {
 
       <Button title="Log activity" onPress={goLog} />
       </View>
+
+      <DatePickSheet
+        visible={datePickerOpen}
+        onClose={() => setDatePickerOpen(false)}
+        title="Choose a date"
+        onPick={setSelectedDate}
+      />
     </Screen>
   );
 }
+
+const styles = StyleSheet.create({
+  typeChip: {
+    flex: 1,
+    paddingHorizontal: 4,
+    paddingVertical: 6,
+    minHeight: 28,
+    alignItems: 'center',
+  },
+});
