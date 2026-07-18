@@ -1,9 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
-import * as Haptics from 'expo-haptics';
 import { Image, type ImageSource } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Pressable, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
@@ -11,24 +10,30 @@ import {
   useDayProgress,
   useDiaryEntries,
   useMealCategories,
-  useWeekProgress,
-  useWeekStart,
+  useSetting,
 } from '@/state/queries';
 import { useUiStore } from '@/state/uiStore';
+import { displayFirstName, greetingForHour } from '@/utils/greeting';
 import { ActivityType } from '@/repositories/types';
-import { DayKey, shortWeekdayLabel, todayKey, weekDays } from '@/utils/date';
 import {
   ActivityLogList,
   AppText,
   BarEntranceProvider,
+  MonthCalendarPopup,
   ProgressRing,
   Screen,
   SectionHeader,
 } from '@/ui/components';
 import { useTheme } from '@/ui/theme/ThemeProvider';
-import { radius, spacing, touchTarget } from '@/ui/theme/tokens';
+import { fonts, radius, spacing, touchTarget } from '@/ui/theme/tokens';
 
-const HERO_IMAGE = require('../../../assets/images/today/hero-stretch.jpg');
+const HERO_IMAGE = require('../../../assets/images/today/hero-gym.jpg');
+
+const MACRO_IMAGES: Record<'protein' | 'carbs' | 'fat', ImageSource> = {
+  protein: require('../../../assets/images/progress/macro-protein.png'),
+  carbs: require('../../../assets/images/progress/macro-carbs.png'),
+  fat: require('../../../assets/images/progress/macro-fat.png'),
+};
 
 const MEAL_IMAGES: Record<string, ImageSource> = {
   breakfast: require('../../../assets/images/today/meal-breakfast.png'),
@@ -38,7 +43,13 @@ const MEAL_IMAGES: Record<string, ImageSource> = {
   snack: require('../../../assets/images/today/meal-snacks.png'),
 };
 
-/** Today — week cinema (mockup 6): week strip, stretch hero, ring+macros card, meal cards. */
+const MACRO_ICONS: Record<'protein' | 'carbs' | 'fat', keyof typeof Ionicons.glyphMap> = {
+  protein: 'fish-outline',
+  carbs: 'nutrition-outline',
+  fat: 'water-outline',
+};
+
+/** Today — split dayboard (mockup 3): hero + ring/goals + photo macros + meals. */
 export default function TodayScreen() {
   return (
     <BarEntranceProvider pageKey="today">
@@ -55,248 +66,276 @@ function TodayBody() {
   const date = useUiStore((s) => s.selectedDate);
   const setSelectedDate = useUiStore((s) => s.setSelectedDate);
   const setTargetMeal = useUiStore((s) => s.setTargetMeal);
-  const weekStart = useWeekStart();
   const progress = useDayProgress(date);
-  const week = useWeekProgress(date);
   const entries = useDiaryEntries(date);
   const activities = useActivityEntries(date);
   const categories = useMealCategories();
+  const displayName = useSetting<string>('displayName', '');
+  const [calendarOpen, setCalendarOpen] = useState(false);
+
+  const greeting = useMemo(() => greetingForHour(), []);
+  const firstName = displayFirstName(displayName.data);
 
   const consumed = progress?.consumed.calories ?? 0;
+  const burned = progress?.burned ?? 0;
   const target = progress?.target.calories ?? 0;
-  const ringProgress = target > 0 ? Math.min(consumed / target, 1) : 0;
+  const remaining = progress?.caloriesRemaining ?? target - consumed;
+  const over = remaining < 0;
 
   const mealTotals = new Map<string, number>();
+  const mealTimes = new Map<string, string>();
+  const mealTitles = new Map<string, string>();
   for (const e of entries.data ?? []) {
     mealTotals.set(e.meal, (mealTotals.get(e.meal) ?? 0) + e.nutrition.calories);
-  }
-
-  const completedDays = useMemo(() => {
-    const set = new Set<DayKey>();
-    for (const d of week?.days ?? []) {
-      if (d.consumed.calories > 0) set.add(d.date);
+    if (!mealTimes.has(e.meal) && e.createdAt) {
+      mealTimes.set(e.meal, formatEntryTime(e.createdAt));
     }
-    return set;
-  }, [week]);
+    if (!mealTitles.has(e.meal) && e.name?.trim()) {
+      mealTitles.set(e.meal, e.name.trim());
+    }
+  }
 
   const burnedByType = new Map<ActivityType, number>();
   for (const a of activities.data ?? []) {
     burnedByType.set(a.activityType, (burnedByType.get(a.activityType) ?? 0) + a.caloriesBurned);
   }
 
-  const heroHeight = Math.round(Math.min(Math.max(windowHeight * 0.38, width * 0.85), 360));
-  const cardBg = resolved === 'dark' ? 'rgba(23,27,32,0.96)' : colors.surface;
-
+  // Hero is tall enough that the athlete stays visible above the goals card.
+  const heroHeight = Math.round(
+    Math.min(Math.max(windowHeight * 0.42, width * 0.95), 420),
+  );
   const macros = [
-    { key: 'protein', label: 'PROTEIN', value: progress?.consumed.protein ?? 0 },
-    { key: 'carbs', label: 'CARBS', value: progress?.consumed.carbs ?? 0 },
-    { key: 'fat', label: 'FAT', value: progress?.consumed.fat ?? 0 },
-  ] as const;
-
-  const weekKeys = weekDays(date, weekStart);
+    {
+      key: 'protein' as const,
+      label: 'Protein',
+      consumed: progress?.consumed.protein ?? 0,
+      target: progress?.target.protein,
+    },
+    {
+      key: 'carbs' as const,
+      label: 'Carbs',
+      consumed: progress?.consumed.carbs ?? 0,
+      target: progress?.target.carbs,
+    },
+    {
+      key: 'fat' as const,
+      label: 'Fat',
+      consumed: progress?.consumed.fat ?? 0,
+      target: progress?.target.fat,
+    },
+  ];
 
   return (
     <Screen tabBarSpace padded={false} safeTop={false}>
-      {/* —— Hero + week strip —— */}
+      {/* —— Hero —— */}
       <View style={[styles.hero, { height: heroHeight + insets.top }]}>
         <Image
           source={HERO_IMAGE}
           style={StyleSheet.absoluteFill}
           contentFit="cover"
-          contentPosition="center"
+          contentPosition="top"
         />
         <LinearGradient
-          colors={['rgba(8,12,16,0.55)', 'rgba(8,12,16,0.15)', 'rgba(14,17,20,0.95)']}
-          locations={[0, 0.45, 1]}
+          colors={['rgba(8,12,16,0.35)', 'rgba(8,12,16,0.12)', 'rgba(14,17,20,0.88)']}
+          locations={[0, 0.55, 1]}
           style={StyleSheet.absoluteFill}
         />
 
-        <View style={[styles.weekStrip, { paddingTop: insets.top + spacing.sm }]}>
-          {weekKeys.map((d) => {
-            const selected = d === date;
-            const logged = completedDays.has(d);
-            const dayNum = Number(d.slice(8));
-            return (
-              <Pressable
-                key={d}
-                accessibilityRole="button"
-                accessibilityState={{ selected }}
-                accessibilityLabel={`${shortWeekdayLabel(d)} ${dayNum}`}
-                onPress={() => {
-                  void Haptics.selectionAsync();
-                  setSelectedDate(d);
-                }}
-                style={styles.weekCell}
-              >
-                <AppText
-                  variant="micro"
-                  weight="600"
-                  style={{
-                    color: selected ? 'rgba(242,244,247,0.95)' : 'rgba(242,244,247,0.7)',
-                    textTransform: 'uppercase',
-                    fontSize: 10,
-                    letterSpacing: 0.4,
-                  }}
-                >
-                  {shortWeekdayLabel(d).slice(0, 3).toUpperCase()}
-                </AppText>
-                <View
-                  style={[
-                    styles.weekBubble,
-                    selected && { backgroundColor: colors.accent },
-                  ]}
-                >
-                  <AppText
-                    variant="caption"
-                    weight="700"
-                    style={{ color: selected ? colors.onAccent : '#FFFFFF' }}
-                  >
-                    {dayNum}
-                  </AppText>
-                </View>
-                <View
-                  style={[
-                    styles.weekDot,
-                    {
-                      backgroundColor: logged
-                        ? colors.accent
-                        : 'transparent',
-                    },
-                  ]}
-                />
-              </Pressable>
-            );
-          })}
-        </View>
-      </View>
-
-      {/* Stats card — overlaps hero bottom */}
-      <View style={styles.statsWrap}>
-        <View
-          style={[
-            styles.statsCard,
-            { backgroundColor: cardBg, borderColor: colors.borderStrong },
-          ]}
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Open calendar"
+          onPress={() => setCalendarOpen(true)}
+          hitSlop={8}
+          style={[styles.bellBtn, { top: insets.top + spacing.sm }]}
         >
-          <ProgressRing
-            progress={Math.max(ringProgress, consumed > 0 ? 0.02 : 0)}
-            size={108}
-            strokeWidth={10}
-            accessibilityLabel={`${Math.round(consumed)} of ${Math.round(target)} calories`}
-          >
-            <View style={{ alignItems: 'center', paddingHorizontal: 2 }}>
-              <AppText
-                variant="heading"
-                weight="700"
-                display
-                align="center"
-                style={{ fontSize: 18, lineHeight: 22 }}
-              >
-                {Math.round(consumed).toLocaleString()}
-              </AppText>
-              <AppText variant="micro" tone="muted" align="center">
-                kcal
-              </AppText>
-              <AppText variant="micro" tone="muted" align="center">
-                of {Math.round(target).toLocaleString()}
-              </AppText>
-            </View>
-          </ProgressRing>
+          <Ionicons name="notifications-outline" size={22} color="#FFFFFF" />
+          <View style={[styles.bellDot, { backgroundColor: colors.accent }]} />
+        </Pressable>
 
-          <View style={styles.macroCols}>
-            {macros.map((m, i) => (
-              <React.Fragment key={m.key}>
-                {i > 0 ? (
-                  <View style={[styles.macroRule, { backgroundColor: colors.borderStrong }]} />
-                ) : null}
-                <View style={styles.macroCol}>
+        {/* Greeting sits tight above the calories box; goals float unboxed beside it. */}
+        <View style={styles.heroBottom}>
+          <View style={styles.greetingBlock}>
+            <AppText style={styles.greetingLine}>{greeting},</AppText>
+            <AppText style={styles.nameLine} numberOfLines={1}>
+              {firstName}
+            </AppText>
+          </View>
+
+          <View style={styles.statsRow}>
+            <View
+              style={[
+                styles.calsBox,
+                {
+                  backgroundColor: resolved === 'dark' ? 'rgba(23,27,32,0.94)' : colors.surface,
+                  borderColor: colors.borderStrong,
+                },
+              ]}
+            >
+              <ProgressRing
+                progress={target > 0 ? Math.min(Math.max(consumed / target, 0.02), 1) : 0.02}
+                size={118}
+                strokeWidth={11}
+                accessibilityLabel={`Calories: ${Math.round(consumed)} of ${Math.round(target)}`}
+              >
+                <View style={{ alignItems: 'center', paddingHorizontal: 4 }}>
+                  <AppText variant="micro" tone={over ? 'danger' : 'muted'} align="center">
+                    {over ? 'Calories over' : 'Calories left'}
+                  </AppText>
                   <AppText
                     variant="heading"
                     weight="700"
                     display
-                    style={{ color: colors.accent, fontSize: 20, lineHeight: 24 }}
+                    align="center"
+                    style={{ fontSize: 22, lineHeight: 26 }}
                   >
-                    {Math.round(m.value)}g
+                    {Math.round(Math.abs(remaining)).toLocaleString()}
                   </AppText>
-                  <AppText variant="micro" tone="muted" style={styles.macroLabel}>
-                    {m.label}
+                  <AppText variant="micro" tone="muted">
+                    kcal
                   </AppText>
                 </View>
-              </React.Fragment>
-            ))}
+              </ProgressRing>
+            </View>
+
+            <View style={styles.goalsCol}>
+              <AppText variant="body" weight="700" display style={{ color: '#FFFFFF' }}>
+                Daily Goals
+              </AppText>
+              <GoalRow
+                label="Calorie Goal"
+                value={Math.round(target).toLocaleString()}
+                onHero
+              />
+              <GoalRow
+                label="Protein Goal"
+                value={`${Math.round(progress?.target.protein ?? 0).toLocaleString()} g`}
+                onHero
+              />
+              {burned > 0 ? (
+                <GoalRow
+                  label="Exercise"
+                  value={`+${Math.round(burned).toLocaleString()}`}
+                  accent
+                  onHero
+                />
+              ) : null}
+            </View>
           </View>
         </View>
       </View>
 
       <View style={styles.body}>
-        {/* Large meal cards (mockup shows Breakfast / Lunch; keep Dinner/Snacks for function) */}
-        {(categories.data ?? []).map((cat) => {
-          const kcal = Math.round(mealTotals.get(cat.id) ?? 0);
-          const logged = kcal > 0;
-          const image = MEAL_IMAGES[cat.id] ?? MEAL_IMAGES.lunch;
-          return (
+        {/* —— Macro photo cards —— */}
+        <View style={styles.macroRow}>
+          {macros.map((m) => {
+            const pct =
+              m.target && m.target > 0 ? Math.min(m.consumed / m.target, 1) : 0;
+            return (
+              <View key={m.key} style={styles.macroTile}>
+                <Image
+                  source={MACRO_IMAGES[m.key]}
+                  style={StyleSheet.absoluteFill}
+                  contentFit="cover"
+                />
+                <LinearGradient
+                  colors={['rgba(10,12,16,0.55)', 'rgba(10,12,16,0.88)']}
+                  style={StyleSheet.absoluteFill}
+                />
+                <View style={styles.macroIcon}>
+                  <Ionicons name={MACRO_ICONS[m.key]} size={14} color="#FFFFFF" />
+                </View>
+                <AppText variant="caption" style={{ color: 'rgba(255,255,255,0.85)' }}>
+                  {m.label}
+                </AppText>
+                <AppText variant="heading" weight="700" display style={{ color: '#FFFFFF' }}>
+                  {Math.round(m.consumed)} g
+                </AppText>
+                <View style={styles.macroTrack}>
+                  <View
+                    style={[
+                      styles.macroFill,
+                      { width: `${pct * 100}%`, backgroundColor: colors.accent },
+                    ]}
+                  />
+                </View>
+                <AppText variant="micro" style={{ color: 'rgba(255,255,255,0.65)' }}>
+                  / {Math.round(m.target ?? 0)} g
+                </AppText>
+              </View>
+            );
+          })}
+        </View>
+
+        {/* —— Meals —— */}
+        <SectionHeader
+          title="Meals"
+          right={
             <Pressable
-              key={cat.id}
               accessibilityRole="button"
-              accessibilityLabel={`${cat.name}. ${logged ? `${kcal} kcal logged` : 'Log meal'}`}
+              accessibilityLabel="View all diary entries"
               onPress={() => {
                 setSelectedDate(date);
-                setTargetMeal(cat.id);
-                router.push(logged ? '/diary' : '/add');
+                router.push('/diary');
               }}
-              style={styles.mealCard}
+              style={{ minHeight: 44, justifyContent: 'center' }}
             >
-              <Image source={image} style={StyleSheet.absoluteFill} contentFit="cover" />
-              <LinearGradient
-                colors={['rgba(8,12,16,0.72)', 'rgba(8,12,16,0.25)', 'rgba(8,12,16,0.55)']}
-                start={{ x: 0, y: 0.5 }}
-                end={{ x: 1, y: 0.5 }}
-                style={StyleSheet.absoluteFill}
-              />
-              <View style={styles.mealCopy}>
-                <AppText
-                  variant="heading"
-                  weight="700"
-                  display
-                  numberOfLines={1}
-                  style={{ color: '#FFFFFF' }}
-                >
-                  {cat.name}
-                </AppText>
-                <View style={styles.mealStatusSlot}>
-                  {logged ? (
-                    <View style={styles.loggedRow}>
-                      <AppText variant="caption" weight="600" style={{ color: colors.accent }}>
-                        Logged
-                      </AppText>
-                      <Ionicons name="checkmark-circle" size={16} color={colors.accent} />
-                    </View>
-                  ) : (
-                    <View style={[styles.logPill, { borderColor: colors.accent }]}>
-                      <AppText variant="caption" weight="600" style={{ color: colors.accent }}>
-                        Log
-                      </AppText>
-                    </View>
-                  )}
-                </View>
-              </View>
-              <View
+              <AppText variant="caption" weight="600" style={{ color: colors.accent }}>
+                View all ›
+              </AppText>
+            </Pressable>
+          }
+        />
+
+        <View
+          style={[
+            styles.mealsCard,
+            { backgroundColor: colors.surface, borderColor: colors.border },
+          ]}
+        >
+          {(categories.data ?? []).map((cat, idx, arr) => {
+            const kcal = Math.round(mealTotals.get(cat.id) ?? 0);
+            const time = mealTimes.get(cat.id);
+            const title = mealTitles.get(cat.id) ?? cat.name;
+            const image = MEAL_IMAGES[cat.id] ?? MEAL_IMAGES.lunch;
+            return (
+              <Pressable
+                key={cat.id}
+                accessibilityRole="button"
+                accessibilityLabel={`${title}, ${kcal} kcal`}
+                onPress={() => {
+                  setSelectedDate(date);
+                  setTargetMeal(cat.id);
+                  router.push(kcal > 0 ? '/diary' : '/add');
+                }}
                 style={[
-                  styles.mealBadge,
-                  {
-                    backgroundColor: logged ? colors.accent : 'rgba(8,12,16,0.25)',
-                    borderColor: colors.accent,
+                  styles.mealRow,
+                  idx < arr.length - 1 && {
+                    borderBottomWidth: StyleSheet.hairlineWidth,
+                    borderBottomColor: colors.border,
                   },
                 ]}
               >
-                {logged ? (
-                  <Ionicons name="checkmark" size={18} color={colors.onAccent} />
+                <Image source={image} style={styles.mealThumb} contentFit="cover" />
+                <View style={styles.mealCopy}>
+                  <AppText variant="body" weight="600" numberOfLines={1}>
+                    {title}
+                  </AppText>
+                  <AppText variant="caption" tone="muted">
+                    {kcal > 0 ? `${kcal.toLocaleString()} kcal` : 'Not logged'}
+                  </AppText>
+                </View>
+                {time ? (
+                  <AppText variant="caption" tone="muted" style={{ marginRight: 4 }}>
+                    {time}
+                  </AppText>
                 ) : null}
-              </View>
-            </Pressable>
-          );
-        })}
+                <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+              </Pressable>
+            );
+          })}
+        </View>
 
+        {/* —— Activity (below fold; keeps logging entry points) —— */}
         <SectionHeader
           title="Activity"
           right={
@@ -323,136 +362,192 @@ function TodayBody() {
             router.push({ pathname: '/activity', params: { type } });
           }}
         />
-
-        {date !== todayKey() ? (
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Back to today"
-            onPress={() => setSelectedDate(todayKey())}
-            style={styles.backToday}
-          >
-            <AppText variant="caption" weight="600" tone="accent">
-              Back to today
-            </AppText>
-          </Pressable>
-        ) : null}
       </View>
+
+      <MonthCalendarPopup
+        visible={calendarOpen}
+        selected={date}
+        top={insets.top + 56}
+        onClose={() => setCalendarOpen(false)}
+        onSelect={(d) => {
+          setCalendarOpen(false);
+          setSelectedDate(d);
+        }}
+      />
     </Screen>
   );
+}
+
+function GoalRow({
+  label,
+  value,
+  accent,
+  onHero,
+}: {
+  label: string;
+  value: string;
+  accent?: boolean;
+  onHero?: boolean;
+}) {
+  return (
+    <View style={styles.goalRow}>
+      <AppText
+        variant="caption"
+        tone={onHero ? undefined : 'secondary'}
+        style={onHero ? { color: 'rgba(242,244,247,0.78)' } : undefined}
+      >
+        {label}
+      </AppText>
+      <AppText
+        variant="caption"
+        weight="600"
+        tone={accent ? 'accent' : onHero ? undefined : 'primary'}
+        style={onHero && !accent ? { color: '#FFFFFF' } : undefined}
+      >
+        {value}
+      </AppText>
+    </View>
+  );
+}
+
+function formatEntryTime(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  return d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
 }
 
 const styles = StyleSheet.create({
   hero: {
     width: '100%',
     overflow: 'hidden',
+    justifyContent: 'flex-end',
   },
-  weekStrip: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacing.md,
-    zIndex: 3,
-  },
-  weekCell: {
-    alignItems: 'center',
-    gap: 4,
-    minWidth: 36,
-  },
-  weekBubble: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
+  bellBtn: {
+    position: 'absolute',
+    right: spacing.md,
+    width: touchTarget,
+    height: touchTarget,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  weekDot: {
-    width: 5,
-    height: 5,
-    borderRadius: 3,
-  },
-  statsWrap: {
-    marginTop: -56,
-    paddingHorizontal: spacing.lg,
     zIndex: 4,
   },
-  statsCard: {
+  bellDot: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  heroBottom: {
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.md,
+    gap: spacing.sm,
+    zIndex: 3,
+  },
+  greetingBlock: {
+    gap: 0,
+    marginBottom: 2,
+  },
+  greetingLine: {
+    color: 'rgba(242,244,247,0.92)',
+    fontFamily: fonts.displayMedium,
+    fontSize: 22,
+    lineHeight: 28,
+    fontWeight: '500',
+  },
+  nameLine: {
+    color: '#FFFFFF',
+    fontFamily: fonts.display,
+    fontSize: 42,
+    lineHeight: 48,
+    fontWeight: '700',
+    letterSpacing: -0.8,
+  },
+  statsRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
+  },
+  calsBox: {
     borderRadius: radius.xl,
     borderWidth: 1,
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.md,
-  },
-  macroCols: {
-    flex: 1,
-    flexDirection: 'row',
+    padding: spacing.md,
     alignItems: 'center',
+    justifyContent: 'center',
+  },
+  goalsCol: {
+    flex: 1,
+    gap: 8,
     minWidth: 0,
+    paddingVertical: spacing.xs,
   },
-  macroCol: {
-    flex: 1,
-    alignItems: 'center',
-    gap: 4,
-  },
-  macroRule: {
-    width: StyleSheet.hairlineWidth,
-    alignSelf: 'stretch',
-    marginVertical: spacing.sm,
-  },
-  macroLabel: {
-    letterSpacing: 0.8,
-    fontSize: 10,
+  goalRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
   },
   body: {
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.lg,
-    gap: spacing.md,
+    gap: spacing.lg,
   },
-  mealCard: {
-    height: 140,
-    borderRadius: radius.xl,
+  macroRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+  },
+  macroTile: {
+    flex: 1,
+    borderRadius: radius.lg,
     overflow: 'hidden',
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.lg,
+    padding: spacing.md,
+    gap: 4,
+    minHeight: 158,
+    justifyContent: 'flex-end',
+  },
+  macroIcon: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,255,255,0.85)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(0,0,0,0.25)',
+    marginBottom: 4,
+  },
+  macroTrack: {
+    height: 5,
+    borderRadius: 3,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    overflow: 'hidden',
+    marginTop: 2,
+  },
+  macroFill: {
+    height: '100%',
+    borderRadius: 3,
+  },
+  mealsCard: {
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    overflow: 'hidden',
+  },
+  mealRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
+    gap: spacing.md,
+    minHeight: 64,
+  },
+  mealThumb: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
   },
   mealCopy: {
     flex: 1,
-    maxWidth: '62%',
-    justifyContent: 'space-between',
-    zIndex: 2,
-  },
-  mealStatusSlot: {
-    alignSelf: 'flex-start',
-  },
-  loggedRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  logPill: {
-    alignSelf: 'flex-start',
-    borderWidth: 1.5,
-    borderRadius: radius.full,
-    paddingHorizontal: spacing.md,
-    paddingVertical: 6,
-    backgroundColor: 'rgba(8,12,16,0.35)',
-  },
-  mealBadge: {
-    position: 'absolute',
-    right: spacing.lg,
-    top: spacing.lg,
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    borderWidth: 2.5,
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 3,
-  },
-  backToday: {
-    alignSelf: 'center',
-    minHeight: touchTarget,
-    justifyContent: 'center',
-    paddingHorizontal: spacing.md,
+    minWidth: 0,
+    gap: 2,
   },
 });
