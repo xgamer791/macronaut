@@ -180,7 +180,7 @@ function ActivityBody() {
     });
 
   return (
-    <Screen style={{ flexGrow: 1, justifyContent: 'center' }}>
+    <Screen style={{ flexGrow: 1 }}>
       <ScreenHeader
         title="Activity"
         right={
@@ -195,6 +195,7 @@ function ActivityBody() {
         }
       />
 
+      <View style={{ flexGrow: 1, justifyContent: 'center', gap: spacing.lg }}>
       <View style={{ alignItems: 'center', gap: spacing.md, paddingVertical: spacing.sm }}>
         <ProgressRing
           progress={ringProgress}
@@ -395,6 +396,7 @@ function ActivityBody() {
       ) : null}
 
       <Button title="Log activity" onPress={goLog} />
+      </View>
     </Screen>
   );
 }
