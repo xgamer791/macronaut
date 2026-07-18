@@ -40,6 +40,7 @@ export default function SettingsScreen() {
   const units = useSetting<UnitSystem>('unitSystem', 'us');
   const weekStart = useSetting<WeekStart>('weekStart', 'monday');
   const savedGrokKey = useSetting<string>('grokApiKey', '');
+  const savedDisplayName = useSetting<string>('displayName', '');
 
   const [newMealOpen, setNewMealOpen] = useState(false);
   const [newMealName, setNewMealName] = useState('');
@@ -48,6 +49,8 @@ export default function SettingsScreen() {
   const [draftGrokKey, setDraftGrokKey] = useState<string | null>(null);
   const [showGrokKey, setShowGrokKey] = useState(false);
   const grokKey = draftGrokKey ?? savedGrokKey.data ?? '';
+  const [draftDisplayName, setDraftDisplayName] = useState<string | null>(null);
+  const displayName = draftDisplayName ?? savedDisplayName.data ?? '';
 
   async function setUnits(u: UnitSystem) {
     await settings.setUnitSystem(u);
@@ -110,6 +113,29 @@ export default function SettingsScreen() {
 
       <SectionHeader title="Preferences" />
       <Card style={{ gap: spacing.lg }}>
+        <View style={{ gap: spacing.xs }}>
+          <AppText variant="caption" tone="secondary">
+            Display name
+          </AppText>
+          <TextField
+            value={displayName}
+            onChangeText={setDraftDisplayName}
+            placeholder="Your name"
+            autoCapitalize="words"
+            accessibilityLabel="Display name"
+          />
+          {draftDisplayName !== null ? (
+            <Button
+              title="Save name"
+              compact
+              onPress={async () => {
+                await settings.set('displayName', draftDisplayName.trim());
+                setDraftDisplayName(null);
+                qc.invalidateQueries({ queryKey: keys.setting('displayName') });
+              }}
+            />
+          ) : null}
+        </View>
         <View style={{ gap: spacing.xs }}>
           <AppText variant="caption" tone="secondary">
             Units
