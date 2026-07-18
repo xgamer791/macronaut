@@ -440,17 +440,21 @@ const styles = StyleSheet.create({
   },
   chipRow: {
     paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.md,
     gap: spacing.sm,
+    // Sit the photo chips into the hero fade, like the mockup.
+    marginTop: -28,
   },
   typeChip: {
-    height: 128,
+    height: 132,
     borderRadius: radius.lg,
     overflow: 'hidden',
     borderWidth: 2,
-    borderColor: 'transparent',
+    borderColor: 'rgba(255,255,255,0.08)',
     justifyContent: 'space-between',
     padding: spacing.sm,
+    backgroundColor: '#1A1F24',
   },
   chipIcon: {
     width: 28,
