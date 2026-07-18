@@ -236,7 +236,7 @@ function TodayBody() {
         burnedByType={burnedByType}
         onLog={(type) => {
           setSelectedDate(date);
-          router.push({ pathname: '/log-activity', params: { type } });
+          router.push({ pathname: '/activity', params: { type } });
         }}
         onOpenType={(type) => {
           setSelectedDate(date);
