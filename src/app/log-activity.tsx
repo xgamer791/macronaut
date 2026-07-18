@@ -1,112 +1,115 @@
+import { Ionicons } from '@expo/vector-icons';
+import { Image, type ImageSource } from 'expo-image';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
-import { View } from 'react-native';
+import React, { useEffect, useMemo, useState } from 'react';
+import {
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  TextInput,
+  View,
+  useWindowDimensions,
+} from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   ACTIVITY_CATEGORIES,
   ACTIVITY_PRESETS,
-  computeImprovements,
   estimateBurn,
 } from '@/domain/activity';
-import { useRepos } from '@/state/AppProvider';
 import { useAddActivityEntry } from '@/state/queries';
 import { useUiStore } from '@/state/uiStore';
 import { ActivityIntensity, ActivityType } from '@/repositories/types';
-import { formatDayKey } from '@/utils/date';
 import { goBackOrHome } from '@/utils/navigation';
-import {
-  AppText,
-  Button,
-  Card,
-  Chip,
-  NumberField,
-  Screen,
-  ScreenHeader,
-  TextField,
-} from '@/ui/components';
+import { AppText, NumberField } from '@/ui/components';
 import { useTheme } from '@/ui/theme/ThemeProvider';
-import { spacing } from '@/ui/theme/tokens';
+import { radius, spacing, touchTarget } from '@/ui/theme/tokens';
 
-const TYPES: ActivityType[] = ['cardio', 'strength', 'sports', 'mobility', 'other'];
+const TYPE_IMAGES: Record<Exclude<ActivityType, 'other'>, ImageSource> = {
+  cardio: require('../../assets/images/activity/activity-cardio.jpg'),
+  strength: require('../../assets/images/activity/activity-strength.jpg'),
+  sports: require('../../assets/images/activity/activity-sports.jpg'),
+  mobility: require('../../assets/images/activity/activity-mobility.jpg'),
+};
 
-function isActivityType(v: string | undefined): v is ActivityType {
-  return !!v && (TYPES as string[]).includes(v);
+const HERO_BLURBS: Record<Exclude<ActivityType, 'other'>, string> = {
+  cardio: 'Elevate your heart rate and boost endurance',
+  strength: 'Build muscle, power, and resilience',
+  sports: 'Play hard. Compete. Stay active.',
+  mobility: 'Improve flexibility and move better',
+};
+
+const PHOTO_TYPES = ACTIVITY_CATEGORIES.map((c) => c.id);
+
+const INTENSITY_LABEL: Record<ActivityIntensity, string> = {
+  easy: 'Easy',
+  moderate: 'Moderate',
+  hard: 'High',
+};
+
+function isPhotoType(v: string | undefined): v is Exclude<ActivityType, 'other'> {
+  return !!v && (PHOTO_TYPES as string[]).includes(v);
 }
 
-/** Manual workout logger — live estimate card with form above. */
+/** Type-reactive photo Log activity — matches photographic mockup 6. */
 export default function LogActivityScreen() {
   const router = useRouter();
   const { colors } = useTheme();
+  const insets = useSafeAreaInsets();
+  const { width } = useWindowDimensions();
   const params = useLocalSearchParams<{ type?: string; name?: string }>();
-  const { activity } = useRepos();
   const addEntry = useAddActivityEntry();
   const date = useUiStore((s) => s.selectedDate);
 
-  const initialType: ActivityType = isActivityType(params.type) ? params.type : 'cardio';
-  const [activityType, setActivityType] = useState<ActivityType>(initialType);
+  const initialType: Exclude<ActivityType, 'other'> = isPhotoType(params.type)
+    ? params.type
+    : 'cardio';
+  const [activityType, setActivityType] =
+    useState<Exclude<ActivityType, 'other'>>(initialType);
   const [name, setName] = useState(params.name ?? '');
-  const [nameError, setNameError] = useState<string | undefined>();
-  const [durationMin, setDurationMin] = useState<number | undefined>(30);
-  const [distanceKm, setDistanceKm] = useState<number | undefined>();
-  /** Manual override; when unset, burn is derived from preset × duration. */
+  const [durationMin, setDurationMin] = useState<number | undefined>(55);
   const [caloriesOverride, setCaloriesOverride] = useState<number | undefined>();
-  const [intensity, setIntensity] = useState<ActivityIntensity>('moderate');
+  const [intensity, setIntensity] = useState<ActivityIntensity>('hard');
   const [notes, setNotes] = useState('');
+  const [intensityOpen, setIntensityOpen] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [improvements, setImprovements] = useState<
-    ReturnType<typeof computeImprovements>
-  >([]);
+  const [calorieEdit, setCalorieEdit] = useState(false);
 
-  const selectedPreset = ACTIVITY_PRESETS.find(
-    (p) => p.name.toLowerCase() === name.trim().toLowerCase(),
+  const category = ACTIVITY_CATEGORIES.find((c) => c.id === activityType)!;
+  const heroImage = TYPE_IMAGES[activityType];
+  const chipWidth = Math.min(104, (width - spacing.lg * 2 - spacing.sm * 3) / 4);
+
+  const defaultPreset = useMemo(
+    () => ACTIVITY_PRESETS.find((p) => p.activityType === activityType),
+    [activityType],
   );
 
   const estimatedBurn =
-    selectedPreset && durationMin !== undefined
-      ? estimateBurn(selectedPreset.kcalPerMin, durationMin)
+    defaultPreset && durationMin !== undefined
+      ? estimateBurn(defaultPreset.kcalPerMin, durationMin)
       : undefined;
-  const caloriesBurned = caloriesOverride ?? estimatedBurn;
-  const hasEstimate = caloriesBurned !== undefined && caloriesBurned >= 0;
-  const isManualBurn = caloriesOverride !== undefined;
+  const caloriesBurned = caloriesOverride ?? estimatedBurn ?? 0;
 
+  // When type changes, adopt that type’s default workout name for save.
   useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      if (!name.trim()) {
-        setImprovements([]);
-        return;
-      }
-      const prev = await activity.previousByName(name.trim(), date, 1);
-      if (cancelled) return;
-      setImprovements(
-        computeImprovements(
-          {
-            durationMin,
-            distanceKm,
-            caloriesBurned: caloriesBurned ?? 0,
-          },
-          prev[0] ?? null,
-        ),
-      );
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [activity, name, date, durationMin, distanceKm, caloriesBurned]);
+    if (params.name) return;
+    const preset = ACTIVITY_PRESETS.find((p) => p.activityType === activityType);
+    if (preset) {
+      setName(preset.name);
+      setCaloriesOverride(undefined);
+    }
+  }, [activityType, params.name]);
 
   async function save() {
-    if (!name.trim()) {
-      setNameError('Name this workout');
-      return;
-    }
-    if (caloriesBurned === undefined || caloriesBurned < 0) return;
+    const workoutName = name.trim() || category.name;
+    if (caloriesBurned < 0) return;
     setSaving(true);
     try {
       await addEntry.mutateAsync({
         date,
-        name: name.trim(),
+        name: workoutName,
         activityType,
         durationMin,
-        distanceKm,
         caloriesBurned,
         intensity,
         notes: notes.trim() || undefined,
@@ -118,155 +121,407 @@ export default function LogActivityScreen() {
     }
   }
 
+  const heroHeight = Math.round(width * 0.92);
+
   return (
-    <Screen>
-      <ScreenHeader title="Log activity" />
-      <AppText variant="caption" tone="secondary">
-        {formatDayKey(date)} · burned calories credit your daily budget
-      </AppText>
-
-      <AppText variant="caption" tone="secondary">
-        Type
-      </AppText>
-      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
-        {(
-          [
-            ...ACTIVITY_CATEGORIES.map((c) => ({ id: c.id as ActivityType, name: c.name })),
-            { id: 'other' as const, name: 'Other' },
-          ] as { id: ActivityType; name: string }[]
-        ).map((c) => (
-          <Chip
-            key={c.id}
-            label={c.name}
-            selected={activityType === c.id}
-            onPress={() => {
-              setActivityType(c.id);
-              setCaloriesOverride(undefined);
-            }}
+    <View style={[styles.root, { backgroundColor: colors.background }]}>
+      <ScrollView
+        bounces={false}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: insets.bottom + spacing.xl }}
+      >
+        {/* —— Hero —— */}
+        <View style={{ height: heroHeight, width: '100%' }}>
+          <Image
+            source={heroImage}
+            style={StyleSheet.absoluteFill}
+            contentFit="cover"
+            transition={200}
           />
-        ))}
-      </View>
-
-      <TextField
-        label="Workout name"
-        value={name}
-        onChangeText={(t) => {
-          setName(t);
-          if (t.trim()) setNameError(undefined);
-          setCaloriesOverride(undefined);
-        }}
-        placeholder="Morning run"
-        error={nameError}
-        required
-      />
-
-      <View style={{ flexDirection: 'row', gap: spacing.md }}>
-        <View style={{ flex: 1 }}>
-          <NumberField
-            label="Duration (min)"
-            value={durationMin}
-            onChange={(v) => {
-              setDurationMin(v);
-              if (!isManualBurn) setCaloriesOverride(undefined);
-            }}
-            min={0}
+          <LinearGradient
+            colors={['rgba(8,12,16,0.35)', 'rgba(8,12,16,0.15)', 'rgba(8,12,16,0.92)']}
+            locations={[0, 0.45, 1]}
+            style={StyleSheet.absoluteFill}
           />
-        </View>
-        <View style={{ flex: 1 }}>
-          <NumberField
-            label="Distance (km)"
-            value={distanceKm}
-            onChange={setDistanceKm}
-            min={0}
-          />
-        </View>
-      </View>
 
-      {/* Live estimate hero — mockup 6 */}
-      <Card style={{ gap: spacing.md }}>
-        <AppText variant="caption" tone="secondary" weight="600">
-          {isManualBurn ? 'Calories burned' : 'Live estimate'}
-        </AppText>
-        <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: spacing.sm }}>
-          <AppText
-            variant="hero"
-            weight="600"
-            display
-            style={{ color: hasEstimate ? colors.accent : colors.textMuted }}
-          >
-            {hasEstimate ? Math.round(caloriesBurned).toLocaleString() : '—'}
-          </AppText>
-          <AppText variant="body" tone="secondary">
-            kcal burned
-          </AppText>
-        </View>
-        {!hasEstimate ? (
-          <AppText variant="micro" tone="muted">
-            Pick a preset or enter calories below to estimate burn.
-          </AppText>
-        ) : estimatedBurn !== undefined && isManualBurn ? (
-          <AppText variant="micro" tone="muted">
-            Estimate was {Math.round(estimatedBurn).toLocaleString()} kcal · edited
-          </AppText>
-        ) : selectedPreset ? (
-          <AppText variant="micro" tone="muted">
-            From {selectedPreset.name}
-            {durationMin !== undefined ? ` · ${durationMin} min` : ''}
-          </AppText>
-        ) : null}
+          {/* Header over hero */}
+          <View style={[styles.header, { paddingTop: insets.top + spacing.sm }]}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Close"
+              onPress={() => goBackOrHome(router)}
+              hitSlop={8}
+              style={styles.headerBtn}
+            >
+              <Ionicons name="close" size={26} color="#FFFFFF" />
+            </Pressable>
+            <AppText
+              variant="heading"
+              weight="600"
+              display
+              style={styles.headerTitle}
+              numberOfLines={1}
+            >
+              Log Activity
+            </AppText>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Save workout"
+              disabled={saving}
+              onPress={save}
+              hitSlop={8}
+              style={styles.headerBtn}
+            >
+              <Ionicons
+                name="checkmark"
+                size={28}
+                color={saving ? colors.textMuted : colors.accent}
+              />
+            </Pressable>
+          </View>
 
-        {improvements.length > 0 ? (
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
-            {improvements.map((chip) => (
-              <View
-                key={chip.label}
-                style={{
-                  paddingHorizontal: spacing.md,
-                  paddingVertical: spacing.sm,
-                  borderRadius: 999,
-                  backgroundColor: colors.accent + '22',
-                }}
+          {/* Hero copy */}
+          <View style={styles.heroCopy}>
+            <View style={[styles.heroIconRing, { borderColor: colors.accent }]}>
+              <Ionicons name={category.icon} size={22} color={colors.accent} />
+            </View>
+            <AppText variant="title" weight="700" display style={{ color: '#FFFFFF' }}>
+              {category.name}
+            </AppText>
+            <AppText
+              variant="body"
+              style={{ color: 'rgba(235,240,245,0.9)', maxWidth: 260 }}
+              numberOfLines={2}
+            >
+              {HERO_BLURBS[activityType]}
+            </AppText>
+          </View>
+        </View>
+
+        {/* —— Type photo chips —— */}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.chipRow}
+        >
+          {ACTIVITY_CATEGORIES.map((c) => {
+            const typeId = c.id as Exclude<ActivityType, 'other'>;
+            const selected = activityType === typeId;
+            return (
+              <Pressable
+                key={c.id}
+                accessibilityRole="button"
+                accessibilityState={{ selected }}
+                accessibilityLabel={c.name}
+                onPress={() => setActivityType(typeId)}
+                style={[
+                  styles.typeChip,
+                  { width: chipWidth },
+                  selected && { borderColor: colors.accent, borderWidth: 2 },
+                ]}
               >
-                <AppText variant="caption" weight="600" style={{ color: colors.accent }}>
-                  {chip.label}
+                <Image
+                  source={TYPE_IMAGES[typeId]}
+                  style={StyleSheet.absoluteFill}
+                  contentFit="cover"
+                />
+                <LinearGradient
+                  colors={['rgba(0,0,0,0.15)', 'rgba(0,0,0,0.75)']}
+                  style={StyleSheet.absoluteFill}
+                />
+                <View
+                  style={[
+                    styles.chipIcon,
+                    {
+                      backgroundColor: selected ? colors.accent : 'rgba(20,24,28,0.75)',
+                    },
+                  ]}
+                >
+                  <Ionicons
+                    name={c.icon}
+                    size={16}
+                    color={selected ? colors.onAccent : '#FFFFFF'}
+                  />
+                </View>
+                <AppText
+                  variant="caption"
+                  weight="600"
+                  style={styles.chipLabel}
+                  numberOfLines={1}
+                >
+                  {c.name}
+                </AppText>
+              </Pressable>
+            );
+          })}
+        </ScrollView>
+
+        {/* —— Details panel —— */}
+        <View style={[styles.panel, { backgroundColor: colors.surface }]}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Edit calories"
+            onPress={() => setCalorieEdit((v) => !v)}
+            style={styles.calRow}
+          >
+            <View style={{ flex: 1, gap: 4 }}>
+              <AppText variant="micro" tone="muted" weight="600" style={styles.caps}>
+                Calories
+              </AppText>
+              <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 8 }}>
+                <AppText
+                  variant="hero"
+                  weight="600"
+                  display
+                  style={{ color: colors.accent, fontSize: 40, lineHeight: 46 }}
+                >
+                  {Math.round(caloriesBurned).toLocaleString()}
+                </AppText>
+                <AppText variant="body" style={{ color: colors.accent }}>
+                  kcal
                 </AppText>
               </View>
-            ))}
+            </View>
+            <Ionicons name="flame" size={28} color={colors.accent} />
+          </Pressable>
+
+          {calorieEdit ? (
+            <NumberField
+              label="Adjust calories"
+              value={caloriesBurned}
+              onChange={setCaloriesOverride}
+              min={0}
+            />
+          ) : null}
+
+          <View style={[styles.splitRow, { borderColor: colors.border }]}>
+            <View style={styles.splitCell}>
+              <AppText variant="micro" tone="muted" weight="600" style={styles.caps}>
+                Duration
+              </AppText>
+              <View style={styles.splitValue}>
+                <Ionicons name="time-outline" size={18} color={colors.accent} />
+                <TextInput
+                  accessibilityLabel="Duration in minutes"
+                  keyboardType="number-pad"
+                  value={durationMin !== undefined ? String(durationMin) : ''}
+                  onChangeText={(t) => {
+                    if (t === '') {
+                      setDurationMin(undefined);
+                      return;
+                    }
+                    const n = Number(t);
+                    if (Number.isFinite(n) && n >= 0) setDurationMin(Math.round(n));
+                  }}
+                  placeholder="0"
+                  placeholderTextColor={colors.textMuted}
+                  style={[styles.durationInput, { color: colors.textPrimary }]}
+                />
+                <AppText variant="caption" tone="muted">
+                  min
+                </AppText>
+              </View>
+            </View>
+
+            <View style={[styles.vRule, { backgroundColor: colors.borderStrong }]} />
+
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={`Intensity ${INTENSITY_LABEL[intensity]}`}
+              onPress={() => setIntensityOpen((o) => !o)}
+              style={styles.splitCell}
+            >
+              <AppText variant="micro" tone="muted" weight="600" style={styles.caps}>
+                Intensity
+              </AppText>
+              <View style={styles.splitValue}>
+                <Ionicons name="cellular-outline" size={18} color={colors.accent} />
+                <AppText variant="body" weight="600">
+                  {INTENSITY_LABEL[intensity]}
+                </AppText>
+                <Ionicons name="chevron-down" size={16} color={colors.textMuted} />
+              </View>
+            </Pressable>
           </View>
-        ) : null}
 
-        <NumberField
-          label="Adjust calories"
-          value={caloriesBurned}
-          onChange={setCaloriesOverride}
-          min={0}
-          required
-        />
-      </Card>
+          {intensityOpen ? (
+            <View style={styles.intensityMenu}>
+              {(['easy', 'moderate', 'hard'] as ActivityIntensity[]).map((level) => (
+                <Pressable
+                  key={level}
+                  onPress={() => {
+                    setIntensity(level);
+                    setIntensityOpen(false);
+                  }}
+                  style={[
+                    styles.intensityOption,
+                    intensity === level && { backgroundColor: colors.accent + '22' },
+                  ]}
+                >
+                  <AppText
+                    variant="body"
+                    weight={intensity === level ? '600' : '400'}
+                    style={{ color: intensity === level ? colors.accent : colors.textPrimary }}
+                  >
+                    {INTENSITY_LABEL[level]}
+                  </AppText>
+                </Pressable>
+              ))}
+            </View>
+          ) : null}
 
-      <AppText variant="caption" tone="secondary">
-        Intensity
-      </AppText>
-      <View style={{ flexDirection: 'row', gap: spacing.sm }}>
-        {(['easy', 'moderate', 'hard'] as ActivityIntensity[]).map((level) => (
-          <Chip
-            key={level}
-            label={level[0].toUpperCase() + level.slice(1)}
-            selected={intensity === level}
-            onPress={() => setIntensity(level)}
-          />
-        ))}
-      </View>
-
-      <TextField
-        label="Notes (optional)"
-        value={notes}
-        onChangeText={setNotes}
-        placeholder="Felt strong on the last set…"
-      />
-
-      <Button title="Save workout" onPress={save} loading={saving} />
-      <Button title="Cancel" variant="ghost" onPress={() => goBackOrHome(router)} />
-    </Screen>
+          <View style={{ gap: spacing.xs }}>
+            <AppText variant="micro" tone="muted" weight="600" style={styles.caps}>
+              Notes (optional)
+            </AppText>
+            <TextInput
+              accessibilityLabel="Notes"
+              value={notes}
+              onChangeText={(t) => setNotes(t.slice(0, 150))}
+              placeholder="How did it go?"
+              placeholderTextColor={colors.textMuted}
+              multiline
+              style={[
+                styles.notes,
+                {
+                  color: colors.textPrimary,
+                  borderColor: colors.borderStrong,
+                  backgroundColor: colors.background,
+                },
+              ]}
+            />
+            <AppText variant="micro" tone="muted" align="right">
+              {notes.length}/150
+            </AppText>
+          </View>
+        </View>
+      </ScrollView>
+    </View>
   );
 }
+
+const styles = StyleSheet.create({
+  root: {
+    flex: 1,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: spacing.md,
+    minHeight: touchTarget,
+    zIndex: 2,
+  },
+  headerBtn: {
+    width: touchTarget,
+    height: touchTarget,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerTitle: {
+    flex: 1,
+    textAlign: 'center',
+    color: '#FFFFFF',
+  },
+  heroCopy: {
+    position: 'absolute',
+    left: spacing.lg,
+    right: spacing.lg,
+    bottom: spacing.lg + 4,
+    gap: 8,
+  },
+  heroIconRing: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    borderWidth: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 4,
+  },
+  chipRow: {
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    gap: spacing.sm,
+  },
+  typeChip: {
+    height: 128,
+    borderRadius: radius.lg,
+    overflow: 'hidden',
+    borderWidth: 2,
+    borderColor: 'transparent',
+    justifyContent: 'space-between',
+    padding: spacing.sm,
+  },
+  chipIcon: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    alignSelf: 'flex-start',
+  },
+  chipLabel: {
+    color: '#FFFFFF',
+    alignSelf: 'flex-start',
+  },
+  panel: {
+    marginHorizontal: spacing.lg,
+    borderRadius: radius.xl,
+    padding: spacing.lg,
+    gap: spacing.lg,
+  },
+  calRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+  },
+  caps: {
+    textTransform: 'uppercase',
+    letterSpacing: 0.6,
+  },
+  splitRow: {
+    flexDirection: 'row',
+    alignItems: 'stretch',
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    paddingVertical: spacing.md,
+  },
+  splitCell: {
+    flex: 1,
+    gap: 8,
+    paddingHorizontal: spacing.xs,
+  },
+  splitValue: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  vRule: {
+    width: StyleSheet.hairlineWidth,
+    alignSelf: 'stretch',
+  },
+  durationInput: {
+    minWidth: 36,
+    fontSize: 17,
+    fontWeight: '600',
+    padding: 0,
+  },
+  intensityMenu: {
+    gap: 4,
+    marginTop: -spacing.sm,
+  },
+  intensityOption: {
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: radius.sm,
+  },
+  notes: {
+    minHeight: 88,
+    borderWidth: 1,
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
+    textAlignVertical: 'top',
+    fontSize: 15,
+  },
+});
