@@ -1,4 +1,4 @@
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useQueryClient } from '@tanstack/react-query';
 import * as Application from 'expo-application';
 import { useRouter } from 'expo-router';
@@ -23,6 +23,9 @@ import {
 import { radius, spacing, touchTarget } from '@/ui/theme/tokens';
 
 type NutritionStyle = 'cut' | 'maintain' | 'bulk';
+type IconSpec =
+  | { set: 'ion'; name: keyof typeof Ionicons.glyphMap }
+  | { set: 'mci'; name: React.ComponentProps<typeof MaterialCommunityIcons>['name'] };
 
 const STYLE_TO_GOAL: Record<NutritionStyle, OnboardingProfile['goalType']> = {
   cut: 'lose',
@@ -53,12 +56,13 @@ const DEFAULT_MEAL_TIMES: Record<string, string> = {
   snack: '3:30 PM',
 };
 
-const MEAL_ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
-  breakfast: 'sunny-outline',
-  lunch: 'partly-sunny-outline',
-  dinner: 'moon-outline',
-  snacks: 'leaf-outline',
-  snack: 'leaf-outline',
+/** Mockup meal glyphs: sunrise / sun / sunset / leaf (no circular chrome). */
+const MEAL_ICONS: Record<string, IconSpec> = {
+  breakfast: { set: 'mci', name: 'weather-sunset-up' },
+  lunch: { set: 'mci', name: 'white-balance-sunny' },
+  dinner: { set: 'mci', name: 'weather-sunset-down' },
+  snacks: { set: 'mci', name: 'leaf' },
+  snack: { set: 'mci', name: 'leaf' },
 };
 
 const MEAL_TIME_OPTIONS = [
@@ -209,11 +213,12 @@ export default function SettingsScreen() {
     router.replace('/onboarding');
   }
 
-  // Decorative fill ~80% like the mockup (goal label sits beside the track).
-  const stepFill = 0.8;
+  // Decorative fill ~70% like the mockup (goal label sits beside the track).
+  const stepFill = 0.72;
 
   return (
     <Screen tabBarSpace>
+      <View style={styles.lifestyleStack}>
       <View style={styles.header}>
         <Ionicons name="settings" size={28} color={colors.accent} />
         <AppText variant="title" weight="700" display>
@@ -224,7 +229,7 @@ export default function SettingsScreen() {
       {/* Nutrition style */}
       <Card style={styles.card}>
         <SectionTitle
-          icon="restaurant-outline"
+          icon={{ set: 'ion', name: 'restaurant' }}
           title="Nutrition style"
           subtitle="Choose your nutrition goal."
         />
@@ -271,7 +276,7 @@ export default function SettingsScreen() {
           style={styles.rowBetween}
         >
           <SectionTitle
-            icon="walk-outline"
+            icon={{ set: 'mci', name: 'run' }}
             title="Activity level"
             subtitle="How active are you daily?"
             compact
@@ -288,33 +293,36 @@ export default function SettingsScreen() {
       {/* Meal schedule */}
       <Card style={styles.card}>
         <SectionTitle
-          icon="calendar-outline"
+          icon={{ set: 'mci', name: 'calendar-clock' }}
           title="Meal schedule"
           subtitle="Set your daily eating windows."
         />
         <View style={styles.mealList}>
-          {(categories.data ?? []).map((cat) => (
+          {(categories.data ?? []).map((cat, idx, arr) => (
             <Pressable
               key={cat.id}
               accessibilityRole="button"
               accessibilityLabel={`${cat.name} time ${times[cat.id] ?? DEFAULT_MEAL_TIMES[cat.id] ?? 'unset'}`}
               onPress={() => setMealTimeEdit(cat.id)}
-              style={styles.mealRow}
+              style={[
+                styles.mealRow,
+                idx < arr.length - 1 && {
+                  borderBottomWidth: StyleSheet.hairlineWidth,
+                  borderBottomColor: colors.border,
+                },
+              ]}
             >
-              <View style={[styles.mealIcon, { backgroundColor: colors.accent + '22' }]}>
-                <Ionicons
-                  name={MEAL_ICONS[cat.id] ?? 'restaurant-outline'}
-                  size={16}
-                  color={colors.accent}
-                />
-              </View>
+              <AccentIcon
+                icon={MEAL_ICONS[cat.id] ?? { set: 'ion', name: 'restaurant-outline' }}
+                size={20}
+              />
               <AppText variant="body" weight="600" style={{ flex: 1 }}>
                 {cat.name}
               </AppText>
-              <AppText variant="caption" style={{ color: colors.accent }}>
+              <AppText variant="caption" tone="secondary">
                 {times[cat.id] ?? DEFAULT_MEAL_TIMES[cat.id] ?? 'Set time'}
               </AppText>
-              <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+              <Ionicons name="chevron-forward" size={16} color={colors.accent} />
             </Pressable>
           ))}
         </View>
@@ -324,37 +332,44 @@ export default function SettingsScreen() {
       <Card style={styles.card}>
         <View style={styles.rowBetween}>
           <SectionTitle
-            icon="water-outline"
+            icon={{ set: 'ion', name: 'water' }}
             title="Water goal"
             subtitle="Daily water intake goal."
             compact
           />
           <Stepper
             label={`${cups} cups`}
+            labelAccent
             onMinus={() => void setWater(cups - 1)}
             onPlus={() => void setWater(cups + 1)}
           />
         </View>
         <View style={styles.glasses}>
-          {Array.from({ length: 10 }, (_, i) => (
-            <View key={i} style={styles.glassSlot}>
-              <View
-                style={[
-                  styles.glassBowl,
-                  {
-                    backgroundColor: i < cups ? colors.accent : 'transparent',
-                    borderColor: colors.accent,
-                  },
-                ]}
-              />
-              <View
-                style={[
-                  styles.glassBase,
-                  { backgroundColor: i < cups ? colors.accent : colors.accent + '55' },
-                ]}
-              />
-            </View>
-          ))}
+          {Array.from({ length: 10 }, (_, i) => {
+            const filled = i < cups;
+            return (
+              <View key={i} style={styles.glassSlot}>
+                <View
+                  style={[
+                    styles.glassBowl,
+                    {
+                      backgroundColor: filled ? colors.accent : 'transparent',
+                      borderColor: colors.accent,
+                    },
+                  ]}
+                />
+                <View
+                  style={[
+                    styles.glassBase,
+                    {
+                      backgroundColor: filled ? colors.accent : 'transparent',
+                      borderColor: colors.accent,
+                    },
+                  ]}
+                />
+              </View>
+            );
+          })}
         </View>
       </Card>
 
@@ -362,7 +377,7 @@ export default function SettingsScreen() {
       <Card style={styles.card}>
         <View style={styles.rowBetween}>
           <SectionTitle
-            icon="footsteps-outline"
+            icon={{ set: 'mci', name: 'shoe-sneaker' }}
             title="Step goal"
             subtitle="Daily step target."
             compact
@@ -391,22 +406,22 @@ export default function SettingsScreen() {
       <AppText variant="caption" tone="muted" style={styles.prefLabel}>
         Preferences
       </AppText>
-      <Card padded={false} style={{ paddingHorizontal: spacing.lg, marginBottom: spacing.sm }}>
-        <ListRow
+      <Card padded={false} style={styles.prefCard}>
+        <PrefRow
+          icon={{ set: 'mci', name: 'scale-balance' }}
           title="Units"
           value={units.data === 'metric' ? 'Metric (kg, cm)' : 'US (lb, ft)'}
-          left={<Ionicons name="scale-outline" size={20} color={colors.accent} />}
-          right={<Ionicons name="chevron-forward" size={16} color={colors.textMuted} />}
           onPress={() => setUnitsOpen(true)}
         />
-        <ListRow
+        <View style={[styles.prefDivider, { backgroundColor: colors.border }]} />
+        <PrefRow
+          icon={{ set: 'mci', name: 'brush' }}
           title="Appearance"
           value={mode === 'system' ? 'System' : mode === 'dark' ? 'Dark' : 'Light'}
-          left={<Ionicons name="brush-outline" size={20} color={colors.accent} />}
-          right={<Ionicons name="chevron-forward" size={16} color={colors.textMuted} />}
           onPress={() => setAppearanceOpen(true)}
         />
       </Card>
+      </View>
 
       <Card padded={false} style={{ paddingHorizontal: spacing.lg }}>
         <ListRow
@@ -653,21 +668,28 @@ export default function SettingsScreen() {
   );
 }
 
+function AccentIcon({ icon, size = 22 }: { icon: IconSpec; size?: number }) {
+  const { colors } = useTheme();
+  if (icon.set === 'mci') {
+    return <MaterialCommunityIcons name={icon.name} size={size} color={colors.accent} />;
+  }
+  return <Ionicons name={icon.name} size={size} color={colors.accent} />;
+}
+
 function SectionTitle({
   icon,
   title,
   subtitle,
   compact,
 }: {
-  icon: keyof typeof Ionicons.glyphMap;
+  icon: IconSpec;
   title: string;
   subtitle: string;
   compact?: boolean;
 }) {
-  const { colors } = useTheme();
   return (
     <View style={[styles.sectionTitle, compact && { flex: 1, minWidth: 0, paddingRight: spacing.sm }]}>
-      <Ionicons name={icon} size={22} color={colors.accent} />
+      <AccentIcon icon={icon} size={22} />
       <View style={{ flex: 1, gap: 2, minWidth: 0 }}>
         <AppText variant="body" weight="600" numberOfLines={1}>
           {title}
@@ -684,10 +706,13 @@ function Stepper({
   label,
   onMinus,
   onPlus,
+  labelAccent,
 }: {
   label: string;
   onMinus: () => void;
   onPlus: () => void;
+  /** Water stepper uses mint value; step goal uses white. */
+  labelAccent?: boolean;
 }) {
   const { colors } = useTheme();
   return (
@@ -700,7 +725,15 @@ function Stepper({
       >
         <Ionicons name="remove" size={18} color={colors.accent} />
       </Pressable>
-      <AppText variant="caption" weight="700" style={{ color: colors.accent, minWidth: 64, textAlign: 'center' }}>
+      <AppText
+        variant="caption"
+        weight="700"
+        style={{
+          color: labelAccent ? colors.accent : colors.textPrimary,
+          minWidth: 64,
+          textAlign: 'center',
+        }}
+      >
         {label}
       </AppText>
       <Pressable
@@ -715,15 +748,50 @@ function Stepper({
   );
 }
 
+function PrefRow({
+  icon,
+  title,
+  value,
+  onPress,
+}: {
+  icon: IconSpec;
+  title: string;
+  value: string;
+  onPress: () => void;
+}) {
+  const { colors } = useTheme();
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={`${title}, ${value}`}
+      onPress={onPress}
+      style={styles.prefRow}
+    >
+      <AccentIcon icon={icon} size={20} />
+      <AppText variant="body" weight="600" style={{ flex: 1 }}>
+        {title}
+      </AppText>
+      <AppText variant="caption" weight="600" style={{ color: colors.accent }}>
+        {value}
+      </AppText>
+      <Ionicons name="chevron-forward" size={16} color={colors.accent} />
+    </Pressable>
+  );
+}
+
 const styles = StyleSheet.create({
+  lifestyleStack: {
+    gap: 10,
+  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
-    minHeight: touchTarget,
+    minHeight: 36,
   },
   card: {
     gap: spacing.sm,
+    marginBottom: 0,
   },
   sectionTitle: {
     flexDirection: 'row',
@@ -761,53 +829,50 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
-    minHeight: 42,
-    paddingVertical: 2,
-  },
-  mealIcon: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
+    minHeight: 40,
+    paddingVertical: 6,
   },
   glasses: {
     flexDirection: 'row',
-    gap: 5,
+    gap: 6,
     alignItems: 'flex-end',
+    justifyContent: 'space-between',
+    marginTop: 2,
   },
   glassSlot: {
     alignItems: 'center',
     gap: 2,
+    flex: 1,
   },
   glassBowl: {
-    width: 18,
-    height: 22,
-    borderTopLeftRadius: 3,
-    borderTopRightRadius: 3,
-    borderBottomLeftRadius: 5,
-    borderBottomRightRadius: 5,
-    borderWidth: 1.5,
+    width: '100%',
+    maxWidth: 22,
+    height: 24,
+    borderTopLeftRadius: 4,
+    borderTopRightRadius: 4,
+    borderBottomLeftRadius: 7,
+    borderBottomRightRadius: 7,
+    borderWidth: 1.75,
+    alignSelf: 'center',
   },
   glassBase: {
-    width: 12,
+    width: '55%',
+    maxWidth: 12,
     height: 3,
     borderRadius: 1,
+    borderWidth: 1,
+    alignSelf: 'center',
   },
   stepper: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 8,
     flexShrink: 0,
-    backgroundColor: 'rgba(255,255,255,0.04)',
-    borderRadius: radius.full,
-    paddingHorizontal: 4,
-    paddingVertical: 3,
   },
   stepperBtn: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    width: 30,
+    height: 30,
+    borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -829,5 +894,20 @@ const styles = StyleSheet.create({
   prefLabel: {
     marginTop: spacing.xs,
     marginLeft: spacing.xs,
+    marginBottom: 4,
+  },
+  prefCard: {
+    paddingHorizontal: spacing.lg,
+    marginBottom: spacing.sm,
+  },
+  prefRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    minHeight: 48,
+    paddingVertical: spacing.sm,
+  },
+  prefDivider: {
+    height: StyleSheet.hairlineWidth,
   },
 });
