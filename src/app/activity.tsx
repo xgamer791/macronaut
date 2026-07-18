@@ -1,7 +1,9 @@
+import * as Haptics from 'expo-haptics';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ACTIVITY_CATEGORIES, computeImprovements } from '@/domain/activity';
 import { useRepos } from '@/state/AppProvider';
 import {
@@ -27,16 +29,18 @@ import {
   Button,
   Card,
   Chip,
-  DatePickSheet,
   EmptyState,
   ListRow,
+  MonthCalendarPopup,
   ProgressRing,
   Screen,
   ScreenHeader,
   StatTile,
 } from '@/ui/components';
 import { useTheme } from '@/ui/theme/ThemeProvider';
-import { spacing } from '@/ui/theme/tokens';
+import { spacing, touchTarget } from '@/ui/theme/tokens';
+
+const CALENDAR_GAP = 8;
 
 type Range = '7' | '30' | '90';
 
@@ -67,6 +71,7 @@ export default function ActivityScreen() {
 function ActivityBody() {
   const router = useRouter();
   const { colors } = useTheme();
+  const insets = useSafeAreaInsets();
   const { activity } = useRepos();
   const params = useLocalSearchParams<{ type?: string }>();
   const date = useUiStore((s) => s.selectedDate);
@@ -74,12 +79,50 @@ function ActivityBody() {
   const progress = useDayProgress(date);
   const todayEntries = useActivityEntries(date);
   const removeEntry = useDeleteActivityEntry();
+  const todayRowRef = useRef<View>(null);
 
   const filterType: ActivityType | 'all' = isActivityType(params.type) ? params.type : 'all';
   const [range, setRange] = useState<Range>('7');
   const [typeFilter, setTypeFilter] = useState<ActivityType | 'all'>(filterType);
   const [trendsOpen, setTrendsOpen] = useState(false);
-  const [datePickerOpen, setDatePickerOpen] = useState(false);
+  const [calendarOpen, setCalendarOpen] = useState(false);
+  const [calendarTop, setCalendarTop] = useState(insets.top + touchTarget + CALENDAR_GAP);
+
+  const closeCalendar = useCallback(() => setCalendarOpen(false), []);
+
+  const openCalendar = useCallback(() => {
+    void Haptics.selectionAsync();
+    const finishOpen = (top: number) => {
+      setCalendarTop(top);
+      setCalendarOpen(true);
+    };
+    const node = todayRowRef.current;
+    if (node && typeof node.measureInWindow === 'function') {
+      node.measureInWindow((_x, y, _w, h) => {
+        finishOpen(Math.max(insets.top + spacing.sm, y + h + CALENDAR_GAP));
+      });
+      return;
+    }
+    finishOpen(insets.top + touchTarget + spacing.lg + CALENDAR_GAP);
+  }, [insets.top]);
+
+  const toggleCalendar = useCallback(() => {
+    if (calendarOpen) {
+      void Haptics.selectionAsync();
+      closeCalendar();
+      return;
+    }
+    openCalendar();
+  }, [calendarOpen, closeCalendar, openCalendar]);
+
+  const pickDate = useCallback(
+    (next: DayKey) => {
+      void Haptics.selectionAsync();
+      setSelectedDate(next);
+      closeCalendar();
+    },
+    [setSelectedDate, closeCalendar],
+  );
 
   const today = todayKey();
   const from = addDays(today, -(Number(range) - 1));
@@ -257,6 +300,8 @@ function ActivityBody() {
         </View>
 
         <View
+          ref={todayRowRef}
+          collapsable={false}
           style={{
             flexDirection: 'row',
             alignItems: 'center',
@@ -269,10 +314,11 @@ function ActivityBody() {
           </AppText>
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Choose date"
-            accessibilityHint="Opens a date picker"
+            accessibilityLabel={`${date === todayKey() ? 'Today' : formatDayKey(date)}. ${calendarOpen ? 'Close' : 'Open'} calendar`}
+            accessibilityHint="Shows a month calendar to pick a day"
+            accessibilityState={{ expanded: calendarOpen }}
             hitSlop={8}
-            onPress={() => setDatePickerOpen(true)}
+            onPress={toggleCalendar}
             style={{
               minWidth: 44,
               minHeight: 44,
@@ -427,11 +473,12 @@ function ActivityBody() {
       <Button title="Log activity" onPress={goLog} />
       </View>
 
-      <DatePickSheet
-        visible={datePickerOpen}
-        onClose={() => setDatePickerOpen(false)}
-        title="Choose a date"
-        onPick={setSelectedDate}
+      <MonthCalendarPopup
+        visible={calendarOpen}
+        selected={date}
+        top={calendarTop}
+        onClose={closeCalendar}
+        onSelect={pickDate}
       />
     </Screen>
   );

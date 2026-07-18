@@ -20,6 +20,7 @@ export { StatTile } from './StatTile';
 export { TextField } from './TextField';
 export { TargetEditor } from './TargetEditor';
 export { DatePickSheet } from './DatePickSheet';
+export { MonthCalendarPopup } from './MonthCalendarPopup';
 export { DashboardHeader } from './DashboardHeader';
 export { FoodImage } from './FoodImage';
 export { BarChart } from './BarChart';
