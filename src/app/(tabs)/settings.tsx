@@ -227,7 +227,7 @@ export default function SettingsScreen() {
       </View>
 
       {/* Nutrition style */}
-      <Card style={styles.card}>
+      <Card style={[styles.card, styles.lifestyleCard]}>
         <SectionTitle
           icon={{ set: 'ion', name: 'restaurant' }}
           title="Nutrition style"
@@ -268,7 +268,7 @@ export default function SettingsScreen() {
       </Card>
 
       {/* Activity level — effort levels */}
-      <Card style={styles.card}>
+      <Card style={[styles.card, styles.lifestyleCard]}>
         <Pressable
           accessibilityRole="button"
           accessibilityLabel={`Activity level ${activityLabel}`}
@@ -291,7 +291,7 @@ export default function SettingsScreen() {
       </Card>
 
       {/* Meal schedule */}
-      <Card style={styles.card}>
+      <Card style={[styles.card, styles.lifestyleCard]}>
         <SectionTitle
           icon={{ set: 'mci', name: 'calendar-clock' }}
           title="Meal schedule"
@@ -329,7 +329,7 @@ export default function SettingsScreen() {
       </Card>
 
       {/* Water goal */}
-      <Card style={styles.card}>
+      <Card style={[styles.card, styles.lifestyleCard]}>
         <View style={styles.rowBetween}>
           <SectionTitle
             icon={{ set: 'ion', name: 'water' }}
@@ -374,7 +374,7 @@ export default function SettingsScreen() {
       </Card>
 
       {/* Step goal */}
-      <Card style={styles.card}>
+      <Card style={[styles.card, styles.lifestyleCard]}>
         <View style={styles.rowBetween}>
           <SectionTitle
             icon={{ set: 'mci', name: 'shoe-sneaker' }}
@@ -781,22 +781,26 @@ function PrefRow({
 
 const styles = StyleSheet.create({
   lifestyleStack: {
-    gap: 10,
+    gap: 8,
+  },
+  lifestyleCard: {
+    padding: 12,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
-    minHeight: 36,
+    minHeight: 32,
+    marginBottom: 2,
   },
   card: {
-    gap: spacing.sm,
+    gap: 8,
     marginBottom: 0,
   },
   sectionTitle: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    gap: spacing.md,
+    gap: 10,
   },
   segment: {
     flexDirection: 'row',
@@ -806,7 +810,7 @@ const styles = StyleSheet.create({
   },
   segmentBtn: {
     flex: 1,
-    minHeight: 34,
+    minHeight: 32,
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: radius.full,
@@ -824,17 +828,18 @@ const styles = StyleSheet.create({
   },
   mealList: {
     gap: 0,
+    marginTop: 2,
   },
   mealRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.md,
-    minHeight: 40,
-    paddingVertical: 6,
+    gap: 10,
+    minHeight: 34,
+    paddingVertical: 4,
   },
   glasses: {
     flexDirection: 'row',
-    gap: 6,
+    gap: 5,
     alignItems: 'flex-end',
     justifyContent: 'space-between',
     marginTop: 2,
@@ -846,19 +851,19 @@ const styles = StyleSheet.create({
   },
   glassBowl: {
     width: '100%',
-    maxWidth: 22,
-    height: 24,
-    borderTopLeftRadius: 4,
-    borderTopRightRadius: 4,
-    borderBottomLeftRadius: 7,
-    borderBottomRightRadius: 7,
-    borderWidth: 1.75,
+    maxWidth: 20,
+    height: 20,
+    borderTopLeftRadius: 3,
+    borderTopRightRadius: 3,
+    borderBottomLeftRadius: 6,
+    borderBottomRightRadius: 6,
+    borderWidth: 1.5,
     alignSelf: 'center',
   },
   glassBase: {
-    width: '55%',
-    maxWidth: 12,
-    height: 3,
+    width: '50%',
+    maxWidth: 11,
+    height: 2.5,
     borderRadius: 1,
     borderWidth: 1,
     alignSelf: 'center',
@@ -866,12 +871,12 @@ const styles = StyleSheet.create({
   stepper: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 7,
     flexShrink: 0,
   },
   stepperBtn: {
-    width: 30,
-    height: 30,
+    width: 28,
+    height: 28,
     borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
@@ -883,7 +888,7 @@ const styles = StyleSheet.create({
   },
   stepTrack: {
     flex: 1,
-    height: 7,
+    height: 6,
     borderRadius: 4,
     overflow: 'hidden',
   },
@@ -892,20 +897,21 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
   prefLabel: {
-    marginTop: spacing.xs,
-    marginLeft: spacing.xs,
-    marginBottom: 4,
+    marginTop: 2,
+    marginLeft: 2,
+    marginBottom: 2,
   },
   prefCard: {
-    paddingHorizontal: spacing.lg,
-    marginBottom: spacing.sm,
+    paddingHorizontal: 12,
+    paddingVertical: 2,
+    marginBottom: 0,
   },
   prefRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.md,
-    minHeight: 48,
-    paddingVertical: spacing.sm,
+    gap: 10,
+    minHeight: 42,
+    paddingVertical: 8,
   },
   prefDivider: {
     height: StyleSheet.hairlineWidth,
