@@ -62,7 +62,7 @@ function TodayBody() {
   const router = useRouter();
   const { colors, resolved } = useTheme();
   const insets = useSafeAreaInsets();
-  const { width } = useWindowDimensions();
+  const { width, height: windowHeight } = useWindowDimensions();
   const date = useUiStore((s) => s.selectedDate);
   const setSelectedDate = useUiStore((s) => s.setSelectedDate);
   const setTargetMeal = useUiStore((s) => s.setTargetMeal);
@@ -100,8 +100,10 @@ function TodayBody() {
     burnedByType.set(a.activityType, (burnedByType.get(a.activityType) ?? 0) + a.caloriesBurned);
   }
 
-  // Tall hero so the athlete photo reads as the top plane (mockup 3).
-  const heroHeight = Math.round(Math.min(width * 0.88, 340));
+  // Hero is tall enough that the athlete stays visible above the goals card.
+  const heroHeight = Math.round(
+    Math.min(Math.max(windowHeight * 0.42, width * 0.95), 420),
+  );
   const macros = [
     {
       key: 'protein' as const,
@@ -127,10 +129,15 @@ function TodayBody() {
     <Screen tabBarSpace padded={false} safeTop={false}>
       {/* —— Hero —— */}
       <View style={[styles.hero, { height: heroHeight + insets.top }]}>
-        <Image source={HERO_IMAGE} style={StyleSheet.absoluteFill} contentFit="cover" />
+        <Image
+          source={HERO_IMAGE}
+          style={StyleSheet.absoluteFill}
+          contentFit="cover"
+          contentPosition="top"
+        />
         <LinearGradient
-          colors={['rgba(8,12,16,0.45)', 'rgba(8,12,16,0.2)', 'rgba(14,17,20,0.95)']}
-          locations={[0, 0.4, 1]}
+          colors={['rgba(8,12,16,0.35)', 'rgba(8,12,16,0.12)', 'rgba(14,17,20,0.88)']}
+          locations={[0, 0.55, 1]}
           style={StyleSheet.absoluteFill}
         />
 
@@ -208,10 +215,6 @@ function TodayBody() {
               label="Protein Goal"
               value={`${Math.round(progress?.target.protein ?? 0).toLocaleString()} g`}
             />
-            <GoalRow
-              label="Fat Goal"
-              value={`${Math.round(progress?.target.fat ?? 0).toLocaleString()} g`}
-            />
             {burned > 0 ? (
               <GoalRow
                 label="Exercise"
@@ -219,13 +222,6 @@ function TodayBody() {
                 accent
               />
             ) : null}
-            <View style={styles.consumedRow}>
-              <Ionicons name="flame" size={14} color={colors.accent} />
-              <AppText variant="micro" tone="secondary" numberOfLines={1}>
-                {Math.round(consumed).toLocaleString()} / {Math.round(target).toLocaleString()} kcal
-                consumed
-              </AppText>
-            </View>
           </View>
         </View>
       </View>
@@ -437,7 +433,8 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
   overlayWrap: {
-    marginTop: -72,
+    // Light overlap only — keep the athlete photo open above the card.
+    marginTop: -28,
     paddingHorizontal: spacing.lg,
     zIndex: 3,
   },
@@ -451,7 +448,7 @@ const styles = StyleSheet.create({
   },
   goalsCol: {
     flex: 1,
-    gap: 6,
+    gap: 8,
     minWidth: 0,
   },
   goalRow: {
@@ -459,21 +456,14 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: spacing.sm,
   },
-  consumedRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    marginTop: 2,
-  },
   body: {
     paddingHorizontal: spacing.lg,
-    paddingTop: spacing.md,
+    paddingTop: spacing.lg,
     gap: spacing.lg,
   },
   macroRow: {
     flexDirection: 'row',
     gap: spacing.sm,
-    marginTop: spacing.sm,
   },
   macroTile: {
     flex: 1,
