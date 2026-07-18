@@ -4,6 +4,7 @@ import * as Application from 'expo-application';
 import { useRouter } from 'expo-router';
 import React, { useMemo, useState } from 'react';
 import { Linking, Platform, Pressable, StyleSheet, View } from 'react-native';
+import Svg, { Path } from 'react-native-svg';
 import { ActivityLevel, UnitSystem, WeekStart } from '@/domain/types';
 import { loadDemoData } from '@/seed/demoData';
 import { OnboardingProfile } from '@/repositories/settingsRepo';
@@ -213,8 +214,8 @@ export default function SettingsScreen() {
     router.replace('/onboarding');
   }
 
-  // Decorative fill ~70% like the mockup (goal label sits beside the track).
-  const stepFill = 0.72;
+  // Decorative fill ~80% like the mockup (goal label sits beside the track).
+  const stepFill = 0.8;
 
   return (
     <Screen tabBarSpace>
@@ -339,37 +340,14 @@ export default function SettingsScreen() {
           />
           <Stepper
             label={`${cups} cups`}
-            labelAccent
             onMinus={() => void setWater(cups - 1)}
             onPlus={() => void setWater(cups + 1)}
           />
         </View>
         <View style={styles.glasses}>
-          {Array.from({ length: 10 }, (_, i) => {
-            const filled = i < cups;
-            return (
-              <View key={i} style={styles.glassSlot}>
-                <View
-                  style={[
-                    styles.glassBowl,
-                    {
-                      backgroundColor: filled ? colors.accent : 'transparent',
-                      borderColor: colors.accent,
-                    },
-                  ]}
-                />
-                <View
-                  style={[
-                    styles.glassBase,
-                    {
-                      backgroundColor: filled ? colors.accent : 'transparent',
-                      borderColor: colors.accent,
-                    },
-                  ]}
-                />
-              </View>
-            );
-          })}
+          {Array.from({ length: 9 }, (_, i) => (
+            <WaterGlass key={i} filled={i < cups} color={colors.accent} />
+          ))}
         </View>
       </Card>
 
@@ -397,7 +375,7 @@ export default function SettingsScreen() {
               ]}
             />
           </View>
-          <AppText variant="micro" weight="600" style={{ color: colors.accent }}>
+          <AppText variant="micro" tone="muted">
             {Math.round(steps / 1000)}K steps
           </AppText>
         </View>
@@ -676,6 +654,22 @@ function AccentIcon({ icon, size = 22 }: { icon: IconSpec; size?: number }) {
   return <Ionicons name={icon.name} size={size} color={colors.accent} />;
 }
 
+/** Trapezoid tumbler — wider top, rounded base; wavy fill like the mockup. */
+function WaterGlass({ filled, color }: { filled: boolean; color: string }) {
+  const outline =
+    'M3.5 2.5 H18.5 L16.2 24.5 C16 25.5 15.1 26.2 14 26.2 H8 C6.9 26.2 6 25.5 5.8 24.5 Z';
+  const waveFill =
+    'M4.2 5.2 C6.5 3.6 8.8 6.4 11 5.2 C13.2 4 15.5 6.2 17.5 4.8 L16.1 24.3 C15.95 25.1 15.2 25.6 14 25.6 H8 C6.8 25.6 6.05 25.1 5.9 24.3 Z';
+  return (
+    <View style={styles.glassSlot} accessibilityElementsHidden>
+      <Svg width={22} height={28} viewBox="0 0 22 28">
+        {filled ? <Path d={waveFill} fill={color} /> : null}
+        <Path d={outline} fill="none" stroke={color} strokeWidth={1.6} />
+      </Svg>
+    </View>
+  );
+}
+
 function SectionTitle({
   icon,
   title,
@@ -706,43 +700,43 @@ function Stepper({
   label,
   onMinus,
   onPlus,
-  labelAccent,
 }: {
   label: string;
   onMinus: () => void;
   onPlus: () => void;
-  /** Water stepper uses mint value; step goal uses white. */
-  labelAccent?: boolean;
 }) {
   const { colors } = useTheme();
   return (
-    <View style={styles.stepper}>
+    <View style={[styles.stepper, { backgroundColor: colors.track, borderColor: colors.borderStrong }]}>
       <Pressable
         accessibilityRole="button"
         accessibilityLabel="Decrease"
         onPress={onMinus}
-        style={[styles.stepperBtn, { backgroundColor: colors.track }]}
+        style={styles.stepperBtn}
       >
-        <Ionicons name="remove" size={18} color={colors.accent} />
+        <Ionicons name="remove" size={16} color={colors.accent} />
       </Pressable>
+      <View style={[styles.stepperDivider, { backgroundColor: colors.borderStrong }]} />
       <AppText
         variant="caption"
         weight="700"
         style={{
-          color: labelAccent ? colors.accent : colors.textPrimary,
-          minWidth: 64,
+          color: colors.accent,
+          minWidth: 58,
           textAlign: 'center',
+          paddingHorizontal: 4,
         }}
       >
         {label}
       </AppText>
+      <View style={[styles.stepperDivider, { backgroundColor: colors.borderStrong }]} />
       <Pressable
         accessibilityRole="button"
         accessibilityLabel="Increase"
         onPress={onPlus}
-        style={[styles.stepperBtn, { backgroundColor: colors.track }]}
+        style={styles.stepperBtn}
       >
-        <Ionicons name="add" size={18} color={colors.accent} />
+        <Ionicons name="add" size={16} color={colors.accent} />
       </Pressable>
     </View>
   );
@@ -774,7 +768,7 @@ function PrefRow({
       <AppText variant="caption" weight="600" style={{ color: colors.accent }}>
         {value}
       </AppText>
-      <Ionicons name="chevron-forward" size={16} color={colors.accent} />
+      <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
     </Pressable>
   );
 }
@@ -839,47 +833,33 @@ const styles = StyleSheet.create({
   },
   glasses: {
     flexDirection: 'row',
-    gap: 5,
+    gap: 8,
     alignItems: 'flex-end',
-    justifyContent: 'space-between',
-    marginTop: 2,
+    justifyContent: 'flex-start',
+    marginTop: 4,
   },
   glassSlot: {
     alignItems: 'center',
-    gap: 2,
-    flex: 1,
-  },
-  glassBowl: {
-    width: '100%',
-    maxWidth: 20,
-    height: 20,
-    borderTopLeftRadius: 3,
-    borderTopRightRadius: 3,
-    borderBottomLeftRadius: 6,
-    borderBottomRightRadius: 6,
-    borderWidth: 1.5,
-    alignSelf: 'center',
-  },
-  glassBase: {
-    width: '50%',
-    maxWidth: 11,
-    height: 2.5,
-    borderRadius: 1,
-    borderWidth: 1,
-    alignSelf: 'center',
   },
   stepper: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 7,
     flexShrink: 0,
+    borderRadius: radius.full,
+    borderWidth: StyleSheet.hairlineWidth,
+    paddingHorizontal: 2,
+    minHeight: 30,
   },
   stepperBtn: {
     width: 28,
     height: 28,
-    borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  stepperDivider: {
+    width: StyleSheet.hairlineWidth,
+    alignSelf: 'stretch',
+    marginVertical: 6,
   },
   stepRow: {
     flexDirection: 'row',
