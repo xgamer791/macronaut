@@ -44,8 +44,8 @@ const MEAL_IMAGES: Record<string, ImageSource> = {
 };
 
 const MACRO_ICONS: Record<'protein' | 'carbs' | 'fat', keyof typeof Ionicons.glyphMap> = {
-  protein: 'nutrition-outline',
-  carbs: 'leaf-outline',
+  protein: 'fish-outline',
+  carbs: 'nutrition-outline',
   fat: 'water-outline',
 };
 
@@ -60,7 +60,7 @@ export default function TodayScreen() {
 
 function TodayBody() {
   const router = useRouter();
-  const { colors } = useTheme();
+  const { colors, resolved } = useTheme();
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const date = useUiStore((s) => s.selectedDate);
@@ -84,10 +84,14 @@ function TodayBody() {
 
   const mealTotals = new Map<string, number>();
   const mealTimes = new Map<string, string>();
+  const mealTitles = new Map<string, string>();
   for (const e of entries.data ?? []) {
     mealTotals.set(e.meal, (mealTotals.get(e.meal) ?? 0) + e.nutrition.calories);
     if (!mealTimes.has(e.meal) && e.createdAt) {
       mealTimes.set(e.meal, formatEntryTime(e.createdAt));
+    }
+    if (!mealTitles.has(e.meal) && e.name?.trim()) {
+      mealTitles.set(e.meal, e.name.trim());
     }
   }
 
@@ -96,7 +100,8 @@ function TodayBody() {
     burnedByType.set(a.activityType, (burnedByType.get(a.activityType) ?? 0) + a.caloriesBurned);
   }
 
-  const heroHeight = Math.round(Math.min(width * 0.72, 280));
+  // Tall hero so the athlete photo reads as the top plane (mockup 3).
+  const heroHeight = Math.round(Math.min(width * 0.88, 340));
   const macros = [
     {
       key: 'protein' as const,
@@ -156,20 +161,23 @@ function TodayBody() {
           </Pressable>
         </View>
 
-        {/* Ring + Daily Goals overlay card */}
+      </View>
+
+      {/* Ring + Daily Goals — overlaps hero fade into the body (mockup 3). */}
+      <View style={styles.overlayWrap}>
         <View
           style={[
             styles.overlayCard,
             {
-              backgroundColor: 'rgba(23,27,32,0.92)',
-              borderColor: colors.border,
+              backgroundColor: resolved === 'dark' ? 'rgba(23,27,32,0.96)' : colors.surface,
+              borderColor: colors.borderStrong,
             },
           ]}
         >
           <ProgressRing
-            progress={target > 0 ? Math.min(consumed / target, 1) : 0}
-            size={112}
-            strokeWidth={10}
+            progress={target > 0 ? Math.min(Math.max(consumed / target, 0.02), 1) : 0.02}
+            size={118}
+            strokeWidth={11}
             accessibilityLabel={`Calories: ${Math.round(consumed)} of ${Math.round(target)}`}
           >
             <View style={{ alignItems: 'center', paddingHorizontal: 4 }}>
@@ -181,7 +189,7 @@ function TodayBody() {
                 weight="700"
                 display
                 align="center"
-                style={{ fontSize: 18, lineHeight: 22 }}
+                style={{ fontSize: 22, lineHeight: 26 }}
               >
                 {Math.round(Math.abs(remaining)).toLocaleString()}
               </AppText>
@@ -210,15 +218,14 @@ function TodayBody() {
                 value={`+${Math.round(burned).toLocaleString()}`}
                 accent
               />
-            ) : (
-              <View style={styles.consumedRow}>
-                <Ionicons name="flame" size={14} color={colors.accent} />
-                <AppText variant="micro" tone="secondary" numberOfLines={1}>
-                  {Math.round(consumed).toLocaleString()} / {Math.round(target).toLocaleString()}{' '}
-                  kcal
-                </AppText>
-              </View>
-            )}
+            ) : null}
+            <View style={styles.consumedRow}>
+              <Ionicons name="flame" size={14} color={colors.accent} />
+              <AppText variant="micro" tone="secondary" numberOfLines={1}>
+                {Math.round(consumed).toLocaleString()} / {Math.round(target).toLocaleString()} kcal
+                consumed
+              </AppText>
+            </View>
           </View>
         </View>
       </View>
@@ -294,16 +301,17 @@ function TodayBody() {
           {(categories.data ?? []).map((cat, idx, arr) => {
             const kcal = Math.round(mealTotals.get(cat.id) ?? 0);
             const time = mealTimes.get(cat.id);
+            const title = mealTitles.get(cat.id) ?? cat.name;
             const image = MEAL_IMAGES[cat.id] ?? MEAL_IMAGES.lunch;
             return (
               <Pressable
                 key={cat.id}
                 accessibilityRole="button"
-                accessibilityLabel={`${cat.name}, ${kcal} kcal`}
+                accessibilityLabel={`${title}, ${kcal} kcal`}
                 onPress={() => {
                   setSelectedDate(date);
                   setTargetMeal(cat.id);
-                  router.push('/add');
+                  router.push(kcal > 0 ? '/diary' : '/add');
                 }}
                 style={[
                   styles.mealRow,
@@ -316,15 +324,17 @@ function TodayBody() {
                 <Image source={image} style={styles.mealThumb} contentFit="cover" />
                 <View style={styles.mealCopy}>
                   <AppText variant="body" weight="600" numberOfLines={1}>
-                    {cat.name}
+                    {title}
                   </AppText>
                   <AppText variant="caption" tone="muted">
                     {kcal > 0 ? `${kcal.toLocaleString()} kcal` : 'Not logged'}
                   </AppText>
                 </View>
-                <AppText variant="caption" tone="muted" style={{ marginRight: 4 }}>
-                  {time ?? (kcal > 0 ? '' : 'Log')}
-                </AppText>
+                {time ? (
+                  <AppText variant="caption" tone="muted" style={{ marginRight: 4 }}>
+                    {time}
+                  </AppText>
+                ) : null}
                 <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
               </Pressable>
             );
@@ -426,18 +436,18 @@ const styles = StyleSheet.create({
     height: 8,
     borderRadius: 4,
   },
+  overlayWrap: {
+    marginTop: -72,
+    paddingHorizontal: spacing.lg,
+    zIndex: 3,
+  },
   overlayCard: {
-    position: 'absolute',
-    left: spacing.lg,
-    right: spacing.lg,
-    bottom: spacing.md,
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.lg,
     borderRadius: radius.xl,
     borderWidth: 1,
     padding: spacing.md,
-    zIndex: 3,
   },
   goalsCol: {
     flex: 1,
@@ -463,6 +473,7 @@ const styles = StyleSheet.create({
   macroRow: {
     flexDirection: 'row',
     gap: spacing.sm,
+    marginTop: spacing.sm,
   },
   macroTile: {
     flex: 1,
@@ -470,7 +481,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     padding: spacing.md,
     gap: 4,
-    minHeight: 148,
+    minHeight: 158,
     justifyContent: 'flex-end',
   },
   macroIcon: {
