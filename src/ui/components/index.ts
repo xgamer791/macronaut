@@ -24,6 +24,7 @@ export { MonthCalendarPopup } from './MonthCalendarPopup';
 export { DashboardHeader } from './DashboardHeader';
 export { FoodImage } from './FoodImage';
 export { BarChart } from './BarChart';
+export { LineChart } from './LineChart';
 export { BarcodeScanSheet } from './BarcodeScanSheet';
 export { ScannerOverlay } from './ScannerOverlay';
 export { ScannerView } from './ScannerView';
