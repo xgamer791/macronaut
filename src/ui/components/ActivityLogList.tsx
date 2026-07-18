@@ -184,7 +184,8 @@ function MosaicTile({
           </AppText>
           <AppText
             variant="micro"
-            numberOfLines={variant === 'half' ? 1 : 2}
+            // Mobility stays one line; Cardio / Strength / Sports wrap to two.
+            numberOfLines={variant === 'wide' ? 1 : 2}
             style={styles.subtitle}
           >
             {subtitle}
@@ -288,10 +289,11 @@ const styles = StyleSheet.create({
     fontSize: 19,
     lineHeight: 26,
   },
+  // ~20% larger than the prior 14/20 body under the title.
   subtitle: {
     color: 'rgba(230,234,238,0.88)',
-    fontSize: 14,
-    lineHeight: 20,
+    fontSize: 17,
+    lineHeight: 24,
   },
   logLabel: {
     fontSize: 17,
