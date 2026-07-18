@@ -4,9 +4,11 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useMemo, useState } from 'react';
 import {
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
+  Text,
   TextInput,
   View,
   useWindowDimensions,
@@ -33,7 +35,7 @@ const TYPE_IMAGES: Record<Exclude<ActivityType, 'other'>, ImageSource> = {
 };
 
 const HERO_BLURBS: Record<Exclude<ActivityType, 'other'>, string> = {
-  cardio: 'Elevate your heart rate and boost endurance',
+  cardio: 'Elevate heart rate and boost endurance',
   strength: 'Build muscle, power, and resilience',
   sports: 'Play hard. Compete. Stay active.',
   mobility: 'Improve flexibility and move better',
@@ -194,13 +196,22 @@ export default function LogActivityScreen() {
           <AppText variant="title" weight="700" display style={{ color: '#FFFFFF' }}>
             {category.name}
           </AppText>
-          <AppText
-            variant="caption"
-            style={{ color: 'rgba(235,240,245,0.9)' }}
+          <Text
             numberOfLines={1}
+            ellipsizeMode="tail"
+            style={[
+              styles.heroBlurb,
+              Platform.OS === 'web'
+                ? ({
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                  } as object)
+                : null,
+            ]}
           >
             {HERO_BLURBS[activityType]}
-          </AppText>
+          </Text>
         </View>
       </View>
 
@@ -441,6 +452,12 @@ const styles = StyleSheet.create({
     right: spacing.lg,
     bottom: spacing.md,
     gap: 2,
+  },
+  heroBlurb: {
+    color: 'rgba(235,240,245,0.9)',
+    fontSize: 13,
+    lineHeight: 16,
+    width: '100%',
   },
   heroIconRing: {
     width: 34,
