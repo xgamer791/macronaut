@@ -209,7 +209,8 @@ export default function SettingsScreen() {
     router.replace('/onboarding');
   }
 
-  const stepFill = Math.min(steps / 12500, 1);
+  // Decorative fill ~80% like the mockup (goal label sits beside the track).
+  const stepFill = 0.8;
 
   return (
     <Screen tabBarSpace>
@@ -336,16 +337,23 @@ export default function SettingsScreen() {
         </View>
         <View style={styles.glasses}>
           {Array.from({ length: 10 }, (_, i) => (
-            <View
-              key={i}
-              style={[
-                styles.glass,
-                {
-                  backgroundColor: i < cups ? colors.accent : 'transparent',
-                  borderColor: colors.accent,
-                },
-              ]}
-            />
+            <View key={i} style={styles.glassSlot}>
+              <View
+                style={[
+                  styles.glassBowl,
+                  {
+                    backgroundColor: i < cups ? colors.accent : 'transparent',
+                    borderColor: colors.accent,
+                  },
+                ]}
+              />
+              <View
+                style={[
+                  styles.glassBase,
+                  { backgroundColor: i < cups ? colors.accent : colors.accent + '55' },
+                ]}
+              />
+            </View>
           ))}
         </View>
       </Card>
@@ -365,23 +373,25 @@ export default function SettingsScreen() {
             onPlus={() => void setSteps(steps + 500)}
           />
         </View>
-        <View style={[styles.stepTrack, { backgroundColor: colors.track }]}>
-          <View
-            style={[
-              styles.stepFill,
-              { width: `${stepFill * 100}%`, backgroundColor: colors.accent },
-            ]}
-          />
+        <View style={styles.stepRow}>
+          <View style={[styles.stepTrack, { backgroundColor: colors.track }]}>
+            <View
+              style={[
+                styles.stepFill,
+                { width: `${stepFill * 100}%`, backgroundColor: colors.accent },
+              ]}
+            />
+          </View>
+          <AppText variant="micro" weight="600" style={{ color: colors.accent }}>
+            {Math.round(steps / 1000)}K steps
+          </AppText>
         </View>
-        <AppText variant="micro" weight="600" style={{ color: colors.accent, alignSelf: 'flex-end' }}>
-          {Math.round(steps / 1000)}K steps
-        </AppText>
       </Card>
 
       <AppText variant="caption" tone="muted" style={styles.prefLabel}>
         Preferences
       </AppText>
-      <Card padded={false} style={{ paddingHorizontal: spacing.lg }}>
+      <Card padded={false} style={{ paddingHorizontal: spacing.lg, marginBottom: spacing.sm }}>
         <ListRow
           title="Units"
           value={units.data === 'metric' ? 'Metric (kg, cm)' : 'US (lb, ft)'}
@@ -396,6 +406,9 @@ export default function SettingsScreen() {
           right={<Ionicons name="chevron-forward" size={16} color={colors.textMuted} />}
           onPress={() => setAppearanceOpen(true)}
         />
+      </Card>
+
+      <Card padded={false} style={{ paddingHorizontal: spacing.lg }}>
         <ListRow
           title="Display name"
           value={displayName.trim() || 'Not set'}
@@ -710,7 +723,7 @@ const styles = StyleSheet.create({
     minHeight: touchTarget,
   },
   card: {
-    gap: spacing.md,
+    gap: spacing.sm,
   },
   sectionTitle: {
     flexDirection: 'row',
@@ -720,12 +733,12 @@ const styles = StyleSheet.create({
   segment: {
     flexDirection: 'row',
     borderRadius: radius.full,
-    padding: 4,
-    gap: 4,
+    padding: 3,
+    gap: 3,
   },
   segmentBtn: {
     flex: 1,
-    minHeight: 36,
+    minHeight: 34,
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: radius.full,
@@ -742,54 +755,76 @@ const styles = StyleSheet.create({
     flexShrink: 0,
   },
   mealList: {
-    gap: 2,
+    gap: 0,
   },
   mealRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
-    minHeight: 48,
-    paddingVertical: spacing.xs,
+    minHeight: 42,
+    paddingVertical: 2,
   },
   mealIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
   },
   glasses: {
     flexDirection: 'row',
-    gap: 6,
-    flexWrap: 'wrap',
+    gap: 5,
+    alignItems: 'flex-end',
   },
-  glass: {
-    width: 22,
-    height: 28,
-    borderRadius: 6,
+  glassSlot: {
+    alignItems: 'center',
+    gap: 2,
+  },
+  glassBowl: {
+    width: 18,
+    height: 22,
+    borderTopLeftRadius: 3,
+    borderTopRightRadius: 3,
+    borderBottomLeftRadius: 5,
+    borderBottomRightRadius: 5,
     borderWidth: 1.5,
+  },
+  glassBase: {
+    width: 12,
+    height: 3,
+    borderRadius: 1,
   },
   stepper: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.sm,
+    gap: 6,
     flexShrink: 0,
+    backgroundColor: 'rgba(255,255,255,0.04)',
+    borderRadius: radius.full,
+    paddingHorizontal: 4,
+    paddingVertical: 3,
   },
   stepperBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
   },
+  stepRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+  },
   stepTrack: {
-    height: 6,
-    borderRadius: 3,
+    flex: 1,
+    height: 7,
+    borderRadius: 4,
     overflow: 'hidden',
   },
   stepFill: {
     height: '100%',
-    borderRadius: 3,
+    borderRadius: 4,
   },
   prefLabel: {
     marginTop: spacing.xs,
