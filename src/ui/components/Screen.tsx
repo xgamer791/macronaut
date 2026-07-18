@@ -11,6 +11,8 @@ export interface ScreenProps {
   style?: StyleProp<ViewStyle>;
   /** Extra bottom padding so content clears the tab bar. */
   tabBarSpace?: boolean;
+  /** When false, content can draw under the status bar (full-bleed heroes). */
+  safeTop?: boolean;
 }
 
 export function Screen({
@@ -19,17 +21,18 @@ export function Screen({
   padded = true,
   style,
   tabBarSpace = false,
+  safeTop = true,
 }: ScreenProps) {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const base: StyleProp<ViewStyle> = [
     { flex: 1, backgroundColor: colors.background },
-    { paddingTop: insets.top },
+    { paddingTop: safeTop ? insets.top : 0 },
   ];
   const contentPad = {
     padding: padded ? spacing.lg : 0,
     paddingBottom: (padded ? spacing.lg : 0) + (tabBarSpace ? 96 : insets.bottom),
-    gap: spacing.lg,
+    gap: padded ? spacing.lg : 0,
   };
 
   if (!scroll) {
