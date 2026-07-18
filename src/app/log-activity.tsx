@@ -1,5 +1,5 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View } from 'react-native';
 import {
   ACTIVITY_CATEGORIES,
@@ -55,11 +55,6 @@ export default function LogActivityScreen() {
   const [improvements, setImprovements] = useState<
     ReturnType<typeof computeImprovements>
   >([]);
-
-  const presets = useMemo(
-    () => ACTIVITY_PRESETS.filter((p) => p.activityType === activityType),
-    [activityType],
-  );
 
   const selectedPreset = ACTIVITY_PRESETS.find(
     (p) => p.name.toLowerCase() === name.trim().toLowerCase(),
@@ -134,7 +129,12 @@ export default function LogActivityScreen() {
         Type
       </AppText>
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
-        {ACTIVITY_CATEGORIES.map((c) => (
+        {(
+          [
+            ...ACTIVITY_CATEGORIES.map((c) => ({ id: c.id as ActivityType, name: c.name })),
+            { id: 'other' as const, name: 'Other' },
+          ] as { id: ActivityType; name: string }[]
+        ).map((c) => (
           <Chip
             key={c.id}
             label={c.name}
@@ -145,32 +145,7 @@ export default function LogActivityScreen() {
             }}
           />
         ))}
-        <Chip
-          label="Other"
-          selected={activityType === 'other'}
-          onPress={() => {
-            setActivityType('other');
-            setCaloriesOverride(undefined);
-          }}
-        />
       </View>
-
-      {presets.length > 0 ? (
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
-          {presets.map((p) => (
-            <Chip
-              key={p.name}
-              label={p.name}
-              selected={name.trim().toLowerCase() === p.name.toLowerCase()}
-              onPress={() => {
-                setName(p.name);
-                setNameError(undefined);
-                setCaloriesOverride(undefined);
-              }}
-            />
-          ))}
-        </View>
-      ) : null}
 
       <TextField
         label="Workout name"
