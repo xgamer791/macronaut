@@ -4,9 +4,9 @@ import { GlassView, isGlassEffectAPIAvailable } from 'expo-glass-effect';
 import { spacing } from '@/ui/theme/tokens';
 
 const GLASS_RADIUS = 22;
-/** Same stroke on every side — avoid hairline + top highlight stacking. */
+/** Uniform stroke — same width/color on every side. */
 const GLASS_BORDER = 1;
-const GLASS_BORDER_COLOR = 'rgba(255, 255, 255, 0.14)';
+const GLASS_BORDER_COLOR = 'rgba(255, 255, 255, 0.18)';
 
 export interface LiquidGlassCardProps {
   children: React.ReactNode;
@@ -19,7 +19,8 @@ export interface LiquidGlassCardProps {
 
 /**
  * Clean liquid-glass surface — native GlassView on iOS 26+, CSS blur elsewhere.
- * Uniform 1px rim on all sides (no thicker top highlight).
+ * Frosted enough to read as glass on black (not a solid grey card), with a
+ * uniform 1px rim on all sides.
  */
 export function LiquidGlassCard({
   children,
@@ -40,7 +41,7 @@ export function LiquidGlassCard({
     return (
       <GlassView
         glassEffectStyle="regular"
-        tintColor="rgba(12, 16, 20, 0.45)"
+        tintColor="rgba(255, 255, 255, 0.08)"
         colorScheme="dark"
         style={[styles.glassNative, style]}
       >
@@ -53,10 +54,15 @@ export function LiquidGlassCard({
     <View
       style={[
         styles.glassWeb,
-        {
-          backdropFilter: 'blur(40px) saturate(180%)',
-          WebkitBackdropFilter: 'blur(40px) saturate(180%)',
-        } as object,
+        Platform.OS === 'web'
+          ? ({
+              backdropFilter: 'blur(48px) saturate(190%)',
+              WebkitBackdropFilter: 'blur(48px) saturate(190%)',
+              // Soft frost wash — even across the card, not a thicker top edge.
+              backgroundImage:
+                'linear-gradient(180deg, rgba(255,255,255,0.09) 0%, rgba(255,255,255,0.05) 100%)',
+            } as object)
+          : null,
         style,
       ]}
     >
@@ -77,21 +83,18 @@ const styles = StyleSheet.create({
     borderRadius: GLASS_RADIUS,
     overflow: 'hidden',
     borderWidth: GLASS_BORDER,
-    borderTopWidth: GLASS_BORDER,
-    borderRightWidth: GLASS_BORDER,
-    borderBottomWidth: GLASS_BORDER,
-    borderLeftWidth: GLASS_BORDER,
     borderColor: GLASS_BORDER_COLOR,
-    backgroundColor: 'rgba(22, 28, 34, 0.42)',
+    // Lighter translucent frost so it doesn’t collapse to solid #171B20 on black.
+    backgroundColor: 'rgba(255, 255, 255, 0.07)',
     shadowColor: '#000',
-    shadowOpacity: 0.28,
-    shadowRadius: 20,
-    shadowOffset: { width: 0, height: 10 },
-    elevation: 12,
+    shadowOpacity: 0.35,
+    shadowRadius: 24,
+    shadowOffset: { width: 0, height: 12 },
+    elevation: 14,
   },
   glassFill: {
     ...StyleSheet.absoluteFill,
-    backgroundColor: 'rgba(255, 255, 255, 0.03)',
+    backgroundColor: 'rgba(28, 34, 42, 0.35)',
   },
   inner: {
     position: 'relative',

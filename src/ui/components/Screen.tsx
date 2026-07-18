@@ -1,5 +1,5 @@
 import React from 'react';
-import { ScrollView, StyleProp, View, ViewStyle } from 'react-native';
+import { Platform, ScrollView, StyleProp, View, ViewStyle } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '@/ui/theme/ThemeProvider';
 import { spacing } from '@/ui/theme/tokens';
@@ -20,11 +20,20 @@ export function Screen({
   style,
   tabBarSpace = false,
 }: ScreenProps) {
-  const { colors } = useTheme();
+  const { colors, resolved } = useTheme();
   const insets = useSafeAreaInsets();
+  // Soft vignette behind dark glass so blur/frost reads as glass, not solid grey.
+  const darkAtmosphere =
+    resolved === 'dark' && Platform.OS === 'web'
+      ? ({
+          backgroundImage:
+            'radial-gradient(120% 80% at 50% -10%, rgba(40, 52, 64, 0.55) 0%, transparent 55%), radial-gradient(90% 60% at 100% 100%, rgba(23, 166, 115, 0.08) 0%, transparent 45%)',
+        } as object)
+      : null;
   const base: StyleProp<ViewStyle> = [
     { flex: 1, backgroundColor: colors.background },
     { paddingTop: insets.top },
+    darkAtmosphere,
   ];
   const contentPad = {
     padding: padded ? spacing.lg : 0,

@@ -15,7 +15,7 @@ export function Card({ padded = true, style, children, ...rest }: CardProps) {
 
   if (resolved === 'dark') {
     return (
-      <View {...rest}>
+      <View {...rest} collapsable={false}>
         <LiquidGlassCard padded={padded} contentStyle={style}>
           {children}
         </LiquidGlassCard>
