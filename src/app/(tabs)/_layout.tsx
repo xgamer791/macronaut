@@ -7,9 +7,11 @@ import { TabBar } from '@/ui/components/TabBar';
 import { VoiceAssistant } from '@/ui/components/VoiceAssistant';
 
 export default function TabsLayout() {
+  const auth = useSetting<boolean>('authComplete', false);
   const onboarded = useSetting<boolean>('onboardingComplete', false);
 
-  if (onboarded.isLoading) return null;
+  if (auth.isLoading || onboarded.isLoading) return null;
+  if (!auth.data) return <Redirect href="/login" />;
   if (!onboarded.data) return <Redirect href="/onboarding" />;
 
   return (

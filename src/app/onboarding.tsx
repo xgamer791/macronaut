@@ -1,4 +1,4 @@
-import { useRouter } from 'expo-router';
+import { Redirect, useRouter } from 'expo-router';
 import React, { useMemo, useState } from 'react';
 import { Pressable, View } from 'react-native';
 import { useQueryClient } from '@tanstack/react-query';
@@ -11,7 +11,7 @@ import {
   UnitSystem,
 } from '@/domain/types';
 import { useRepos } from '@/state/AppProvider';
-import { keys } from '@/state/queries';
+import { keys, useSetting } from '@/state/queries';
 import { todayKey } from '@/utils/date';
 import {
   AppText,
@@ -52,6 +52,7 @@ export default function Onboarding() {
   const { settings, goals } = useRepos();
   const qc = useQueryClient();
   const { colors } = useTheme();
+  const auth = useSetting<boolean>('authComplete', false);
 
   const [step, setStep] = useState<Step>('welcome');
   const [displayName, setDisplayName] = useState('');
@@ -101,6 +102,9 @@ export default function Onboarding() {
       weeklyRateKg: signedRate * KG_PER_LB,
     });
   }, [canRecommend, age, sex, metrics, activity, goalType, rateLb]);
+
+  if (auth.isLoading) return null;
+  if (!auth.data) return <Redirect href="/login" />;
 
   async function complete(finalTargets: NutrientTargets) {
     setSaving(true);
