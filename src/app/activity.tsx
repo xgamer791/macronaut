@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Image, type ImageSource } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   Platform,
   Pressable,
@@ -66,9 +66,10 @@ export default function ActivityScreen() {
   const initialType: Exclude<ActivityType, 'other'> = isPhotoType(params.type)
     ? params.type
     : 'cardio';
+  const initialPreset = ACTIVITY_PRESETS.find((p) => p.activityType === initialType);
   const [activityType, setActivityType] =
     useState<Exclude<ActivityType, 'other'>>(initialType);
-  const [name, setName] = useState(params.name ?? '');
+  const [name, setName] = useState(params.name ?? initialPreset?.name ?? '');
   const [durationMin, setDurationMin] = useState<number | undefined>(55);
   const [caloriesOverride, setCaloriesOverride] = useState<number | undefined>();
   const [intensity, setIntensity] = useState<ActivityIntensity>('hard');
@@ -92,15 +93,15 @@ export default function ActivityScreen() {
       : undefined;
   const caloriesBurned = caloriesOverride ?? estimatedBurn ?? 0;
 
-  // When type changes, adopt that type’s default workout name for save.
-  useEffect(() => {
+  function selectActivityType(typeId: Exclude<ActivityType, 'other'>) {
+    setActivityType(typeId);
     if (params.name) return;
-    const preset = ACTIVITY_PRESETS.find((p) => p.activityType === activityType);
+    const preset = ACTIVITY_PRESETS.find((p) => p.activityType === typeId);
     if (preset) {
       setName(preset.name);
       setCaloriesOverride(undefined);
     }
-  }, [activityType, params.name]);
+  }
 
   async function save() {
     const workoutName = name.trim() || category.name;
@@ -232,7 +233,7 @@ export default function ActivityScreen() {
                 accessibilityRole="button"
                 accessibilityState={{ selected }}
                 accessibilityLabel={c.name}
-                onPress={() => setActivityType(typeId)}
+                onPress={() => selectActivityType(typeId)}
                 style={[
                   styles.typeChip,
                   { width: chipWidth },

@@ -21,7 +21,7 @@ import {
   Sheet,
   TextField,
 } from '@/ui/components';
-import { radius, spacing, touchTarget } from '@/ui/theme/tokens';
+import { radius, spacing } from '@/ui/theme/tokens';
 
 type NutritionStyle = 'cut' | 'maintain' | 'bulk';
 type IconSpec =
