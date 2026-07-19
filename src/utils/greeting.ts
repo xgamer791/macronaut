@@ -6,8 +6,9 @@ export function greetingForHour(hour: number = new Date().getHours()): string {
   return 'Good night';
 }
 
-export function displayFirstName(raw?: string | null): string {
+/** First token of the display name, or null when unset (never a fake placeholder). */
+export function displayFirstName(raw?: string | null): string | null {
   const trimmed = (raw ?? '').trim();
-  if (!trimmed) return 'Athlete';
+  if (!trimmed) return null;
   return trimmed.split(/\s+/)[0]!;
 }

@@ -23,9 +23,9 @@ describe('greetingForHour', () => {
 });
 
 describe('displayFirstName', () => {
-  it('uses first token and falls back', () => {
+  it('uses first token and returns null when unset', () => {
     expect(displayFirstName('Alex Rivera')).toBe('Alex');
-    expect(displayFirstName('  ')).toBe('Athlete');
-    expect(displayFirstName(undefined)).toBe('Athlete');
+    expect(displayFirstName('  ')).toBeNull();
+    expect(displayFirstName(undefined)).toBeNull();
   });
 });
