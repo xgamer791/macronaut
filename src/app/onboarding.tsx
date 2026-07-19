@@ -11,6 +11,7 @@ import {
   UnitSystem,
 } from '@/domain/types';
 import { useRepos } from '@/state/AppProvider';
+import { keys } from '@/state/queries';
 import { todayKey } from '@/utils/date';
 import {
   AppText,
@@ -20,6 +21,7 @@ import {
   Screen,
   SegmentedControl,
   TargetEditor,
+  TextField,
 } from '@/ui/components';
 import { useTheme } from '@/ui/theme/ThemeProvider';
 import { radius, spacing } from '@/ui/theme/tokens';
@@ -52,6 +54,7 @@ export default function Onboarding() {
   const { colors } = useTheme();
 
   const [step, setStep] = useState<Step>('welcome');
+  const [displayName, setDisplayName] = useState('');
   const [units, setUnits] = useState<UnitSystem>('us');
   const [age, setAge] = useState<number | undefined>();
   const [sex, setSex] = useState<BiologicalSex>('male');
@@ -102,6 +105,11 @@ export default function Onboarding() {
   async function complete(finalTargets: NutrientTargets) {
     setSaving(true);
     try {
+      const name = displayName.trim();
+      if (name) {
+        await settings.set('displayName', name);
+        qc.invalidateQueries({ queryKey: keys.setting('displayName') });
+      }
       await settings.setUnitSystem(units);
       await settings.setProfile({
         age,
@@ -209,6 +217,14 @@ export default function Onboarding() {
             Answer a few optional questions and Macronaut will recommend daily calorie and macro
             targets. They are recommendations, not rules — you can change every number, any time.
           </AppText>
+          <TextField
+            label="What should we call you?"
+            value={displayName}
+            onChangeText={setDisplayName}
+            placeholder="Your first name"
+            autoCapitalize="words"
+            autoCorrect={false}
+          />
           <Button title="Get started" onPress={() => setStep('about')} />
           <Button
             title="Skip — I'll set my own targets"

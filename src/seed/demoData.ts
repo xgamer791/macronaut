@@ -119,5 +119,6 @@ export async function loadDemoData(repos: Repos): Promise<void> {
     }
   }
 
+  await settings.set('displayName', 'Alex');
   await settings.set('demoDataLoaded', true);
 }

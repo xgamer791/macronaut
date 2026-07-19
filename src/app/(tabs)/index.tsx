@@ -152,49 +152,51 @@ function TodayBody() {
           <View style={[styles.bellDot, { backgroundColor: colors.accent }]} />
         </Pressable>
 
-        {/* Greeting sits tight above the calories box; goals float unboxed beside it. */}
+        {/* Greeting shares the calories column so left edges line up; goals sit beside the box. */}
         <View style={styles.heroBottom}>
-          <View style={styles.greetingBlock}>
-            <AppText style={styles.greetingLine}>{greeting},</AppText>
-            <AppText style={styles.nameLine} numberOfLines={1}>
-              {firstName}
-            </AppText>
-          </View>
-
           <View style={styles.statsRow}>
-            <View
-              style={[
-                styles.calsBox,
-                {
-                  backgroundColor: resolved === 'dark' ? 'rgba(23,27,32,0.94)' : colors.surface,
-                  borderColor: colors.borderStrong,
-                },
-              ]}
-            >
-              <ProgressRing
-                progress={target > 0 ? Math.min(Math.max(consumed / target, 0.02), 1) : 0.02}
-                size={118}
-                strokeWidth={11}
-                accessibilityLabel={`Calories: ${Math.round(consumed)} of ${Math.round(target)}`}
+            <View style={styles.leftCol}>
+              <View style={styles.greetingBlock}>
+                <AppText style={styles.greetingLine}>{greeting},</AppText>
+                <AppText style={styles.nameLine} numberOfLines={1}>
+                  {firstName}
+                </AppText>
+              </View>
+
+              <View
+                style={[
+                  styles.calsBox,
+                  {
+                    backgroundColor: resolved === 'dark' ? 'rgba(23,27,32,0.94)' : colors.surface,
+                    borderColor: colors.borderStrong,
+                  },
+                ]}
               >
-                <View style={{ alignItems: 'center', paddingHorizontal: 4 }}>
-                  <AppText variant="micro" tone={over ? 'danger' : 'muted'} align="center">
-                    {over ? 'Calories over' : 'Calories left'}
-                  </AppText>
-                  <AppText
-                    variant="heading"
-                    weight="700"
-                    display
-                    align="center"
-                    style={{ fontSize: 22, lineHeight: 26 }}
-                  >
-                    {Math.round(Math.abs(remaining)).toLocaleString()}
-                  </AppText>
-                  <AppText variant="micro" tone="muted">
-                    kcal
-                  </AppText>
-                </View>
-              </ProgressRing>
+                <ProgressRing
+                  progress={target > 0 ? Math.min(Math.max(consumed / target, 0.02), 1) : 0.02}
+                  size={118}
+                  strokeWidth={11}
+                  accessibilityLabel={`Calories: ${Math.round(consumed)} of ${Math.round(target)}`}
+                >
+                  <View style={{ alignItems: 'center', paddingHorizontal: 4 }}>
+                    <AppText variant="micro" tone={over ? 'danger' : 'muted'} align="center">
+                      {over ? 'Calories over' : 'Calories left'}
+                    </AppText>
+                    <AppText
+                      variant="heading"
+                      weight="700"
+                      display
+                      align="center"
+                      style={{ fontSize: 22, lineHeight: 26 }}
+                    >
+                      {Math.round(Math.abs(remaining)).toLocaleString()}
+                    </AppText>
+                    <AppText variant="micro" tone="muted">
+                      kcal
+                    </AppText>
+                  </View>
+                </ProgressRing>
+              </View>
             </View>
 
             <View style={styles.goalsCol}>
@@ -442,32 +444,35 @@ const styles = StyleSheet.create({
   heroBottom: {
     paddingHorizontal: spacing.lg,
     paddingBottom: spacing.md,
-    gap: spacing.sm,
     zIndex: 3,
   },
+  statsRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    gap: spacing.md,
+  },
+  leftCol: {
+    gap: spacing.sm,
+    alignItems: 'stretch',
+  },
   greetingBlock: {
-    gap: 0,
-    marginBottom: 2,
+    gap: 2,
+    paddingHorizontal: 0,
   },
   greetingLine: {
     color: 'rgba(242,244,247,0.92)',
     fontFamily: fonts.displayMedium,
-    fontSize: 22,
-    lineHeight: 28,
+    fontSize: 26,
+    lineHeight: 32,
     fontWeight: '500',
   },
   nameLine: {
     color: '#FFFFFF',
     fontFamily: fonts.display,
-    fontSize: 42,
-    lineHeight: 48,
+    fontSize: 30,
+    lineHeight: 36,
     fontWeight: '700',
-    letterSpacing: -0.8,
-  },
-  statsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
+    letterSpacing: -0.4,
   },
   calsBox: {
     borderRadius: radius.xl,
@@ -475,12 +480,13 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     alignItems: 'center',
     justifyContent: 'center',
+    alignSelf: 'flex-start',
   },
   goalsCol: {
     flex: 1,
     gap: 8,
     minWidth: 0,
-    paddingVertical: spacing.xs,
+    paddingBottom: spacing.xs,
   },
   goalRow: {
     flexDirection: 'row',
