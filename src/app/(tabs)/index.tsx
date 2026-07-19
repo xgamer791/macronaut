@@ -1,11 +1,14 @@
 import { Ionicons } from '@expo/vector-icons';
+import { useQueryClient } from '@tanstack/react-query';
 import { Image, type ImageSource } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import React, { useMemo, useState } from 'react';
 import { Pressable, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useRepos } from '@/state/AppProvider';
 import {
+  keys,
   useActivityEntries,
   useDayProgress,
   useDiaryEntries,
@@ -19,10 +22,13 @@ import {
   ActivityLogList,
   AppText,
   BarEntranceProvider,
+  Button,
   MonthCalendarPopup,
   ProgressRing,
   Screen,
   SectionHeader,
+  Sheet,
+  TextField,
 } from '@/ui/components';
 import { useTheme } from '@/ui/theme/ThemeProvider';
 import { fonts, radius, spacing, touchTarget } from '@/ui/theme/tokens';
@@ -60,6 +66,8 @@ export default function TodayScreen() {
 
 function TodayBody() {
   const router = useRouter();
+  const qc = useQueryClient();
+  const { settings } = useRepos();
   const { colors, resolved } = useTheme();
   const insets = useSafeAreaInsets();
   const { width, height: windowHeight } = useWindowDimensions();
@@ -72,6 +80,8 @@ function TodayBody() {
   const categories = useMealCategories();
   const displayName = useSetting<string>('displayName', '');
   const [calendarOpen, setCalendarOpen] = useState(false);
+  const [nameOpen, setNameOpen] = useState(false);
+  const [draftName, setDraftName] = useState('');
 
   const greeting = useMemo(() => greetingForHour(), []);
   const firstName = displayFirstName(displayName.data);
@@ -152,16 +162,29 @@ function TodayBody() {
           <View style={[styles.bellDot, { backgroundColor: colors.accent }]} />
         </Pressable>
 
-        {/* Greeting shares the calories column so left edges line up; goals sit beside the box. */}
+        {/* Greeting flush with calories box left edge; goals sit beside the box. */}
         <View style={styles.heroBottom}>
           <View style={styles.statsRow}>
             <View style={styles.leftCol}>
-              <View style={styles.greetingBlock}>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={
+                  firstName ? `Greeting for ${firstName}. Tap to edit name.` : 'Tap to set your name'
+                }
+                onPress={() => {
+                  setDraftName((displayName.data ?? '').trim());
+                  setNameOpen(true);
+                }}
+                style={styles.greetingBlock}
+              >
                 <AppText style={styles.greetingLine}>{greeting},</AppText>
-                <AppText style={styles.nameLine} numberOfLines={1}>
-                  {firstName}
+                <AppText
+                  style={[styles.nameLine, !firstName && styles.namePlaceholder]}
+                  numberOfLines={1}
+                >
+                  {firstName ?? 'Your name'}
                 </AppText>
-              </View>
+              </Pressable>
 
               <View
                 style={[
@@ -225,6 +248,26 @@ function TodayBody() {
           </View>
         </View>
       </View>
+
+      <Sheet visible={nameOpen} onClose={() => setNameOpen(false)} title="Your name">
+        <TextField
+          label="What should we call you?"
+          value={draftName}
+          onChangeText={setDraftName}
+          placeholder="First name"
+          autoCapitalize="words"
+          autoCorrect={false}
+          autoFocus
+        />
+        <Button
+          title="Save"
+          onPress={async () => {
+            await settings.set('displayName', draftName.trim());
+            qc.invalidateQueries({ queryKey: keys.setting('displayName') });
+            setNameOpen(false);
+          }}
+        />
+      </Sheet>
 
       <View style={styles.body}>
         {/* —— Macro photo cards —— */}
@@ -443,7 +486,8 @@ const styles = StyleSheet.create({
   },
   heroBottom: {
     paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.md,
+    // Lift the greeting + calories block 15px toward the top of the hero.
+    paddingBottom: spacing.md + 15,
     zIndex: 3,
   },
   statsRow: {
@@ -452,12 +496,14 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   leftCol: {
+    alignItems: 'flex-start',
     gap: spacing.sm,
-    alignItems: 'stretch',
   },
   greetingBlock: {
     gap: 2,
-    paddingHorizontal: 0,
+    marginLeft: 0,
+    paddingLeft: 0,
+    alignSelf: 'flex-start',
   },
   greetingLine: {
     color: 'rgba(242,244,247,0.92)',
@@ -465,6 +511,9 @@ const styles = StyleSheet.create({
     fontSize: 26,
     lineHeight: 32,
     fontWeight: '500',
+    marginLeft: 0,
+    paddingLeft: 0,
+    includeFontPadding: false,
   },
   nameLine: {
     color: '#FFFFFF',
@@ -473,6 +522,12 @@ const styles = StyleSheet.create({
     lineHeight: 36,
     fontWeight: '700',
     letterSpacing: -0.4,
+    marginLeft: 0,
+    paddingLeft: 0,
+    includeFontPadding: false,
+  },
+  namePlaceholder: {
+    color: 'rgba(242,244,247,0.55)',
   },
   calsBox: {
     borderRadius: radius.xl,
@@ -481,6 +536,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     alignSelf: 'flex-start',
+    marginLeft: 0,
   },
   goalsCol: {
     flex: 1,
