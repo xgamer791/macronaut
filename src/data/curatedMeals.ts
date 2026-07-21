@@ -45,7 +45,7 @@ export function mealSlotForHour(hour: number = new Date().getHours()): Exclude<M
 /** Carousel order: current meal period first, other mains next, Snacks always last. */
 export function orderedMealSlots(hour: number = new Date().getHours()): MealSlot[] {
   const current = mealSlotForHour(hour);
-  const mains: Array<Exclude<MealSlot, 'Snack'>> = ['Breakfast', 'Lunch', 'Dinner'];
+  const mains: Exclude<MealSlot, 'Snack'>[] = ['Breakfast', 'Lunch', 'Dinner'];
   return [current, ...mains.filter((s) => s !== current), 'Snack'];
 }
 
