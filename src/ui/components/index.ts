@@ -3,6 +3,7 @@ export { ActivityLogList } from './ActivityLogList';
 export { Button } from './Button';
 export { Card } from './Card';
 export { Chip } from './Chip';
+export { DifficultyBar } from './DifficultyBar';
 export { EmptyState } from './EmptyState';
 export { ErrorState } from './ErrorState';
 export { ListRow } from './ListRow';
