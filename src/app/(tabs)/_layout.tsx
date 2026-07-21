@@ -18,7 +18,7 @@ export default function TabsLayout() {
     <View style={{ flex: 1 }}>
       <Tabs screenOptions={{ headerShown: false }} tabBar={(props) => <TabBar {...props} />}>
         <Tabs.Screen name="index" />
-        <Tabs.Screen name="diary" />
+        <Tabs.Screen name="meals" />
         <Tabs.Screen name="progress" />
         <Tabs.Screen name="settings" />
       </Tabs>

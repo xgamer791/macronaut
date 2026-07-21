@@ -317,10 +317,10 @@ function TodayBody() {
           right={
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel="View all diary entries"
+              accessibilityLabel="Browse curated meals"
               onPress={() => {
                 setSelectedDate(date);
-                router.push('/diary');
+                router.push('/meals');
               }}
               style={{ minHeight: 44, justifyContent: 'center' }}
             >
@@ -350,7 +350,7 @@ function TodayBody() {
                 onPress={() => {
                   setSelectedDate(date);
                   setTargetMeal(cat.id);
-                  router.push(kcal > 0 ? '/diary' : '/add');
+                  router.push(kcal > 0 ? '/day-detail' : '/add');
                 }}
                 style={[
                   styles.mealRow,

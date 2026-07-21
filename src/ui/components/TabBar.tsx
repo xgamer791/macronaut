@@ -12,7 +12,7 @@ type IconName = keyof typeof Ionicons.glyphMap;
 
 const TAB_META: Record<string, { label: string; icon: IconName; iconActive: IconName }> = {
   index: { label: 'Today', icon: 'home-outline', iconActive: 'home' },
-  diary: { label: 'Diary', icon: 'book-outline', iconActive: 'book' },
+  meals: { label: 'Meals', icon: 'restaurant-outline', iconActive: 'restaurant' },
   progress: { label: 'Progress', icon: 'bar-chart-outline', iconActive: 'bar-chart' },
   settings: { label: 'Settings', icon: 'settings-outline', iconActive: 'settings' },
 };
