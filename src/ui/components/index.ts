@@ -12,6 +12,7 @@ export { MacroSummary } from './MacroSummary';
 export { MealLogList } from './MealLogList';
 export { NumberField } from './NumberField';
 export { ProgressRing } from './ProgressRing';
+export { HeroMetricModule } from './HeroMetricModule';
 export { Screen } from './Screen';
 export { ScreenHeader } from './ScreenHeader';
 export { SectionHeader } from './SectionHeader';

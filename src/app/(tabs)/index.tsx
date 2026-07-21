@@ -19,17 +19,26 @@ import { useUiStore } from '@/state/uiStore';
 import { displayFirstName, greetingForHour } from '@/utils/greeting';
 import { ActivityType } from '@/repositories/types';
 import {
+  DEFAULT_HERO_LEFT,
+  DEFAULT_HERO_RIGHT,
+  HERO_METRICS,
+  isHeroMetricId,
+  type HeroMetricId,
+} from '@/data/heroMetrics';
+import {
   ActivityLogList,
   AppText,
   BarEntranceProvider,
   Button,
+  HeroMetricModule,
+  ListRow,
   MonthCalendarPopup,
-  ProgressRing,
   Screen,
   SectionHeader,
   Sheet,
   TextField,
 } from '@/ui/components';
+import type { HeroMetricValues } from '@/ui/components/HeroMetricModule';
 import { useTheme } from '@/ui/theme/ThemeProvider';
 import { fonts, radius, spacing, touchTarget } from '@/ui/theme/tokens';
 
@@ -55,7 +64,7 @@ const MACRO_ICONS: Record<'protein' | 'carbs' | 'fat', keyof typeof Ionicons.gly
   fat: 'water-outline',
 };
 
-/** Today — split dayboard (mockup 3): hero + ring/goals + photo macros + meals. */
+/** Today — hero greeting + dual configurable metric modules + photo macros + meals. */
 export default function TodayScreen() {
   return (
     <BarEntranceProvider pageKey="today">
@@ -68,7 +77,7 @@ function TodayBody() {
   const router = useRouter();
   const qc = useQueryClient();
   const { settings } = useRepos();
-  const { colors, resolved } = useTheme();
+  const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const { width, height: windowHeight } = useWindowDimensions();
   const date = useUiStore((s) => s.selectedDate);
@@ -79,18 +88,91 @@ function TodayBody() {
   const activities = useActivityEntries(date);
   const categories = useMealCategories();
   const displayName = useSetting<string>('displayName', '');
+  const waterGoal = useSetting<number>('waterGoalCups', 8);
+  const stepGoal = useSetting<number>('stepGoal', 10000);
+  const waterCups = useSetting<number>(`waterCups:${date}`, 0);
+  const stepsToday = useSetting<number>(`stepsToday:${date}`, 0);
+  const leftSetting = useSetting<string>('heroModuleLeft', DEFAULT_HERO_LEFT);
+  const rightSetting = useSetting<string>('heroModuleRight', DEFAULT_HERO_RIGHT);
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [nameOpen, setNameOpen] = useState(false);
   const [draftName, setDraftName] = useState('');
+  const [pickerSlot, setPickerSlot] = useState<'left' | 'right' | null>(null);
 
   const greeting = useMemo(() => greetingForHour(), []);
   const firstName = displayFirstName(displayName.data);
+
+  const leftMetric: HeroMetricId = isHeroMetricId(leftSetting.data)
+    ? leftSetting.data
+    : DEFAULT_HERO_LEFT;
+  const rightMetric: HeroMetricId = isHeroMetricId(rightSetting.data)
+    ? rightSetting.data
+    : DEFAULT_HERO_RIGHT;
 
   const consumed = progress?.consumed.calories ?? 0;
   const burned = progress?.burned ?? 0;
   const target = progress?.target.calories ?? 0;
   const remaining = progress?.caloriesRemaining ?? target - consumed;
   const over = remaining < 0;
+
+  // Equal modules fill the content row: edge inset lg, fixed md gutter between cards.
+  const moduleSize = Math.floor((width - spacing.lg * 2 - spacing.md) / 2);
+
+  function valuesFor(metric: HeroMetricId): HeroMetricValues {
+    switch (metric) {
+      case 'calories':
+        return {
+          value: Math.abs(remaining),
+          target,
+          progress: target > 0 ? Math.min(Math.max(consumed / target, 0.02), 1) : 0.02,
+          over,
+        };
+      case 'protein':
+        return {
+          value: progress?.consumed.protein ?? 0,
+          target: progress?.target.protein ?? 0,
+        };
+      case 'carbs':
+        return {
+          value: progress?.consumed.carbs ?? 0,
+          target: progress?.target.carbs ?? 0,
+        };
+      case 'fat':
+        return {
+          value: progress?.consumed.fat ?? 0,
+          target: progress?.target.fat ?? 0,
+        };
+      case 'fiber':
+        return {
+          value: progress?.consumed.fiber ?? 0,
+          target: progress?.target.fiber ?? 0,
+        };
+      case 'water':
+        return {
+          value: waterCups.data ?? 0,
+          target: waterGoal.data ?? 8,
+        };
+      case 'steps':
+        return {
+          value: stepsToday.data ?? 0,
+          target: stepGoal.data ?? 10000,
+        };
+      case 'burned':
+        return {
+          value: burned,
+          detail: burned > 0 ? 'From logged activity' : 'Log activity below',
+        };
+      default:
+        return { value: 0 };
+    }
+  }
+
+  async function setModuleMetric(slot: 'left' | 'right', id: HeroMetricId) {
+    const key = slot === 'left' ? 'heroModuleLeft' : 'heroModuleRight';
+    await settings.set(key, id);
+    qc.invalidateQueries({ queryKey: keys.setting(key) });
+    setPickerSlot(null);
+  }
 
   const mealTotals = new Map<string, number>();
   const mealTimes = new Map<string, string>();
@@ -162,89 +244,41 @@ function TodayBody() {
           <View style={[styles.bellDot, { backgroundColor: colors.accent }]} />
         </Pressable>
 
-        {/* Greeting flush with calories box left edge; goals sit beside the box. */}
+        {/* Greeting + dual metric modules (Daily Goals removed). */}
         <View style={styles.heroBottom}>
-          <View style={styles.statsRow}>
-            <View style={styles.leftCol}>
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel={
-                  firstName ? `Greeting for ${firstName}. Tap to edit name.` : 'Tap to set your name'
-                }
-                onPress={() => {
-                  setDraftName((displayName.data ?? '').trim());
-                  setNameOpen(true);
-                }}
-                style={styles.greetingBlock}
-              >
-                <AppText style={styles.greetingLine}>{greeting},</AppText>
-                <AppText
-                  style={[styles.nameLine, !firstName && styles.namePlaceholder]}
-                  numberOfLines={1}
-                >
-                  {firstName ?? 'Your name'}
-                </AppText>
-              </Pressable>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={
+              firstName ? `Greeting for ${firstName}. Tap to edit name.` : 'Tap to set your name'
+            }
+            onPress={() => {
+              setDraftName((displayName.data ?? '').trim());
+              setNameOpen(true);
+            }}
+            style={styles.greetingBlock}
+          >
+            <AppText style={styles.greetingLine}>{greeting},</AppText>
+            <AppText
+              style={[styles.nameLine, !firstName && styles.namePlaceholder]}
+              numberOfLines={1}
+            >
+              {firstName ?? 'Your name'}
+            </AppText>
+          </Pressable>
 
-              <View
-                style={[
-                  styles.calsBox,
-                  {
-                    backgroundColor: resolved === 'dark' ? 'rgba(23,27,32,0.94)' : colors.surface,
-                    borderColor: colors.borderStrong,
-                  },
-                ]}
-              >
-                <ProgressRing
-                  progress={target > 0 ? Math.min(Math.max(consumed / target, 0.02), 1) : 0.02}
-                  size={118}
-                  strokeWidth={11}
-                  accessibilityLabel={`Calories: ${Math.round(consumed)} of ${Math.round(target)}`}
-                >
-                  <View style={{ alignItems: 'center', paddingHorizontal: 4 }}>
-                    <AppText variant="micro" tone={over ? 'danger' : 'muted'} align="center">
-                      {over ? 'Calories over' : 'Calories left'}
-                    </AppText>
-                    <AppText
-                      variant="heading"
-                      weight="700"
-                      display
-                      align="center"
-                      style={{ fontSize: 22, lineHeight: 26 }}
-                    >
-                      {Math.round(Math.abs(remaining)).toLocaleString()}
-                    </AppText>
-                    <AppText variant="micro" tone="muted">
-                      kcal
-                    </AppText>
-                  </View>
-                </ProgressRing>
-              </View>
-            </View>
-
-            <View style={styles.goalsCol}>
-              <AppText variant="body" weight="700" display style={{ color: '#FFFFFF' }}>
-                Daily Goals
-              </AppText>
-              <GoalRow
-                label="Calorie Goal"
-                value={Math.round(target).toLocaleString()}
-                onHero
-              />
-              <GoalRow
-                label="Protein Goal"
-                value={`${Math.round(progress?.target.protein ?? 0).toLocaleString()} g`}
-                onHero
-              />
-              {burned > 0 ? (
-                <GoalRow
-                  label="Exercise"
-                  value={`+${Math.round(burned).toLocaleString()}`}
-                  accent
-                  onHero
-                />
-              ) : null}
-            </View>
+          <View style={styles.modulesRow}>
+            <HeroMetricModule
+              metric={leftMetric}
+              values={valuesFor(leftMetric)}
+              size={moduleSize}
+              onPress={() => setPickerSlot('left')}
+            />
+            <HeroMetricModule
+              metric={rightMetric}
+              values={valuesFor(rightMetric)}
+              size={moduleSize}
+              onPress={() => setPickerSlot('right')}
+            />
           </View>
         </View>
       </View>
@@ -267,6 +301,40 @@ function TodayBody() {
             setNameOpen(false);
           }}
         />
+      </Sheet>
+
+      <Sheet
+        visible={pickerSlot !== null}
+        onClose={() => setPickerSlot(null)}
+        title={
+          pickerSlot
+            ? `Show on ${pickerSlot === 'left' ? 'left' : 'right'} module`
+            : 'Choose metric'
+        }
+      >
+        <AppText variant="caption" tone="secondary" style={{ marginBottom: spacing.md }}>
+          Each module uses a layout optimized for that metric — rings, bars, cups, and stride
+          meters are intentional, not required to match.
+        </AppText>
+        {HERO_METRICS.map((m) => {
+          const selected =
+            pickerSlot === 'left' ? m.id === leftMetric : m.id === rightMetric;
+          const usedElsewhere =
+            pickerSlot === 'left' ? m.id === rightMetric : m.id === leftMetric;
+          return (
+            <ListRow
+              key={m.id}
+              title={m.label}
+              subtitle={usedElsewhere ? `${m.subtitle} · on other module` : m.subtitle}
+              selected={selected}
+              left={<Ionicons name={m.icon} size={20} color={colors.textSecondary} />}
+              onPress={() => {
+                if (!pickerSlot) return;
+                void setModuleMetric(pickerSlot, m.id);
+              }}
+            />
+          );
+        })}
       </Sheet>
 
       <View style={styles.body}>
@@ -423,38 +491,6 @@ function TodayBody() {
   );
 }
 
-function GoalRow({
-  label,
-  value,
-  accent,
-  onHero,
-}: {
-  label: string;
-  value: string;
-  accent?: boolean;
-  onHero?: boolean;
-}) {
-  return (
-    <View style={styles.goalRow}>
-      <AppText
-        variant="caption"
-        tone={onHero ? undefined : 'secondary'}
-        style={onHero ? { color: 'rgba(242,244,247,0.78)' } : undefined}
-      >
-        {label}
-      </AppText>
-      <AppText
-        variant="caption"
-        weight="600"
-        tone={accent ? 'accent' : onHero ? undefined : 'primary'}
-        style={onHero && !accent ? { color: '#FFFFFF' } : undefined}
-      >
-        {value}
-      </AppText>
-    </View>
-  );
-}
-
 function formatEntryTime(iso: string): string {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return '';
@@ -486,18 +522,10 @@ const styles = StyleSheet.create({
   },
   heroBottom: {
     paddingHorizontal: spacing.lg,
-    // Lift the greeting + calories block 15px toward the top of the hero.
+    // Lift the greeting + modules 15px toward the top of the hero.
     paddingBottom: spacing.md + 15,
     zIndex: 3,
-  },
-  statsRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
     gap: spacing.md,
-  },
-  leftCol: {
-    alignItems: 'flex-start',
-    gap: spacing.sm,
   },
   greetingBlock: {
     gap: 2,
@@ -529,25 +557,11 @@ const styles = StyleSheet.create({
   namePlaceholder: {
     color: 'rgba(242,244,247,0.55)',
   },
-  calsBox: {
-    borderRadius: radius.xl,
-    borderWidth: 1,
-    padding: spacing.md,
-    alignItems: 'center',
-    justifyContent: 'center',
-    alignSelf: 'flex-start',
-    marginLeft: 0,
-  },
-  goalsCol: {
-    flex: 1,
-    gap: 8,
-    minWidth: 0,
-    paddingBottom: spacing.xs,
-  },
-  goalRow: {
+  modulesRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: spacing.sm,
+    alignItems: 'stretch',
+    justifyContent: 'flex-start',
+    gap: spacing.md,
   },
   body: {
     paddingHorizontal: spacing.lg,
