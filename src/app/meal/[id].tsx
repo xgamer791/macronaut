@@ -381,8 +381,8 @@ export default function MealDetailScreen() {
   );
 }
 
-/** Bare icon action — no chrome, ~13% larger than the previous 18px glyphs. */
-const ACTION_ICON_SIZE = Math.round(18 * 1.13);
+/** Bare icon action — no chrome; ~25% larger than the prior ~20px glyphs. */
+const ACTION_ICON_SIZE = Math.round(18 * 1.13 * 1.25);
 
 function IconActionButton({
   icon,
