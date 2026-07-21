@@ -26,8 +26,8 @@ export interface DifficultyBarProps {
 export function DifficultyBar({ difficulty, compact = false }: DifficultyBarProps) {
   const { colors } = useTheme();
   const filled = LEVEL[difficulty];
-  const barH = compact ? 8 : 10;
-  const barW = compact ? 4 : 5;
+  const barH = compact ? 8 : 12;
+  const barW = compact ? 4 : 6;
 
   return (
     <View
@@ -50,7 +50,7 @@ export function DifficultyBar({ difficulty, compact = false }: DifficultyBarProp
         ))}
       </View>
       {compact ? null : (
-        <AppText variant="micro" tone="muted" weight="600">
+        <AppText variant="caption" tone="muted" weight="700">
           {LABEL[difficulty]}
         </AppText>
       )}

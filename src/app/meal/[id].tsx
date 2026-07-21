@@ -1,16 +1,20 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
+import * as Linking from 'expo-linking';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useMemo, useState } from 'react';
 import {
+  Alert,
+  Platform,
   Pressable,
   ScrollView,
+  Share,
   StyleSheet,
   View,
   useWindowDimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { getCuratedMeal } from '@/data/curatedMeals';
+import { getCuratedMeal, type CuratedMeal } from '@/data/curatedMeals';
 import { useRepos } from '@/state/AppProvider';
 import { useAddDiaryEntry, useMealCategories } from '@/state/queries';
 import { useUiStore } from '@/state/uiStore';
@@ -18,9 +22,32 @@ import { goBackOrHome } from '@/utils/navigation';
 import { AppText, Button, ErrorState, Sheet } from '@/ui/components';
 import { DifficultyBar } from '@/ui/components/DifficultyBar';
 import { useTheme } from '@/ui/theme/ThemeProvider';
-import { fonts, radius, spacing } from '@/ui/theme/tokens';
+import { fonts, radius, spacing, touchTarget } from '@/ui/theme/tokens';
 
 type DetailTab = 'ingredients' | 'directions';
+
+function mealShareUrl(mealId: string): string {
+  if (Platform.OS === 'web' && typeof window !== 'undefined' && window.location?.href) {
+    return window.location.href;
+  }
+  return Linking.createURL(`/meal/${mealId}`);
+}
+
+function mealShareMessage(meal: CuratedMeal, url: string): string {
+  return `${meal.name} — ${meal.withLine}\n${Math.round(meal.nutrition.calories)} cal · via Macronaut\n${url}`;
+}
+
+async function copyText(text: string): Promise<boolean> {
+  try {
+    if (Platform.OS === 'web' && typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(text);
+      return true;
+    }
+  } catch {
+    // fall through
+  }
+  return false;
+}
 
 /**
  * Meal detail — Plan-style recipe view with Ingredients / Directions tabs
@@ -58,26 +85,68 @@ export default function MealDetailScreen() {
     );
   }
 
+  const recipe = meal;
   const heroHeight = Math.min(Math.round(width * 0.62), 280);
-  const totalMin = meal.prepMinutes + meal.cookMinutes;
+  const totalMin = recipe.prepMinutes + recipe.cookMinutes;
+
+  async function shareMeal() {
+    const url = mealShareUrl(recipe.id);
+    const message = mealShareMessage(recipe, url);
+    try {
+      if (
+        Platform.OS === 'web' &&
+        typeof navigator !== 'undefined' &&
+        typeof navigator.share === 'function'
+      ) {
+        await navigator.share({ title: recipe.name, text: message, url });
+        return;
+      }
+      if (Platform.OS !== 'web') {
+        await Share.share({ message, title: recipe.name, url });
+        return;
+      }
+      const copied = await copyText(message);
+      Alert.alert(
+        copied ? 'Copied' : 'Share unavailable',
+        copied
+          ? 'Meal details were copied to your clipboard.'
+          : 'Sharing is not available in this browser.',
+      );
+    } catch {
+      // User cancelled or share unavailable — ignore.
+    }
+  }
+
+  async function copyMealLink() {
+    const url = mealShareUrl(recipe.id);
+    try {
+      const copied = await copyText(url);
+      if (copied) {
+        Alert.alert('Link copied', 'Meal link copied to clipboard.');
+        return;
+      }
+      await Share.share({ message: url, title: recipe.name, url });
+    } catch {
+      // User cancelled — ignore.
+    }
+  }
 
   async function logMeal(mealId: string) {
-    if (!meal) return;
     setLogging(true);
     try {
       await addEntry.mutateAsync({
         entry: {
           date,
           meal: mealId,
-          name: meal.name,
+          name: recipe.name,
           sourceType: 'recipe',
-          sourceId: meal.id,
+          sourceId: recipe.id,
           quantity: 1,
           unit: 'serving',
           servingDesc: '1 serving',
-          nutrition: meal.nutrition,
+          nutrition: recipe.nutrition,
         },
-        foodKey: `curated:${meal.id}`,
+        foodKey: `curated:${recipe.id}`,
       });
       void diary.entriesForDate(date);
       setLogOpen(false);
@@ -101,7 +170,7 @@ export default function MealDetailScreen() {
         contentContainerStyle={{ paddingBottom: 110 + insets.bottom }}
       >
         <View>
-          <Image source={meal.image} style={{ width, height: heroHeight }} contentFit="cover" />
+          <Image source={recipe.image} style={{ width, height: heroHeight }} contentFit="cover" />
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="Back"
@@ -119,23 +188,47 @@ export default function MealDetailScreen() {
         </View>
 
         <View style={styles.body}>
-          <View style={styles.metaRow}>
-            <AppText variant="micro" tone="muted" weight="600" style={{ flex: 1 }}>
-              {meal.slot} · {totalMin} min · Curated by Macronaut
+          <View style={styles.headerSection}>
+            <View style={styles.metaRow}>
+              <AppText variant="caption" tone="muted" weight="600" style={styles.metaText}>
+                {recipe.slot} · {totalMin} min · Curated by Macronaut
+              </AppText>
+              <View style={styles.shareRow}>
+                <ShareIconButton
+                  icon="share-outline"
+                  label="Share meal"
+                  color={colors.textSecondary}
+                  background={colors.surface}
+                  border={colors.border}
+                  onPress={() => void shareMeal()}
+                />
+                <ShareIconButton
+                  icon="link-outline"
+                  label="Copy meal link"
+                  color={colors.textSecondary}
+                  background={colors.surface}
+                  border={colors.border}
+                  onPress={() => void copyMealLink()}
+                />
+              </View>
+            </View>
+
+            <AppText
+              variant="title"
+              weight="700"
+              display
+              style={[styles.mealTitle, { fontFamily: fonts.display }]}
+            >
+              {recipe.name}
             </AppText>
-            <DifficultyBar difficulty={meal.difficulty} />
+            <AppText variant="body" tone="secondary" style={styles.mealSubtitle}>
+              {recipe.withLine}
+            </AppText>
+
+            <View style={styles.headerFooter}>
+              <DifficultyBar difficulty={recipe.difficulty} />
+            </View>
           </View>
-          <AppText
-            variant="title"
-            weight="700"
-            display
-            style={{ fontFamily: fonts.display, marginTop: 4 }}
-          >
-            {meal.name}
-          </AppText>
-          <AppText variant="body" tone="secondary" style={{ marginTop: 6 }}>
-            {meal.withLine}
-          </AppText>
 
           <View
             style={[
@@ -149,13 +242,18 @@ export default function MealDetailScreen() {
                   <View style={[styles.macroDivider, { backgroundColor: colors.border }]} />
                 ) : null}
                 <View style={styles.macroCell}>
-                  <AppText variant="micro" tone="muted">
+                  <AppText variant="caption" tone="muted" weight="600">
                     {m.label}
                   </AppText>
-                  <AppText variant="heading" weight="700" display>
+                  <AppText
+                    variant="heading"
+                    weight="700"
+                    display
+                    style={styles.macroValue}
+                  >
                     {m.value}
                   </AppText>
-                  <AppText variant="micro" tone="muted">
+                  <AppText variant="caption" tone="muted">
                     {m.unit}
                   </AppText>
                 </View>
@@ -180,9 +278,10 @@ export default function MealDetailScreen() {
                   style={styles.tabBtn}
                 >
                   <AppText
-                    variant="body"
+                    variant="heading"
                     weight={active ? '700' : '500'}
                     tone={active ? 'primary' : 'muted'}
+                    style={styles.tabLabel}
                   >
                     {t.label}
                   </AppText>
@@ -199,7 +298,7 @@ export default function MealDetailScreen() {
 
           {tab === 'ingredients' ? (
             <View style={styles.pillList}>
-              {meal.ingredients.map((ing, idx) => (
+              {recipe.ingredients.map((ing, idx) => (
                 <View
                   key={`${ing.name}-${idx}`}
                   style={[
@@ -210,10 +309,10 @@ export default function MealDetailScreen() {
                     },
                   ]}
                 >
-                  <AppText variant="body" style={{ flex: 1 }}>
+                  <AppText variant="body" style={[styles.contentText, { flex: 1 }]}>
                     {ing.name}
                   </AppText>
-                  <AppText variant="body" tone="secondary">
+                  <AppText variant="body" tone="secondary" style={styles.contentText}>
                     {ing.amount}
                   </AppText>
                 </View>
@@ -221,10 +320,10 @@ export default function MealDetailScreen() {
             </View>
           ) : (
             <View style={styles.stepsBlock}>
-              <AppText variant="caption" tone="secondary" style={{ marginBottom: spacing.sm }}>
-                Prep {meal.prepMinutes} min · Cook {meal.cookMinutes} min
+              <AppText variant="body" tone="secondary" style={{ marginBottom: spacing.sm }}>
+                Prep {recipe.prepMinutes} min · Cook {recipe.cookMinutes} min
               </AppText>
-              {meal.directions.map((step, idx) => (
+              {recipe.directions.map((step, idx) => (
                 <View
                   key={idx}
                   style={[
@@ -236,11 +335,11 @@ export default function MealDetailScreen() {
                   ]}
                 >
                   <View style={[styles.stepBadge, { backgroundColor: colors.accent }]}>
-                    <AppText variant="caption" weight="700" tone="onAccent">
+                    <AppText variant="body" weight="700" tone="onAccent">
                       {idx + 1}
                     </AppText>
                   </View>
-                  <AppText variant="body" style={{ flex: 1, lineHeight: 22 }}>
+                  <AppText variant="body" style={[styles.stepText, { flex: 1 }]}>
                     {step}
                   </AppText>
                 </View>
@@ -268,10 +367,10 @@ export default function MealDetailScreen() {
       </View>
 
       <Sheet visible={logOpen} onClose={() => setLogOpen(false)} title="Log meal">
-        <AppText variant="caption" tone="secondary" style={{ marginBottom: spacing.md }}>
-          Add 1 serving of {meal.name} to {date}.
+        <AppText variant="body" tone="secondary" style={{ marginBottom: spacing.md }}>
+          Add 1 serving of {recipe.name} to {date}.
         </AppText>
-        <AppText variant="caption" tone="secondary" style={{ marginBottom: spacing.sm }}>
+        <AppText variant="body" tone="secondary" style={{ marginBottom: spacing.sm }}>
           Meal
         </AppText>
         <View
@@ -298,6 +397,41 @@ export default function MealDetailScreen() {
   );
 }
 
+function ShareIconButton({
+  icon,
+  label,
+  color,
+  background,
+  border,
+  onPress,
+}: {
+  icon: keyof typeof Ionicons.glyphMap;
+  label: string;
+  color: string;
+  background: string;
+  border: string;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      onPress={onPress}
+      hitSlop={6}
+      style={({ pressed }) => [
+        styles.shareBtn,
+        {
+          backgroundColor: background,
+          borderColor: border,
+          opacity: pressed ? 0.85 : 1,
+        },
+      ]}
+    >
+      <Ionicons name={icon} size={18} color={color} />
+    </Pressable>
+  );
+}
+
 const styles = StyleSheet.create({
   root: { flex: 1 },
   backBtn: {
@@ -313,16 +447,53 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.lg,
   },
+  headerSection: {
+    gap: spacing.sm,
+  },
   metaRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
   },
+  metaText: {
+    flex: 1,
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  shareRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  shareBtn: {
+    width: touchTarget - 8,
+    height: touchTarget - 8,
+    borderRadius: radius.full,
+    borderWidth: StyleSheet.hairlineWidth,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  mealTitle: {
+    marginTop: 2,
+    fontSize: 30,
+    lineHeight: 36,
+  },
+  mealSubtitle: {
+    fontSize: 17,
+    lineHeight: 24,
+  },
+  headerFooter: {
+    marginTop: spacing.xs,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-start',
+    minHeight: 22,
+  },
   macroRow: {
-    marginTop: spacing.md,
+    marginTop: spacing.lg,
     borderRadius: radius.md,
     borderWidth: StyleSheet.hairlineWidth,
-    paddingVertical: spacing.md,
+    paddingVertical: spacing.md + 2,
     flexDirection: 'row',
     alignItems: 'stretch',
   },
@@ -331,21 +502,29 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 2,
   },
+  macroValue: {
+    fontSize: 22,
+    lineHeight: 28,
+  },
   macroDivider: {
     width: StyleSheet.hairlineWidth,
     alignSelf: 'stretch',
   },
   tabs: {
-    marginTop: spacing.md,
+    marginTop: spacing.lg,
     flexDirection: 'row',
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
   tabBtn: {
     flex: 1,
     alignItems: 'center',
-    minHeight: 40,
+    minHeight: 46,
     justifyContent: 'flex-end',
     paddingBottom: spacing.sm,
+  },
+  tabLabel: {
+    fontSize: 17,
+    lineHeight: 22,
   },
   tabUnderline: {
     position: 'absolute',
@@ -365,8 +544,12 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     borderRadius: radius.full,
     borderWidth: StyleSheet.hairlineWidth,
-    paddingHorizontal: spacing.md,
-    paddingVertical: 10,
+    paddingHorizontal: spacing.md + 2,
+    paddingVertical: 12,
+  },
+  contentText: {
+    fontSize: 16,
+    lineHeight: 22,
   },
   stepsBlock: {
     marginTop: spacing.md,
@@ -374,19 +557,24 @@ const styles = StyleSheet.create({
   },
   stepRow: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     gap: spacing.md,
     borderRadius: radius.md,
     borderWidth: StyleSheet.hairlineWidth,
     paddingHorizontal: spacing.md,
-    paddingVertical: 10,
+    paddingVertical: 12,
   },
   stepBadge: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
     alignItems: 'center',
     justifyContent: 'center',
+    marginTop: 1,
+  },
+  stepText: {
+    fontSize: 16,
+    lineHeight: 24,
   },
   footer: {
     position: 'absolute',
