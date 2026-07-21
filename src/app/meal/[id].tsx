@@ -22,7 +22,7 @@ import { goBackOrHome } from '@/utils/navigation';
 import { AppText, Button, ErrorState, Sheet } from '@/ui/components';
 import { DifficultyBar } from '@/ui/components/DifficultyBar';
 import { useTheme } from '@/ui/theme/ThemeProvider';
-import { fonts, radius, spacing, touchTarget } from '@/ui/theme/tokens';
+import { fonts, radius, spacing } from '@/ui/theme/tokens';
 
 type DetailTab = 'ingredients' | 'directions';
 
@@ -64,6 +64,8 @@ export default function MealDetailScreen() {
   const [tab, setTab] = useState<DetailTab>('ingredients');
   const [logOpen, setLogOpen] = useState(false);
   const [logging, setLogging] = useState(false);
+  /** Local UI-only favorite toggle — persistence comes later. */
+  const [favorited, setFavorited] = useState(false);
 
   const addEntry = useAddDiaryEntry();
   const categories = useMealCategories();
@@ -114,20 +116,6 @@ export default function MealDetailScreen() {
       );
     } catch {
       // User cancelled or share unavailable — ignore.
-    }
-  }
-
-  async function copyMealLink() {
-    const url = mealShareUrl(recipe.id);
-    try {
-      const copied = await copyText(url);
-      if (copied) {
-        Alert.alert('Link copied', 'Meal link copied to clipboard.');
-        return;
-      }
-      await Share.share({ message: url, title: recipe.name, url });
-    } catch {
-      // User cancelled — ignore.
     }
   }
 
@@ -193,22 +181,18 @@ export default function MealDetailScreen() {
               <AppText variant="caption" tone="muted" weight="600" style={styles.metaText}>
                 {recipe.slot} · {totalMin} min · Curated by Macronaut
               </AppText>
-              <View style={styles.shareRow}>
-                <ShareIconButton
+              <View style={styles.actionRow}>
+                <IconActionButton
                   icon="share-outline"
                   label="Share meal"
-                  color={colors.textSecondary}
-                  background={colors.surface}
-                  border={colors.border}
+                  color={colors.textPrimary}
                   onPress={() => void shareMeal()}
                 />
-                <ShareIconButton
-                  icon="link-outline"
-                  label="Copy meal link"
-                  color={colors.textSecondary}
-                  background={colors.surface}
-                  border={colors.border}
-                  onPress={() => void copyMealLink()}
+                <IconActionButton
+                  icon={favorited ? 'heart' : 'heart-outline'}
+                  label={favorited ? 'Remove from favorites' : 'Add to favorites'}
+                  color={favorited ? '#E53935' : colors.textPrimary}
+                  onPress={() => setFavorited((v) => !v)}
                 />
               </View>
             </View>
@@ -397,19 +381,18 @@ export default function MealDetailScreen() {
   );
 }
 
-function ShareIconButton({
+/** Bare icon action — no chrome, ~13% larger than the previous 18px glyphs. */
+const ACTION_ICON_SIZE = Math.round(18 * 1.13);
+
+function IconActionButton({
   icon,
   label,
   color,
-  background,
-  border,
   onPress,
 }: {
   icon: keyof typeof Ionicons.glyphMap;
   label: string;
   color: string;
-  background: string;
-  border: string;
   onPress: () => void;
 }) {
   return (
@@ -417,17 +400,10 @@ function ShareIconButton({
       accessibilityRole="button"
       accessibilityLabel={label}
       onPress={onPress}
-      hitSlop={6}
-      style={({ pressed }) => [
-        styles.shareBtn,
-        {
-          backgroundColor: background,
-          borderColor: border,
-          opacity: pressed ? 0.85 : 1,
-        },
-      ]}
+      hitSlop={8}
+      style={({ pressed }) => [styles.actionBtn, { opacity: pressed ? 0.7 : 1 }]}
     >
-      <Ionicons name={icon} size={18} color={color} />
+      <Ionicons name={icon} size={ACTION_ICON_SIZE} color={color} />
     </Pressable>
   );
 }
@@ -460,18 +436,15 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 20,
   },
-  shareRow: {
+  actionRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.sm,
+    gap: spacing.md,
   },
-  shareBtn: {
-    width: touchTarget - 8,
-    height: touchTarget - 8,
-    borderRadius: radius.full,
-    borderWidth: StyleSheet.hairlineWidth,
+  actionBtn: {
     alignItems: 'center',
     justifyContent: 'center',
+    padding: 2,
   },
   mealTitle: {
     marginTop: 2,
