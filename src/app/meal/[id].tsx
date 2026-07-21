@@ -16,6 +16,7 @@ import { useAddDiaryEntry, useMealCategories } from '@/state/queries';
 import { useUiStore } from '@/state/uiStore';
 import { goBackOrHome } from '@/utils/navigation';
 import { AppText, Button, ErrorState, Sheet } from '@/ui/components';
+import { DifficultyBar } from '@/ui/components/DifficultyBar';
 import { useTheme } from '@/ui/theme/ThemeProvider';
 import { fonts, radius, spacing } from '@/ui/theme/tokens';
 
@@ -118,9 +119,12 @@ export default function MealDetailScreen() {
         </View>
 
         <View style={styles.body}>
-          <AppText variant="micro" tone="muted" weight="600">
-            {meal.slot} · {totalMin} min · Curated by Macronaut
-          </AppText>
+          <View style={styles.metaRow}>
+            <AppText variant="micro" tone="muted" weight="600" style={{ flex: 1 }}>
+              {meal.slot} · {totalMin} min · Curated by Macronaut
+            </AppText>
+            <DifficultyBar difficulty={meal.difficulty} />
+          </View>
           <AppText
             variant="title"
             weight="700"
@@ -308,6 +312,11 @@ const styles = StyleSheet.create({
   body: {
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.lg,
+  },
+  metaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
   },
   macroRow: {
     marginTop: spacing.md,
