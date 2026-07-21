@@ -48,6 +48,8 @@ Check:
 - No missing/extra chrome vs the reference
 - Content/branding may differ only if the user said layout-only; otherwise flag material visual differences
 
+**Important — metric modules:** When the user asks for multiple tracking modules (calories, steps, water, macros, burned, etc.), each module may use a **different inner design optimized for that metric** (ring vs stride meter vs cup grid vs macro bar). Do **not** REJECT solely because a steps/water/macro module does not look like the calorie ring. Compare shared chrome (card size, radius, placement in the grid) and overall hero structure to the reference; treat metric-specific inners as intentional.
+
 **Output (required):**
 ```markdown
 ## Second Agent (Reference Compare): APPROVE | REJECT
