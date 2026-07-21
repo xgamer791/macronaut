@@ -48,7 +48,10 @@ Check:
 - No missing/extra chrome vs the reference
 - Content/branding may differ only if the user said layout-only; otherwise flag material visual differences
 
-**Important — metric modules:** When the user asks for multiple tracking modules (calories, steps, water, macros, burned, etc.), each module may use a **different inner design optimized for that metric** (ring vs stride meter vs cup grid vs macro bar). Do **not** REJECT solely because a steps/water/macro module does not look like the calorie ring. Compare shared chrome (card size, radius, placement in the grid) and overall hero structure to the reference; treat metric-specific inners as intentional.
+**Important — metric modules:** When the user asks for multiple tracking modules (calories, steps, water, macros, burned, etc.), each module may use a **different inner design optimized for that metric** (ring vs stride meter vs cups vs macro bar). Do **not** REJECT solely because a steps/water module does not look like the calorie ring. Still REJECT if:
+- Shared chrome/placement is wrong
+- A module’s metaphor is wrong (e.g. water shown as generic squares instead of cups)
+- A module’s **internal** content is poorly aligned / off-center when siblings are centered
 
 **Output (required):**
 ```markdown
@@ -67,6 +70,7 @@ APPROVE only if design and reference are visually identical for the requested sc
 Runs **only after** second agent APPROVE.
 
 **Job:** Scrutinize spacing and alignment of the implementation against the reference image.
+**Must inspect inside every module/card**, not only the outer grid.
 
 Check:
 - Margins/padding rhythm matches the reference
@@ -75,6 +79,9 @@ Check:
 - Icon groups optically centered and level
 - Gaps consistent with the reference (no cramped or uneven pairs)
 - Edges and dividers line up with content padding as in the reference
+- **In-module alignment:** stacked labels/values/icons share one axis (usually centered); no jagged left edges or mixed align rules inside a single module
+- **Sibling balance:** if one hero module is centered, the other should not look left-ragged unless the design deliberately differs
+- **Metaphor fidelity:** water = cup icons (filled/empty), not abstract squares/rects
 
 **Output (required):**
 ```markdown
@@ -105,6 +112,7 @@ Check:
 - Cards/rows with uneven heights or floating footers when they should align
 - Optical drift, cramped pairs next to loose pairs
 - Internal layout contradictions (e.g. mixed alignment rules in one section)
+- **Inside each module:** content centering/alignment consistent; metaphors correct (cups for water, etc.)
 
 **Output (required):**
 ```markdown
@@ -127,6 +135,7 @@ Check (stricter):
 - Safe-area / edge anchoring for overlays and sticky footers
 - Spacing tokens used consistently (no one-off magic numbers that break rhythm)
 - Any leftover visual debt from earlier iterations
+- Open each specialized module (water/steps/burned/macros) and verify internal alignment + icon metaphor — do not approve on outer chrome alone
 
 **Output (required):**
 ```markdown

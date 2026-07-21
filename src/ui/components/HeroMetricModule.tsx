@@ -54,7 +54,11 @@ export function HeroMetricModule({ metric, values, onPress, size }: HeroMetricMo
       ]}
     >
       {def.kind === 'ring' ? (
-        <CaloriesInner values={values} ringSize={Math.min(118, size - spacing.md * 2)} />
+        <RingInner
+          metric={metric}
+          values={values}
+          ringSize={Math.min(118, size - spacing.md * 2)}
+        />
       ) : def.kind === 'macro' ? (
         <MacroInner metric={metric} values={values} />
       ) : def.kind === 'steps' ? (
@@ -68,26 +72,43 @@ export function HeroMetricModule({ metric, values, onPress, size }: HeroMetricMo
   );
 }
 
-function CaloriesInner({
+function ringAccent(
+  metric: HeroMetricId,
+  colors: { protein: string; carbs: string; fat: string },
+): string | undefined {
+  if (metric === 'protein') return colors.protein;
+  if (metric === 'carbs') return colors.carbs;
+  if (metric === 'fat') return colors.fat;
+  return undefined; // calories uses theme accent
+}
+
+/** Shared ring layout used by calories + protein/carbs/fat. */
+function RingInner({
+  metric,
   values,
   ringSize,
 }: {
+  metric: HeroMetricId;
   values: HeroMetricValues;
   ringSize: number;
 }) {
+  const { colors } = useTheme();
+  const def = heroMetricDef(metric);
   const remaining = values.value;
   const progress = Math.min(Math.max(values.progress ?? 0.02, 0.02), 1);
+  const accent = ringAccent(metric, colors);
 
   return (
     <ProgressRing
       progress={progress}
       size={ringSize}
       strokeWidth={Math.max(8, Math.round(ringSize * 0.09))}
-      accessibilityLabel={`Calories: ${Math.round(remaining)} ${values.over ? 'over' : 'left'}`}
+      color={accent}
+      accessibilityLabel={`${def.label}: ${Math.round(remaining)} ${values.over ? 'over' : 'left'}`}
     >
       <View style={styles.centerCopy}>
         <AppText variant="micro" tone={values.over ? 'danger' : 'muted'} align="center">
-          {values.over ? 'Calories over' : 'Calories left'}
+          {values.over ? `${def.label} over` : `${def.label} left`}
         </AppText>
         <AppText
           variant="heading"
@@ -99,7 +120,7 @@ function CaloriesInner({
           {Math.round(Math.abs(remaining)).toLocaleString()}
         </AppText>
         <AppText variant="micro" tone="muted">
-          kcal
+          {def.unit}
         </AppText>
       </View>
     </ProgressRing>
@@ -185,38 +206,39 @@ function WaterInner({ values }: { values: HeroMetricValues }) {
   const { colors } = useTheme();
   const target = Math.max(1, Math.round(values.target ?? 8));
   const filled = Math.max(0, Math.round(values.value));
-  const cups = Array.from({ length: Math.min(target, 8) }, (_, i) => i < filled);
+  const cupCount = Math.min(target, 8);
+  const water = '#4EA8F0';
 
   return (
     <View style={styles.waterLayout}>
-      <View style={styles.macroTop}>
-        <Ionicons name="water" size={18} color="#4EA8F0" />
+      <View style={styles.waterHeader}>
+        <Ionicons name="water" size={18} color={water} />
         <AppText variant="caption" weight="600" tone="secondary">
           Water
         </AppText>
       </View>
-      <AppText variant="heading" weight="700" display style={styles.macroValue}>
+      <AppText variant="heading" weight="700" display align="center" style={styles.waterValue}>
         {filled}
         <AppText variant="caption" tone="muted">
           {' '}
           / {target}
         </AppText>
       </AppText>
-      <View style={styles.cupGrid}>
-        {cups.map((on, i) => (
-          <View
-            key={i}
-            style={[
-              styles.cup,
-              {
-                backgroundColor: on ? '#4EA8F0' : colors.track,
-                borderColor: on ? '#4EA8F0' : colors.borderStrong,
-              },
-            ]}
-          />
-        ))}
+      <View style={styles.cupRow}>
+        {Array.from({ length: cupCount }, (_, i) => {
+          const on = i < filled;
+          return (
+            <View key={i} style={styles.cupGlyph} accessibilityLabel={on ? 'Cup filled' : 'Cup empty'}>
+              <Ionicons
+                name={on ? 'cafe' : 'cafe-outline'}
+                size={20}
+                color={on ? water : colors.textMuted}
+              />
+            </View>
+          );
+        })}
       </View>
-      <AppText variant="micro" tone="muted">
+      <AppText variant="micro" tone="muted" align="center">
         cups today
       </AppText>
     </View>
@@ -325,19 +347,34 @@ const styles = StyleSheet.create({
   waterLayout: {
     flex: 1,
     width: '100%',
-    justifyContent: 'space-between',
+    alignItems: 'center',
+    justifyContent: 'center',
     gap: 6,
   },
-  cupGrid: {
+  waterHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+  },
+  waterValue: {
+    fontSize: 28,
+    lineHeight: 32,
+    fontFamily: fonts.display,
+  },
+  cupRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 5,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    maxWidth: '100%',
   },
-  cup: {
-    width: 14,
-    height: 18,
-    borderRadius: 4,
-    borderWidth: StyleSheet.hairlineWidth,
+  cupGlyph: {
+    width: 22,
+    height: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   burnedLayout: {
     flex: 1,

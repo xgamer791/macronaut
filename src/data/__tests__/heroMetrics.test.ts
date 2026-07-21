@@ -23,13 +23,14 @@ describe('heroMetrics', () => {
     );
   });
 
-  it('uses distinct visual kinds (not every metric is a calorie ring)', () => {
-    const kinds = new Set(HERO_METRICS.map((m) => m.kind));
-    expect(kinds.has('ring')).toBe(true);
-    expect(kinds.has('steps')).toBe(true);
-    expect(kinds.has('water')).toBe(true);
-    expect(kinds.has('macro')).toBe(true);
-    expect(kinds.has('burned')).toBe(true);
+  it('uses ring design for calories and macros; other metrics keep specialized kinds', () => {
+    expect(heroMetricDef('calories').kind).toBe('ring');
+    expect(heroMetricDef('protein').kind).toBe('ring');
+    expect(heroMetricDef('carbs').kind).toBe('ring');
+    expect(heroMetricDef('fat').kind).toBe('ring');
+    expect(heroMetricDef('steps').kind).toBe('steps');
+    expect(heroMetricDef('water').kind).toBe('water');
+    expect(heroMetricDef('burned').kind).toBe('burned');
   });
 
   it('validates ids and defaults', () => {

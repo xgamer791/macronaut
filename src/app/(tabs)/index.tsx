@@ -112,36 +112,30 @@ function TodayBody() {
   const consumed = progress?.consumed.calories ?? 0;
   const burned = progress?.burned ?? 0;
   const target = progress?.target.calories ?? 0;
-  const remaining = progress?.caloriesRemaining ?? target - consumed;
-  const over = remaining < 0;
 
   // Equal modules fill the content row: edge inset lg, fixed md gutter between cards.
   const moduleSize = Math.floor((width - spacing.lg * 2 - spacing.md) / 2);
 
+  function ringValues(consumedAmt: number, targetAmt: number): HeroMetricValues {
+    const left = targetAmt - consumedAmt;
+    return {
+      value: Math.abs(left),
+      target: targetAmt,
+      progress: targetAmt > 0 ? Math.min(Math.max(consumedAmt / targetAmt, 0.02), 1) : 0.02,
+      over: left < 0,
+    };
+  }
+
   function valuesFor(metric: HeroMetricId): HeroMetricValues {
     switch (metric) {
       case 'calories':
-        return {
-          value: Math.abs(remaining),
-          target,
-          progress: target > 0 ? Math.min(Math.max(consumed / target, 0.02), 1) : 0.02,
-          over,
-        };
+        return ringValues(consumed, target);
       case 'protein':
-        return {
-          value: progress?.consumed.protein ?? 0,
-          target: progress?.target.protein ?? 0,
-        };
+        return ringValues(progress?.consumed.protein ?? 0, progress?.target.protein ?? 0);
       case 'carbs':
-        return {
-          value: progress?.consumed.carbs ?? 0,
-          target: progress?.target.carbs ?? 0,
-        };
+        return ringValues(progress?.consumed.carbs ?? 0, progress?.target.carbs ?? 0);
       case 'fat':
-        return {
-          value: progress?.consumed.fat ?? 0,
-          target: progress?.target.fat ?? 0,
-        };
+        return ringValues(progress?.consumed.fat ?? 0, progress?.target.fat ?? 0);
       case 'fiber':
         return {
           value: progress?.consumed.fiber ?? 0,
