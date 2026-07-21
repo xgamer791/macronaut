@@ -195,21 +195,25 @@ function MealCard({
     >
       <Image source={meal.image} style={{ width: '100%', height: imageHeight }} contentFit="cover" />
       <View style={styles.cardBody}>
-        <AppText variant="micro" tone="muted" weight="600">
-          {meal.slot}
-        </AppText>
-        <AppText variant="caption" weight="700" numberOfLines={2} style={styles.cardTitle}>
-          {meal.name}
-        </AppText>
-        <AppText variant="micro" tone="secondary" numberOfLines={2} style={styles.withLine}>
-          {meal.withLine}
-        </AppText>
-        <View style={[styles.divider, { backgroundColor: colors.border }]} />
-        <View style={styles.cardFooter}>
-          <AppText variant="micro" tone="secondary">
-            {Math.round(meal.nutrition.calories)} cal
+        <View style={styles.cardTop}>
+          <AppText variant="micro" tone="muted" weight="600">
+            {meal.slot}
           </AppText>
-          <DifficultyBar difficulty={meal.difficulty} compact />
+          <AppText variant="caption" weight="700" numberOfLines={2} style={styles.cardTitle}>
+            {meal.name}
+          </AppText>
+          <AppText variant="micro" tone="secondary" numberOfLines={2} style={styles.withLine}>
+            {meal.withLine}
+          </AppText>
+        </View>
+        <View style={styles.cardBottom}>
+          <View style={[styles.divider, { backgroundColor: colors.border }]} />
+          <View style={styles.cardFooter}>
+            <AppText variant="micro" tone="secondary">
+              {Math.round(meal.nutrition.calories)} cal
+            </AppText>
+            <DifficultyBar difficulty={meal.difficulty} compact />
+          </View>
         </View>
       </View>
     </Pressable>
@@ -256,20 +260,32 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     gap: spacing.md,
     paddingBottom: spacing.xs,
+    alignItems: 'stretch',
   },
   card: {
     borderRadius: radius.md,
     borderWidth: StyleSheet.hairlineWidth,
     overflow: 'hidden',
+    alignSelf: 'stretch',
   },
   cardBody: {
+    flexGrow: 1,
+    minHeight: 118,
     paddingHorizontal: spacing.sm + 2,
     paddingTop: spacing.sm,
     paddingBottom: spacing.sm + 2,
+    justifyContent: 'space-between',
+  },
+  cardTop: {
     gap: 2,
+  },
+  cardBottom: {
+    marginTop: 'auto',
+    gap: 4,
   },
   cardTitle: {
     lineHeight: 17,
+    minHeight: 34,
   },
   withLine: {
     lineHeight: 14,
@@ -277,8 +293,6 @@ const styles = StyleSheet.create({
   },
   divider: {
     height: StyleSheet.hairlineWidth,
-    marginTop: 2,
-    marginBottom: 1,
   },
   cardFooter: {
     flexDirection: 'row',
