@@ -1,79 +1,170 @@
 ---
 name: prodesign
 description: >
-  Strict third-agent visual QA for layout, position, and alignment.
+  Two-stage visual QA (second agent then third agent) for design work.
   Use only when the user invokes /prodesign or explicitly asks for a pro design check.
 disable-model-invocation: true
 ---
 
 # Pro Design (`/prodesign`)
 
-Strict visual QA modeled on the Macronaut “third agent” pass: layout, position, **and alignment**. Content/copy matching is out of scope unless the user asks.
+Gate every design task behind **second agent → third agent** approval.
+The working agent must **not** treat the task as complete until the **third agent** returns **APPROVE**.
 
-## Goal
-Decide whether the current UI is a **MATCH** or **NO MATCH** against the intended design/reference for spacing, structure, element placement, and alignment.
+## Working agent (orchestrator)
 
-## When Invoked
-1. Identify the **target UI** (screen/component the user is reviewing).
-2. Identify the **reference** (screenshot, mock, described layout, or prior approved state). If missing, ask once — then proceed with best available evidence.
-3. Run the checklist below on the live implementation (code + screenshots/artifacts when available).
-4. Optionally launch a fresh subagent for an independent second opinion on the same evidence; reconcile disagreements conservatively (prefer **NO MATCH** if uncertain).
+1. Implement / revise the design as requested.
+2. Detect whether a **reference image** exists:
+   - User-attached screenshot or mockup in the current turn
+   - Reference image earlier in the same chat
+   - Saved visual artifacts clearly intended as the reference
+3. Choose Mode A or Mode B below.
+4. Launch the **second agent** as a fresh subagent with the exact brief for that mode.
+5. If second agent returns **REJECT**: fix the issues, then re-run second agent. Do not advance.
+6. Only after second agent returns **APPROVE**: launch the **third agent** as a fresh subagent.
+7. If third agent returns **REJECT**: fix the issues, then re-run **from the second agent** again (second must re-approve before third runs).
+8. Task is **complete only when third agent returns APPROVE**.
 
-## Checklist (all must pass for MATCH)
+### Hard rules
+- Never skip second or third agent.
+- Never mark the task complete on second-agent approval alone.
+- Never let the working agent “self-approve” in place of either agent.
+- Prefer **REJECT** when uncertain.
+- Ignore pure content/copy differences unless the user asked for those too (layout/visual fidelity is the default bar).
 
-### Layout
-- [ ] Section order matches the reference (header → content blocks → footer/actions)
-- [ ] Card/list structure matches (columns, carousels, tabs, hero, meta rows)
-- [ ] Relative sizing feels consistent (image vs text blocks, card proportions)
-- [ ] No accidental leftover chrome from older layouts
+---
 
-### Position
-- [ ] Key elements sit in the correct region (e.g. meta top-left, actions top-right, CTAs bottom)
-- [ ] Overlays/back buttons/fabs are anchored as designed (safe-area aware)
-- [ ] Empty states / dividers / pills appear where expected
+## Mode A — Reference image attached or found in chat
 
-### Alignment (required — this is the strict third-agent bar)
-- [ ] Shared baselines: text rows and icon rows share a common vertical center where intended
-- [ ] Leading edges align across stacked items (titles, body, meta) unless design deliberately indents
-- [ ] Trailing edges / right-side actions align consistently across cards or rows
-- [ ] Icon groups use equal hit boxes and optical center alignment (not just flex defaults)
-- [ ] Columns in grids/carousels share equal card heights or intentionally pinned footers
-- [ ] Spacing rhythm is even (no 1-off gaps, no cramped pairs next to loose pairs)
-- [ ] Dividers and rules span/align with content padding, not floating short/long
+Used when copying a design from a screenshot/mockup.
 
-## Method
-1. Read the relevant screen/component source and theme tokens.
-2. Prefer visual evidence: screenshots in `/opt/cursor/artifacts`, browser captures, or user-provided images.
-3. For icon/text rows, verify equal-height containers + `alignItems: 'center'` (or equivalent) and call out optical drift from glyph bounds.
-4. For card grids/carousels, verify footer pinning / minHeights if footers must line up.
-5. Note only **material** issues (visible misalignment or structural drift). Ignore pure copy/image content differences unless requested.
+### Second agent — identicality vs reference
+**Job:** Compare the working agent’s design to the reference image and decide if they are visually identical in structure and appearance.
 
-## Output Format
-Return a short report:
+Check:
+- Same overall layout and section order
+- Same placement of major elements (hero, titles, meta, actions, cards, tabs, footers)
+- Same relative proportions and hierarchy
+- No missing/extra chrome vs the reference
+- Content/branding may differ only if the user said layout-only; otherwise flag material visual differences
+
+**Output (required):**
+```markdown
+## Second Agent (Reference Compare): APPROVE | REJECT
+### Reference
+- …
+### Compared against
+- …
+### Differences
+- … (empty if none)
+### Verdict
+APPROVE only if design and reference are visually identical for the requested scope.
+```
+
+### Third agent — spacing & alignment vs reference
+Runs **only after** second agent APPROVE.
+
+**Job:** Scrutinize spacing and alignment of the implementation against the reference image.
+
+Check:
+- Margins/padding rhythm matches the reference
+- Vertical/horizontal alignment of text, icons, and rows
+- Equal card heights / pinned footers where the reference shows them
+- Icon groups optically centered and level
+- Gaps consistent with the reference (no cramped or uneven pairs)
+- Edges and dividers line up with content padding as in the reference
+
+**Output (required):**
+```markdown
+## Third Agent (Spacing & Alignment vs Reference): APPROVE | REJECT
+### Spacing
+PASS | FAIL — …
+### Alignment
+PASS | FAIL — …
+### Must-fix (if REJECT)
+1. …
+### Verdict
+APPROVE only if spacing and alignment match the reference.
+```
+
+---
+
+## Mode B — No reference image
+
+Used when designing from scratch (no mockup/screenshot in the request or chat).
+
+### Second agent — consistency pass
+**Job:** Check the design for inconsistent spacing and alignment issues (no external reference).
+
+Check:
+- Uneven gaps / inconsistent padding scale
+- Misaligned leading/trailing edges across stacked items
+- Icon/text rows that don’t share a vertical center
+- Cards/rows with uneven heights or floating footers when they should align
+- Optical drift, cramped pairs next to loose pairs
+- Internal layout contradictions (e.g. mixed alignment rules in one section)
+
+**Output (required):**
+```markdown
+## Second Agent (Consistency): APPROVE | REJECT
+### Issues
+- … (empty if none)
+### Verdict
+APPROVE only if spacing/alignment are internally consistent.
+```
+
+### Third agent — harder scrutiny
+Runs **only after** second agent APPROVE.
+
+**Job:** Scrutinize harder than the second agent. Assume something was missed.
+
+Check (stricter):
+- Pixel-sensitive alignment of icon groups and meta rows
+- Baseline consistency across adjacent text styles
+- Grid/carousel regularity (widths, gutters, card body alignment)
+- Safe-area / edge anchoring for overlays and sticky footers
+- Spacing tokens used consistently (no one-off magic numbers that break rhythm)
+- Any leftover visual debt from earlier iterations
+
+**Output (required):**
+```markdown
+## Third Agent (Hard Scrutiny): APPROVE | REJECT
+### Findings
+- …
+### Must-fix (if REJECT)
+1. …
+### Verdict
+APPROVE only if the design holds up under stricter scrutiny.
+```
+
+---
+
+## Completion report (working agent)
+
+After third agent APPROVE, publish:
 
 ```markdown
-## Pro Design Result: MATCH | NO MATCH
+## Pro Design: COMPLETE
 
-### Scope
-- Target: …
-- Reference: …
-
-### Findings
-- Layout: PASS | FAIL — …
-- Position: PASS | FAIL — …
-- Alignment: PASS | FAIL — …
-
-### Must-fix (if NO MATCH)
-1. …
-2. …
+- Mode: A (reference) | B (no reference)
+- Second agent: APPROVE
+- Third agent: APPROVE
+- Reference used: … | none
 
 ### Notes
 - …
 ```
 
-**Verdict rule:** any FAIL in Layout, Position, or Alignment ⇒ **NO MATCH**.
+If third agent has not approved, the status must remain:
 
-## Do Not
-- Rubber-stamp MATCH without checking alignment explicitly
-- Fail on brand/content differences when the user asked for layout-only comparison
-- Rewrite large features unless the user asks to implement the fixes after the report
+```markdown
+## Pro Design: INCOMPLETE
+- Waiting on: Second agent | Third agent
+- Last verdict: …
+- Open must-fixes: …
+```
+
+## Subagent practice
+- Use a fresh subagent for second agent and a **different** fresh subagent for third agent.
+- Give each subagent only the evidence they need (screenshots/artifacts + target file paths + mode brief).
+- Do not tell the third agent that the second already approved in a way that pressures approval; provide the artifacts and checklist only.
