@@ -383,6 +383,7 @@ export default function MealDetailScreen() {
 
 /** Bare icon action — no chrome; ~25% larger than the prior ~20px glyphs. */
 const ACTION_ICON_SIZE = Math.round(18 * 1.13 * 1.25);
+const ACTION_HIT = ACTION_ICON_SIZE + 4;
 
 function IconActionButton({
   icon,
@@ -401,9 +402,17 @@ function IconActionButton({
       accessibilityLabel={label}
       onPress={onPress}
       hitSlop={8}
-      style={({ pressed }) => [styles.actionBtn, { opacity: pressed ? 0.7 : 1 }]}
+      style={({ pressed }) => [
+        styles.actionBtn,
+        { width: ACTION_HIT, height: ACTION_HIT, opacity: pressed ? 0.7 : 1 },
+      ]}
     >
-      <Ionicons name={icon} size={ACTION_ICON_SIZE} color={color} />
+      <Ionicons
+        name={icon}
+        size={ACTION_ICON_SIZE}
+        color={color}
+        style={styles.actionIcon}
+      />
     </Pressable>
   );
 }
@@ -439,12 +448,18 @@ const styles = StyleSheet.create({
   actionRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     gap: spacing.md,
+    height: ACTION_HIT,
   },
   actionBtn: {
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 2,
+  },
+  actionIcon: {
+    width: ACTION_ICON_SIZE,
+    height: ACTION_ICON_SIZE,
+    textAlign: 'center',
   },
   mealTitle: {
     marginTop: 2,
