@@ -20,10 +20,33 @@ export interface SyncTable {
   /** True when the table already carries its own soft-delete flag, so a
    * removal is an UPDATE the outbox sees rather than a DELETE. */
   softDelete?: boolean;
+  /** Primary-key values that stay on the device. Only meaningful for the
+   * key-value `settings` table, where one row can be a secret while the rest
+   * of the table is ordinary preferences. */
+  excludeKeys?: string[];
 }
 
+/**
+ * Settings rows that must never leave the device, even though the rest of the
+ * table syncs.
+ *
+ * `grokApiKey` is the user's own xAI credential. It is billable, it is theirs
+ * rather than ours, and both the AI screens and the privacy policy tell them
+ * it stays on their device. Uploading it to our database would make that a
+ * lie and would put someone else's API key in our custody. It is excluded at
+ * the trigger, so it never even enters the outbox.
+ *
+ * `demoDataLoaded` is a development marker with no meaning on another device.
+ */
+export const DEVICE_ONLY_SETTINGS = ['grokApiKey', 'demoDataLoaded'];
+
 export const SYNC_TABLES: SyncTable[] = [
-  { name: 'settings', pk: ['key'], columns: ['value'] },
+  {
+    name: 'settings',
+    pk: ['key'],
+    columns: ['value'],
+    excludeKeys: DEVICE_ONLY_SETTINGS,
+  },
   {
     name: 'goal_configs',
     pk: ['id'],

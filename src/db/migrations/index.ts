@@ -8,6 +8,7 @@ import * as m006 from './006_activity_entries';
 import * as m007 from './007_day_notes';
 import * as m008 from './008_day_notes_multi';
 import * as m009 from './009_sync_outbox';
+import * as m010 from './010_device_only_settings';
 
 export interface Migration {
   version: number;
@@ -27,6 +28,7 @@ export const migrations: Migration[] = [
   { version: 7, name: 'day_notes', up: m007.up },
   { version: 8, name: 'day_notes_multi', up: m008.up },
   { version: 9, name: 'sync_outbox', up: m009.up },
+  { version: 10, name: 'device_only_settings', up: m010.up },
 ];
 
 export async function migrate(db: Database, list: Migration[] = migrations): Promise<number> {

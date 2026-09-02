@@ -66,8 +66,17 @@ async function pushBatch(
   db: Database,
   remote: RemoteStore,
   table: SyncTable,
-  batch: OutboxEntry[],
+  queued: OutboxEntry[],
 ): Promise<number> {
+  // The triggers already refuse to queue these, so reaching here means the row
+  // was queued by an older build or by something writing to the outbox
+  // directly. One of them is the user's API key, so it is checked again at the
+  // last point before the network rather than trusted to the schema alone.
+  const blocked = queued.filter((e) => table.excludeKeys?.includes(e.row_key));
+  const batch = queued.filter((e) => !table.excludeKeys?.includes(e.row_key));
+  if (blocked.length > 0) await clearSent(db, blocked);
+  if (batch.length === 0) return blocked.length;
+
   const removals = batch.filter((e) => e.op === 'delete');
   const upserts = batch.filter((e) => e.op === 'upsert');
 
@@ -89,7 +98,7 @@ async function pushBatch(
   }
 
   await clearSent(db, batch);
-  return batch.length;
+  return batch.length + blocked.length;
 }
 
 /** Removes the outbox entries we just sent, but only those still at the
@@ -149,6 +158,9 @@ async function applyRemote(db: Database, table: SyncTable, rows: Row[]): Promise
     for (const row of rows) {
       const key = rowKey(table, row);
       if (pending.has(key)) continue;
+      // Never let the server dictate a device-only row: a stale API key left
+      // in an account by an older build must not overwrite the real one here.
+      if (table.excludeKeys?.includes(key)) continue;
 
       if (row[DELETED] === true) {
         const { sql, params } = deleteByKey(table, row);

@@ -77,6 +77,93 @@ describe('sync outbox triggers', () => {
   });
 });
 
+describe('device-only settings', () => {
+  it('never queues the user API key for upload', async () => {
+    const db = await createTestDb();
+    await db.runAsync('DELETE FROM sync_outbox');
+
+    await db.runAsync('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)', [
+      'grokApiKey',
+      '"xai-secret"',
+    ]);
+
+    expect(await pendingCount(db)).toBe(0);
+  });
+
+  it('still queues ordinary settings alongside it', async () => {
+    const db = await createTestDb();
+    await db.runAsync('DELETE FROM sync_outbox');
+
+    await db.runAsync('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)', [
+      'grokApiKey',
+      '"xai-secret"',
+    ]);
+    await db.runAsync('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)', [
+      'unitSystem',
+      '"metric"',
+    ]);
+
+    const queued = await db.getAllAsync<{ row_key: string }>(
+      `SELECT row_key FROM sync_outbox WHERE table_name = 'settings'`,
+    );
+    expect(queued.map((r) => r.row_key)).toEqual(['unitSystem']);
+  });
+
+  it('keeps the API key out of the server even after a full sync', async () => {
+    const remote = new FakeRemote();
+    const db = await createTestDb();
+
+    await db.runAsync('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)', [
+      'grokApiKey',
+      '"xai-secret"',
+    ]);
+    await syncOnce(db, remote);
+
+    const uploaded = remote.rowsFor(settings).map((r) => r.key);
+    expect(uploaded).not.toContain('grokApiKey');
+    expect(JSON.stringify(remote.rowsFor(settings))).not.toContain('xai-secret');
+  });
+
+  it('refuses to upload a key queued by an older build', async () => {
+    const remote = new FakeRemote();
+    const db = await createTestDb();
+    await db.runAsync('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)', [
+      'grokApiKey',
+      '"xai-secret"',
+    ]);
+    // Simulate the outbox written by the version of migration 009 that had no
+    // guard, which shipped to this branch before the exclusion existed.
+    await db.runAsync(
+      `INSERT OR REPLACE INTO sync_outbox (table_name, row_key, op, queued_at, rev)
+       VALUES ('settings', 'grokApiKey', 'upsert', '2026-01-01T00:00:00Z', 999)`,
+    );
+
+    await syncOnce(db, remote);
+
+    expect(JSON.stringify(remote.rowsFor(settings))).not.toContain('xai-secret');
+    // ...and it is dropped rather than retried forever.
+    expect(await pendingCount(db)).toBe(0);
+  });
+
+  it('does not let a stale server copy overwrite the local key', async () => {
+    const remote = new FakeRemote();
+    const db = await createTestDb();
+    await db.runAsync('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)', [
+      'grokApiKey',
+      '"mine"',
+    ]);
+    await remote.upsert(settings, [{ key: 'grokApiKey', value: '"someone-elses"' }]);
+
+    await syncOnce(db, remote);
+
+    const row = await db.getFirstAsync<{ value: string }>(
+      'SELECT value FROM settings WHERE key = ?',
+      ['grokApiKey'],
+    );
+    expect(row?.value).toBe('"mine"');
+  });
+});
+
 describe('verify-sync script', () => {
   it('checks every table the engine actually syncs', () => {
     // The script is plain Node and re-lists the tables by hand; a table added

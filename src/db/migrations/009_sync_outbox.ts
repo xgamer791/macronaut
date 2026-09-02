@@ -43,7 +43,7 @@ export async function up(db: Database): Promise<void> {
       `INSERT INTO sync_outbox (table_name, row_key, op, queued_at, rev)
        SELECT '${table.name}', ${keyExpr(table, '')}, 'upsert', ${NOW}, ${NEXT_REV}
        FROM ${table.name}
-       WHERE true
+       WHERE ${seedFilter(table)}
        ON CONFLICT (table_name, row_key) DO NOTHING`,
     );
   }
@@ -71,6 +71,24 @@ function keyExpr(table: SyncTable, alias: 'NEW' | 'OLD' | ''): string {
   return parts.length === 1 ? parts[0] : parts.join(` || char(1) || `);
 }
 
+/** The same exclusion as `triggerGuard`, for the plain SELECT that seeds rows
+ * predating the outbox. */
+function seedFilter(table: SyncTable): string {
+  if (!table.excludeKeys?.length) return 'true';
+  const list = table.excludeKeys.map((k) => `'${k.replace(/'/g, "''")}'`).join(', ');
+  return `"${table.pk[0]}" NOT IN (${list})`;
+}
+
+/** Restricts a trigger to the rows that are allowed to sync. Excluded keys are
+ * filtered here rather than in the engine so a secret cannot reach the outbox
+ * at all, whatever later code does with it. */
+export function triggerGuard(table: SyncTable, alias: 'NEW' | 'OLD'): string {
+  if (!table.excludeKeys?.length) return '';
+  const col = table.pk[0];
+  const list = table.excludeKeys.map((k) => `'${k.replace(/'/g, "''")}'`).join(', ');
+  return ` WHEN ${alias}."${col}" NOT IN (${list})`;
+}
+
 function enqueue(table: SyncTable, alias: 'NEW' | 'OLD', op: 'upsert' | 'delete'): string {
   return `
       INSERT INTO sync_outbox (table_name, row_key, op, queued_at, rev)
@@ -86,13 +104,16 @@ function triggerSql(table: SyncTable): string {
     DROP TRIGGER IF EXISTS sync_${n}_au;
     DROP TRIGGER IF EXISTS sync_${n}_ad;
 
-    CREATE TRIGGER sync_${n}_ai AFTER INSERT ON ${n} BEGIN${enqueue(table, 'NEW', 'upsert')}
+    CREATE TRIGGER sync_${n}_ai AFTER INSERT ON ${n}${triggerGuard(table, 'NEW')}
+    BEGIN${enqueue(table, 'NEW', 'upsert')}
     END;
 
-    CREATE TRIGGER sync_${n}_au AFTER UPDATE ON ${n} BEGIN${enqueue(table, 'NEW', 'upsert')}
+    CREATE TRIGGER sync_${n}_au AFTER UPDATE ON ${n}${triggerGuard(table, 'NEW')}
+    BEGIN${enqueue(table, 'NEW', 'upsert')}
     END;
 
-    CREATE TRIGGER sync_${n}_ad AFTER DELETE ON ${n} BEGIN${enqueue(table, 'OLD', 'delete')}
+    CREATE TRIGGER sync_${n}_ad AFTER DELETE ON ${n}${triggerGuard(table, 'OLD')}
+    BEGIN${enqueue(table, 'OLD', 'delete')}
     END;
   `;
 }
