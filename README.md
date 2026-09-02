@@ -73,7 +73,7 @@ npm run ios                # iOS simulator (needs Xcode)
 
 | Variable | Required | Purpose |
 |---|---|---|
-| `EXPO_PUBLIC_USDA_API_KEY` | No | USDA FoodData Central key. Falls back to `DEMO_KEY` (heavily rate-limited — fine for a quick try). Get a free key at https://fdc.nal.usda.gov/api-key-signup |
+| `EXPO_PUBLIC_USDA_API_KEY` | For production | USDA FoodData Central key. Falls back to `DEMO_KEY`, whose ~30 requests/hour are shared by everyone using the deploy, not per visitor — fine for a quick try, not for real traffic. Free key at https://fdc.nal.usda.gov/api-key-signup; the Pages workflow reads it from a repository secret of the same name. |
 | `EXPO_PUBLIC_SUPABASE_URL` | No | Overrides `supabase.json`. Only needed to aim one machine at a different project. |
 | `EXPO_PUBLIC_SUPABASE_ANON_KEY` | No | Same, and only ever the **publishable (anon)** key — never `service_role` / `sb_secret_`, which the build and the app both refuse. |
 | `EXPO_PUBLIC_BASE_PATH` | No | Set by the Pages deploy workflow only. Leave empty locally. |
@@ -130,7 +130,7 @@ The suite runs in plain Node (better-sqlite3 stands in for expo-sqlite), so no s
 ## Known limitations
 
 - Camera barcode scanning is unavailable on web (manual entry + demo barcode provided); it works on iOS/Android devices.
-- USDA `DEMO_KEY` is rate-limited (~30 req/hr). Built-in generics and Open Food Facts keep search useful regardless.
+- USDA `DEMO_KEY` is rate-limited (~30 req/hr for the whole deploy, not per user), so set `EXPO_PUBLIC_USDA_API_KEY` before real traffic. Built-in generics and Open Food Facts keep search useful regardless.
 - Sync resolves conflicts last-write-wins per row, biased toward the device you are using. Editing the same entry on two devices while both are offline keeps one of the two edits, not a merge.
 - Your xAI API key is deliberately excluded from sync, so it has to be entered on each device.
 - Sign in with Apple is not implemented yet, which iOS requires alongside Google sign-in; needed before App Store submission.
