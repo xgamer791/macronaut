@@ -6,7 +6,7 @@ project URL and publishable key are configured.
 | Mode | When | Sign-in | Data |
 |---|---|---|---|
 | Local-only | No project configured (the public GitHub Pages demo) | "Continue on this device" | One local database, nothing leaves the device |
-| Accounts | A project is configured | Google, or a six-digit email code | One local database **per account** on the device |
+| Accounts | A project is configured | Google, or a six-digit email code | Stored in the account on Supabase, cached locally so the app works offline |
 
 Two places supply that configuration, and an environment variable wins over the
 file:
@@ -23,9 +23,11 @@ world. The publishable key is designed to be public; Row Level Security is what
 protects the data. The `service_role` / `sb_secret_` key is the opposite and
 must never go in either place — the build script and the app both refuse it.
 
-Nothing syncs to the cloud yet. Signing in establishes identity and isolates
-each account's local database; the diary itself is still local-first. See
-[architecture.md](architecture.md) for the seams sync will use.
+In accounts mode the diary belongs to the account, not the device: sign in
+anywhere and your food, goals, recipes and settings are there. The local
+database is still the one every screen reads and writes, so the app stays fast
+and works offline — it is a cache that is reconciled with Supabase in the
+background. See [How sync works](#how-sync-works) below.
 
 ## Project setup
 
@@ -61,6 +63,21 @@ it needs, gives `anon` nothing, and provisions each profile from a
 
 The file ends with the template every future user-owned table should copy, so
 isolation is written into the table definition rather than remembered later.
+
+Then run [`supabase/migrations/0002_sync_tables.sql`](../supabase/migrations/0002_sync_tables.sql).
+It creates the fifteen tables the diary syncs into — entries, goals, custom
+foods, saved meals, recipes, activity, notes, history and settings — each keyed
+by `user_id`, each under forced Row Level Security. **Until this runs, sign-in
+works but nothing syncs**, and Settings shows "Sync paused".
+
+Both files are safe to run again; re-pasting either one changes nothing.
+
+To check the schema and its isolation without a Supabase project, apply them to
+a throwaway local Postgres:
+
+```bash
+npm run test:rls
+```
 
 ### 3. Enable the email code
 
@@ -122,6 +139,20 @@ verifier held by the client that started the flow.
 
 ### 5. Verify
 
+First confirm the project is actually ready to hold diaries:
+
+```bash
+npm run verify:sync
+```
+
+It probes every table the sync engine writes to and reports one of three
+things: the table is missing (migration 0002 has not been run), the table
+answers an anonymous read (Row Level Security is not doing its job — stop), or
+the table exists and refuses to talk to anyone who is not signed in, which is
+the answer you want.
+
+Then the round trip:
+
 ```bash
 npm run web
 ```
@@ -130,6 +161,10 @@ Sign in with an email code, add a diary entry, sign out, then sign in as a
 second address. The second account must see an empty diary. Sign back in as the
 first and its entries must return. That round trip is the isolation guarantee —
 if it fails, stop and fix it before shipping.
+
+Finally, the guarantee that sync exists for: sign in as the first account in a
+**different browser** (or a private window). The diary entry you just made must
+appear there without you doing anything.
 
 ## Deploying accounts to GitHub Pages
 
@@ -166,6 +201,54 @@ Finally, run the two-account round trip from step 5 above against the live URL.
 Sign-in cannot work until the Supabase redirect allow-list contains
 `https://xgamer791.github.io/macronaut/`, including the sub-path.
 
+## How sync works
+
+Every screen reads and writes the local SQLite database, exactly as before.
+Nothing waits on the network, and the app works with no connection at all. A
+background reconciler moves those writes up to Supabase and brings down what
+changed elsewhere.
+
+**Recording changes.** The app has around forty repository methods that write
+to the diary. Teaching each one to also call Supabase would mean touching all
+of them and silently missing any write added later. Instead the database
+records its own changes: `src/db/migrations/009_sync_outbox.ts` puts an
+`AFTER INSERT / UPDATE / DELETE` trigger on each account-owned table, and each
+trigger drops a row into `sync_outbox`. Repositories are untouched and cannot
+forget. The outbox is keyed by table and row, not append-only, so editing one
+entry fifty times before the next sync still uploads it once.
+
+**Reconciling.** `src/services/sync/engine.ts` pushes the outbox, then pulls
+anything the server has stamped since the last cursor. Push runs first so a row
+edited here wins over the server's copy; pull then skips any row still sitting
+in the outbox, since that is a change made after the push began and is newer
+still. Conflicts resolve last-write-wins per row, biased toward the device in
+the user's hand. Applying a pulled row fires the local triggers, which would
+queue it straight back for upload, so the engine clears that echo in the same
+transaction.
+
+Which tables sync is declared once, in `src/services/sync/tables.ts`. Both the
+trigger migration and the engine read that list. `cached_foods` is deliberately
+excluded: it is a provider cache, identical for every user and refillable from
+the network.
+
+**Scheduling.** `src/state/SyncProvider.tsx` syncs on sign-in, a few seconds
+after local writes, on a slow timer for other devices' changes, and whenever
+the app returns to the foreground. Failures back off exponentially. Settings →
+Account shows the current state and syncs on tap.
+
+**First launch on a device blocks.** Until the initial download finishes, the
+local database is empty — and an empty database is indistinguishable from a new
+user, so the app would send someone with a year of history to the onboarding
+screen while their diary was still arriving. `SyncProvider` holds the UI until
+that first sync completes, and records that it did so; every launch afterwards
+renders immediately and syncs behind the screen. If the first sync cannot reach
+the server the app still opens, and tries again rather than settling into a
+permanently empty diary.
+
+**Deletions travel as tombstones.** A deleted row is kept server-side with
+`_deleted = true` rather than removed, so the user's other devices learn it is
+gone instead of re-uploading their stale copy and resurrecting it.
+
 ## How isolation works on the device
 
 Before accounts there was one local SQLite database per device. Adding sign-in
@@ -188,8 +271,15 @@ browser the previous account's diary.
 created for. The React Query cache is cleared on every scope change, because a
 cached diary result belongs to whoever fetched it.
 
-Signing out does not erase the local database: the account keeps its data for
-next time. Use Settings → Data → **Delete all data** to erase it.
+Signing out does not erase the local database: the account keeps its cached
+copy for next time.
+
+Settings → Data → **Delete all data** now erases the account, not just the
+device. It runs `DELETE` against the local tables, the triggers turn those into
+tombstones, and the next sync removes the rows from Supabase and from every
+other device the user owns. That is what "delete" means once data is synced, so
+the confirmation says so rather than promising a device-local wipe it cannot
+deliver.
 
 ## Session storage
 

@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { createTestDb } from '@/db/__tests__/testDb';
 import { Database } from '@/db/driver';
 import { pendingCount, syncOnce } from '../engine';
@@ -71,6 +73,17 @@ describe('sync outbox triggers', () => {
       expect(names.has(`sync_${table.name}_ai`)).toBe(true);
       expect(names.has(`sync_${table.name}_au`)).toBe(true);
       expect(names.has(`sync_${table.name}_ad`)).toBe(true);
+    }
+  });
+});
+
+describe('verify-sync script', () => {
+  it('checks every table the engine actually syncs', () => {
+    // The script is plain Node and re-lists the tables by hand; a table added
+    // to SYNC_TABLES but not there would go unverified against the live project.
+    const script = readFileSync(join(__dirname, '../../../../scripts/verify-sync.mjs'), 'utf8');
+    for (const table of SYNC_TABLES) {
+      expect(script).toContain(`'${table.name}'`);
     }
   });
 });

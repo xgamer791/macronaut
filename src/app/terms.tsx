@@ -3,10 +3,14 @@ import React from 'react';
 import { Linking, View } from 'react-native';
 import { AppText, Card, LegalSection, ListRow, Screen, ScreenHeader } from '@/ui/components';
 import { spacing } from '@/ui/theme/tokens';
+import { useAuth } from '@/state/AuthProvider';
 import { CONTACT_EMAIL, LEGAL_LAST_UPDATED } from '@/utils/legal';
 
 export default function TermsScreen() {
   const router = useRouter();
+  // Storage terms differ by build: the demo keeps everything on the device,
+  // a configured build keeps it in the user's account.
+  const { accountsEnabled } = useAuth();
 
   return (
     <Screen>
@@ -26,8 +30,12 @@ export default function TermsScreen() {
       <LegalSection
         title="What Macronaut is"
         paragraphs={[
-          'Macronaut is a personal calorie and macro tracker. It is free to use, carries no ads, and stores your food diary on your own device.',
-          'An account is optional and exists only to identify you and keep separate accounts\u2019 data apart on a shared device.',
+          accountsEnabled
+            ? 'Macronaut is a personal calorie and macro tracker. It is free to use and carries no ads. Your food diary is stored in your account so it is available on every device you sign in on.'
+            : 'Macronaut is a personal calorie and macro tracker. It is free to use, carries no ads, and stores your food diary on your own device.',
+          accountsEnabled
+            ? 'An account identifies you and keeps your data separate from everyone else\u2019s, including other people using the same device.'
+            : 'An account is optional and exists only to identify you and keep separate accounts\u2019 data apart on a shared device.',
         ]}
       />
 
@@ -64,10 +72,17 @@ export default function TermsScreen() {
 
       <LegalSection
         title="Your data, and backups"
-        paragraphs={[
-          'Because your diary lives on your device, we hold no copy of it and cannot restore it for you. If you delete the app, clear your browser storage, use Delete all data, or lose the device, that data is gone.',
-          'Keeping a backup, where your platform offers one, is up to you.',
-        ]}
+        paragraphs={
+          accountsEnabled
+            ? [
+                'Your diary is stored in your account, so losing a device does not lose your data \u2014 sign in again elsewhere and it is there.',
+                'We are not a backup service, though. Deleting your data deletes it everywhere and cannot be undone, and we do not guarantee we can recover anything for you. Keeping your own copy of anything you cannot afford to lose is up to you.',
+              ]
+            : [
+                'Because your diary lives on your device, we hold no copy of it and cannot restore it for you. If you delete the app, clear your browser storage, use Delete all data, or lose the device, that data is gone.',
+                'Keeping a backup, where your platform offers one, is up to you.',
+              ]
+        }
       />
 
       <LegalSection

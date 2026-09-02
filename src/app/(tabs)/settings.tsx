@@ -505,7 +505,11 @@ export default function SettingsScreen() {
         />
         <ListRow
           title="Delete all data"
-          subtitle="Erases everything on this device"
+          subtitle={
+            accountsEnabled
+              ? 'Erases your diary from your account'
+              : 'Erases everything on this device'
+          }
           destructive
           onPress={() => setConfirmReset('all')}
         />
@@ -695,7 +699,11 @@ export default function SettingsScreen() {
       >
         <AppText variant="body" tone="secondary">
           {confirmReset === 'all'
-            ? 'This permanently erases your diary, foods, meals, recipes, goals and settings from this device.'
+            ? accountsEnabled
+              ? // The deletion syncs, so saying "this device" would be a lie
+                // that costs someone their diary on every device they own.
+                'This permanently erases your diary, foods, meals, recipes, goals and settings from your account, on this device and every other device you use.'
+              : 'This permanently erases your diary, foods, meals, recipes, goals and settings from this device.'
             : 'You will go through the setup wizard again. Your diary, foods and history are kept.'}
         </AppText>
         <Button
@@ -713,8 +721,9 @@ export default function SettingsScreen() {
 
       <Sheet visible={confirmSignOut} onClose={() => setConfirmSignOut(false)} title="Sign out?">
         <AppText variant="body" tone="secondary">
-          Your diary stays on this device under this account and comes back when you sign in again.
-          Use &quot;Delete all data&quot; first if you want it gone.
+          {accountsEnabled
+            ? 'Your diary stays in your account and comes back when you sign in again, here or anywhere else.'
+            : 'Your diary stays on this device under this account and comes back when you sign in again. Use "Delete all data" first if you want it gone.'}
         </AppText>
         <Button
           title="Sign out"
