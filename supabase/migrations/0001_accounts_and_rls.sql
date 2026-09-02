@@ -127,9 +127,10 @@ create trigger on_auth_user_created
   after insert on auth.users
   for each row execute function public.handle_new_user();
 
--- Template for the sync tables that cloud sync will add (diary_entries,
--- custom_foods, goal_configs, …). Copy this shape for each one so isolation is
--- part of the table definition rather than something to remember later:
+-- Shape used by the sync tables in 0002_sync_tables.sql (diary_entries,
+-- custom_foods, goal_configs, …), and by any user-owned table added later.
+-- Copy it so isolation is part of the table definition rather than something
+-- to remember afterwards:
 --
 --   create table public.<name> (
 --     id uuid primary key default gen_random_uuid(),

@@ -136,9 +136,15 @@ export default function SettingsScreen() {
   const syncLabel = describeSync(sync);
   const syncNow = () => void sync.syncNow();
 
+  // ?demo=1 exists so the public demo can be filled with sample history in one
+  // tap. That was harmless while the demo was local-only. Now the same tap in
+  // an accounts build would write two weeks of invented meals into the user's
+  // real account and sync them to every device they own, so the URL switch is
+  // limited to builds with no account server.
   const demoAvailable =
     __DEV__ ||
-    (Platform.OS === 'web' &&
+    (!accountsEnabled &&
+      Platform.OS === 'web' &&
       typeof window !== 'undefined' &&
       window.location.search.includes('demo=1'));
 

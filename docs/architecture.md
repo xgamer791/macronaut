@@ -17,9 +17,8 @@ Food services (src/services/food)  providers + layered search/barcode
 **The rule that holds it together:** repositories depend only on the
 `Database` interface, and all calculation lives in `src/domain` with zero
 dependencies. That is what makes the whole data layer testable in plain Node
-and what makes a future cloud-sync backend a swap, not a rewrite — implement
-the repository interfaces against a server API (or add a sync engine beneath
-the SQLite driver) and no screen changes.
+and what let cloud sync land beneath the SQLite driver without touching a
+single repository or screen.
 
 ## Key decisions
 
@@ -37,6 +36,12 @@ the SQLite driver) and no screen changes.
 - **Web persistence.** GitHub Pages can't serve COOP/COEP headers, so the web
   driver runs sql.js in memory and persists serialized bytes to IndexedDB
   (debounced after writes). Same schema, same migrations, same repositories.
+- **Supabase owns the data; SQLite is the cache.** Screens read and write
+  locally, so nothing waits on the network and the app works offline. Triggers
+  record every change into `sync_outbox` and `src/services/sync` reconciles it
+  with the account's Postgres tables. Because the database tracks its own
+  changes, no repository knows sync exists and none can forget to. See
+  [accounts.md](accounts.md#how-sync-works).
 - **One database per account.** `getDatabase(scope)` opens a separate SQLite
   file (native) or IndexedDB record (web) per signed-in account, resolved by
   `src/db/scope.ts` before any screen mounts. Accounts on a shared device
@@ -53,9 +58,9 @@ the SQLite driver) and no screen changes.
 
 ## Future-proofing (deliberately not built yet)
 
-Cloud sync, iCloud backup, multi-device, Android, web dashboard. The seams for
-them: repository interfaces (swap/decorate for sync), the `Database` driver
-(add replication), effective-dated goal versions and snapshot entries
+iCloud backup, Android, web dashboard. The seams for them: repository
+interfaces (swap/decorate), the `Database` driver, effective-dated goal
+versions and snapshot entries
 (merge-friendly), `getDatabase(scope)` as the single composition point, and the
 account identity now supplied by `AuthProvider`. The Row Level Security
 template at the bottom of `supabase/migrations/0001_accounts_and_rls.sql` is
