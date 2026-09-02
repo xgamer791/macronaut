@@ -3,10 +3,16 @@ import React from 'react';
 import { Linking, View } from 'react-native';
 import { AppText, Card, LegalSection, ListRow, Screen, ScreenHeader } from '@/ui/components';
 import { spacing } from '@/ui/theme/tokens';
+import { useAuth } from '@/state/AuthProvider';
 import { CONTACT_EMAIL, LEGAL_LAST_UPDATED } from '@/utils/legal';
 
 export default function PrivacyScreen() {
   const router = useRouter();
+  // This page has to describe the build in the reader's hands. The public demo
+  // has no account server and genuinely never uploads anything; a build with a
+  // Supabase project stores the diary in the account. Saying the wrong one is
+  // not a copy problem, it is a false privacy promise.
+  const { accountsEnabled } = useAuth();
 
   return (
     <Screen>
@@ -15,8 +21,9 @@ export default function PrivacyScreen() {
       <Card>
         <View style={{ gap: spacing.md }}>
           <AppText variant="body" tone="secondary">
-            Macronaut is a calorie and macro tracker that keeps your food diary on your own device.
-            There are no ads, no analytics and no tracking of any kind.
+            {accountsEnabled
+              ? 'Macronaut is a calorie and macro tracker. Your food diary is stored in your own account so it follows you between devices, and nobody else can read it. There are no ads, no analytics and no tracking of any kind.'
+              : 'Macronaut is a calorie and macro tracker that keeps your food diary on your own device. There are no ads, no analytics and no tracking of any kind.'}
           </AppText>
           <AppText variant="micro" tone="muted">
             Last updated {LEGAL_LAST_UPDATED}
@@ -24,23 +31,44 @@ export default function PrivacyScreen() {
         </View>
       </Card>
 
-      <LegalSection
-        title="What stays on your device"
-        paragraphs={[
-          'Everything you log lives in a database on the device you logged it on: diary entries, custom foods, saved meals and recipes, goals, weight and activity history, and your settings.',
-          'None of it is uploaded to us. We operate no server that holds a copy of your diary, so there is nothing on our side to read, share or lose.',
-        ]}
-      />
+      {accountsEnabled ? (
+        <>
+          <LegalSection
+            title="Where your diary is kept"
+            paragraphs={[
+              'Everything you log is stored in your account: diary entries, custom foods, saved meals and recipes, goals, weight and activity history, and your settings. A copy is kept on each device you use so the app keeps working offline.',
+              'Your account is hosted on Supabase, our database and authentication provider, on your behalf. Every table is protected by row-level security keyed to your user id, which means a request carrying anyone else\u2019s sign-in cannot read your rows. We do not read your diary, and it is never sold, shared or used to build a profile of you.',
+              'Deleting a diary entry deletes it from your account and from your other devices, not just the one you are holding.',
+            ]}
+          />
 
-      <LegalSection
-        title="If you create an account"
-        paragraphs={[
-          'Accounts are optional. You can use Macronaut without one.',
-          'Sign-in is handled by Supabase, our authentication provider. If you sign in, Supabase stores your email address and, when you use Google, the name and profile information Google returns. We use this only to identify you at sign-in and to keep each account\u2019s data separate on shared devices.',
-          'Signing in does not upload your diary. Each account simply gets its own separate database on the device, so two people using the same phone or browser never see each other\u2019s food log.',
-          'Your sign-in session is stored on the device \u2014 in the system keychain on iOS and Android, and in browser storage on the web.',
-        ]}
-      />
+          <LegalSection
+            title="Your account"
+            paragraphs={[
+              'Sign-in is handled by Supabase. It stores your email address and, when you use Google, the name and profile information Google returns. We use this only to identify you and to keep your data separate from everyone else\u2019s.',
+              'Your sign-in session is stored on the device \u2014 in the system keychain on iOS and Android, and in browser storage on the web.',
+              'Signing out leaves the cached copy on that device so it is ready next time. Anyone else signing in on the same device gets their own separate database and cannot see your food log.',
+            ]}
+          />
+        </>
+      ) : (
+        <>
+          <LegalSection
+            title="What stays on your device"
+            paragraphs={[
+              'Everything you log lives in a database on the device you logged it on: diary entries, custom foods, saved meals and recipes, goals, weight and activity history, and your settings.',
+              'None of it is uploaded to us. We operate no server that holds a copy of your diary, so there is nothing on our side to read, share or lose.',
+            ]}
+          />
+
+          <LegalSection
+            title="If you create an account"
+            paragraphs={[
+              'This build has no account server, so there is nothing to sign in to and nothing leaves the device.',
+            ]}
+          />
+        </>
+      )}
 
       <LegalSection
         title="Searching for foods"
@@ -75,7 +103,10 @@ export default function PrivacyScreen() {
         title="AI features and your own API key"
         paragraphs={[
           'The AI food-photo and voice assistant features work only if you add your own xAI (Grok) API key in Settings. They are off until you do.',
-          'When you use them, the photo, audio or question you supply is sent directly from your device to xAI using your key, and is handled under xAI\u2019s own privacy terms. Your key is stored locally on your device and is never sent to us.',
+          'When you use them, the photo, audio or question you supply is sent directly from your device to xAI using your key, and is handled under xAI\u2019s own privacy terms.',
+          accountsEnabled
+            ? 'Your key is stored on the device you entered it on and is never sent to us. It is deliberately left out of the data that syncs to your account, which is why you have to enter it again on each device.'
+            : 'Your key is stored locally on your device and is never sent to us.',
         ]}
       />
 
@@ -88,10 +119,17 @@ export default function PrivacyScreen() {
 
       <LegalSection
         title="Deleting your data"
-        paragraphs={[
-          'To erase everything held on a device, open Settings, then Data, then Delete all data. This is immediate and cannot be undone.',
-          'Signing out deliberately leaves that account\u2019s data on the device so it is still there next time you sign in. To delete the account itself, along with the email address stored by our authentication provider, email us and we will remove it.',
-        ]}
+        paragraphs={
+          accountsEnabled
+            ? [
+                'Open Settings, then Data, then Delete all data. Because your diary is stored in your account, this erases it everywhere \u2014 this device, your other devices, and our database. It is immediate and cannot be undone.',
+                'Signing out is not deletion: it deliberately leaves your data in your account so it is there next time you sign in. To delete the account itself, along with the email address held by our authentication provider, email us and we will remove it.',
+              ]
+            : [
+                'To erase everything held on a device, open Settings, then Data, then Delete all data. This is immediate and cannot be undone.',
+                'Signing out deliberately leaves that account\u2019s data on the device so it is still there next time you sign in.',
+              ]
+        }
       />
 
       <LegalSection

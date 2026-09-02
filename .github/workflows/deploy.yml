@@ -46,15 +46,43 @@ jobs:
           EXPO_PUBLIC_BASE_PATH: /macronaut
           EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.EXPO_PUBLIC_SUPABASE_URL || vars.EXPO_PUBLIC_SUPABASE_URL }}
           EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.EXPO_PUBLIC_SUPABASE_ANON_KEY || vars.EXPO_PUBLIC_SUPABASE_ANON_KEY }}
+          # Without this the bundle falls back to USDA's shared DEMO_KEY, whose
+          # ~30 requests/hour are spent by the whole site put together, not per
+          # visitor. Food search then fails for everyone under any real load.
+          EXPO_PUBLIC_USDA_API_KEY: ${{ secrets.EXPO_PUBLIC_USDA_API_KEY || vars.EXPO_PUBLIC_USDA_API_KEY }}
+
+      - name: Warn when food search will run on the shared USDA demo key
+        env:
+          EXPO_PUBLIC_USDA_API_KEY: ${{ secrets.EXPO_PUBLIC_USDA_API_KEY || vars.EXPO_PUBLIC_USDA_API_KEY }}
+        run: |
+          if [ -z "$EXPO_PUBLIC_USDA_API_KEY" ]; then
+            echo "::warning::No EXPO_PUBLIC_USDA_API_KEY set, so USDA search uses DEMO_KEY (~30 requests/hour for the entire site). Add a free key from https://fdc.nal.usda.gov/api-key-signup as a repository secret before real traffic."
+            echo "usda=DEMO_KEY (rate-limited)" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "usda=project key" >> "$GITHUB_STEP_SUMMARY"
+          fi
 
       # The project host is inlined at build time, so a config that never
       # reached the bundler produces a local-only site that still looks like a
       # successful deploy. Fail instead of shipping a silent downgrade.
       - name: Verify the built bundle matches the configured auth mode
+        env:
+          ALLOW_LOCAL_ONLY_DEPLOY: ${{ vars.ALLOW_LOCAL_ONLY_DEPLOY }}
         run: |
           if [ "$MACRONAUT_AUTH_MODE" = "local-only" ]; then
-            echo "mode=local-only (no Supabase project configured)" >> "$GITHUB_STEP_SUMMARY"
-            exit 0
+            # The live site holds real accounts. Shipping a local-only build
+            # over it would greet every existing user with "continue on this
+            # device" and an empty diary, which is indistinguishable from
+            # losing their data -- their rows would still be in Supabase, but
+            # nothing in the app could reach them. A missing or unreadable
+            # config is far more likely to be a mistake than an intention, so
+            # this fails unless someone says otherwise on purpose.
+            if [ "$ALLOW_LOCAL_ONLY_DEPLOY" = "true" ]; then
+              echo "mode=local-only (explicitly allowed by ALLOW_LOCAL_ONLY_DEPLOY)" >> "$GITHUB_STEP_SUMMARY"
+              exit 0
+            fi
+            echo "::error::No Supabase project resolved, so this deploy would replace the live accounts build with a local-only one. Restore supabase.json (or the EXPO_PUBLIC_SUPABASE_* secrets), or set the repository variable ALLOW_LOCAL_ONLY_DEPLOY=true if that is genuinely intended."
+            exit 1
           fi
           if grep -rqF "$MACRONAUT_SUPABASE_HOST" dist/_expo/static/js/web/; then
             echo "mode=accounts (bundle points at $MACRONAUT_SUPABASE_HOST)" >> "$GITHUB_STEP_SUMMARY"

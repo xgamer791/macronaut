@@ -44,6 +44,12 @@ revoke all on public.profiles from anon, authenticated;
 grant select, insert on public.profiles to authenticated;
 grant update (display_name, unit_system, week_start) on public.profiles to authenticated;
 
+-- Dropped first so the whole file can be pasted into the SQL editor again
+-- without erroring on a policy that is already there.
+drop policy if exists "profiles: read own" on public.profiles;
+drop policy if exists "profiles: insert own" on public.profiles;
+drop policy if exists "profiles: update own" on public.profiles;
+
 -- auth.uid() is wrapped in a subquery so Postgres evaluates it once per
 -- statement instead of once per row.
 create policy "profiles: read own"
@@ -121,9 +127,10 @@ create trigger on_auth_user_created
   after insert on auth.users
   for each row execute function public.handle_new_user();
 
--- Template for the sync tables that cloud sync will add (diary_entries,
--- custom_foods, goal_configs, …). Copy this shape for each one so isolation is
--- part of the table definition rather than something to remember later:
+-- Shape used by the sync tables in 0002_sync_tables.sql (diary_entries,
+-- custom_foods, goal_configs, …), and by any user-owned table added later.
+-- Copy it so isolation is part of the table definition rather than something
+-- to remember afterwards:
 --
 --   create table public.<name> (
 --     id uuid primary key default gen_random_uuid(),

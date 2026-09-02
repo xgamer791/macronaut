@@ -127,12 +127,20 @@ should move to the device store added here (`expo-secure-store` on native), and
 it is worth reconsidering whether the app should hold a user's provider key at
 all rather than proxying through a backend.
 
+It is explicitly excluded from sync (`DEVICE_ONLY_SETTINGS` in
+`src/services/sync/tables.ts`), enforced at the SQLite trigger and re-checked
+on push and pull. Syncing it would put a user's billable third-party
+credential in our database and contradict what the AI screens and the privacy
+policy tell them. Any future secret stored in `settings` must be added to that
+list.
+
 ### The local database is not encrypted at rest
 
 Web IndexedDB is unencrypted, and native SQLite relies on the OS sandbox and
 full-disk encryption rather than SQLCipher. Signing out leaves the account's
-diary on the device by design, so a recovered unlocked device exposes it.
-"Delete all data" is the only eraser today. SQLCipher via
+cached diary on the device by design, so a recovered unlocked device exposes
+it. "Delete all data" is the only eraser today, and it now deletes the account
+everywhere rather than just the device — there is no "forget this device only". SQLCipher via
 `expo-sqlite`'s encryption support would close this on native; the web build
 has no good answer while it has to run on a static host.
 
@@ -162,9 +170,15 @@ the UI and an Edge Function to call the admin API are not.
 
 The Supabase free plan has no point-in-time recovery or managed backups, no
 HIPAA BAA, and pauses a project after a week of inactivity. Nutrition data is
-sensitive even when it is not regulated. The free tier is fine while the app is
-local-first with no server-side copy of the diary; revisit all three before
-cloud sync stores real user data.
+sensitive even when it is not regulated.
+
+This was acceptable while the diary was local-first and the server held no copy
+of it. It is not acceptable now. Supabase is the system of record: a user who
+signs in on a new device gets whatever the project holds, so a lost project is
+lost user data, and a paused project is an app that cannot sync. Devices that
+have synced keep their local cache, which softens but does not remove the
+problem. Move off the free plan before real users, or accept that the only
+backups are the copies sitting on users' phones.
 
 ### Email delivery is on the shared sender
 

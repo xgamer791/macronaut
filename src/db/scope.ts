@@ -13,6 +13,15 @@ import { getDeviceStore } from '@/services/storage/deviceStore';
 
 export const LEGACY_SCOPE = 'legacy';
 
+/** Scope used while nobody is signed in on a build that has accounts.
+ *
+ * Signed out, the app still mounts its data layer — the login screen lives
+ * inside it, and a route can be opened directly by URL before the redirect to
+ * login lands. Pointing that at the pre-accounts database would mean a visitor
+ * on a shared browser could read and write the diary of whoever used it last.
+ * This scope is a scratch database that no account ever owns. */
+export const SIGNED_OUT_SCOPE = 'signedout';
+
 const LEGACY_OWNER_KEY = 'macronaut.db.legacyOwner';
 
 /** Supabase user ids are UUIDs; anything else is normalised so it can never

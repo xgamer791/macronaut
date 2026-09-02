@@ -1,9 +1,10 @@
 # Macronaut
 
-Clean calorie and macro tracking. Local-first, no ads, no tracking. Optional
-Supabase accounts, with each account's data kept in its own local database.
+Clean calorie and macro tracking. No ads, no tracking. Your diary is stored in
+your own Supabase account and cached on each device, so it follows you between
+phone and browser and still works offline.
 
-**Test it now:** https://xgamer791.github.io/macronaut/ — the full app running in your browser, deployed from `main` on every push. Add `?demo=1` to the URL to unlock a "Load demo data" option in Settings (2+ weeks of sample history in one tap).
+**Test it now:** https://xgamer791.github.io/macronaut/ — the full app running in your browser, deployed from `main` on every push. On a build with no account server, adding `?demo=1` to the URL unlocks a "Load demo data" option in Settings (2+ weeks of sample history in one tap); it is off in builds with accounts, where it would write sample meals into a real diary.
 
 ![CI](https://github.com/xgamer791/macronaut/actions/workflows/ci.yml/badge.svg)
 
@@ -72,7 +73,7 @@ npm run ios                # iOS simulator (needs Xcode)
 
 | Variable | Required | Purpose |
 |---|---|---|
-| `EXPO_PUBLIC_USDA_API_KEY` | No | USDA FoodData Central key. Falls back to `DEMO_KEY` (heavily rate-limited — fine for a quick try). Get a free key at https://fdc.nal.usda.gov/api-key-signup |
+| `EXPO_PUBLIC_USDA_API_KEY` | For production | USDA FoodData Central key. Falls back to `DEMO_KEY`, whose ~30 requests/hour are shared by everyone using the deploy, not per visitor — fine for a quick try, not for real traffic. Free key at https://fdc.nal.usda.gov/api-key-signup; the Pages workflow reads it from a repository secret of the same name. |
 | `EXPO_PUBLIC_SUPABASE_URL` | No | Overrides `supabase.json`. Only needed to aim one machine at a different project. |
 | `EXPO_PUBLIC_SUPABASE_ANON_KEY` | No | Same, and only ever the **publishable (anon)** key — never `service_role` / `sb_secret_`, which the build and the app both refuse. |
 | `EXPO_PUBLIC_BASE_PATH` | No | Set by the Pages deploy workflow only. Leave empty locally. |
@@ -91,12 +92,16 @@ Paste your project URL and publishable key there and commit; both values are
 public by design, so storing them in a CI secret would hide them from
 contributors while still publishing them to every user. Empty means local-only.
 
-With a project configured the app asks for a real sign-in and gives
-each account its own local database. Apply
-[`supabase/migrations/0001_accounts_and_rls.sql`](supabase/migrations/0001_accounts_and_rls.sql)
-to the project first: it enables and forces Row Level Security so the database
-itself refuses to return another user's rows. Full setup, including the Google
-provider and the email-code template, is in [docs/accounts.md](docs/accounts.md).
+With a project configured the app asks for a real sign-in and stores the
+account's diary, goals, recipes and settings in Supabase, cached locally on
+each device. Apply both migrations to the project first —
+[`0001_accounts_and_rls.sql`](supabase/migrations/0001_accounts_and_rls.sql)
+for the profile table and
+[`0002_sync_tables.sql`](supabase/migrations/0002_sync_tables.sql) for the
+fifteen tables the diary syncs into. Both enable and force Row Level Security,
+so the database itself refuses to return another user's rows. Check the result
+with `npm run verify:sync`. Full setup, including the Google provider and the
+email-code template, is in [docs/accounts.md](docs/accounts.md).
 
 ### Food data providers
 
@@ -125,14 +130,15 @@ The suite runs in plain Node (better-sqlite3 stands in for expo-sqlite), so no s
 ## Known limitations
 
 - Camera barcode scanning is unavailable on web (manual entry + demo barcode provided); it works on iOS/Android devices.
-- USDA `DEMO_KEY` is rate-limited (~30 req/hr). Built-in generics and Open Food Facts keep search useful regardless.
-- Accounts establish identity and isolate each account's local database, but nothing syncs to the cloud yet — the diary is still local-first (the repository layer is built to add a sync backend without rewriting the app — see [docs/architecture.md](docs/architecture.md)).
+- USDA `DEMO_KEY` is rate-limited (~30 req/hr for the whole deploy, not per user), so set `EXPO_PUBLIC_USDA_API_KEY` before real traffic. Built-in generics and Open Food Facts keep search useful regardless.
+- Sync resolves conflicts last-write-wins per row, biased toward the device you are using. Editing the same entry on two devices while both are offline keeps one of the two edits, not a merge.
+- Your xAI API key is deliberately excluded from sync, so it has to be entered on each device.
 - Sign in with Apple is not implemented yet, which iOS requires alongside Google sign-in; needed before App Store submission.
 - Weekly goal detail defines weeks by your configured week start; partial first weeks show as-is.
 
 ## Roadmap
 
-Cloud sync on top of the accounts added here, Sign in with Apple, MFA, iCloud backup, Apple Health integration, widgets, Android polish, web dashboard.
+Sign in with Apple, MFA, Apple Health integration, widgets, Android polish, web dashboard.
 
 ## Documentation
 

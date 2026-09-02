@@ -67,7 +67,9 @@
     "typecheck": "tsc --noEmit",
     "test": "jest",
     "test:watch": "jest --watch",
-    "export:web": "expo export --platform web"
+    "export:web": "expo export --platform web",
+    "verify:sync": "node scripts/verify-sync.mjs",
+    "test:rls": "supabase/tests/run.sh"
   },
   "private": true
 }

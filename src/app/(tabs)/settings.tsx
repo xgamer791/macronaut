@@ -11,6 +11,7 @@ import { OnboardingProfile } from '@/repositories/settingsRepo';
 import { providerFromSession } from '@/services/supabase/auth';
 import { useRepos } from '@/state/AppProvider';
 import { useAuth } from '@/state/AuthProvider';
+import { useSync, type SyncStatusValue } from '@/state/SyncProvider';
 import { keys, useMealCategories, useSetting } from '@/state/queries';
 import { AppearanceMode, useTheme } from '@/ui/theme/ThemeProvider';
 import {
@@ -92,6 +93,36 @@ const MEAL_TIME_OPTIONS = [
   '8:00 PM',
 ];
 
+/** Plain-language sync state. Anything unsent is worth naming precisely: the
+ * user should be able to tell "saved everywhere" from "saved on this device
+ * only" before they close the app or pick up another one. */
+function describeSync(sync: SyncStatusValue): { title: string; subtitle: string } {
+  if (sync.state === 'syncing') {
+    return { title: 'Syncing…', subtitle: 'Bringing this device up to date' };
+  }
+  if (sync.state === 'error') {
+    return {
+      title: 'Sync paused',
+      subtitle: `${sync.pending} change${sync.pending === 1 ? '' : 's'} waiting. Tap to retry.`,
+    };
+  }
+  if (sync.pending > 0) {
+    return {
+      title: 'Changes waiting to sync',
+      subtitle: `${sync.pending} saved on this device. Tap to sync now.`,
+    };
+  }
+  const when = sync.lastSyncedAt
+    ? sync.lastSyncedAt.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
+    : null;
+  return {
+    title: 'Synced',
+    subtitle: when
+      ? `Your diary is in your account · last synced ${when}`
+      : 'Your diary is in your account',
+  };
+}
+
 /** Settings — lifestyle toggles (mockup 3). */
 export default function SettingsScreen() {
   const router = useRouter();
@@ -101,10 +132,19 @@ export default function SettingsScreen() {
   const { colors, mode, setMode } = useTheme();
   const categories = useMealCategories();
   const { accountsEnabled, session, signOut } = useAuth();
+  const sync = useSync();
+  const syncLabel = describeSync(sync);
+  const syncNow = () => void sync.syncNow();
 
+  // ?demo=1 exists so the public demo can be filled with sample history in one
+  // tap. That was harmless while the demo was local-only. Now the same tap in
+  // an accounts build would write two weeks of invented meals into the user's
+  // real account and sync them to every device they own, so the URL switch is
+  // limited to builds with no account server.
   const demoAvailable =
     __DEV__ ||
-    (Platform.OS === 'web' &&
+    (!accountsEnabled &&
+      Platform.OS === 'web' &&
       typeof window !== 'undefined' &&
       window.location.search.includes('demo=1'));
 
@@ -224,185 +264,182 @@ export default function SettingsScreen() {
   return (
     <Screen tabBarSpace>
       <View style={styles.lifestyleStack}>
-      <View style={styles.header}>
-        <Ionicons name="settings" size={28} color={colors.accent} />
-        <AppText variant="title" weight="700" display>
-          Settings
-        </AppText>
-      </View>
-
-      {/* Nutrition style */}
-      <Card style={[styles.card, styles.lifestyleCard]}>
-        <SectionTitle
-          icon={{ set: 'ion', name: 'restaurant' }}
-          title="Nutrition style"
-          subtitle="Choose your nutrition goal."
-        />
-        <View style={[styles.segment, { backgroundColor: colors.track }]}>
-          {(
-            [
-              { value: 'cut', label: 'Cut' },
-              { value: 'maintain', label: 'Maintain' },
-              { value: 'bulk', label: 'Bulk' },
-            ] as const
-          ).map((opt) => {
-            const selected = nutritionStyle === opt.value;
-            return (
-              <Pressable
-                key={opt.value}
-                accessibilityRole="button"
-                accessibilityState={{ selected }}
-                accessibilityLabel={`Nutrition style ${opt.label}`}
-                onPress={() => void setNutritionStyle(opt.value)}
-                style={[
-                  styles.segmentBtn,
-                  selected && { backgroundColor: colors.accent },
-                ]}
-              >
-                <AppText
-                  variant="caption"
-                  weight="600"
-                  style={{ color: selected ? colors.onAccent : colors.textPrimary }}
-                >
-                  {opt.label}
-                </AppText>
-              </Pressable>
-            );
-          })}
-        </View>
-      </Card>
-
-      {/* Activity level — effort levels */}
-      <Card style={[styles.card, styles.lifestyleCard]}>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={`Activity level ${activityLabel}`}
-          onPress={() => setActivityOpen(true)}
-          style={styles.rowBetween}
-        >
-          <SectionTitle
-            icon={{ set: 'mci', name: 'run' }}
-            title="Activity level"
-            subtitle="How active are you daily?"
-            compact
-          />
-          <View style={styles.valueChevron}>
-            <AppText variant="caption" weight="600" style={{ color: colors.accent }}>
-              {activityLabel}
-            </AppText>
-            <Ionicons name="chevron-down" size={16} color={colors.accent} />
-          </View>
-        </Pressable>
-      </Card>
-
-      {/* Meal schedule */}
-      <Card style={[styles.card, styles.lifestyleCard]}>
-        <SectionTitle
-          icon={{ set: 'mci', name: 'calendar-clock' }}
-          title="Meal schedule"
-          subtitle="Set your daily eating windows."
-        />
-        <View style={styles.mealList}>
-          {(categories.data ?? []).map((cat, idx, arr) => (
-            <Pressable
-              key={cat.id}
-              accessibilityRole="button"
-              accessibilityLabel={`${cat.name} time ${times[cat.id] ?? DEFAULT_MEAL_TIMES[cat.id] ?? 'unset'}`}
-              onPress={() => setMealTimeEdit(cat.id)}
-              style={[
-                styles.mealRow,
-                idx < arr.length - 1 && {
-                  borderBottomWidth: StyleSheet.hairlineWidth,
-                  borderBottomColor: colors.border,
-                },
-              ]}
-            >
-              <AccentIcon
-                icon={MEAL_ICONS[cat.id] ?? { set: 'ion', name: 'restaurant-outline' }}
-                size={20}
-              />
-              <AppText variant="body" weight="600" style={{ flex: 1 }}>
-                {cat.name}
-              </AppText>
-              <AppText variant="caption" tone="secondary">
-                {times[cat.id] ?? DEFAULT_MEAL_TIMES[cat.id] ?? 'Set time'}
-              </AppText>
-              <Ionicons name="chevron-forward" size={16} color={colors.accent} />
-            </Pressable>
-          ))}
-        </View>
-      </Card>
-
-      {/* Water goal */}
-      <Card style={[styles.card, styles.lifestyleCard]}>
-        <View style={styles.rowBetween}>
-          <SectionTitle
-            icon={{ set: 'ion', name: 'water' }}
-            title="Water goal"
-            subtitle="Daily water intake goal."
-            compact
-          />
-          <Stepper
-            label={`${cups} cups`}
-            onMinus={() => void setWater(cups - 1)}
-            onPlus={() => void setWater(cups + 1)}
-          />
-        </View>
-        <View style={styles.glasses}>
-          {Array.from({ length: 9 }, (_, i) => (
-            <WaterGlass key={i} filled={i < cups} color={colors.accent} />
-          ))}
-        </View>
-      </Card>
-
-      {/* Step goal */}
-      <Card style={[styles.card, styles.lifestyleCard]}>
-        <View style={styles.rowBetween}>
-          <SectionTitle
-            icon={{ set: 'mci', name: 'shoe-sneaker' }}
-            title="Step goal"
-            subtitle="Daily step target."
-            compact
-          />
-          <Stepper
-            label={steps.toLocaleString()}
-            onMinus={() => void setSteps(steps - 500)}
-            onPlus={() => void setSteps(steps + 500)}
-          />
-        </View>
-        <View style={styles.stepRow}>
-          <View style={[styles.stepTrack, { backgroundColor: colors.track }]}>
-            <View
-              style={[
-                styles.stepFill,
-                { width: `${stepFill * 100}%`, backgroundColor: colors.accent },
-              ]}
-            />
-          </View>
-          <AppText variant="micro" tone="muted">
-            {Math.round(steps / 1000)}K steps
+        <View style={styles.header}>
+          <Ionicons name="settings" size={28} color={colors.accent} />
+          <AppText variant="title" weight="700" display>
+            Settings
           </AppText>
         </View>
-      </Card>
 
-      <AppText variant="caption" tone="muted" style={styles.prefLabel}>
-        Preferences
-      </AppText>
-      <Card padded={false} style={styles.prefCard}>
-        <PrefRow
-          icon={{ set: 'mci', name: 'scale-balance' }}
-          title="Units"
-          value={units.data === 'metric' ? 'Metric (kg, cm)' : 'US (lb, ft)'}
-          onPress={() => setUnitsOpen(true)}
-        />
-        <View style={[styles.prefDivider, { backgroundColor: colors.border }]} />
-        <PrefRow
-          icon={{ set: 'mci', name: 'brush' }}
-          title="Appearance"
-          value={mode === 'system' ? 'System' : mode === 'dark' ? 'Dark' : 'Light'}
-          onPress={() => setAppearanceOpen(true)}
-        />
-      </Card>
+        {/* Nutrition style */}
+        <Card style={[styles.card, styles.lifestyleCard]}>
+          <SectionTitle
+            icon={{ set: 'ion', name: 'restaurant' }}
+            title="Nutrition style"
+            subtitle="Choose your nutrition goal."
+          />
+          <View style={[styles.segment, { backgroundColor: colors.track }]}>
+            {(
+              [
+                { value: 'cut', label: 'Cut' },
+                { value: 'maintain', label: 'Maintain' },
+                { value: 'bulk', label: 'Bulk' },
+              ] as const
+            ).map((opt) => {
+              const selected = nutritionStyle === opt.value;
+              return (
+                <Pressable
+                  key={opt.value}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected }}
+                  accessibilityLabel={`Nutrition style ${opt.label}`}
+                  onPress={() => void setNutritionStyle(opt.value)}
+                  style={[styles.segmentBtn, selected && { backgroundColor: colors.accent }]}
+                >
+                  <AppText
+                    variant="caption"
+                    weight="600"
+                    style={{ color: selected ? colors.onAccent : colors.textPrimary }}
+                  >
+                    {opt.label}
+                  </AppText>
+                </Pressable>
+              );
+            })}
+          </View>
+        </Card>
+
+        {/* Activity level — effort levels */}
+        <Card style={[styles.card, styles.lifestyleCard]}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={`Activity level ${activityLabel}`}
+            onPress={() => setActivityOpen(true)}
+            style={styles.rowBetween}
+          >
+            <SectionTitle
+              icon={{ set: 'mci', name: 'run' }}
+              title="Activity level"
+              subtitle="How active are you daily?"
+              compact
+            />
+            <View style={styles.valueChevron}>
+              <AppText variant="caption" weight="600" style={{ color: colors.accent }}>
+                {activityLabel}
+              </AppText>
+              <Ionicons name="chevron-down" size={16} color={colors.accent} />
+            </View>
+          </Pressable>
+        </Card>
+
+        {/* Meal schedule */}
+        <Card style={[styles.card, styles.lifestyleCard]}>
+          <SectionTitle
+            icon={{ set: 'mci', name: 'calendar-clock' }}
+            title="Meal schedule"
+            subtitle="Set your daily eating windows."
+          />
+          <View style={styles.mealList}>
+            {(categories.data ?? []).map((cat, idx, arr) => (
+              <Pressable
+                key={cat.id}
+                accessibilityRole="button"
+                accessibilityLabel={`${cat.name} time ${times[cat.id] ?? DEFAULT_MEAL_TIMES[cat.id] ?? 'unset'}`}
+                onPress={() => setMealTimeEdit(cat.id)}
+                style={[
+                  styles.mealRow,
+                  idx < arr.length - 1 && {
+                    borderBottomWidth: StyleSheet.hairlineWidth,
+                    borderBottomColor: colors.border,
+                  },
+                ]}
+              >
+                <AccentIcon
+                  icon={MEAL_ICONS[cat.id] ?? { set: 'ion', name: 'restaurant-outline' }}
+                  size={20}
+                />
+                <AppText variant="body" weight="600" style={{ flex: 1 }}>
+                  {cat.name}
+                </AppText>
+                <AppText variant="caption" tone="secondary">
+                  {times[cat.id] ?? DEFAULT_MEAL_TIMES[cat.id] ?? 'Set time'}
+                </AppText>
+                <Ionicons name="chevron-forward" size={16} color={colors.accent} />
+              </Pressable>
+            ))}
+          </View>
+        </Card>
+
+        {/* Water goal */}
+        <Card style={[styles.card, styles.lifestyleCard]}>
+          <View style={styles.rowBetween}>
+            <SectionTitle
+              icon={{ set: 'ion', name: 'water' }}
+              title="Water goal"
+              subtitle="Daily water intake goal."
+              compact
+            />
+            <Stepper
+              label={`${cups} cups`}
+              onMinus={() => void setWater(cups - 1)}
+              onPlus={() => void setWater(cups + 1)}
+            />
+          </View>
+          <View style={styles.glasses}>
+            {Array.from({ length: 9 }, (_, i) => (
+              <WaterGlass key={i} filled={i < cups} color={colors.accent} />
+            ))}
+          </View>
+        </Card>
+
+        {/* Step goal */}
+        <Card style={[styles.card, styles.lifestyleCard]}>
+          <View style={styles.rowBetween}>
+            <SectionTitle
+              icon={{ set: 'mci', name: 'shoe-sneaker' }}
+              title="Step goal"
+              subtitle="Daily step target."
+              compact
+            />
+            <Stepper
+              label={steps.toLocaleString()}
+              onMinus={() => void setSteps(steps - 500)}
+              onPlus={() => void setSteps(steps + 500)}
+            />
+          </View>
+          <View style={styles.stepRow}>
+            <View style={[styles.stepTrack, { backgroundColor: colors.track }]}>
+              <View
+                style={[
+                  styles.stepFill,
+                  { width: `${stepFill * 100}%`, backgroundColor: colors.accent },
+                ]}
+              />
+            </View>
+            <AppText variant="micro" tone="muted">
+              {Math.round(steps / 1000)}K steps
+            </AppText>
+          </View>
+        </Card>
+
+        <AppText variant="caption" tone="muted" style={styles.prefLabel}>
+          Preferences
+        </AppText>
+        <Card padded={false} style={styles.prefCard}>
+          <PrefRow
+            icon={{ set: 'mci', name: 'scale-balance' }}
+            title="Units"
+            value={units.data === 'metric' ? 'Metric (kg, cm)' : 'US (lb, ft)'}
+            onPress={() => setUnitsOpen(true)}
+          />
+          <View style={[styles.prefDivider, { backgroundColor: colors.border }]} />
+          <PrefRow
+            icon={{ set: 'mci', name: 'brush' }}
+            title="Appearance"
+            value={mode === 'system' ? 'System' : mode === 'dark' ? 'Dark' : 'Light'}
+            onPress={() => setAppearanceOpen(true)}
+          />
+        </Card>
       </View>
 
       <Card padded={false} style={{ paddingHorizontal: spacing.lg }}>
@@ -424,8 +461,10 @@ export default function SettingsScreen() {
       <SectionHeader title="AI features" />
       <Card style={{ gap: spacing.md }}>
         <AppText variant="caption" tone="secondary">
-          Paste your personal xAI Grok API key for AI food scan and the voice assistant. The key
-          stays on this device.
+          Paste your personal xAI Grok API key for AI food scan and the voice assistant.
+          {accountsEnabled
+            ? ' It is the one thing that never leaves this device — it is not stored in your account and does not sync, so add it again on each device you use.'
+            : ' The key stays on this device.'}
         </AppText>
         <TextField
           label="Grok API key"
@@ -474,7 +513,11 @@ export default function SettingsScreen() {
         />
         <ListRow
           title="Delete all data"
-          subtitle="Erases everything on this device"
+          subtitle={
+            accountsEnabled
+              ? 'Erases your diary from your account'
+              : 'Erases everything on this device'
+          }
           destructive
           onPress={() => setConfirmReset('all')}
         />
@@ -492,6 +535,7 @@ export default function SettingsScreen() {
                   : 'Signed in with an email code'
               }
             />
+            <ListRow title={syncLabel.title} subtitle={syncLabel.subtitle} onPress={syncNow} />
             <ListRow
               title="Sign out"
               subtitle="Keeps this account's data on the device"
@@ -511,7 +555,7 @@ export default function SettingsScreen() {
       <Card>
         <AppText variant="caption" tone="secondary">
           {accountsEnabled
-            ? 'Your diary lives in a local database on this device, kept separate per account. Sign-in is handled by Supabase, which stores your email address. Macronaut has no analytics and no tracking.'
+            ? 'Your diary is stored in your account on Supabase and cached on this device so the app works offline. Only you can read it: every table is protected by row-level security tied to your user id. Macronaut has no analytics and no tracking.'
             : 'All of your data lives in a local database on this device. This build has no account server, no analytics and no tracking.'}
         </AppText>
       </Card>
@@ -663,7 +707,11 @@ export default function SettingsScreen() {
       >
         <AppText variant="body" tone="secondary">
           {confirmReset === 'all'
-            ? 'This permanently erases your diary, foods, meals, recipes, goals and settings from this device.'
+            ? accountsEnabled
+              ? // The deletion syncs, so saying "this device" would be a lie
+                // that costs someone their diary on every device they own.
+                'This permanently erases your diary, foods, meals, recipes, goals and settings from your account, on this device and every other device you use.'
+              : 'This permanently erases your diary, foods, meals, recipes, goals and settings from this device.'
             : 'You will go through the setup wizard again. Your diary, foods and history are kept.'}
         </AppText>
         <Button
@@ -681,8 +729,9 @@ export default function SettingsScreen() {
 
       <Sheet visible={confirmSignOut} onClose={() => setConfirmSignOut(false)} title="Sign out?">
         <AppText variant="body" tone="secondary">
-          Your diary stays on this device under this account and comes back when you sign in
-          again. Use &quot;Delete all data&quot; first if you want it gone.
+          {accountsEnabled
+            ? 'Your diary stays in your account and comes back when you sign in again, here or anywhere else.'
+            : 'Your diary stays on this device under this account and comes back when you sign in again. Use "Delete all data" first if you want it gone.'}
         </AppText>
         <Button
           title="Sign out"
@@ -734,7 +783,9 @@ function SectionTitle({
   compact?: boolean;
 }) {
   return (
-    <View style={[styles.sectionTitle, compact && { flex: 1, minWidth: 0, paddingRight: spacing.sm }]}>
+    <View
+      style={[styles.sectionTitle, compact && { flex: 1, minWidth: 0, paddingRight: spacing.sm }]}
+    >
       <AccentIcon icon={icon} size={22} />
       <View style={{ flex: 1, gap: 2, minWidth: 0 }}>
         <AppText variant="body" weight="600" numberOfLines={1}>
@@ -759,7 +810,9 @@ function Stepper({
 }) {
   const { colors } = useTheme();
   return (
-    <View style={[styles.stepper, { backgroundColor: colors.track, borderColor: colors.borderStrong }]}>
+    <View
+      style={[styles.stepper, { backgroundColor: colors.track, borderColor: colors.borderStrong }]}
+    >
       <Pressable
         accessibilityRole="button"
         accessibilityLabel="Decrease"
