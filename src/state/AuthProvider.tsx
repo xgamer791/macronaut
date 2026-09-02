@@ -1,7 +1,7 @@
 import type { Session } from '@supabase/supabase-js';
 import { useQueryClient } from '@tanstack/react-query';
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
-import { LEGACY_SCOPE, resolveDbScope } from '@/db/scope';
+import { LEGACY_SCOPE, SIGNED_OUT_SCOPE, resolveDbScope } from '@/db/scope';
 import { getDeviceStore } from '@/services/storage/deviceStore';
 import { signOut as supabaseSignOut } from '@/services/supabase/auth';
 import { getSupabase, isSupabaseConfigured } from '@/services/supabase/client';
@@ -106,8 +106,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
   }, [sessionLoaded, signedIn, userId]);
 
+  // Signed out on a build with accounts, the data layer is pointed at a
+  // scratch database rather than the pre-accounts one, so a route opened
+  // directly by URL cannot read or write the last account's diary. Local-only
+  // builds have no account to protect and keep using the legacy database.
+  const signedOutScope = accountsEnabled ? SIGNED_OUT_SCOPE : LEGACY_SCOPE;
   const dbScope = !signedIn
-    ? LEGACY_SCOPE
+    ? signedOutScope
     : resolved && resolved.userId === userId
       ? resolved.scope
       : null;
@@ -140,7 +145,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     session,
     userId,
     signedIn,
-    dbScope: dbScope ?? LEGACY_SCOPE,
+    dbScope: dbScope ?? signedOutScope,
     continueLocalOnly,
     signOut,
   };
