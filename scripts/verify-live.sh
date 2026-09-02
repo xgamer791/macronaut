@@ -27,6 +27,15 @@ if curl -fsSL "${BASE_URL}/version.json?_=${STAMP}" >/tmp/macronaut-version.json
   echo "version=$(cat /tmp/macronaut-version.json)"
 fi
 
+# Which auth mode is actually live. The Supabase project URL is inlined at
+# build time, so its presence in the bundle is the deciding evidence — not
+# whatever the repository secrets happen to say today.
+if grep -qE 'https://[a-z0-9-]+\.supabase\.co' "$TMP"; then
+  echo "auth=accounts (supabase project: $(grep -oE 'https://[a-z0-9-]+\.supabase\.co' "$TMP" | head -1))"
+else
+  echo "auth=local-only (no Supabase project in the live bundle)"
+fi
+
 fail=0
 for marker in "${MARKERS[@]}"; do
   if grep -q -- "$marker" "$TMP"; then

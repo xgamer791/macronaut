@@ -10,8 +10,10 @@ import {
   NutrientTargets,
   UnitSystem,
 } from '@/domain/types';
+import { displayNameFromSession } from '@/services/supabase/auth';
 import { useRepos } from '@/state/AppProvider';
-import { keys, useSetting } from '@/state/queries';
+import { useAuth } from '@/state/AuthProvider';
+import { keys } from '@/state/queries';
 import { todayKey } from '@/utils/date';
 import {
   AppText,
@@ -52,10 +54,10 @@ export default function Onboarding() {
   const { settings, goals } = useRepos();
   const qc = useQueryClient();
   const { colors } = useTheme();
-  const auth = useSetting<boolean>('authComplete', false);
+  const { loading: authLoading, signedIn, session } = useAuth();
 
   const [step, setStep] = useState<Step>('welcome');
-  const [displayName, setDisplayName] = useState('');
+  const [displayName, setDisplayName] = useState(() => displayNameFromSession(session) ?? '');
   const [units, setUnits] = useState<UnitSystem>('us');
   const [age, setAge] = useState<number | undefined>();
   const [sex, setSex] = useState<BiologicalSex>('male');
@@ -103,8 +105,8 @@ export default function Onboarding() {
     });
   }, [canRecommend, age, sex, metrics, activity, goalType, rateLb]);
 
-  if (auth.isLoading) return null;
-  if (!auth.data) return <Redirect href="/login" />;
+  if (authLoading) return null;
+  if (!signedIn) return <Redirect href="/login" />;
 
   async function complete(finalTargets: NutrientTargets) {
     setSaving(true);

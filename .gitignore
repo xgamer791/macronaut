@@ -49,3 +49,7 @@ example
 # coverage
 coverage/
 scripts/audit-food-engine-results.json
+
+# Supabase CLI local state (migrations under supabase/migrations are tracked)
+supabase/.branches/
+supabase/.temp/

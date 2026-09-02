@@ -9,6 +9,7 @@ import * as SplashScreen from 'expo-splash-screen';
 import React, { useEffect } from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AppProvider, useRepos } from '@/state/AppProvider';
+import { AuthProvider, useAuth } from '@/state/AuthProvider';
 import { keys, useSetting } from '@/state/queries';
 import { AppearanceMode, ThemeProvider } from '@/ui/theme/ThemeProvider';
 
@@ -59,6 +60,18 @@ function ThemedApp() {
   );
 }
 
+/** Opens the signed-in account's database. Remounted on scope change so no
+ * repository instance outlives the account it was created for. */
+function ScopedApp() {
+  const { loading, dbScope } = useAuth();
+  if (loading) return null;
+  return (
+    <AppProvider key={dbScope} scope={dbScope}>
+      <ThemedApp />
+    </AppProvider>
+  );
+}
+
 export default function RootLayout() {
   const [fontsLoaded] = useFonts({
     SpaceGrotesk_500Medium,
@@ -74,9 +87,9 @@ export default function RootLayout() {
   return (
     <SafeAreaProvider>
       <QueryClientProvider client={queryClient}>
-        <AppProvider>
-          <ThemedApp />
-        </AppProvider>
+        <AuthProvider>
+          <ScopedApp />
+        </AuthProvider>
       </QueryClientProvider>
     </SafeAreaProvider>
   );

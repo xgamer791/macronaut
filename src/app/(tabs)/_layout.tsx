@@ -2,16 +2,17 @@ import { Redirect } from 'expo-router';
 import { Tabs } from 'expo-router/js-tabs';
 import React from 'react';
 import { View } from 'react-native';
+import { useAuth } from '@/state/AuthProvider';
 import { useSetting } from '@/state/queries';
 import { TabBar } from '@/ui/components/TabBar';
 import { VoiceAssistant } from '@/ui/components/VoiceAssistant';
 
 export default function TabsLayout() {
-  const auth = useSetting<boolean>('authComplete', false);
+  const { loading, signedIn } = useAuth();
   const onboarded = useSetting<boolean>('onboardingComplete', false);
 
-  if (auth.isLoading || onboarded.isLoading) return null;
-  if (!auth.data) return <Redirect href="/login" />;
+  if (loading || onboarded.isLoading) return null;
+  if (!signedIn) return <Redirect href="/login" />;
   if (!onboarded.data) return <Redirect href="/onboarding" />;
 
   return (
