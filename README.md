@@ -114,7 +114,7 @@ The suite runs in plain Node (better-sqlite3 stands in for expo-sqlite), so no s
 
 ## Building for production
 
-- **Web:** `npm run export:web` → static site in `dist/` (deployed to GitHub Pages by `.github/workflows/deploy.yml`).
+- **Web:** `npm run export:web` → static site in `dist/` (deployed to GitHub Pages by `.github/workflows/deploy.yml`). Accounts go live only if `EXPO_PUBLIC_SUPABASE_URL` and `EXPO_PUBLIC_SUPABASE_ANON_KEY` exist as repository secrets or variables — without them the workflow deploys the local-only build. `./scripts/verify-live.sh` reports which mode is actually serving. See [docs/accounts.md](docs/accounts.md#deploying-accounts-to-github-pages).
 - **iOS:** `npx eas build --platform ios` with an Expo account, or `npx expo run:ios --configuration Release` locally with Xcode. Camera barcode scanning requires a real device.
 
 ## Known limitations

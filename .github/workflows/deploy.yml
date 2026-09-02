@@ -28,10 +28,36 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # Supabase accounts are opt-in: set both repository secrets (or variables
+      # of the same name) to deploy with sign-in, or leave them unset to deploy
+      # the local-only build. The anon key is public by design — it ships in
+      # the bundle and is backed by Row Level Security — so a variable is as
+      # appropriate as a secret. Never put a service_role key here; the app
+      # refuses to start with one. See docs/accounts.md.
       - name: Export web build
         run: npm run export:web
         env:
           EXPO_PUBLIC_BASE_PATH: /macronaut
+          EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.EXPO_PUBLIC_SUPABASE_URL || vars.EXPO_PUBLIC_SUPABASE_URL }}
+          EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.EXPO_PUBLIC_SUPABASE_ANON_KEY || vars.EXPO_PUBLIC_SUPABASE_ANON_KEY }}
+
+      # Expo inlines EXPO_PUBLIC_* at build time, so a misnamed secret produces
+      # a local-only bundle that looks like a successful deploy. Fail instead.
+      - name: Verify the built bundle matches the configured auth mode
+        env:
+          EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.EXPO_PUBLIC_SUPABASE_URL || vars.EXPO_PUBLIC_SUPABASE_URL }}
+        run: |
+          if [ -z "${EXPO_PUBLIC_SUPABASE_URL}" ]; then
+            echo "mode=local-only (no Supabase project configured)" >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          host=$(printf '%s' "$EXPO_PUBLIC_SUPABASE_URL" | sed -E 's#^https?://##; s#/.*$##')
+          if grep -rqF "$host" dist/_expo/static/js/web/; then
+            echo "mode=accounts (bundle points at $host)" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "::error::EXPO_PUBLIC_SUPABASE_URL is set but $host is absent from the exported bundle, so this deploy would be local-only. Check the secret/variable names."
+            exit 1
+          fi
 
       # GitHub Pages CDN caches HTML for ~10 minutes; meta tags do not override
       # that. Write version.json and inject a tiny client script that detects a

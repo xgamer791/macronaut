@@ -77,10 +77,19 @@ Then add the URLs the app itself returns to, under **Authentication → URL
 Configuration → Redirect URLs**:
 
 ```
-macronaut://           # native (Expo scheme from app.config.ts)
-http://localhost:8081/ # expo start --web
-https://<your-web-host>/
+macronaut://                                  # native (Expo scheme from app.config.ts)
+http://localhost:8081/                        # expo start --web
+https://xgamer791.github.io/macronaut/        # GitHub Pages deploy
 ```
+
+The GitHub Pages entry **must include the `/macronaut/` sub-path**. The site is
+served from a sub-path, not the domain root, and Supabase matches redirect URLs
+exactly (or by explicit wildcard, e.g.
+`https://xgamer791.github.io/macronaut/**`). An entry for the bare host will not
+match and sign-in will fail. `authRedirectUrl()` builds the same URL from
+`EXPO_PUBLIC_BASE_PATH`, so the two stay in step.
+
+Set **Site URL** to the same GitHub Pages URL.
 
 That allow-list is a security control, not configuration noise: it is what
 stops an attacker sending the authorization code to a site they control.
@@ -100,6 +109,38 @@ Sign in with an email code, add a diary entry, sign out, then sign in as a
 second address. The second account must see an empty diary. Sign back in as the
 first and its entries must return. That round trip is the isolation guarantee —
 if it fails, stop and fix it before shipping.
+
+## Deploying accounts to GitHub Pages
+
+`EXPO_PUBLIC_*` values are inlined when the bundle is built, so the live site
+only gets accounts if the deploy workflow is given them. Add two **repository
+secrets** (Settings → Secrets and variables → Actions), or repository variables
+of the same names — `.github/workflows/deploy.yml` accepts either:
+
+| Name | Value |
+|---|---|
+| `EXPO_PUBLIC_SUPABASE_URL` | `https://<project-ref>.supabase.co` |
+| `EXPO_PUBLIC_SUPABASE_ANON_KEY` | the publishable (anon) key |
+
+With neither set, the workflow deploys the local-only build — which is what the
+public demo has always been, so nothing breaks by leaving them out.
+
+The workflow fails the deploy if `EXPO_PUBLIC_SUPABASE_URL` is set but the
+project host is missing from the exported bundle. A misnamed secret otherwise
+produces a local-only site that looks like a successful deploy.
+
+After the deploy finishes, confirm which mode actually went live:
+
+```bash
+./scripts/verify-live.sh
+```
+
+It reports `auth=accounts (supabase project: …)` or `auth=local-only`, read from
+the bundle the CDN is really serving rather than from the repository settings.
+
+Finally, run the two-account round trip from step 5 above against the live URL.
+Sign-in cannot work until the Supabase redirect allow-list contains
+`https://xgamer791.github.io/macronaut/`, including the sub-path.
 
 ## How isolation works on the device
 

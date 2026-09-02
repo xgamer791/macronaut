@@ -18,11 +18,25 @@ function requireClient() {
   return supabase;
 }
 
+/** Web builds can be served from a sub-path (GitHub Pages serves the app from
+ * /macronaut/), and `Linking.createURL` on web resolves against the origin
+ * only, so it would hand back the bare host and send the provider's redirect
+ * to the wrong site. Build the URL from the same base path the bundle was
+ * exported with. */
+export function webRedirectUrl(origin: string, basePath: string | undefined): string {
+  const base = (basePath ?? '').trim().replace(/^\/*/, '/').replace(/\/+$/, '');
+  return `${origin.replace(/\/+$/, '')}${base === '/' ? '' : base}/`;
+}
+
 /** Where the OAuth provider sends the user back. Must be listed under
  * Authentication → URL Configuration → Redirect URLs in the Supabase
  * dashboard; anything else is rejected by Supabase, which is what stops an
  * attacker redirecting the authorization code to their own site. */
 export function authRedirectUrl(): string {
+  if (Platform.OS === 'web') {
+    if (typeof window === 'undefined') return '';
+    return webRedirectUrl(window.location.origin, process.env.EXPO_PUBLIC_BASE_PATH);
+  }
   return Linking.createURL('/');
 }
 

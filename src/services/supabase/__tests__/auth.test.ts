@@ -9,6 +9,7 @@ import {
   isPlausibleEmail,
   normalizeEmail,
   providerFromSession,
+  webRedirectUrl,
 } from '../auth';
 
 function session(overrides: {
@@ -31,6 +32,35 @@ function session(overrides: {
     },
   } as unknown as Session;
 }
+
+describe('webRedirectUrl', () => {
+  it('keeps the base path the GitHub Pages build is served from', () => {
+    expect(webRedirectUrl('https://xgamer791.github.io', '/macronaut')).toBe(
+      'https://xgamer791.github.io/macronaut/',
+    );
+  });
+
+  it('returns the origin root when there is no base path', () => {
+    expect(webRedirectUrl('http://localhost:8081', '')).toBe('http://localhost:8081/');
+    expect(webRedirectUrl('http://localhost:8081', undefined)).toBe('http://localhost:8081/');
+  });
+
+  it('normalises stray slashes on either side', () => {
+    expect(webRedirectUrl('https://example.com/', 'macronaut/')).toBe(
+      'https://example.com/macronaut/',
+    );
+    expect(webRedirectUrl('https://example.com', '/macronaut/')).toBe(
+      'https://example.com/macronaut/',
+    );
+    expect(webRedirectUrl('https://example.com', '/')).toBe('https://example.com/');
+  });
+
+  it('handles a nested base path', () => {
+    expect(webRedirectUrl('https://example.com', '/apps/macronaut')).toBe(
+      'https://example.com/apps/macronaut/',
+    );
+  });
+});
 
 describe('email normalisation', () => {
   it('lowercases and trims so one address is one account', () => {
