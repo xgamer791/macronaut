@@ -103,7 +103,10 @@ export default function PrivacyScreen() {
         title="AI features and your own API key"
         paragraphs={[
           'The AI food-photo and voice assistant features work only if you add your own xAI (Grok) API key in Settings. They are off until you do.',
-          'When you use them, the photo, audio or question you supply is sent directly from your device to xAI using your key, and is handled under xAI\u2019s own privacy terms. Your key is stored locally on your device and is never sent to us.',
+          'When you use them, the photo, audio or question you supply is sent directly from your device to xAI using your key, and is handled under xAI\u2019s own privacy terms.',
+          accountsEnabled
+            ? 'Your key is stored on the device you entered it on and is never sent to us. It is deliberately left out of the data that syncs to your account, which is why you have to enter it again on each device.'
+            : 'Your key is stored locally on your device and is never sent to us.',
         ]}
       />
 
