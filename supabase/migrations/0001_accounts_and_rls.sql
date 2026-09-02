@@ -44,6 +44,12 @@ revoke all on public.profiles from anon, authenticated;
 grant select, insert on public.profiles to authenticated;
 grant update (display_name, unit_system, week_start) on public.profiles to authenticated;
 
+-- Dropped first so the whole file can be pasted into the SQL editor again
+-- without erroring on a policy that is already there.
+drop policy if exists "profiles: read own" on public.profiles;
+drop policy if exists "profiles: insert own" on public.profiles;
+drop policy if exists "profiles: update own" on public.profiles;
+
 -- auth.uid() is wrapped in a subquery so Postgres evaluates it once per
 -- statement instead of once per row.
 create policy "profiles: read own"

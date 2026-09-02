@@ -65,7 +65,10 @@ export function SyncProvider({
   const [syncing, setSyncing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lastSyncedAt, setLastSyncedAt] = useState<Date | null>(null);
-  const [hydrated, setHydrated] = useState(false);
+  // The account whose data has finished its first download here. Derived
+  // rather than a boolean so switching account re-closes the gate on its own.
+  const [hydratedFor, setHydratedFor] = useState<string | null>(null);
+  const hydrated = !active || hydratedFor === userId;
 
   // State updates are not visible to the caller that triggered them, and the
   // first-launch gate has to know right away whether the sync succeeded.
@@ -132,18 +135,14 @@ export function SyncProvider({
   // history to the onboarding screen while their diary was still downloading.
   // Every launch after that renders immediately and syncs behind the screen.
   useEffect(() => {
-    if (!active) {
-      setHydrated(true);
-      return;
-    }
+    if (!active || !userId) return;
     let live = true;
-    setHydrated(false);
 
     void (async () => {
       const done = await getState(db, HYDRATED).catch(() => null);
       if (!live) return;
       if (done === '1') {
-        setHydrated(true);
+        setHydratedFor(userId);
         void runSync();
         return;
       }
@@ -154,14 +153,14 @@ export function SyncProvider({
         if (!errorRef.current) await setState(db, HYDRATED, '1');
       } finally {
         // Offline on first launch still opens the app; it syncs when it can.
-        if (live) setHydrated(true);
+        if (live) setHydratedFor(userId);
       }
     })();
 
     return () => {
       live = false;
     };
-  }, [active, db, runSync]);
+  }, [active, db, runSync, userId]);
 
   // Upload local work shortly after it happens, and pick up remote changes on
   // a slower beat.
