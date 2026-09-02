@@ -55,6 +55,9 @@ function ThemedApp() {
         <Stack.Screen name="meal-editor" options={{ presentation: 'modal' }} />
         <Stack.Screen name="recipe-editor" options={{ presentation: 'modal' }} />
         <Stack.Screen name="meal/[id]" />
+        {/* Reachable signed-out: Google's OAuth consent screen links to both. */}
+        <Stack.Screen name="privacy" />
+        <Stack.Screen name="terms" />
       </Stack>
     </ThemeProvider>
   );

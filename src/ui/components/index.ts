@@ -6,6 +6,7 @@ export { Chip } from './Chip';
 export { DifficultyBar } from './DifficultyBar';
 export { EmptyState } from './EmptyState';
 export { ErrorState } from './ErrorState';
+export { LegalSection } from './LegalSection';
 export { ListRow } from './ListRow';
 export { MacroBar } from './MacroBar';
 export { MacroSummary } from './MacroSummary';

@@ -515,6 +515,10 @@ export default function SettingsScreen() {
             : 'All of your data lives in a local database on this device. This build has no account server, no analytics and no tracking.'}
         </AppText>
       </Card>
+      <Card padded={false} style={{ paddingHorizontal: spacing.lg, paddingVertical: spacing.xs }}>
+        <ListRow title="Privacy Policy" onPress={() => router.push('/privacy')} />
+        <ListRow title="Terms of Service" onPress={() => router.push('/terms')} />
+      </Card>
 
       <SectionHeader title="Food data sources" />
       <Card padded={false} style={{ paddingHorizontal: spacing.lg, paddingVertical: spacing.xs }}>
