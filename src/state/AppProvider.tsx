@@ -33,29 +33,38 @@ const ReposContext = createContext<Repos | null>(null);
 export function AppProvider({
   children,
   fallback = null,
+  scope,
 }: {
   children: React.ReactNode;
   fallback?: React.ReactNode;
+  /** Which account's local database to open. Omit for the device default. */
+  scope?: string;
 }) {
-  const [repos, setRepos] = useState<Repos | null>(null);
+  // Repositories are tagged with the scope they were built for, so a scope
+  // change can never hand a screen repositories pointing at another account's
+  // database while the new one opens.
+  const [loaded, setLoaded] = useState<{ scope: string | undefined; repos: Repos } | null>(null);
   const [error, setError] = useState<Error | null>(null);
 
   useEffect(() => {
     let mounted = true;
-    getDatabase()
+    getDatabase(scope)
       .then((db) => {
         if (!mounted) return;
-        setRepos({
-          db,
-          diary: createDiaryRepo(db),
-          activity: createActivityRepo(db),
-          dayNotes: createDayNotesRepo(db),
-          food: createFoodRepo(db),
-          goals: createGoalRepo(db),
-          savedMeals: createSavedMealRepo(db),
-          recipes: createRecipeRepo(db),
-          history: createHistoryRepo(db),
-          settings: createSettingsRepo(db),
+        setLoaded({
+          scope,
+          repos: {
+            db,
+            diary: createDiaryRepo(db),
+            activity: createActivityRepo(db),
+            dayNotes: createDayNotesRepo(db),
+            food: createFoodRepo(db),
+            goals: createGoalRepo(db),
+            savedMeals: createSavedMealRepo(db),
+            recipes: createRecipeRepo(db),
+            history: createHistoryRepo(db),
+            settings: createSettingsRepo(db),
+          },
         });
       })
       .catch((err) => {
@@ -64,9 +73,10 @@ export function AppProvider({
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [scope]);
 
   if (error) throw error;
+  const repos = loaded && loaded.scope === scope ? loaded.repos : null;
   if (!repos) return <>{fallback}</>;
   return <ReposContext.Provider value={repos}>{children}</ReposContext.Provider>;
 }

@@ -1,7 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useQueryClient } from '@tanstack/react-query';
 import { Image } from 'expo-image';
-import { Redirect, useRouter } from 'expo-router';
+import { Redirect } from 'expo-router';
 import React, { useState } from 'react';
 import {
   Platform,
@@ -12,8 +11,14 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path, Rect } from 'react-native-svg';
-import { useRepos } from '@/state/AppProvider';
-import { keys, useSetting } from '@/state/queries';
+import {
+  isPlausibleEmail,
+  sendEmailCode,
+  signInWithGoogle,
+  verifyEmailCode,
+} from '@/services/supabase/auth';
+import { useAuth } from '@/state/AuthProvider';
+import { useSetting } from '@/state/queries';
 import { AppText, Button, Sheet, TextField } from '@/ui/components';
 import { fonts, spacing } from '@/ui/theme/tokens';
 
@@ -22,44 +27,88 @@ const BG = require('../../assets/images/login/editorial-produce.png');
 const NAVY = '#0B1F3A';
 const NAVY_SOFT = '#1A2F4A';
 const CARD_BG = 'rgba(255, 255, 255, 0.86)';
+const DANGER = '#B3261E';
 
-/** Editorial photo login — mockup 5 with Google above Email. */
+/** Keeps provider internals out of the UI while still telling the user what to
+ * do next. Anything unrecognised gets a generic message rather than a raw
+ * server string. */
+function friendlyAuthError(err: unknown): string {
+  const raw = err instanceof Error ? err.message : String(err ?? '');
+  const message = raw.toLowerCase();
+  if (message.includes('rate limit') || message.includes('too many')) {
+    return 'Too many attempts. Wait a minute and try again.';
+  }
+  if (message.includes('expired')) return 'That code has expired. Request a new one.';
+  if (message.includes('invalid') && message.includes('token')) {
+    return 'That code is not right. Check it and try again.';
+  }
+  if (message.includes('otp') || message.includes('token')) {
+    return 'That code is not right. Check it and try again.';
+  }
+  if (message.includes('network') || message.includes('fetch')) {
+    return 'Could not reach the server. Check your connection.';
+  }
+  if (message.includes('not configured')) {
+    return 'Accounts are not enabled on this build.';
+  }
+  return 'Something went wrong signing in. Please try again.';
+}
+
 export default function LoginScreen() {
-  const router = useRouter();
-  const qc = useQueryClient();
-  const { settings } = useRepos();
   const insets = useSafeAreaInsets();
   const { width, height } = useWindowDimensions();
-  const auth = useSetting<boolean>('authComplete', false);
+  const { loading: authLoading, signedIn, accountsEnabled, continueLocalOnly } = useAuth();
   const onboarded = useSetting<boolean>('onboardingComplete', false);
 
   const [emailOpen, setEmailOpen] = useState(false);
+  const [stage, setStage] = useState<'email' | 'code'>('email');
   const [email, setEmail] = useState('');
+  const [code, setCode] = useState('');
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  if (auth.isLoading || onboarded.isLoading) return null;
-  if (auth.data && onboarded.data) return <Redirect href="/" />;
-  if (auth.data && !onboarded.data) return <Redirect href="/onboarding" />;
+  if (authLoading || onboarded.isLoading) return null;
+  if (signedIn) return <Redirect href={onboarded.data ? '/' : '/onboarding'} />;
 
   const cardWidth = Math.min(width - spacing.xl * 2, 340);
 
-  async function completeAuth(provider: 'google' | 'email', displayName?: string) {
+  function closeEmail() {
+    setEmailOpen(false);
+    setStage('email');
+    setCode('');
+    setError(null);
+  }
+
+  async function run(action: () => Promise<void>) {
     setBusy(true);
+    setError(null);
     try {
-      await settings.set('authComplete', true);
-      await settings.set('authProvider', provider);
-      if (displayName?.trim()) {
-        await settings.set('displayName', displayName.trim());
-        qc.invalidateQueries({ queryKey: keys.setting('displayName') });
-      }
-      qc.invalidateQueries({ queryKey: keys.setting('authComplete') });
-      const done = await settings.getOnboardingComplete();
-      router.replace(done ? '/' : '/onboarding');
+      await action();
+    } catch (err) {
+      setError(friendlyAuthError(err));
     } finally {
       setBusy(false);
-      setEmailOpen(false);
     }
   }
+
+  // Navigation after a successful sign-in is handled by the redirect above:
+  // AuthProvider publishes the new session and this screen unmounts itself.
+  const onGoogle = () =>
+    run(async () => {
+      if (!accountsEnabled) return continueLocalOnly();
+      await signInWithGoogle();
+    });
+
+  const onSendCode = () =>
+    run(async () => {
+      await sendEmailCode(email);
+      setStage('code');
+    });
+
+  const onVerifyCode = () =>
+    run(async () => {
+      await verifyEmailCode(email, code);
+    });
 
   return (
     <View style={styles.root}>
@@ -116,71 +165,151 @@ export default function LoginScreen() {
           <View style={styles.actions}>
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel="Continue with Google"
+              accessibilityLabel={
+                accountsEnabled ? 'Continue with Google' : 'Continue on this device'
+              }
               disabled={busy}
-              onPress={() => void completeAuth('google')}
+              onPress={() => void onGoogle()}
               style={({ pressed }) => [
                 styles.btn,
                 styles.btnGoogle,
                 pressed && { opacity: 0.9 },
+                busy && { opacity: 0.6 },
               ]}
             >
-              <GoogleG />
-              <AppText style={styles.btnGoogleLabel}>Continue with Google</AppText>
+              {accountsEnabled ? (
+                <GoogleG />
+              ) : (
+                <Ionicons name="phone-portrait-outline" size={20} color={NAVY} />
+              )}
+              <AppText style={styles.btnGoogleLabel}>
+                {accountsEnabled ? 'Continue with Google' : 'Continue on this device'}
+              </AppText>
             </Pressable>
 
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Continue with Email"
-              disabled={busy}
-              onPress={() => setEmailOpen(true)}
-              style={({ pressed }) => [
-                styles.btn,
-                styles.btnEmail,
-                pressed && { opacity: 0.9 },
-              ]}
-            >
-              <Ionicons name="mail-outline" size={20} color="#FFFFFF" />
-              <AppText style={styles.btnEmailLabel}>Continue with Email</AppText>
-            </Pressable>
+            {accountsEnabled ? (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Continue with Email"
+                disabled={busy}
+                onPress={() => {
+                  setError(null);
+                  setEmailOpen(true);
+                }}
+                style={({ pressed }) => [
+                  styles.btn,
+                  styles.btnEmail,
+                  pressed && { opacity: 0.9 },
+                  busy && { opacity: 0.6 },
+                ]}
+              >
+                <Ionicons name="mail-outline" size={20} color="#FFFFFF" />
+                <AppText style={styles.btnEmailLabel}>Continue with Email</AppText>
+              </Pressable>
+            ) : null}
           </View>
 
-          <Pressable
-            accessibilityRole="link"
-            accessibilityLabel="Create Account"
-            disabled={busy}
-            onPress={() => setEmailOpen(true)}
-            style={styles.createRow}
-          >
-            <AppText style={styles.createMuted}>Don&apos;t have an account? </AppText>
-            <AppText style={styles.createLink}>Create Account.</AppText>
-          </Pressable>
+          {error ? (
+            <AppText accessibilityRole="alert" style={styles.error}>
+              {error}
+            </AppText>
+          ) : null}
+
+          {accountsEnabled ? (
+            <Pressable
+              accessibilityRole="link"
+              accessibilityLabel="Create Account"
+              disabled={busy}
+              onPress={() => {
+                setError(null);
+                setEmailOpen(true);
+              }}
+              style={styles.createRow}
+            >
+              <AppText style={styles.createMuted}>Don&apos;t have an account? </AppText>
+              <AppText style={styles.createLink}>Create Account.</AppText>
+            </Pressable>
+          ) : (
+            <AppText style={styles.localNote}>
+              This build has no account server configured, so your diary stays in a local database
+              on this device only.
+            </AppText>
+          )}
         </View>
       </View>
 
-      <Sheet visible={emailOpen} onClose={() => setEmailOpen(false)} title="Continue with Email">
-        <TextField
-          label="Email"
-          value={email}
-          onChangeText={setEmail}
-          placeholder="you@example.com"
-          autoCapitalize="none"
-          autoCorrect={false}
-          keyboardType="email-address"
-          autoFocus
-        />
-        <Button
-          title="Continue"
-          loading={busy}
-          disabled={!email.trim().includes('@')}
-          onPress={() => {
-            const local = email.trim().split('@')[0] ?? '';
-            const pretty = local
-              ? local.charAt(0).toUpperCase() + local.slice(1)
-              : undefined;
-            void completeAuth('email', pretty);
-          }}
-        />
+      <Sheet
+        visible={emailOpen}
+        onClose={closeEmail}
+        title={stage === 'email' ? 'Continue with Email' : 'Enter your code'}
+      >
+        {stage === 'email' ? (
+          <>
+            <TextField
+              label="Email"
+              value={email}
+              onChangeText={setEmail}
+              placeholder="you@example.com"
+              autoCapitalize="none"
+              autoCorrect={false}
+              keyboardType="email-address"
+              textContentType="emailAddress"
+              autoFocus
+            />
+            <AppText variant="caption" tone="secondary">
+              We&apos;ll email you a six-digit code. No password to remember or leak.
+            </AppText>
+            {error ? (
+              <AppText accessibilityRole="alert" style={styles.error}>
+                {error}
+              </AppText>
+            ) : null}
+            <Button
+              title="Send code"
+              loading={busy}
+              disabled={busy || !isPlausibleEmail(email)}
+              onPress={() => void onSendCode()}
+            />
+          </>
+        ) : (
+          <>
+            <TextField
+              label="Six-digit code"
+              value={code}
+              onChangeText={(next) => setCode(next.replace(/[^0-9]/g, '').slice(0, 6))}
+              placeholder="123456"
+              autoCapitalize="none"
+              autoCorrect={false}
+              keyboardType="number-pad"
+              textContentType="oneTimeCode"
+              autoFocus
+            />
+            <AppText variant="caption" tone="secondary">
+              Sent to {email.trim().toLowerCase()}. Codes expire shortly.
+            </AppText>
+            {error ? (
+              <AppText accessibilityRole="alert" style={styles.error}>
+                {error}
+              </AppText>
+            ) : null}
+            <Button
+              title="Sign in"
+              loading={busy}
+              disabled={busy || code.length !== 6}
+              onPress={() => void onVerifyCode()}
+            />
+            <Button
+              title="Use a different email"
+              variant="ghost"
+              disabled={busy}
+              onPress={() => {
+                setStage('email');
+                setCode('');
+                setError(null);
+              }}
+            />
+          </>
+        )}
       </Sheet>
     </View>
   );
@@ -324,6 +453,18 @@ const styles = StyleSheet.create({
     lineHeight: 22,
     fontWeight: '600',
     color: '#FFFFFF',
+  },
+  error: {
+    fontSize: 14,
+    lineHeight: 20,
+    color: DANGER,
+    textAlign: 'center',
+  },
+  localNote: {
+    fontSize: 13,
+    lineHeight: 19,
+    color: NAVY_SOFT,
+    textAlign: 'center',
   },
   createRow: {
     flexDirection: 'row',
