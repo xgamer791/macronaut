@@ -10,6 +10,7 @@ import React, { useEffect } from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AppProvider, useRepos } from '@/state/AppProvider';
 import { AuthProvider, useAuth } from '@/state/AuthProvider';
+import { SyncProvider } from '@/state/SyncProvider';
 import { keys, useSetting } from '@/state/queries';
 import { AppearanceMode, ThemeProvider } from '@/ui/theme/ThemeProvider';
 
@@ -70,7 +71,9 @@ function ScopedApp() {
   if (loading) return null;
   return (
     <AppProvider key={dbScope} scope={dbScope}>
-      <ThemedApp />
+      <SyncProvider>
+        <ThemedApp />
+      </SyncProvider>
     </AppProvider>
   );
 }
