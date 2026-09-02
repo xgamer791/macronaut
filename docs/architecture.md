@@ -3,23 +3,26 @@
 ## Layering
 
 ```
-AuthProvider (src/state)      Supabase session → local database scope
+AuthProvider (src/state)          Convex Auth session → who the caller is
   ↓
-UI (src/app, src/ui)          screens + components, no SQL, no fetch
+UI (src/app, src/ui)              screens + components, no fetch, no API calls
   ↓ React Query hooks (src/state)
-Repositories (src/repositories)   all persistence, one per domain
-  ↓ Database interface (src/db/driver.ts)
-Drivers: expo-sqlite (native) · sql.js + IndexedDB (web) · better-sqlite3 (tests)
-Pure domain (src/domain)      math only — no React, no DB, no network
-Food services (src/services/food)  providers + layered search/barcode
+Repositories (src/repositories)   one per domain, thin clients over the Convex API
+  ↓ ConvexReactClient (src/services/convex)
+Convex functions (convex/)        queries + mutations, every one scoped to the caller
+  ↓
+Convex database                   one schema (convex/schema.ts), every table keyed by userId
+Pure domain (src/domain)          math only — no React, no network
+Food services (src/services/food) providers + layered search/barcode
 ```
 
-**The rule that holds it together:** repositories depend only on the
-`Database` interface, and all calculation lives in `src/domain` with zero
-dependencies. That is what makes the whole data layer testable in plain Node
-and what makes a future cloud-sync backend a swap, not a rewrite — implement
-the repository interfaces against a server API (or add a sync engine beneath
-the SQLite driver) and no screen changes.
+**The rule that holds it together:** screens depend on repository interfaces,
+repositories depend on the generated Convex API, and all calculation lives in
+`src/domain` with zero dependencies. That is what lets the app's own test
+suite run in plain Node with in-memory repositories, and what lets the backend
+suite run the real Convex functions through the real repositories against
+convex-test's in-memory backend — the same code path a device uses, minus the
+WebSocket.
 
 ## Key decisions
 
@@ -34,29 +37,39 @@ the SQLite driver) and no screen changes.
 - **No rollover by construction.** Aggregation only compares a day's total to
   that day's resolved target; weekly numbers are Σ(7 daily targets) or an
   explicit weekly target. Nothing ever reads "yesterday's remaining".
-- **Web persistence.** GitHub Pages can't serve COOP/COEP headers, so the web
-  driver runs sql.js in memory and persists serialized bytes to IndexedDB
-  (debounced after writes). Same schema, same migrations, same repositories.
-- **One database per account.** `getDatabase(scope)` opens a separate SQLite
-  file (native) or IndexedDB record (web) per signed-in account, resolved by
-  `src/db/scope.ts` before any screen mounts. Accounts on a shared device
-  cannot read each other's rows, and the pre-accounts database is adopted by
-  the first account to sign in so upgrades keep their history. See
-  [accounts.md](accounts.md) and [security.md](security.md).
-- **Auth is not a local flag.** Route guards read a verified Supabase session,
-  never a value the device can edit. With no Supabase project configured the
-  app runs local-only instead of pretending to be signed in.
+- **Ownership is decided on the server.** Every function in `convex/`
+  resolves the caller from the verified session (`requireUserId`), reads only
+  through indexes that start with that `userId`, and checks the owner before
+  touching an existing row. The client never sends a user id, so it cannot
+  send the wrong one. `tests/convex/isolation.test.ts` pins this down.
+- **Auth is not a local flag.** Route guards read Convex Auth's verified
+  session state, never a value the device can edit. There is no signed-out
+  mode with data in it: without a session nothing loads.
+- **Settings are JSON text per key.** Shapes vary per key (profile, assistant
+  memory, meal times) and grow over time; storing them as text on the server
+  keeps that flexibility without schema churn. Everything queried by field
+  has real columns and indexes.
+- **Saved meals and recipes embed their items.** A parent and its items are
+  always read and replaced together, so they are one document, not two
+  tables joined on every read.
+- **The provider cache is per account.** Repeat searches and barcode scans
+  resolve from the account's `cachedFoods` rows; a user's correction or flag
+  on a record is theirs and survives provider refreshes.
 - **Bundled generics.** Common meats/staples ship in the binary
-  (`services/food/genericFoods.ts`) so ingredient searches are instant,
-  offline, and immune to provider rate limits; ranked above network results
-  for ingredient-style queries.
+  (`services/food/genericFoods.ts`) so ingredient searches are instant and
+  immune to provider rate limits; ranked above network results for
+  ingredient-style queries.
+
+## Deployment
+
+`npx convex deploy --cmd 'npm run export:web'` pushes `convex/` and builds the
+web bundle against the deployment it just pushed, so the two can never drift.
+See [accounts.md](accounts.md#deploying).
 
 ## Future-proofing (deliberately not built yet)
 
-Cloud sync, iCloud backup, multi-device, Android, web dashboard. The seams for
-them: repository interfaces (swap/decorate for sync), the `Database` driver
-(add replication), effective-dated goal versions and snapshot entries
-(merge-friendly), `getDatabase(scope)` as the single composition point, and the
-account identity now supplied by `AuthProvider`. The Row Level Security
-template at the bottom of `supabase/migrations/0001_accounts_and_rls.sql` is
-the shape each synced table should take.
+Sign in with Apple, MFA, offline write queueing, Apple Health, Android, web
+dashboard. The seams for them: the repository interfaces (decorate for an
+offline queue), Convex's reactive queries (swap React Query hooks for
+`useQuery` from `convex/react` screen by screen for live updates), and
+effective-dated goal versions plus snapshot entries (merge-friendly).

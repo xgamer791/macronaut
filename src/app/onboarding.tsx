@@ -10,7 +10,7 @@ import {
   NutrientTargets,
   UnitSystem,
 } from '@/domain/types';
-import { displayNameFromSession } from '@/services/supabase/auth';
+import { displayNameFromUser } from '@/services/auth/displayName';
 import { useRepos } from '@/state/AppProvider';
 import { useAuth } from '@/state/AuthProvider';
 import { keys } from '@/state/queries';
@@ -54,10 +54,10 @@ export default function Onboarding() {
   const { settings, goals } = useRepos();
   const qc = useQueryClient();
   const { colors } = useTheme();
-  const { loading: authLoading, signedIn, session } = useAuth();
+  const { loading: authLoading, signedIn, user } = useAuth();
 
   const [step, setStep] = useState<Step>('welcome');
-  const [displayName, setDisplayName] = useState(() => displayNameFromSession(session) ?? '');
+  const [displayName, setDisplayName] = useState(() => displayNameFromUser(user) ?? '');
   const [units, setUnits] = useState<UnitSystem>('us');
   const [age, setAge] = useState<number | undefined>();
   const [sex, setSex] = useState<BiologicalSex>('male');

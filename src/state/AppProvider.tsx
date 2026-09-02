@@ -1,22 +1,22 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
-import { Database } from '@/db/driver';
-import { getDatabase } from '@/db';
-import { createDiaryRepo, DiaryRepo } from '@/repositories/diaryRepo';
+import React, { createContext, useContext, useMemo } from 'react';
+import { createAccountRepo, AccountRepo } from '@/repositories/accountRepo';
 import { createActivityRepo, ActivityRepo } from '@/repositories/activityRepo';
-import { createDayNotesRepo, DayNotesRepo } from '@/repositories/dayNotesRepo';
-import { createFoodRepo, FoodRepo } from '@/repositories/foodRepo';
-import { createGoalRepo, GoalRepo } from '@/repositories/goalRepo';
 import {
   createRecipeRepo,
   createSavedMealRepo,
   RecipeRepo,
   SavedMealRepo,
 } from '@/repositories/collectionsRepo';
+import { ConvexCaller } from '@/repositories/convexCall';
+import { createDayNotesRepo, DayNotesRepo } from '@/repositories/dayNotesRepo';
+import { createDiaryRepo, DiaryRepo } from '@/repositories/diaryRepo';
+import { createFoodRepo, FoodRepo } from '@/repositories/foodRepo';
+import { createGoalRepo, GoalRepo } from '@/repositories/goalRepo';
 import { createHistoryRepo, HistoryRepo } from '@/repositories/historyRepo';
 import { createSettingsRepo, SettingsRepo } from '@/repositories/settingsRepo';
+import { getConvexClient } from '@/services/convex/client';
 
 export interface Repos {
-  db: Database;
   diary: DiaryRepo;
   activity: ActivityRepo;
   dayNotes: DayNotesRepo;
@@ -26,58 +26,38 @@ export interface Repos {
   recipes: RecipeRepo;
   history: HistoryRepo;
   settings: SettingsRepo;
+  account: AccountRepo;
 }
 
 const ReposContext = createContext<Repos | null>(null);
 
+/** Repositories over the account's data on Convex. Which account is decided
+ * by the session the Convex client carries, so there is nothing to scope
+ * here — the server refuses rows that are not the caller's. */
+export function createRepos(convex: ConvexCaller): Repos {
+  return {
+    diary: createDiaryRepo(convex),
+    activity: createActivityRepo(convex),
+    dayNotes: createDayNotesRepo(convex),
+    food: createFoodRepo(convex),
+    goals: createGoalRepo(convex),
+    savedMeals: createSavedMealRepo(convex),
+    recipes: createRecipeRepo(convex),
+    history: createHistoryRepo(convex),
+    settings: createSettingsRepo(convex),
+    account: createAccountRepo(convex),
+  };
+}
+
 export function AppProvider({
   children,
-  fallback = null,
-  scope,
+  repos: override,
 }: {
   children: React.ReactNode;
-  fallback?: React.ReactNode;
-  /** Which account's local database to open. Omit for the device default. */
-  scope?: string;
+  /** Test seam: supply repositories instead of building them on the client. */
+  repos?: Repos;
 }) {
-  // Repositories are tagged with the scope they were built for, so a scope
-  // change can never hand a screen repositories pointing at another account's
-  // database while the new one opens.
-  const [loaded, setLoaded] = useState<{ scope: string | undefined; repos: Repos } | null>(null);
-  const [error, setError] = useState<Error | null>(null);
-
-  useEffect(() => {
-    let mounted = true;
-    getDatabase(scope)
-      .then((db) => {
-        if (!mounted) return;
-        setLoaded({
-          scope,
-          repos: {
-            db,
-            diary: createDiaryRepo(db),
-            activity: createActivityRepo(db),
-            dayNotes: createDayNotesRepo(db),
-            food: createFoodRepo(db),
-            goals: createGoalRepo(db),
-            savedMeals: createSavedMealRepo(db),
-            recipes: createRecipeRepo(db),
-            history: createHistoryRepo(db),
-            settings: createSettingsRepo(db),
-          },
-        });
-      })
-      .catch((err) => {
-        if (mounted) setError(err instanceof Error ? err : new Error(String(err)));
-      });
-    return () => {
-      mounted = false;
-    };
-  }, [scope]);
-
-  if (error) throw error;
-  const repos = loaded && loaded.scope === scope ? loaded.repos : null;
-  if (!repos) return <>{fallback}</>;
+  const repos = useMemo(() => override ?? createRepos(getConvexClient()), [override]);
   return <ReposContext.Provider value={repos}>{children}</ReposContext.Provider>;
 }
 

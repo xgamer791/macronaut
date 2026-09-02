@@ -1,5 +1,5 @@
-import { Database } from '@/db/driver';
-import { newId, nowIso } from './util';
+import { api } from '../../convex/_generated/api';
+import { clean, ConvexCaller } from './convexCall';
 
 export interface RecentFood {
   foodKey: string;
@@ -27,66 +27,20 @@ export interface HistoryRepo {
   clearSearches(): Promise<void>;
 }
 
-export function createHistoryRepo(db: Database): HistoryRepo {
+export function createHistoryRepo(convex: ConvexCaller): HistoryRepo {
   return {
     async recordLog(foodKey, name, meal, imageUrl) {
-      await db.runAsync(
-        'INSERT INTO food_log_history (id, food_key, name, meal, logged_at, image_url) VALUES (?, ?, ?, ?, ?, ?)',
-        [newId(), foodKey, name, meal, nowIso(), imageUrl ?? null],
-      );
+      await convex.mutation(api.history.recordLog, clean({ foodKey, name, meal, imageUrl }));
     },
-
-    async recentFoods(limit = 15) {
-      return db.getAllAsync<RecentFood>(
-        `SELECT food_key as foodKey, name, MAX(image_url) as imageUrl, MAX(logged_at) as lastLoggedAt
-         FROM food_log_history GROUP BY food_key ORDER BY lastLoggedAt DESC LIMIT ?`,
-        [limit],
-      );
-    },
-
-    async frequentFoods(limit = 15, meal) {
-      if (meal) {
-        // Bias: rank by count within the meal first, then overall recency.
-        return db.getAllAsync<FrequentFood>(
-          `SELECT food_key as foodKey, name, MAX(image_url) as imageUrl,
-             COUNT(*) as count,
-             SUM(CASE WHEN meal = ? THEN 1 ELSE 0 END) as mealCount
-           FROM food_log_history
-           GROUP BY food_key
-           HAVING count >= 1
-           ORDER BY mealCount DESC, count DESC, MAX(logged_at) DESC
-           LIMIT ?`,
-          [meal, limit],
-        );
-      }
-      return db.getAllAsync<FrequentFood>(
-        `SELECT food_key as foodKey, name, MAX(image_url) as imageUrl, COUNT(*) as count
-         FROM food_log_history GROUP BY food_key
-         ORDER BY count DESC, MAX(logged_at) DESC LIMIT ?`,
-        [limit],
-      );
-    },
-
+    recentFoods: (limit) => convex.query(api.history.recentFoods, clean({ limit })),
+    frequentFoods: (limit, meal) => convex.query(api.history.frequentFoods, clean({ limit, meal })),
     async recordSearch(query) {
-      const q = query.trim();
-      if (!q) return;
-      await db.runAsync(
-        `INSERT INTO search_history (query, searched_at) VALUES (?, ?)
-         ON CONFLICT(query) DO UPDATE SET searched_at = excluded.searched_at`,
-        [q, nowIso()],
-      );
+      if (!query.trim()) return;
+      await convex.mutation(api.history.recordSearch, { query });
     },
-
-    async recentSearches(limit = 10) {
-      const rows = await db.getAllAsync<{ query: string }>(
-        'SELECT query FROM search_history ORDER BY searched_at DESC LIMIT ?',
-        [limit],
-      );
-      return rows.map((r) => r.query);
-    },
-
+    recentSearches: (limit) => convex.query(api.history.recentSearches, clean({ limit })),
     async clearSearches() {
-      await db.runAsync('DELETE FROM search_history');
+      await convex.mutation(api.history.clearSearches, {});
     },
   };
 }

@@ -50,6 +50,5 @@ example
 coverage/
 scripts/audit-food-engine-results.json
 
-# Supabase CLI local state (migrations under supabase/migrations are tracked)
-supabase/.branches/
-supabase/.temp/
+# Convex CLI: .env.local holds this machine's dev deployment (already covered
+# by the env rules above); nothing else local is written outside node_modules.

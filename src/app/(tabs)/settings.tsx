@@ -8,7 +8,6 @@ import Svg, { Path } from 'react-native-svg';
 import { ActivityLevel, UnitSystem, WeekStart } from '@/domain/types';
 import { loadDemoData } from '@/seed/demoData';
 import { OnboardingProfile } from '@/repositories/settingsRepo';
-import { providerFromSession } from '@/services/supabase/auth';
 import { useRepos } from '@/state/AppProvider';
 import { useAuth } from '@/state/AuthProvider';
 import { keys, useMealCategories, useSetting } from '@/state/queries';
@@ -97,10 +96,10 @@ export default function SettingsScreen() {
   const router = useRouter();
   const qc = useQueryClient();
   const allRepos = useRepos();
-  const { settings, db } = allRepos;
+  const { settings, account } = allRepos;
   const { colors, mode, setMode } = useTheme();
   const categories = useMealCategories();
-  const { accountsEnabled, session, signOut } = useAuth();
+  const { user, signOut } = useAuth();
 
   const demoAvailable =
     __DEV__ ||
@@ -121,6 +120,8 @@ export default function SettingsScreen() {
   const [newMealName, setNewMealName] = useState('');
   const [confirmReset, setConfirmReset] = useState<null | 'onboarding' | 'all'>(null);
   const [confirmSignOut, setConfirmSignOut] = useState(false);
+  const [confirmDeleteAccount, setConfirmDeleteAccount] = useState(false);
+  const [deletingAccount, setDeletingAccount] = useState(false);
   const [draftGrokKey, setDraftGrokKey] = useState<string | null>(null);
   const [showGrokKey, setShowGrokKey] = useState(false);
   const grokKey = draftGrokKey ?? savedGrokKey.data ?? '';
@@ -198,24 +199,20 @@ export default function SettingsScreen() {
   }
 
   async function resetAllData() {
-    await db.execAsync(`
-      DELETE FROM diary_entries;
-      DELETE FROM custom_foods;
-      DELETE FROM cached_foods;
-      DELETE FROM saved_meal_items;
-      DELETE FROM saved_meals;
-      DELETE FROM recipe_ingredients;
-      DELETE FROM recipes;
-      DELETE FROM food_log_history;
-      DELETE FROM search_history;
-      DELETE FROM favorites;
-      DELETE FROM goal_configs;
-      DELETE FROM day_type_marks;
-      DELETE FROM settings;
-      DELETE FROM meal_categories WHERE builtin = 0;
-    `);
+    await account.deleteAllData();
     qc.clear();
     router.replace('/onboarding');
+  }
+
+  async function deleteAccount() {
+    setDeletingAccount(true);
+    try {
+      await account.deleteAccount();
+      await signOut();
+    } finally {
+      setDeletingAccount(false);
+      setConfirmDeleteAccount(false);
+    }
   }
 
   // Decorative fill ~80% like the mockup (goal label sits beside the track).
@@ -474,7 +471,7 @@ export default function SettingsScreen() {
         />
         <ListRow
           title="Delete all data"
-          subtitle="Erases everything on this device"
+          subtitle="Erases your diary, foods, goals and settings from your account"
           destructive
           onPress={() => setConfirmReset('all')}
         />
@@ -482,37 +479,33 @@ export default function SettingsScreen() {
 
       <SectionHeader title="Account" />
       <Card padded={false} style={{ paddingHorizontal: spacing.lg, paddingVertical: spacing.xs }}>
-        {accountsEnabled ? (
-          <>
-            <ListRow
-              title={session?.user.email ?? 'Signed in'}
-              subtitle={
-                providerFromSession(session) === 'google'
-                  ? 'Signed in with Google'
-                  : 'Signed in with an email code'
-              }
-            />
-            <ListRow
-              title="Sign out"
-              subtitle="Keeps this account's data on the device"
-              destructive
-              onPress={() => setConfirmSignOut(true)}
-            />
-          </>
-        ) : (
-          <ListRow
-            title="No account"
-            subtitle="This build runs local-only — nothing leaves the device"
-          />
-        )}
+        <ListRow
+          title={user?.email ?? 'Signed in'}
+          subtitle={
+            user?.provider === 'google' ? 'Signed in with Google' : 'Signed in with an email code'
+          }
+        />
+        <ListRow
+          title="Sign out"
+          subtitle="Your data stays in your account for next time"
+          destructive
+          onPress={() => setConfirmSignOut(true)}
+        />
+        <ListRow
+          title="Delete account"
+          subtitle="Permanently removes your account and everything in it"
+          destructive
+          onPress={() => setConfirmDeleteAccount(true)}
+        />
       </Card>
 
       <SectionHeader title="Privacy" />
       <Card>
         <AppText variant="caption" tone="secondary">
-          {accountsEnabled
-            ? 'Your diary lives in a local database on this device, kept separate per account. Sign-in is handled by Supabase, which stores your email address. Macronaut has no analytics and no tracking.'
-            : 'All of your data lives in a local database on this device. This build has no account server, no analytics and no tracking.'}
+          Your diary, foods, goals and settings are stored in your Macronaut account, which only you
+          can read. Sign-in is handled by Convex Auth with Google or an emailed code; we keep your
+          email address and, with Google, the name it returns. Macronaut has no analytics and no
+          tracking.
         </AppText>
       </Card>
       <Card padded={false} style={{ paddingHorizontal: spacing.lg, paddingVertical: spacing.xs }}>
@@ -663,7 +656,7 @@ export default function SettingsScreen() {
       >
         <AppText variant="body" tone="secondary">
           {confirmReset === 'all'
-            ? 'This permanently erases your diary, foods, meals, recipes, goals and settings from this device.'
+            ? 'This permanently erases your diary, foods, meals, recipes, goals and settings from your account.'
             : 'You will go through the setup wizard again. Your diary, foods and history are kept.'}
         </AppText>
         <Button
@@ -681,8 +674,8 @@ export default function SettingsScreen() {
 
       <Sheet visible={confirmSignOut} onClose={() => setConfirmSignOut(false)} title="Sign out?">
         <AppText variant="body" tone="secondary">
-          Your diary stays on this device under this account and comes back when you sign in
-          again. Use &quot;Delete all data&quot; first if you want it gone.
+          Your diary stays in your account and comes back when you sign in again, on any device.
+          Use &quot;Delete all data&quot; first if you want it gone.
         </AppText>
         <Button
           title="Sign out"
@@ -693,6 +686,30 @@ export default function SettingsScreen() {
           }}
         />
         <Button title="Cancel" variant="ghost" onPress={() => setConfirmSignOut(false)} />
+      </Sheet>
+
+      <Sheet
+        visible={confirmDeleteAccount}
+        onClose={() => (deletingAccount ? undefined : setConfirmDeleteAccount(false))}
+        title="Delete your account?"
+      >
+        <AppText variant="body" tone="secondary">
+          This permanently deletes your account and everything in it: diary, custom foods, saved
+          meals, recipes, goals, activity, notes and settings. It cannot be undone.
+        </AppText>
+        <Button
+          title={deletingAccount ? 'Deleting…' : 'Delete account'}
+          variant="danger"
+          loading={deletingAccount}
+          disabled={deletingAccount}
+          onPress={() => void deleteAccount()}
+        />
+        <Button
+          title="Keep my account"
+          variant="ghost"
+          disabled={deletingAccount}
+          onPress={() => setConfirmDeleteAccount(false)}
+        />
       </Sheet>
     </Screen>
   );

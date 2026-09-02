@@ -1,7 +1,8 @@
-import { createTestDb } from '@/db/__tests__/testDb';
-import { createDayNotesRepo } from '@/repositories/dayNotesRepo';
-import { createDiaryRepo } from '@/repositories/diaryRepo';
-import { createSettingsRepo } from '@/repositories/settingsRepo';
+import {
+  createMemoryDayNotesRepo,
+  createMemoryDiaryRepo,
+  createMemorySettingsRepo,
+} from '@/test/memoryRepos';
 import { executeAssistantTool } from '../toolExecutor';
 import type { AssistantMemoryStore } from '../memory';
 
@@ -11,9 +12,8 @@ function emptyMem(): AssistantMemoryStore {
 
 describe('executeAssistantTool reliability', () => {
   it('deletes by contains when unique', async () => {
-    const db = await createTestDb();
-    const dayNotes = createDayNotesRepo(db);
-    const settings = createSettingsRepo(db);
+    const dayNotes = createMemoryDayNotesRepo();
+    const settings = createMemorySettingsRepo();
     await dayNotes.add('2026-07-17', 'Protein tip: aim for 150g');
     await dayNotes.add('2026-07-17', 'Grocery: buy eggs');
 
@@ -39,9 +39,8 @@ describe('executeAssistantTool reliability', () => {
   });
 
   it('refuses ambiguous note deletes', async () => {
-    const db = await createTestDb();
-    const dayNotes = createDayNotesRepo(db);
-    const settings = createSettingsRepo(db);
+    const dayNotes = createMemoryDayNotesRepo();
+    const settings = createMemorySettingsRepo();
     await dayNotes.add('2026-07-17', 'Calories look good');
     await dayNotes.add('2026-07-17', 'Calories were high yesterday');
 
@@ -64,15 +63,14 @@ describe('executeAssistantTool reliability', () => {
   });
 
   it('rejects unparseable dates instead of silently using today', async () => {
-    const db = await createTestDb();
     const result = await executeAssistantTool(
       'get_day_summary',
       { date: 'next eon' },
       {
         repos: {
-          dayNotes: createDayNotesRepo(db),
-          settings: createSettingsRepo(db),
-          diary: createDiaryRepo(db),
+          dayNotes: createMemoryDayNotesRepo(),
+          settings: createMemorySettingsRepo(),
+          diary: createMemoryDiaryRepo(),
           activity: { totalBurnedForDate: async () => 0 },
           goals: { configFor: async () => null, getMarks: async () => ({}) },
         } as never,

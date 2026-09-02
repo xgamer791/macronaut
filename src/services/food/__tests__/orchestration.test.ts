@@ -1,5 +1,4 @@
-import { createTestDb } from '@/db/__tests__/testDb';
-import { createFoodRepo } from '@/repositories/foodRepo';
+import { createMemoryFoodRepo } from '@/test/memoryRepos';
 import { createFoodSearchService } from '../foodSearchService';
 import { FoodProvider, ProviderFood } from '../types';
 
@@ -13,7 +12,7 @@ function stub(id: FoodProvider['id'], search: ProviderFood[] = [], byCode: Recor
 
 describe('foodSearchService orchestration', () => {
   it('returns groups and includes restaurant + generic bundled results', async () => {
-    const repo = createFoodRepo(await createTestDb());
+    const repo = createMemoryFoodRepo();
     const svc = createFoodSearchService(repo, [
       stub('usda'),
       stub('off'),
@@ -28,7 +27,7 @@ describe('foodSearchService orchestration', () => {
   });
 
   it('filters raw meat when query asks for cooked/grilled', async () => {
-    const repo = createFoodRepo(await createTestDb());
+    const repo = createMemoryFoodRepo();
     const raw: ProviderFood = {
       provider: 'usda',
       id: 'raw1',
@@ -61,7 +60,7 @@ describe('foodSearchService orchestration', () => {
   });
 
   it('barcode pipeline prefers exact barcode match and sets autoSelected when high', async () => {
-    const repo = createFoodRepo(await createTestDb());
+    const repo = createMemoryFoodRepo();
     const hit: ProviderFood = {
       provider: 'nutritionix',
       id: 'nix',
@@ -86,7 +85,7 @@ describe('foodSearchService orchestration', () => {
   });
 
   it('includes user-submitted custom foods in My Foods group', async () => {
-    const repo = createFoodRepo(await createTestDb());
+    const repo = createMemoryFoodRepo();
     const created = await repo.addCustomFood({
       name: 'Gym Protein Shake',
       brand: 'Homemade',
@@ -113,14 +112,14 @@ describe('foodSearchService orchestration', () => {
   });
 
   it('prefetchLikely returns bundled hits without network providers', async () => {
-    const repo = createFoodRepo(await createTestDb());
+    const repo = createMemoryFoodRepo();
     const svc = createFoodSearchService(repo, []);
     const foods = await svc.prefetchLikely('big mac');
     expect(foods.some((f) => f.provider === 'restaurant')).toBe(true);
   });
 
   it('autoSelected only when confidence is high', async () => {
-    const repo = createFoodRepo(await createTestDb());
+    const repo = createMemoryFoodRepo();
     const svc = createFoodSearchService(repo, [
       stub('usda'),
       stub('off'),

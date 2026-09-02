@@ -1,31 +1,10 @@
-import { createTestDb } from '@/db/__tests__/testDb';
-import { createActivityRepo } from '@/repositories/activityRepo';
-import { createDayNotesRepo } from '@/repositories/dayNotesRepo';
-import { createDiaryRepo } from '@/repositories/diaryRepo';
-import { createFoodRepo } from '@/repositories/foodRepo';
-import { createGoalRepo } from '@/repositories/goalRepo';
-import { createHistoryRepo } from '@/repositories/historyRepo';
-import { createRecipeRepo, createSavedMealRepo } from '@/repositories/collectionsRepo';
-import { createSettingsRepo } from '@/repositories/settingsRepo';
-import { Repos } from '@/state/AppProvider';
+import { createMemoryRepos } from '@/test/memoryRepos';
 import { addDays, todayKey } from '@/utils/date';
 import { loadDemoData } from '../demoData';
 
 describe('demo data', () => {
   it('seeds 2+ weeks of coherent data across every store', async () => {
-    const db = await createTestDb();
-    const repos: Repos = {
-      db,
-      diary: createDiaryRepo(db),
-      activity: createActivityRepo(db),
-      dayNotes: createDayNotesRepo(db),
-      food: createFoodRepo(db),
-      goals: createGoalRepo(db),
-      savedMeals: createSavedMealRepo(db),
-      recipes: createRecipeRepo(db),
-      history: createHistoryRepo(db),
-      settings: createSettingsRepo(db),
-    };
+    const repos = createMemoryRepos();
     await loadDemoData(repos);
 
     const today = todayKey();

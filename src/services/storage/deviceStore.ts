@@ -1,6 +1,5 @@
 /** Small async key-value store for device-local values that must survive a
- * reload but must never live in the app database: the Supabase session and the
- * mapping from account to local database scope.
+ * reload: the Convex Auth session tokens on native.
  *
  * Native uses expo-secure-store (Keychain / EncryptedSharedPreferences); web
  * uses localStorage, which is the only option a static GitHub Pages build has.
@@ -12,9 +11,9 @@ export interface DeviceStore {
   removeItem(key: string): Promise<void>;
 }
 
-/** SecureStore rejects values over 2048 bytes on Android, and a Supabase
- * session (access + refresh token + user payload) regularly exceeds that, so
- * every value is written as a manifest plus fixed-size chunks. */
+/** SecureStore rejects values over 2048 bytes on Android, and a session JWT
+ * can approach that, so every value is written as a manifest plus fixed-size
+ * chunks. */
 const CHUNK_SIZE = 1600;
 const MANIFEST_PREFIX = 'chunks:';
 

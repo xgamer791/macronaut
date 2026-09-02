@@ -1,5 +1,4 @@
-import { createTestDb } from '@/db/__tests__/testDb';
-import { createFoodRepo } from '@/repositories/foodRepo';
+import { createMemoryFoodRepo } from '@/test/memoryRepos';
 import { createFoodSearchService } from '../foodSearchService';
 import { offProvider } from '../openFoodFacts';
 import { FoodProvider, ProviderError, ProviderFood } from '../types';
@@ -176,7 +175,7 @@ describe('foodSearchService', () => {
   }
 
   it('merges providers, dedupes by barcode, caches locally', async () => {
-    const repo = createFoodRepo(await createTestDb());
+    const repo = createMemoryFoodRepo();
     const svc = createFoodSearchService(repo, [
       stubProvider('usda', [foodA]),
       stubProvider('off', [foodADupe, foodB]),
@@ -190,7 +189,7 @@ describe('foodSearchService', () => {
   });
 
   it('reports partial failures without losing results', async () => {
-    const repo = createFoodRepo(await createTestDb());
+    const repo = createMemoryFoodRepo();
     const svc = createFoodSearchService(repo, [
       stubProvider('usda', new ProviderError('limit', 'usda', 'rate-limit')),
       stubProvider('off', [foodB]),
@@ -202,7 +201,7 @@ describe('foodSearchService', () => {
   });
 
   it('flags total failure', async () => {
-    const repo = createFoodRepo(await createTestDb());
+    const repo = createMemoryFoodRepo();
     const svc = createFoodSearchService(repo, [
       stubProvider('usda', new ProviderError('x', 'usda', 'network')),
       stubProvider('off', new ProviderError('y', 'off', 'network')),
@@ -212,7 +211,7 @@ describe('foodSearchService', () => {
   });
 
   it('barcode lookup prefers local custom foods, then cache, then providers', async () => {
-    const repo = createFoodRepo(await createTestDb());
+    const repo = createMemoryFoodRepo();
     const custom = await repo.addCustomFood({
       name: 'My bar',
       barcode: '555',
