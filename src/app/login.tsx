@@ -77,7 +77,7 @@ export default function LoginScreen() {
   // privileged key falls back to local-only. Say so instead of quietly
   // behaving like a build that never had a project configured.
   const config = supabaseConfigStatus();
-  const misconfigured = !config.ok && config.reason !== 'not-configured';
+  const misconfigured = !config.ok && config.reason !== 'not-configured' ? config : null;
 
   function closeEmail() {
     setEmailOpen(false);
@@ -238,8 +238,8 @@ export default function LoginScreen() {
             </Pressable>
           ) : misconfigured ? (
             <AppText accessibilityRole="alert" style={styles.error}>
-              Accounts are misconfigured on this build, so it is running local-only. Check the
-              Supabase environment variables.
+              Accounts are misconfigured on this build, so it is running local-only.{' '}
+              {misconfigured.message}
             </AppText>
           ) : (
             <AppText style={styles.localNote}>

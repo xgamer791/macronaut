@@ -1,12 +1,10 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { AppState, Platform } from 'react-native';
 import { getDeviceStore } from '@/services/storage/deviceStore';
+import { configSourceLabel, supabaseConfig } from './config';
 import { describeKeyProblem, inspectPublishableKey, isValidSupabaseUrl } from './keyGuard';
 
-/** Expo inlines EXPO_PUBLIC_* at build time, so these must be read as static
- * property accesses — a computed lookup would come back undefined. */
-const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL?.trim() ?? '';
-const SUPABASE_ANON_KEY = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY?.trim() ?? '';
+const { url: SUPABASE_URL, anonKey: SUPABASE_ANON_KEY, source: CONFIG_SOURCE } = supabaseConfig;
 
 const SESSION_KEY = 'macronaut.auth.session';
 
@@ -15,24 +13,30 @@ export type SupabaseConfigStatus =
   | { ok: false; reason: 'not-configured' | 'invalid-url' | 'invalid-key'; message: string };
 
 function computeStatus(): SupabaseConfigStatus {
+  const where = configSourceLabel(CONFIG_SOURCE);
+
   if (!SUPABASE_URL && !SUPABASE_ANON_KEY) {
     return {
       ok: false,
       reason: 'not-configured',
       message:
-        'Supabase is not configured. Set EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_SUPABASE_ANON_KEY to enable accounts.',
+        'Supabase is not configured. Fill in url and anonKey in supabase.json (or set EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_SUPABASE_ANON_KEY) to enable accounts.',
     };
   }
   if (!isValidSupabaseUrl(SUPABASE_URL)) {
     return {
       ok: false,
       reason: 'invalid-url',
-      message: 'EXPO_PUBLIC_SUPABASE_URL must be an https URL (http is allowed for localhost).',
+      message: `The Supabase project URL in ${where} must be an https URL (http is allowed for localhost).`,
     };
   }
   const keyProblem = inspectPublishableKey(SUPABASE_ANON_KEY);
   if (keyProblem) {
-    return { ok: false, reason: 'invalid-key', message: describeKeyProblem(keyProblem) };
+    return {
+      ok: false,
+      reason: 'invalid-key',
+      message: `${describeKeyProblem(keyProblem)} Correct it in ${where}.`,
+    };
   }
   return { ok: true };
 }

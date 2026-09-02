@@ -42,13 +42,13 @@ export function inspectPublishableKey(key: string | undefined): KeyProblem | nul
 export function describeKeyProblem(problem: KeyProblem): string {
   switch (problem) {
     case 'empty':
-      return 'EXPO_PUBLIC_SUPABASE_ANON_KEY is empty.';
+      return 'The Supabase project URL is set but the key is empty.';
     case 'service-role':
-      return 'EXPO_PUBLIC_SUPABASE_ANON_KEY holds a service_role key. That key bypasses Row Level Security and must never be bundled into the app. Use the publishable (anon) key.';
+      return 'The Supabase key is a service_role key. That key bypasses Row Level Security and must never be bundled into the app. Use the publishable (anon) key.';
     case 'secret-key':
-      return 'EXPO_PUBLIC_SUPABASE_ANON_KEY holds an sb_secret_ key. Secret keys are server-only. Use the sb_publishable_ key.';
+      return 'The Supabase key is an sb_secret_ key. Secret keys are server-only. Use the sb_publishable_ key.';
     case 'malformed':
-      return 'EXPO_PUBLIC_SUPABASE_ANON_KEY is not a recognisable Supabase publishable key.';
+      return 'The Supabase key is not a recognisable publishable key.';
   }
 }
 
