@@ -14,7 +14,7 @@ export type SupabaseConfigStatus =
   | { ok: true }
   | { ok: false; reason: 'not-configured' | 'invalid-url' | 'invalid-key'; message: string };
 
-export function supabaseConfigStatus(): SupabaseConfigStatus {
+function computeStatus(): SupabaseConfigStatus {
   if (!SUPABASE_URL && !SUPABASE_ANON_KEY) {
     return {
       ok: false,
@@ -35,6 +35,21 @@ export function supabaseConfigStatus(): SupabaseConfigStatus {
     return { ok: false, reason: 'invalid-key', message: describeKeyProblem(keyProblem) };
   }
   return { ok: true };
+}
+
+let warned = false;
+
+/** Configuration state, logging a misconfiguration once per session. A build
+ * that meant to have accounts but supplied a bad URL or a privileged key
+ * degrades to local-only, which should never happen quietly — the login screen
+ * says so too. */
+export function supabaseConfigStatus(): SupabaseConfigStatus {
+  const status = computeStatus();
+  if (!status.ok && status.reason !== 'not-configured' && !warned) {
+    warned = true;
+    console.error(`[supabase] ${status.message}`);
+  }
+  return status;
 }
 
 /** True when the app can talk to a real Supabase project. When false the app
@@ -60,11 +75,7 @@ function bindAppStateRefresh(supabase: SupabaseClient): void {
 
 /** The Supabase client, or null when the app is running local-only. */
 export function getSupabase(): SupabaseClient | null {
-  const status = supabaseConfigStatus();
-  if (!status.ok) {
-    if (status.reason !== 'not-configured') console.error(`[supabase] ${status.message}`);
-    return null;
-  }
+  if (!supabaseConfigStatus().ok) return null;
   if (!client) {
     const store = getDeviceStore();
     client = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {

@@ -17,6 +17,7 @@ import {
   signInWithGoogle,
   verifyEmailCode,
 } from '@/services/supabase/auth';
+import { supabaseConfigStatus } from '@/services/supabase/client';
 import { useAuth } from '@/state/AuthProvider';
 import { useSetting } from '@/state/queries';
 import { AppText, Button, Sheet, TextField } from '@/ui/components';
@@ -71,6 +72,12 @@ export default function LoginScreen() {
   if (signedIn) return <Redirect href={onboarded.data ? '/' : '/onboarding'} />;
 
   const cardWidth = Math.min(width - spacing.xl * 2, 340);
+
+  // A build that was *meant* to have accounts but has a bad URL or a
+  // privileged key falls back to local-only. Say so instead of quietly
+  // behaving like a build that never had a project configured.
+  const config = supabaseConfigStatus();
+  const misconfigured = !config.ok && config.reason !== 'not-configured';
 
   function closeEmail() {
     setEmailOpen(false);
@@ -229,6 +236,11 @@ export default function LoginScreen() {
               <AppText style={styles.createMuted}>Don&apos;t have an account? </AppText>
               <AppText style={styles.createLink}>Create Account.</AppText>
             </Pressable>
+          ) : misconfigured ? (
+            <AppText accessibilityRole="alert" style={styles.error}>
+              Accounts are misconfigured on this build, so it is running local-only. Check the
+              Supabase environment variables.
+            </AppText>
           ) : (
             <AppText style={styles.localNote}>
               This build has no account server configured, so your diary stays in a local database
