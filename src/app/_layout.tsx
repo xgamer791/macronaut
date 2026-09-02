@@ -43,6 +43,8 @@ function ThemedApp() {
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="login" />
+        <Stack.Screen name="privacy" />
+        <Stack.Screen name="terms" />
         <Stack.Screen name="onboarding" />
         <Stack.Screen name="add" options={{ presentation: 'modal' }} />
         <Stack.Screen name="manual-entry" options={{ presentation: 'modal' }} />
