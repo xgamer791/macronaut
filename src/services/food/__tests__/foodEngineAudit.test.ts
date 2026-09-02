@@ -3,8 +3,7 @@
  * Invoked by scripts/audit-food-engine.mjs (FOOD_ENGINE_AUDIT=1).
  * Hits live USDA DEMO_KEY + Open Food Facts; exercises local pipeline modules.
  */
-import { createTestDb } from '@/db/__tests__/testDb';
-import { createFoodRepo } from '@/repositories/foodRepo';
+import { createMemoryFoodRepo } from '@/test/memoryRepos';
 import { barcodeVariants, normalizeBarcode } from '../barcodeNormalize';
 import {
   AUTO_SELECT_CONFIDENCE,
@@ -124,7 +123,7 @@ const runLive = process.env.FOOD_ENGINE_AUDIT === '1';
     );
 
     // Live USDA branded is optional (DEMO_KEY flaky) — always exercise the pipeline with mocks.
-    const repo = createFoodRepo(await createTestDb());
+    const repo = createMemoryFoodRepo();
     const mockedUsda: ProviderFood = {
       provider: 'usda',
       id: 'branded-mock',
@@ -179,7 +178,7 @@ const runLive = process.env.FOOD_ENGINE_AUDIT === '1';
   });
 
   it('4. Search ranking / grouping — bestMatch, no chicken dump', async () => {
-    const repo = createFoodRepo(await createTestDb());
+    const repo = createMemoryFoodRepo();
     const chickenFlood: ProviderFood[] = Array.from({ length: 30 }, (_, i) => ({
       provider: 'usda' as const,
       id: `c${i}`,
@@ -338,7 +337,7 @@ const runLive = process.env.FOOD_ENGINE_AUDIT === '1';
   });
 
   it('9. Caching — upsert + findCachedByBarcode roundtrip', async () => {
-    const repo = createFoodRepo(await createTestDb());
+    const repo = createMemoryFoodRepo();
     await repo.upsertCachedFood({
       provider: 'off',
       providerId: '3017624010701',
@@ -435,7 +434,7 @@ const runLive = process.env.FOOD_ENGINE_AUDIT === '1';
   });
 
   it('12. Raw vs cooked — best match respects prep', async () => {
-    const repo = createFoodRepo(await createTestDb());
+    const repo = createMemoryFoodRepo();
     const raw: ProviderFood = {
       provider: 'usda',
       id: 'raw',
@@ -504,7 +503,7 @@ const runLive = process.env.FOOD_ENGINE_AUDIT === '1';
     const rest = searchRestaurantFoods('Big Mac');
     check('restaurant Big Mac macros', hasMacros(rest[0]) && rest[0].verified === true, rest[0]?.name ?? 'none');
 
-    const repo = createFoodRepo(await createTestDb());
+    const repo = createMemoryFoodRepo();
     const packaged: ProviderFood = {
       provider: 'off',
       id: 'p',

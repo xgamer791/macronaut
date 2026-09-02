@@ -6,14 +6,18 @@ import {
 import { QueryClient, QueryClientProvider, useQueryClient } from '@tanstack/react-query';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
-import React, { useEffect } from 'react';
+import React, { useEffect, useSyncExternalStore } from 'react';
+import { Platform, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { convexConfigStatus } from '@/services/convex/client';
 import { AppProvider, useRepos } from '@/state/AppProvider';
 import { AuthProvider, useAuth } from '@/state/AuthProvider';
 import { keys, useSetting } from '@/state/queries';
 import { AppearanceMode, ThemeProvider } from '@/ui/theme/ThemeProvider';
 
 SplashScreen.preventAutoHideAsync();
+
+const subscribeNever = () => () => {};
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -27,9 +31,10 @@ const queryClient = new QueryClient({
 function ThemedApp() {
   const { settings } = useRepos();
   const qc = useQueryClient();
-  const appearance = useSetting<AppearanceMode>('appearance', 'system');
+  const { signedIn } = useAuth();
+  const appearance = useSetting<AppearanceMode>('appearance', 'system', signedIn);
 
-  if (appearance.isLoading) return null;
+  if (signedIn && appearance.isLoading) return null;
 
   return (
     <ThemeProvider
@@ -63,15 +68,26 @@ function ThemedApp() {
   );
 }
 
-/** Opens the signed-in account's database. Remounted on scope change so no
- * repository instance outlives the account it was created for. */
-function ScopedApp() {
-  const { loading, dbScope } = useAuth();
+/** Repositories are remounted per account so nothing built for one user
+ * survives into the next sign-in on the same device. */
+function AccountApp() {
+  const { loading, userId } = useAuth();
   if (loading) return null;
   return (
-    <AppProvider key={dbScope} scope={dbScope}>
+    <AppProvider key={userId ?? 'signed-out'}>
       <ThemedApp />
     </AppProvider>
+  );
+}
+
+/** A build with no backend URL cannot do anything useful; say so instead of
+ * crashing inside the provider tree. */
+function NotConfigured({ message }: { message: string }) {
+  return (
+    <View style={styles.notConfigured}>
+      <Text style={styles.notConfiguredTitle}>Macronaut is not configured</Text>
+      <Text style={styles.notConfiguredBody}>{message}</Text>
+    </View>
   );
 }
 
@@ -80,20 +96,46 @@ export default function RootLayout() {
     SpaceGrotesk_500Medium,
     SpaceGrotesk_600SemiBold,
   });
+  // The Convex client opens a WebSocket when created. The static web export
+  // renders this tree in Node at build time, where that must not happen, so
+  // on web nothing below renders until the page is really running in a
+  // browser (the server snapshot is false, the client snapshot true).
+  const inBrowser = useSyncExternalStore(
+    subscribeNever,
+    () => true,
+    () => false,
+  );
+  const mounted = Platform.OS !== 'web' || inBrowser;
 
   useEffect(() => {
     if (fontsLoaded) SplashScreen.hideAsync();
   }, [fontsLoaded]);
 
-  if (!fontsLoaded) return null;
+  if (!fontsLoaded || !mounted) return null;
+
+  const config = convexConfigStatus();
+  if (!config.ok) return <NotConfigured message={config.message} />;
 
   return (
     <SafeAreaProvider>
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
-          <ScopedApp />
+          <AccountApp />
         </AuthProvider>
       </QueryClientProvider>
     </SafeAreaProvider>
   );
 }
+
+const styles = StyleSheet.create({
+  notConfigured: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 24,
+    backgroundColor: '#101418',
+    gap: 12,
+  },
+  notConfiguredTitle: { color: '#FFFFFF', fontSize: 18, fontWeight: '700', textAlign: 'center' },
+  notConfiguredBody: { color: '#B8C0CC', fontSize: 14, lineHeight: 20, textAlign: 'center' },
+});

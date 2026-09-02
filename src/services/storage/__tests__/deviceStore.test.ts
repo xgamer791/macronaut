@@ -1,7 +1,7 @@
 /* eslint-disable import/first -- jest.mock factories must be declared before the module under test is imported. */
 
 /** The native store keeps values in SecureStore, which rejects anything over
- * 2048 bytes — and a Supabase session is routinely larger. These tests run the
+ * 2048 bytes — and a session token can be larger. These tests run the
  * real chunking code against a SecureStore stub that enforces that limit. */
 
 const SECURE_STORE_LIMIT = 2048;

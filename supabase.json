@@ -1,6 +1,0 @@
-{
-  "//": "Turn on accounts by pasting your Supabase project URL and publishable (anon) key here, then commit. Editing this file in the GitHub web UI is enough — the deploy workflow picks it up and the live site rebuilds. Leave both empty to run local-only with no sign-in server. See docs/accounts.md.",
-  "//key": "Both values below are PUBLIC. They are compiled into the JavaScript every user downloads, which is what the publishable key is designed for; Row Level Security is what protects the data. Never paste a service_role or sb_secret_ key here — the app refuses to start with one.",
-  "url": "https://kmeykyywffzdoidpdwxn.supabase.co",
-  "anonKey": "sb_publishable_hr7rjxhs5Nzb7TTogNIkYQ_-DKDCZhz"
-}

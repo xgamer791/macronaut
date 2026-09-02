@@ -11,13 +11,9 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path, Rect } from 'react-native-svg';
-import {
-  isPlausibleEmail,
-  sendEmailCode,
-  signInWithGoogle,
-  verifyEmailCode,
-} from '@/services/supabase/auth';
-import { supabaseConfigStatus } from '@/services/supabase/client';
+import { useAuthActions } from '@convex-dev/auth/react';
+import { isPlausibleEmail, normalizeEmail } from '@/services/auth/email';
+import { authRedirectUrl } from '@/services/auth/redirect';
 import { useAuth } from '@/state/AuthProvider';
 import { useSetting } from '@/state/queries';
 import { AppText, Button, Sheet, TextField } from '@/ui/components';
@@ -40,17 +36,19 @@ function friendlyAuthError(err: unknown): string {
     return 'Too many attempts. Wait a minute and try again.';
   }
   if (message.includes('expired')) return 'That code has expired. Request a new one.';
-  if (message.includes('invalid') && message.includes('token')) {
-    return 'That code is not right. Check it and try again.';
+  if (message.includes('could not send')) {
+    return 'We could not send the code to that address. Check it and try again.';
   }
-  if (message.includes('otp') || message.includes('token')) {
+  if (
+    message.includes('code') ||
+    message.includes('token') ||
+    message.includes('secret') ||
+    message.includes('verification')
+  ) {
     return 'That code is not right. Check it and try again.';
   }
   if (message.includes('network') || message.includes('fetch')) {
     return 'Could not reach the server. Check your connection.';
-  }
-  if (message.includes('not configured')) {
-    return 'Accounts are not enabled on this build.';
   }
   return 'Something went wrong signing in. Please try again.';
 }
@@ -58,8 +56,9 @@ function friendlyAuthError(err: unknown): string {
 export default function LoginScreen() {
   const insets = useSafeAreaInsets();
   const { width, height } = useWindowDimensions();
-  const { loading: authLoading, signedIn, accountsEnabled, continueLocalOnly } = useAuth();
-  const onboarded = useSetting<boolean>('onboardingComplete', false);
+  const { loading: authLoading, signedIn } = useAuth();
+  const { signIn } = useAuthActions();
+  const onboarded = useSetting<boolean>('onboardingComplete', false, signedIn);
 
   const [emailOpen, setEmailOpen] = useState(false);
   const [stage, setStage] = useState<'email' | 'code'>('email');
@@ -68,16 +67,10 @@ export default function LoginScreen() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  if (authLoading || onboarded.isLoading) return null;
+  if (authLoading || (signedIn && onboarded.isLoading)) return null;
   if (signedIn) return <Redirect href={onboarded.data ? '/' : '/onboarding'} />;
 
   const cardWidth = Math.min(width - spacing.xl * 2, 340);
-
-  // A build that was *meant* to have accounts but has a bad URL or a
-  // privileged key falls back to local-only. Say so instead of quietly
-  // behaving like a build that never had a project configured.
-  const config = supabaseConfigStatus();
-  const misconfigured = !config.ok && config.reason !== 'not-configured' ? config : null;
 
   function closeEmail() {
     setEmailOpen(false);
@@ -100,21 +93,43 @@ export default function LoginScreen() {
 
   // Navigation after a successful sign-in is handled by the redirect above:
   // AuthProvider publishes the new session and this screen unmounts itself.
+  //
+  // Google: the consent screen runs against the Convex site URL, which holds
+  // the client secret. On web the browser is redirected there and comes back
+  // with a one-time code that ConvexAuthProvider exchanges. On native the
+  // same round trip runs in an ASWebAuthenticationSession / Custom Tab and
+  // the code is exchanged here. Either way the code is useless without the
+  // PKCE verifier held by this client.
   const onGoogle = () =>
     run(async () => {
-      if (!accountsEnabled) return continueLocalOnly();
-      await signInWithGoogle();
+      const redirectTo = authRedirectUrl();
+      if (Platform.OS === 'web') {
+        await signIn('google', { redirectTo });
+        return;
+      }
+      const { redirect } = await signIn('google', { redirectTo });
+      if (!redirect) throw new Error('Google sign-in could not be started.');
+      // Required lazily: the web branch above never needs the native browser.
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const WebBrowser = require('expo-web-browser') as typeof import('expo-web-browser');
+      const result = await WebBrowser.openAuthSessionAsync(redirect.toString(), redirectTo);
+      if (result.type !== 'success') return;
+      const authCode = new URL(result.url).searchParams.get('code');
+      if (!authCode) throw new Error('Google sign-in did not return an authorization code.');
+      await signIn('google', { code: authCode });
     });
 
+  // Sending a code deliberately does not reveal whether the address already
+  // has an account, so this cannot be used to enumerate users.
   const onSendCode = () =>
     run(async () => {
-      await sendEmailCode(email);
+      await signIn('resend-otp', { email: normalizeEmail(email) });
       setStage('code');
     });
 
   const onVerifyCode = () =>
     run(async () => {
-      await verifyEmailCode(email, code);
+      await signIn('resend-otp', { email: normalizeEmail(email), code: code.replace(/\s+/g, '') });
     });
 
   return (
@@ -172,9 +187,7 @@ export default function LoginScreen() {
           <View style={styles.actions}>
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel={
-                accountsEnabled ? 'Continue with Google' : 'Continue on this device'
-              }
+              accessibilityLabel="Continue with Google"
               disabled={busy}
               onPress={() => void onGoogle()}
               style={({ pressed }) => [
@@ -184,36 +197,28 @@ export default function LoginScreen() {
                 busy && { opacity: 0.6 },
               ]}
             >
-              {accountsEnabled ? (
-                <GoogleG />
-              ) : (
-                <Ionicons name="phone-portrait-outline" size={20} color={NAVY} />
-              )}
-              <AppText style={styles.btnGoogleLabel}>
-                {accountsEnabled ? 'Continue with Google' : 'Continue on this device'}
-              </AppText>
+              <GoogleG />
+              <AppText style={styles.btnGoogleLabel}>Continue with Google</AppText>
             </Pressable>
 
-            {accountsEnabled ? (
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="Continue with Email"
-                disabled={busy}
-                onPress={() => {
-                  setError(null);
-                  setEmailOpen(true);
-                }}
-                style={({ pressed }) => [
-                  styles.btn,
-                  styles.btnEmail,
-                  pressed && { opacity: 0.9 },
-                  busy && { opacity: 0.6 },
-                ]}
-              >
-                <Ionicons name="mail-outline" size={20} color="#FFFFFF" />
-                <AppText style={styles.btnEmailLabel}>Continue with Email</AppText>
-              </Pressable>
-            ) : null}
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Continue with Email"
+              disabled={busy}
+              onPress={() => {
+                setError(null);
+                setEmailOpen(true);
+              }}
+              style={({ pressed }) => [
+                styles.btn,
+                styles.btnEmail,
+                pressed && { opacity: 0.9 },
+                busy && { opacity: 0.6 },
+              ]}
+            >
+              <Ionicons name="mail-outline" size={20} color="#FFFFFF" />
+              <AppText style={styles.btnEmailLabel}>Continue with Email</AppText>
+            </Pressable>
           </View>
 
           {error ? (
@@ -222,31 +227,19 @@ export default function LoginScreen() {
             </AppText>
           ) : null}
 
-          {accountsEnabled ? (
-            <Pressable
-              accessibilityRole="link"
-              accessibilityLabel="Create Account"
-              disabled={busy}
-              onPress={() => {
-                setError(null);
-                setEmailOpen(true);
-              }}
-              style={styles.createRow}
-            >
-              <AppText style={styles.createMuted}>Don&apos;t have an account? </AppText>
-              <AppText style={styles.createLink}>Create Account.</AppText>
-            </Pressable>
-          ) : misconfigured ? (
-            <AppText accessibilityRole="alert" style={styles.error}>
-              Accounts are misconfigured on this build, so it is running local-only.{' '}
-              {misconfigured.message}
-            </AppText>
-          ) : (
-            <AppText style={styles.localNote}>
-              This build has no account server configured, so your diary stays in a local database
-              on this device only.
-            </AppText>
-          )}
+          <Pressable
+            accessibilityRole="link"
+            accessibilityLabel="Create Account"
+            disabled={busy}
+            onPress={() => {
+              setError(null);
+              setEmailOpen(true);
+            }}
+            style={styles.createRow}
+          >
+            <AppText style={styles.createMuted}>Don&apos;t have an account? </AppText>
+            <AppText style={styles.createLink}>Create Account.</AppText>
+          </Pressable>
         </View>
       </View>
 
@@ -470,12 +463,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 20,
     color: DANGER,
-    textAlign: 'center',
-  },
-  localNote: {
-    fontSize: 13,
-    lineHeight: 19,
-    color: NAVY_SOFT,
     textAlign: 'center',
   },
   createRow: {

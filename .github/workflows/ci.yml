@@ -28,5 +28,8 @@ jobs:
       - name: Test
         run: npm test -- --ci
 
+      - name: Test Convex functions
+        run: npm run test:convex
+
       - name: Build web bundle
         run: npm run export:web

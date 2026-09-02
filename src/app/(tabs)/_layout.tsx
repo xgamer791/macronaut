@@ -9,9 +9,9 @@ import { VoiceAssistant } from '@/ui/components/VoiceAssistant';
 
 export default function TabsLayout() {
   const { loading, signedIn } = useAuth();
-  const onboarded = useSetting<boolean>('onboardingComplete', false);
+  const onboarded = useSetting<boolean>('onboardingComplete', false, signedIn);
 
-  if (loading || onboarded.isLoading) return null;
+  if (loading || (signedIn && onboarded.isLoading)) return null;
   if (!signedIn) return <Redirect href="/login" />;
   if (!onboarded.data) return <Redirect href="/onboarding" />;
 

@@ -43,8 +43,8 @@ describe('legal pages', () => {
   it('covers the disclosures the consent screen is checked against', () => {
     const privacy = read('privacy.tsx');
     for (const heading of [
-      'What stays on your device',
-      'If you create an account',
+      'Your account and what it holds',
+      'Signing in',
       'Searching for foods',
       'Camera and microphone',
       'What we never do',

@@ -1,6 +1,7 @@
-/** Logic-level test suite: pure domain math, date utils, repositories and
- * migrations run against better-sqlite3 in plain Node. UI is exercised via
- * the Expo web build (see README → Testing). */
+/** Logic-level test suite: pure domain math, date utils, food engine and
+ * assistant tools over in-memory repositories, in plain Node. The Convex
+ * functions are tested separately with Vitest (vitest.config.mts). UI is
+ * exercised via the Expo web build (see README → Testing). */
 module.exports = {
   preset: 'ts-jest',
   testEnvironment: 'node',

@@ -28,45 +28,44 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      # Supabase accounts are opt-in. Filling in url + anonKey in the committed
-      # supabase.json is enough — both values are public by design, since they
-      # ship inside the bundle and Row Level Security is what protects the
-      # data. Repository secrets/variables of the same EXPO_PUBLIC_* names
-      # still override the file, for forks pointing at another project.
-      # See docs/accounts.md.
-      - name: Resolve Supabase config
+      # The backend and the web build ship together. `convex deploy` pushes the
+      # functions in convex/ to the production deployment, then runs the export
+      # with EXPO_PUBLIC_CONVEX_URL set to that deployment's URL, so the bundle
+      # can only ever point at the backend that was just deployed.
+      #
+      # CONVEX_DEPLOY_KEY is a repository secret (Settings → Secrets and
+      # variables → Actions). It can deploy code, so it must never be committed
+      # or placed in the bundle; nothing else in this job can read it.
+      - name: Require the Convex deploy key
         env:
-          EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.EXPO_PUBLIC_SUPABASE_URL || vars.EXPO_PUBLIC_SUPABASE_URL }}
-          EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.EXPO_PUBLIC_SUPABASE_ANON_KEY || vars.EXPO_PUBLIC_SUPABASE_ANON_KEY }}
-        run: node scripts/supabase-config.mjs >> "$GITHUB_ENV"
-
-      - name: Export web build
-        run: npm run export:web
-        env:
-          EXPO_PUBLIC_BASE_PATH: /macronaut
-          EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.EXPO_PUBLIC_SUPABASE_URL || vars.EXPO_PUBLIC_SUPABASE_URL }}
-          EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.EXPO_PUBLIC_SUPABASE_ANON_KEY || vars.EXPO_PUBLIC_SUPABASE_ANON_KEY }}
-
-      # The project host is inlined at build time, so a config that never
-      # reached the bundler produces a local-only site that still looks like a
-      # successful deploy. Fail instead of shipping a silent downgrade.
-      - name: Verify the built bundle matches the configured auth mode
+          CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_DEPLOY_KEY }}
         run: |
-          if [ "$MACRONAUT_AUTH_MODE" = "local-only" ]; then
-            echo "mode=local-only (no Supabase project configured)" >> "$GITHUB_STEP_SUMMARY"
-            exit 0
+          if [ -z "$CONVEX_DEPLOY_KEY" ]; then
+            echo "::error::CONVEX_DEPLOY_KEY is not set. Add the production deploy key from the Convex dashboard as a repository secret; see docs/accounts.md."
+            exit 1
           fi
-          if grep -rqF "$MACRONAUT_SUPABASE_HOST" dist/_expo/static/js/web/; then
-            echo "mode=accounts (bundle points at $MACRONAUT_SUPABASE_HOST)" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Deploy Convex functions and export the web build against them
+        env:
+          CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_DEPLOY_KEY }}
+          EXPO_PUBLIC_BASE_PATH: /macronaut
+        run: npx convex deploy --cmd 'npm run export:web' --cmd-url-env-var-name EXPO_PUBLIC_CONVEX_URL
+
+      # The deployment URL is inlined at build time, so a bundle without it is
+      # an app that cannot sign in or load anything. Fail instead of shipping it.
+      - name: Verify the bundle points at a Convex deployment
+        run: |
+          if grep -rqoE 'https://[a-z0-9-]+\.convex\.cloud' dist/_expo/static/js/web/; then
+            echo "backend=$(grep -rhoE 'https://[a-z0-9-]+\.convex\.cloud' dist/_expo/static/js/web/ | head -1)" >> "$GITHUB_STEP_SUMMARY"
           else
-            echo "::error::Accounts are configured but $MACRONAUT_SUPABASE_HOST is absent from the exported bundle, so this deploy would be local-only."
+            echo "::error::No Convex deployment URL in the exported bundle; the deploy would ship an app with no backend."
             exit 1
           fi
 
       # GitHub Pages CDN caches HTML for ~10 minutes; meta tags do not override
       # that. Write version.json and inject a tiny client script that detects a
-      # new build and navigates with ?_build=… so stale tabs pick up Daily Goals
-      # / Fat Goal / etc. immediately.
+      # new build and navigates with ?_build=… so stale tabs pick up the new
+      # bundle immediately.
       - name: Publish build version + force-refresh stale clients
         run: python3 scripts/patch-pages-cachebust.py
 

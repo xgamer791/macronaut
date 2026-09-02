@@ -133,11 +133,14 @@ export function useDayTypeMarks() {
   return useQuery({ queryKey: keys.marks, queryFn: () => goals.allMarks() });
 }
 
-export function useSetting<T>(key: string, fallback: T) {
+/** Settings live in the account, so a signed-out screen must not ask for
+ * them; pass `enabled: false` there and `data` stays undefined. */
+export function useSetting<T>(key: string, fallback: T, enabled = true) {
   const { settings } = useRepos();
   return useQuery({
     queryKey: keys.setting(key),
     queryFn: () => settings.get<T>(key, fallback),
+    enabled,
   });
 }
 

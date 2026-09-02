@@ -1,5 +1,4 @@
-import { createTestDb } from '@/db/__tests__/testDb';
-import { createFoodRepo } from '@/repositories/foodRepo';
+import { createMemoryFoodRepo } from '@/test/memoryRepos';
 import { scoreConfidence, LOW_CONFIDENCE } from '../confidence';
 import { createFoodSearchService } from '../foodSearchService';
 import { mergeBestImage, nutritionAgrees } from '../merge';
@@ -217,7 +216,7 @@ describe('barcode lookup accuracy (end to end)', () => {
   });
 
   it('an exact-barcode match outranks a higher-trust name collision', async () => {
-    const repo = createFoodRepo(await createTestDb());
+    const repo = createMemoryFoodRepo();
     const offReal: ProviderFood = {
       provider: 'off',
       id: 'off-real',
@@ -248,7 +247,7 @@ describe('barcode lookup accuracy (end to end)', () => {
   });
 
   it('flags a barcode result that fails validation as low confidence', async () => {
-    const repo = createFoodRepo(await createTestDb());
+    const repo = createMemoryFoodRepo();
     const garbage: ProviderFood = {
       provider: 'off',
       id: 'bad',
@@ -271,7 +270,7 @@ describe('barcode lookup accuracy (end to end)', () => {
   });
 
   it('a flagged cached food is re-queried live instead of reused', async () => {
-    const repo = createFoodRepo(await createTestDb());
+    const repo = createMemoryFoodRepo();
     await repo.upsertCachedFood({
       provider: 'off',
       providerId: 'stale',
@@ -303,7 +302,7 @@ describe('barcode lookup accuracy (end to end)', () => {
 
 describe('search ranking with confidence', () => {
   it('generics lead ingredient searches; branded stay reachable', async () => {
-    const repo = createFoodRepo(await createTestDb());
+    const repo = createMemoryFoodRepo();
     const branded: ProviderFood = {
       provider: 'off',
       id: 'b',

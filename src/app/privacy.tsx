@@ -15,8 +15,9 @@ export default function PrivacyScreen() {
       <Card>
         <View style={{ gap: spacing.md }}>
           <AppText variant="body" tone="secondary">
-            Macronaut is a calorie and macro tracker that keeps your food diary on your own device.
-            There are no ads, no analytics and no tracking of any kind.
+            Macronaut is a calorie and macro tracker. Your food diary is stored in your own
+            account, which only you can open. There are no ads, no analytics and no tracking of
+            any kind.
           </AppText>
           <AppText variant="micro" tone="muted">
             Last updated {LEGAL_LAST_UPDATED}
@@ -25,20 +26,20 @@ export default function PrivacyScreen() {
       </Card>
 
       <LegalSection
-        title="What stays on your device"
+        title="Your account and what it holds"
         paragraphs={[
-          'Everything you log lives in a database on the device you logged it on: diary entries, custom foods, saved meals and recipes, goals, weight and activity history, and your settings.',
-          'None of it is uploaded to us. We operate no server that holds a copy of your diary, so there is nothing on our side to read, share or lose.',
+          'Macronaut requires an account. Everything you log is stored in it: diary entries, custom foods, saved meals and recipes, goals, activity history, day notes, and your settings.',
+          'That data is held for us by Convex, the hosting provider that runs our backend, in the United States. It is stored so that you can sign in from any device and see the same diary. Each account can read only its own rows; we enforce that on the server, not in the app.',
+          'We use your data only to show it back to you. We do not read it, analyse it, sell it, or share it with anyone.',
         ]}
       />
 
       <LegalSection
-        title="If you create an account"
+        title="Signing in"
         paragraphs={[
-          'Accounts are optional. You can use Macronaut without one.',
-          'Sign-in is handled by Supabase, our authentication provider. If you sign in, Supabase stores your email address and, when you use Google, the name and profile information Google returns. We use this only to identify you at sign-in and to keep each account\u2019s data separate on shared devices.',
-          'Signing in does not upload your diary. Each account simply gets its own separate database on the device, so two people using the same phone or browser never see each other\u2019s food log.',
-          'Your sign-in session is stored on the device \u2014 in the system keychain on iOS and Android, and in browser storage on the web.',
+          'You sign in with Google or with a six-digit code sent to your email address. We store your email address and, when you use Google, the name and profile picture Google returns, so we can show who is signed in and greet you by name.',
+          'Sign-in codes are delivered by Resend, an email delivery service, which receives your email address for that purpose. Google sign-in follows Google\u2019s own privacy terms.',
+          'Your sign-in session is stored on the device \u2014 in the system keychain on iOS and Android, and in browser storage on the web. Signing out removes it from that device only.',
         ]}
       />
 
@@ -46,7 +47,7 @@ export default function PrivacyScreen() {
         title="Searching for foods"
         paragraphs={[
           'When you search for a food or scan a barcode, the text you typed or the barcode number is sent to the food databases below so they can return matches. Nothing identifying you is attached to those requests \u2014 no account, no email, no device identifier.',
-          'Results are cached on your device so repeat lookups work offline.',
+          'Results are cached in your account so repeat lookups are fast.',
         ]}
       >
         <View>
@@ -75,7 +76,7 @@ export default function PrivacyScreen() {
         title="AI features and your own API key"
         paragraphs={[
           'The AI food-photo and voice assistant features work only if you add your own xAI (Grok) API key in Settings. They are off until you do.',
-          'When you use them, the photo, audio or question you supply is sent directly from your device to xAI using your key, and is handled under xAI\u2019s own privacy terms. Your key is stored locally on your device and is never sent to us.',
+          'When you use them, the photo, audio or question you supply is sent directly from your device to xAI using your key, and is handled under xAI\u2019s own privacy terms. Your key is stored in your account settings so it follows you between devices; we never use it ourselves.',
         ]}
       />
 
@@ -89,8 +90,8 @@ export default function PrivacyScreen() {
       <LegalSection
         title="Deleting your data"
         paragraphs={[
-          'To erase everything held on a device, open Settings, then Data, then Delete all data. This is immediate and cannot be undone.',
-          'Signing out deliberately leaves that account\u2019s data on the device so it is still there next time you sign in. To delete the account itself, along with the email address stored by our authentication provider, email us and we will remove it.',
+          'To erase everything in your account but keep the account, open Settings, then Data, then Delete all data. To remove the account itself, including your email address and sign-in details, open Settings, then Account, then Delete account. Both are immediate and cannot be undone.',
+          'Signing out does not delete anything; your diary is there again the next time you sign in.',
         ]}
       />
 

@@ -1,204 +1,161 @@
-# Accounts (Supabase)
+# Accounts and the backend (Convex)
 
-Macronaut runs in one of two modes, decided at build time by whether a Supabase
-project URL and publishable key are configured.
+Macronaut has one backend: a [Convex](https://convex.dev) deployment. Every
+account's data — diary, custom foods, saved meals and recipes, goals, activity,
+day notes, settings, the food lookup cache — lives there, so the same diary
+shows up on every device the person signs in on. Nothing is kept in a local
+database any more.
 
-| Mode | When | Sign-in | Data |
-|---|---|---|---|
-| Local-only | No project configured (the public GitHub Pages demo) | "Continue on this device" | One local database, nothing leaves the device |
-| Accounts | A project is configured | Google, or a six-digit email code | One local database **per account** on the device |
+Sign-in is [Convex Auth](https://labs.convex.dev/auth) with two providers:
 
-Two places supply that configuration, and an environment variable wins over the
-file:
+| Provider | How it works | Deployment variables |
+|---|---|---|
+| Google | OAuth code flow with PKCE. The consent screen returns to the Convex **site** URL, which holds the client secret; the app only ever sees a one-time code. | `AUTH_GOOGLE_ID`, `AUTH_GOOGLE_SECRET` |
+| Email code | A six-digit code sent through [Resend](https://resend.com), valid for ten minutes. Works identically on web, iOS and Android with no deep-link setup. | `AUTH_RESEND_KEY`, `AUTH_EMAIL_FROM` |
 
-| Source | Use it for |
-|---|---|
-| [`supabase.json`](../supabase.json) at the repo root | The project this app deploys with. Committed, because both values are public. |
-| `EXPO_PUBLIC_SUPABASE_URL` / `EXPO_PUBLIC_SUPABASE_ANON_KEY` | A local `.env`, or a fork pointing at a different project, without editing tracked files. |
+The app bundle contains exactly one backend value, `EXPO_PUBLIC_CONVEX_URL`,
+which is public by design (it is the address clients connect to). Every secret
+is an environment variable on the Convex deployment and never reaches the
+bundle, the repository, or CI.
 
-Committing these two values is deliberate, not an oversight. Both are compiled
-into the JavaScript bundle every user downloads no matter where they are stored,
-so a CI secret would hide them from contributors while publishing them to the
-world. The publishable key is designed to be public; Row Level Security is what
-protects the data. The `service_role` / `sb_secret_` key is the opposite and
-must never go in either place — the build script and the app both refuse it.
+## Deployments
 
-Nothing syncs to the cloud yet. Signing in establishes identity and isolates
-each account's local database; the diary itself is still local-first. See
-[architecture.md](architecture.md) for the seams sync will use.
+| Deployment | Used for | Where its URL goes |
+|---|---|---|
+| dev (per developer) | `npx convex dev` on your machine | `.env.local`, written by the CLI (gitignored) |
+| prod | The live site | Injected by `npx convex deploy` in the deploy workflow |
 
-## Project setup
+The Convex dashboard for the project lists both under the `macronaut` project.
 
-### 1. Create the project
+## Setting up a deployment
 
-Create a free project at [supabase.com](https://supabase.com), then copy
-**Project URL** and the **publishable (anon) key** from Project Settings → API
-into `supabase.json`:
+Do this once for prod, and once per developer for dev. Everything except
+step 1 is a value in the dashboard under **Settings → Environment Variables**
+(or `npx convex env set NAME value`, add `--prod` for production).
 
-```json
-{
-  "url": "https://<project-ref>.supabase.co",
-  "anonKey": "sb_publishable_..."
-}
+### 1. Link the repo and push the functions
+
+```bash
+npx convex dev
 ```
 
-Committing that file is all it takes to turn accounts on, locally and on the
-live site. To point one machine at a different project instead, put the same
-values in `.env` as `EXPO_PUBLIC_SUPABASE_URL` and
-`EXPO_PUBLIC_SUPABASE_ANON_KEY`; they override the file.
+The first run signs you in to Convex, picks the project, writes
+`CONVEX_DEPLOYMENT` and `EXPO_PUBLIC_CONVEX_URL` to `.env.local`, regenerates
+`convex/_generated/`, and pushes `convex/` to your dev deployment. Leave it
+running while you work; it re-pushes on every save.
 
-Never use the `service_role` / `sb_secret_` key. It bypasses Row Level Security,
-and every value here ships inside the JavaScript bundle. `scripts/supabase-config.mjs`
-fails the build if it sees one, and the app refuses to create a client from it.
+### 2. Session signing keys
 
-### 2. Apply the schema
-
-Run [`supabase/migrations/0001_accounts_and_rls.sql`](../supabase/migrations/0001_accounts_and_rls.sql)
-in the SQL editor, or `supabase db push` with the CLI. It creates `profiles`,
-enables and forces Row Level Security, grants `authenticated` only the columns
-it needs, gives `anon` nothing, and provisions each profile from a
-`security definer` trigger on `auth.users`.
-
-The file ends with the template every future user-owned table should copy, so
-isolation is written into the table definition rather than remembered later.
-
-### 3. Enable the email code
-
-Email sign-in uses a one-time code rather than a magic link, so it works
-identically on web, iOS and Android with no deep-link or universal-link setup.
-
-Supabase's default magic-link template only contains a URL, so add the token to
-it under **Authentication → Email Templates → Magic Link**:
-
-```html
-<h2>Your Macronaut sign-in code</h2>
-<p>{{ .Token }}</p>
-<p>This code expires shortly. If you didn't ask for it, ignore this email.</p>
+```bash
+node scripts/convex-auth-keys.mjs          # dev
+node scripts/convex-auth-keys.mjs --prod   # prod
 ```
 
-Under **Authentication → Providers → Email**, confirm "Enable Email provider"
-is on. Leave "Confirm email" on: `verifyOtp` confirms the address as part of
-signing in.
+Generates an RS256 key pair on your machine and stores it as
+`JWT_PRIVATE_KEY` and `JWKS`. The private key is never printed or written
+anywhere else. Re-running rotates it, which signs everyone out.
 
-The built-in SMTP service is rate-limited to a handful of emails per hour and
-is not meant for production. Configure your own SMTP under **Authentication →
-Emails → SMTP Settings** before real users arrive.
+### 3. `SITE_URL`
 
-### 4. Enable Google
-
-Under **Authentication → Providers → Google**, add the OAuth client ID and
-secret from the Google Cloud console. In Google Cloud, the authorised redirect
-URI is Supabase's callback:
+The web app's own URL, which is where OAuth returns after consent:
 
 ```
-https://<project-ref>.supabase.co/auth/v1/callback
+https://xgamer791.github.io/macronaut        # prod
+http://localhost:8081                        # dev, for `npm run web`
 ```
 
-Then add the URLs the app itself returns to, under **Authentication → URL
-Configuration → Redirect URLs**:
+`convex/auth.ts` refuses any other destination except the app's native scheme
+(`macronaut://`), Expo Go (`exp://…`) and `http://localhost:*`. That allow-list
+is a security control: it stops an attacker sending the sign-in code to a site
+they control. (The code is useless without the PKCE verifier held by the client
+that started the flow, but there is no reason to hand it out.)
+
+### 4. Google
+
+In the Google Cloud console the OAuth client's **authorised redirect URI** is
+the Convex site URL's callback, one per deployment:
 
 ```
-macronaut://                                  # native (Expo scheme from app.config.ts)
-http://localhost:8081/                        # expo start --web
-https://xgamer791.github.io/macronaut/        # GitHub Pages deploy
+https://<deployment>.convex.site/api/auth/callback/google
 ```
 
-The GitHub Pages entry **must include the `/macronaut/` sub-path**. The site is
-served from a sub-path, not the domain root, and Supabase matches redirect URLs
-exactly (or by explicit wildcard, e.g.
-`https://xgamer791.github.io/macronaut/**`). An entry for the bare host will not
-match and sign-in will fail. `authRedirectUrl()` builds the same URL from
-`EXPO_PUBLIC_BASE_PATH`, so the two stay in step.
+Copy the client ID and secret to `AUTH_GOOGLE_ID` and `AUTH_GOOGLE_SECRET`.
+The consent screen must link to the app's Privacy Policy and Terms
+(`/privacy` and `/terms` on the site) before Google will publish it.
 
-Set **Site URL** to the same GitHub Pages URL.
+### 5. Email codes
 
-That allow-list is a security control, not configuration noise: it is what
-stops an attacker sending the authorization code to a site they control.
-Supabase rejects any `redirectTo` that is not on it, so add only origins you
-own.
+`AUTH_RESEND_KEY` is a Resend API key. `AUTH_EMAIL_FROM` is the sender, e.g.
+`Macronaut <noreply@mangomarketeers.com>`. The domain must be verified in
+Resend first; until it is, `Macronaut <onboarding@resend.dev>` works, but
+**Resend only delivers from that address to the email of the Resend account
+owner**, so nobody else can sign in with a code until the domain verifies.
 
-Sign-in uses the PKCE flow, so the authorization code is worthless without the
-verifier held by the client that started the flow.
-
-### 5. Verify
+### 6. Verify
 
 ```bash
 npm run web
 ```
 
 Sign in with an email code, add a diary entry, sign out, then sign in as a
-second address. The second account must see an empty diary. Sign back in as the
-first and its entries must return. That round trip is the isolation guarantee —
-if it fails, stop and fix it before shipping.
+second address. The second account must see an empty diary; sign back in as
+the first and the entry must be there. `tests/convex/isolation.test.ts` runs
+the same check against the functions on every push, but the round trip through
+a real browser is still worth doing after any change to auth.
 
-## Deploying accounts to GitHub Pages
+## Deploying
 
-Filling in `supabase.json` on `main` is the whole deploy step. Editing it in the
-GitHub web UI works: the push triggers `.github/workflows/deploy.yml`, which
-compiles the values into the bundle and publishes it.
+The deploy workflow (`.github/workflows/deploy.yml`) runs on every push to
+`main`:
 
-Repository secrets or variables named `EXPO_PUBLIC_SUPABASE_URL` and
-`EXPO_PUBLIC_SUPABASE_ANON_KEY` still override the file if you would rather keep
-the project reference out of the tree.
+```bash
+npx convex deploy --cmd 'npm run export:web' --cmd-url-env-var-name EXPO_PUBLIC_CONVEX_URL
+```
 
-With the file empty and no variables set, the workflow deploys the local-only
-build — which is what the public demo has always been, so nothing breaks by
-leaving it alone.
+That pushes `convex/` to the production deployment, then exports the web build
+with `EXPO_PUBLIC_CONVEX_URL` set to that deployment's URL, so the bundle can
+only point at the backend that was just deployed. The workflow then fails if
+the URL is missing from the exported bundle.
 
-Two build-time checks keep a broken config from reaching users, both in
-`scripts/supabase-config.mjs`: a source that fills in only one of `url` /
-`anonKey` fails the build rather than deploying half-configured, and a
-privileged key fails it rather than publishing the key. The workflow then fails
-the deploy if the project host is missing from the exported bundle, since a
-config that never reached the bundler otherwise produces a local-only site that
-looks like a successful deploy.
+It needs one repository secret, **`CONVEX_DEPLOY_KEY`**: the production deploy
+key from the dashboard (**Settings → Deploy keys**). It can push code to the
+backend, so it lives only in GitHub Actions secrets — never in the repository,
+`.env`, or the bundle. Without it the workflow stops with a clear error before
+building anything.
 
-After the deploy finishes, confirm which mode actually went live:
+After a deploy:
 
 ```bash
 ./scripts/verify-live.sh
 ```
 
-It reports `auth=accounts (supabase project: …)` or `auth=local-only`, read from
-the bundle the CDN is really serving rather than from the repository settings.
+prints `backend=https://….convex.cloud`, read from the bundle the CDN is
+actually serving.
 
-Finally, run the two-account round trip from step 5 above against the live URL.
-Sign-in cannot work until the Supabase redirect allow-list contains
-`https://xgamer791.github.io/macronaut/`, including the sub-path.
+## How isolation works
 
-## How isolation works on the device
+Every function in `convex/` starts by resolving the caller from the verified
+session (`requireUserId` in `convex/lib/auth.ts`). Every table carries a
+`userId`, every read goes through an index that starts with it, and every
+write to an existing row checks that the row belongs to the caller. The client
+never passes a user id; there is nothing for it to get wrong.
 
-Before accounts there was one local SQLite database per device. Adding sign-in
-without scoping it would hand the next person to sign in on a shared phone or
-browser the previous account's diary.
+A call with no session throws before touching data. Knowing another account's
+row id gets you nothing: reads return null, writes throw.
 
-`src/db/scope.ts` resolves a database scope per account:
+## Sessions
 
-- Local-only mode uses the pre-accounts database.
-- The first account to sign in on the device **adopts** the pre-accounts
-  database, so anyone upgrading keeps the history they already had.
-- Every account after that gets its own SQLite file (native) or IndexedDB
-  record (web).
-- If the scope cannot be recorded — locked keychain, disabled storage — the
-  account falls back to a scope private to its user id. Failing closed keeps a
-  broken device from becoming a data leak.
+Convex Auth issues a short-lived JWT (one hour) and a refresh token (thirty
+days, rotated on use). On native both go to `expo-secure-store` (Keychain /
+EncryptedSharedPreferences) through `src/services/storage/deviceStore.ts`,
+chunked because SecureStore rejects values over 2048 bytes. On web they are in
+`localStorage`, which also lets sign-in state sync across tabs. Signing out
+clears this device only.
 
-`AuthProvider` resolves the scope before children mount and remounts
-`AppProvider` when it changes, so no repository outlives the account it was
-created for. The React Query cache is cleared on every scope change, because a
-cached diary result belongs to whoever fetched it.
+## Deleting data
 
-Signing out does not erase the local database: the account keeps its data for
-next time. Use Settings → Data → **Delete all data** to erase it.
-
-## Session storage
-
-Sessions live in `expo-secure-store` on native (Keychain /
-EncryptedSharedPreferences) and `localStorage` on web, which is all a static
-host can offer. Values are chunked because SecureStore rejects anything over
-2048 bytes and a Supabase session is bigger than that.
-
-Refresh tokens rotate automatically, and auto-refresh is restarted when the app
-returns to the foreground so iOS suspending the timer does not strand a stale
-session. `signOut` uses `scope: 'local'`, so signing out of one device leaves
-the user's other devices signed in.
+Settings → Data → **Delete all data** erases every row the account owns and
+keeps the account. Settings → Account → **Delete account** erases the rows,
+then the sessions, linked sign-in methods and the user record, so the next
+sign-in with that email starts from nothing. Both run in bounded batches on
+the server and the app repeats them until the server reports done.

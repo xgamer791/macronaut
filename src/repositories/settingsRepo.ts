@@ -1,5 +1,6 @@
-import { Database } from '@/db/driver';
+import { api } from '../../convex/_generated/api';
 import { UnitSystem, WeekStart } from '@/domain/types';
+import { ConvexCaller } from './convexCall';
 import { safeParse } from './util';
 import { MealCategory } from './types';
 
@@ -33,21 +34,16 @@ export interface SettingsRepo {
   addMealCategory(name: string): Promise<MealCategory>;
 }
 
-export function createSettingsRepo(db: Database): SettingsRepo {
+/** Settings live in the account on Convex as JSON text per key, so any shape
+ * can be stored without a schema change. */
+export function createSettingsRepo(convex: ConvexCaller): SettingsRepo {
   async function get<T>(key: string, fallback: T): Promise<T> {
-    const row = await db.getFirstAsync<{ value: string }>(
-      'SELECT value FROM settings WHERE key = ?',
-      [key],
-    );
-    return row ? safeParse<T>(row.value, fallback) : fallback;
+    const raw = await convex.query(api.settings.get, { key });
+    return raw === null ? fallback : safeParse<T>(raw, fallback);
   }
 
   async function set<T>(key: string, value: T): Promise<void> {
-    await db.runAsync(
-      `INSERT INTO settings (key, value) VALUES (?, ?)
-       ON CONFLICT(key) DO UPDATE SET value = excluded.value`,
-      [key, JSON.stringify(value)],
-    );
+    await convex.mutation(api.settings.set, { key, value: JSON.stringify(value) });
   }
 
   return {
@@ -63,30 +59,7 @@ export function createSettingsRepo(db: Database): SettingsRepo {
     setWeekStart: (start) => set('weekStart', start),
     getAppearance: () => get<AppearanceMode>('appearance', 'system'),
     setAppearance: (mode) => set('appearance', mode),
-
-    async getMealCategories() {
-      const rows = await db.getAllAsync<{
-        id: string;
-        name: string;
-        position: number;
-        builtin: number;
-      }>('SELECT id, name, position, builtin FROM meal_categories WHERE deleted = 0 ORDER BY position');
-      return rows.map((r) => ({ ...r, builtin: r.builtin === 1 }));
-    },
-
-    async addMealCategory(name: string) {
-      const trimmed = name.trim();
-      if (!trimmed) throw new Error('Meal name is required');
-      const max = await db.getFirstAsync<{ m: number | null }>(
-        'SELECT MAX(position) as m FROM meal_categories',
-      );
-      const position = (max?.m ?? 0) + 1;
-      const id = `custom-${trimmed.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-${position}`;
-      await db.runAsync(
-        'INSERT INTO meal_categories (id, name, position, builtin) VALUES (?, ?, ?, 0)',
-        [id, trimmed, position],
-      );
-      return { id, name: trimmed, position, builtin: false };
-    },
+    getMealCategories: () => convex.query(api.mealCategories.list, {}),
+    addMealCategory: (name) => convex.mutation(api.mealCategories.add, { name }),
   };
 }

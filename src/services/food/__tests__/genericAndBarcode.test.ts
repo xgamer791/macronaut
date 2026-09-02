@@ -1,5 +1,4 @@
-import { createTestDb } from '@/db/__tests__/testDb';
-import { createFoodRepo } from '@/repositories/foodRepo';
+import { createMemoryFoodRepo } from '@/test/memoryRepos';
 import { barcodeVariants, createFoodSearchService } from '../foodSearchService';
 import { getGenericFood, searchGenericFoods } from '../genericFoods';
 import { FoodProvider, ProviderFood } from '../types';
@@ -80,7 +79,7 @@ describe('search ranking + barcode fan-out', () => {
   });
 
   it('bundled generics rank above branded results for ingredient queries', async () => {
-    const repo = createFoodRepo(await createTestDb());
+    const repo = createMemoryFoodRepo();
     const svc = createFoodSearchService(repo, [stub('off', [branded], null)]);
     const res = await svc.search('chicken breast');
     expect(res.foods[0].provider).toBe('local');
@@ -88,7 +87,7 @@ describe('search ranking + barcode fan-out', () => {
   });
 
   it('generics still appear when every provider fails', async () => {
-    const repo = createFoodRepo(await createTestDb());
+    const repo = createMemoryFoodRepo();
     const failing: FoodProvider = {
       id: 'usda',
       search: async () => {
@@ -101,13 +100,13 @@ describe('search ranking + barcode fan-out', () => {
     expect(res.foods.length).toBeGreaterThan(0);
     expect(res.foods[0].provider).toBe('local');
 
-    function svc(r: ReturnType<typeof createFoodRepo>, p: FoodProvider[]) {
+    function svc(r: ReturnType<typeof createMemoryFoodRepo>, p: FoodProvider[]) {
       return createFoodSearchService(r, p);
     }
   });
 
   it('barcode lookup matches variant encodings across providers in parallel', async () => {
-    const repo = createFoodRepo(await createTestDb());
+    const repo = createMemoryFoodRepo();
     const eggWhites: ProviderFood = {
       provider: 'usda',
       id: 'kirkland-1',
@@ -127,7 +126,7 @@ describe('search ranking + barcode fan-out', () => {
   });
 
   it('returns best match first with remaining candidates', async () => {
-    const repo = createFoodRepo(await createTestDb());
+    const repo = createMemoryFoodRepo();
     const offHit: ProviderFood = {
       provider: 'off',
       id: 'o1',

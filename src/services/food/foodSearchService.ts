@@ -147,8 +147,9 @@ export function createFoodSearchService(
 ) {
   async function cache(foods: ProviderFood[]): Promise<void> {
     const now = new Date().toISOString();
+    const records: CachedFood[] = [];
     for (const f of foods) {
-      // Custom foods live in custom_foods — never duplicate into provider cache.
+      // Custom foods live in their own table — never duplicate into the cache.
       if (f.provider === 'custom') continue;
       const record: CachedFood = {
         provider: f.provider,
@@ -175,8 +176,10 @@ export function createFoodSearchService(
         servingBasis: f.servingBasis,
         cachedAt: now,
       };
-      await foodRepo.upsertCachedFood(record).catch(() => {});
+      records.push(record);
     }
+    // One round trip for the whole result set; a cache failure never fails a search.
+    await foodRepo.upsertCachedFoods(records).catch(() => {});
   }
 
   function dedupeNormalized(foods: NormalizedFood[]): NormalizedFood[] {

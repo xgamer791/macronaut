@@ -1,7 +1,8 @@
 # Macronaut
 
-Clean calorie and macro tracking. Local-first, no ads, no tracking. Optional
-Supabase accounts, with each account's data kept in its own local database.
+Clean calorie and macro tracking. No ads, no tracking. Your diary lives in
+your account on [Convex](https://convex.dev), so phone and web always show the
+same data.
 
 **Test it now:** https://xgamer791.github.io/macronaut/ — the full app running in your browser, deployed from `main` on every push. Add `?demo=1` to the URL to unlock a "Load demo data" option in Settings (2+ weeks of sample history in one tap).
 
@@ -21,9 +22,9 @@ Built with React Native + Expo so the same codebase ships to iOS.
 - **Goals** — Mifflin-St Jeor recommendations from optional onboarding (skippable), same-daily / per-weekday / training-rest modes, per-date day-type marks, custom weekly targets, effective-dated versions so editing goals never rewrites history, **no rollover** between days or weeks
 - **Progress** — tappable charts with goal line (7/30/90-day/custom ranges), per-metric averages and adherence, weekly averages, daily and weekly goal detail views with macro distribution
 - **Edit before logging** — adjust any database food's values for one entry or save as your own custom food; flag inaccurate data locally
-- **Offline** — diary, manual entries, custom foods, built-in generics, previously seen foods, recipes, meals, goals and progress all work with no connection
-- **Accounts (optional)** — Supabase sign-in with Google or a six-digit email code, PKCE OAuth, sessions in the device keychain; every account gets its own local database so two people on one device never see each other's diary. With no Supabase project configured the app runs local-only, exactly as before — see [docs/accounts.md](docs/accounts.md)
-- **Settings** — US/metric units, Sunday/Monday week start, light/dark/system appearance, custom meal categories, sign out, reset flows with confirmation, privacy + attribution
+- **One account, every device** — diary, foods, meals, recipes, goals, activity, notes and settings are stored in your Convex account and served live to every signed-in device; built-in generic foods still need no network
+- **Accounts** — Convex Auth sign-in with Google (OAuth code flow with PKCE) or a six-digit email code delivered by Resend; sessions in the device keychain; every row is scoped to its account on the server, so nobody can read anyone else's diary — see [docs/accounts.md](docs/accounts.md)
+- **Settings** — US/metric units, Sunday/Monday week start, light/dark/system appearance, custom meal categories, sign out, delete all data, delete account, privacy + attribution
 
 ## Tech stack
 
@@ -33,28 +34,30 @@ Built with React Native + Expo so the same codebase ships to iOS.
 | Navigation | expo-router (file-based), custom tab bar with center Add button |
 | Data fetching | TanStack Query |
 | Ephemeral state | Zustand |
-| Persistence | SQLite — expo-sqlite (native), sql.js + IndexedDB (web), better-sqlite3 (tests) behind one `Database` interface; one database per account |
-| Accounts | Supabase Auth (optional) — email OTP + Google OAuth with PKCE, Postgres + Row Level Security |
+| Backend | Convex — functions in `convex/`, every table scoped to the signed-in account on the server; the app reaches it through one repository layer |
+| Accounts | Convex Auth — Google OAuth with PKCE + six-digit email codes via Resend; every secret is a deployment variable, never in the bundle |
 | Session storage | expo-secure-store (native), localStorage (web) |
 | Charts | Custom SVG (react-native-svg) |
 | Camera | expo-camera (barcode scanning) |
 | Fonts | Space Grotesk (display) + platform body face |
-| Tests | Jest + ts-jest, 125 tests |
+| Tests | Jest + ts-jest for the app; Vitest + convex-test for the backend functions |
 
 ## Folder structure
 
 ```
+convex/           the backend: schema, auth providers, one module of queries/mutations per domain
 src/
   app/            expo-router routes (tabs, onboarding, modals, editors)
-  db/             Database interface, 3 drivers, forward-only migrations
   domain/         PURE logic: nutrition math, servings, goals, aggregation, recommendations
-  repositories/   diary / food / goals / collections / settings / history over the Database interface
+  repositories/   diary / food / goals / collections / settings / history / account — thin clients over the Convex API
   services/food/  USDA + Open Food Facts providers, bundled generics, layered search + barcode service
-  state/          AppProvider (repo wiring), React Query hooks, Zustand UI store
+  services/auth/  email validation, OAuth redirect URL, display name
+  state/          AuthProvider (Convex Auth), AppProvider (repo wiring), React Query hooks, Zustand UI store
   ui/             theme tokens + ~20 components
   utils/          day-key date math, navigation helper
   seed/           dev-only demo data
-docs/             architecture, database schema, provider guide
+tests/convex/     backend function tests (Vitest + convex-test)
+docs/             architecture, database schema, accounts + deployment, provider guide
 ```
 
 ## Getting started
@@ -63,40 +66,38 @@ docs/             architecture, database schema, provider guide
 git clone https://github.com/xgamer791/macronaut.git
 cd macronaut
 npm install
+npx convex dev             # links your dev deployment, writes .env.local, pushes convex/
 cp .env.example .env       # optional — add your USDA key
 npm run web                # browser
 npm run ios                # iOS simulator (needs Xcode)
 ```
+
+`npx convex dev` needs a free Convex account. Sign-in also needs a few
+variables on that deployment (Google client, Resend key, session keys) — the
+walkthrough is in [docs/accounts.md](docs/accounts.md).
 
 ### Environment variables
 
 | Variable | Required | Purpose |
 |---|---|---|
 | `EXPO_PUBLIC_USDA_API_KEY` | No | USDA FoodData Central key. Falls back to `DEMO_KEY` (heavily rate-limited — fine for a quick try). Get a free key at https://fdc.nal.usda.gov/api-key-signup |
-| `EXPO_PUBLIC_SUPABASE_URL` | No | Overrides `supabase.json`. Only needed to aim one machine at a different project. |
-| `EXPO_PUBLIC_SUPABASE_ANON_KEY` | No | Same, and only ever the **publishable (anon)** key — never `service_role` / `sb_secret_`, which the build and the app both refuse. |
+| `EXPO_PUBLIC_CONVEX_URL` | Yes | The Convex deployment the app talks to. `npx convex dev` writes it to `.env.local`; the deploy workflow sets it from `npx convex deploy`. |
 | `EXPO_PUBLIC_BASE_PATH` | No | Set by the Pages deploy workflow only. Leave empty locally. |
 
 No secrets are committed. `.env` is gitignored.
 
 Every `EXPO_PUBLIC_*` value is compiled into the bundle every user downloads,
-so treat all of them as public. That is fine for the Supabase publishable key,
-which is designed for it and is backed by Row Level Security; it is *not* fine
-for a provider secret — see [docs/security.md](docs/security.md).
+so treat all of them as public. That is fine for the Convex URL, which is the
+address clients are meant to connect to; it is *not* fine for a provider
+secret — see [docs/security.md](docs/security.md).
 
-### Accounts
+### Accounts and the backend
 
-Accounts are configured in [`supabase.json`](supabase.json), not in `.env`.
-Paste your project URL and publishable key there and commit; both values are
-public by design, so storing them in a CI secret would hide them from
-contributors while still publishing them to every user. Empty means local-only.
-
-With a project configured the app asks for a real sign-in and gives
-each account its own local database. Apply
-[`supabase/migrations/0001_accounts_and_rls.sql`](supabase/migrations/0001_accounts_and_rls.sql)
-to the project first: it enables and forces Row Level Security so the database
-itself refuses to return another user's rows. Full setup, including the Google
-provider and the email-code template, is in [docs/accounts.md](docs/accounts.md).
+The app has one backend, a Convex deployment, and requires an account. All
+secrets — the Google OAuth client secret, the Resend key, the session signing
+key — are environment variables on that deployment. The deploy workflow needs
+exactly one repository secret, `CONVEX_DEPLOY_KEY`. Setup for both is in
+[docs/accounts.md](docs/accounts.md).
 
 ### Food data providers
 
@@ -109,35 +110,37 @@ To add a provider, see [docs/providers.md](docs/providers.md).
 ## Testing
 
 ```bash
-npm test             # 125 Jest tests: domain math, servings, goals, aggregation,
-                     # repositories, migrations, providers, barcode variants, demo data
-npm run typecheck    # tsc --noEmit (strict)
+npm test             # Jest: domain math, servings, goals, aggregation, food engine,
+                     # assistant tools, demo data (in-memory repositories)
+npm run test:convex  # Vitest + convex-test: the real Convex functions, driven through
+                     # the app's repositories, including the account-isolation check
+npm run typecheck    # tsc --noEmit (strict), app and backend
 npm run lint         # eslint
 ```
 
-The suite runs in plain Node (better-sqlite3 stands in for expo-sqlite), so no simulator or device is needed. CI runs all of it plus a full web export on every push.
+Both suites run in plain Node against an in-memory backend, so no simulator, device or Convex deployment is needed. CI runs all of it plus a full web export on every push.
 
 ## Building for production
 
-- **Web:** `npm run export:web` → static site in `dist/` (deployed to GitHub Pages by `.github/workflows/deploy.yml`). Accounts go live once `supabase.json` on `main` has a project in it; empty means the workflow deploys the local-only build. `./scripts/verify-live.sh` reports which mode is actually serving. See [docs/accounts.md](docs/accounts.md#deploying-accounts-to-github-pages).
+- **Web:** every push to `main` runs `.github/workflows/deploy.yml`, which deploys `convex/` to the production deployment and exports the web build against it in one step (`npx convex deploy --cmd 'npm run export:web'`), then publishes `dist/` to GitHub Pages. `./scripts/verify-live.sh` reports which backend the live bundle points at. See [docs/accounts.md](docs/accounts.md#deploying).
 - **iOS:** `npx eas build --platform ios` with an Expo account, or `npx expo run:ios --configuration Release` locally with Xcode. Camera barcode scanning requires a real device.
 
 ## Known limitations
 
 - Camera barcode scanning is unavailable on web (manual entry + demo barcode provided); it works on iOS/Android devices.
 - USDA `DEMO_KEY` is rate-limited (~30 req/hr). Built-in generics and Open Food Facts keep search useful regardless.
-- Accounts establish identity and isolate each account's local database, but nothing syncs to the cloud yet — the diary is still local-first (the repository layer is built to add a sync backend without rewriting the app — see [docs/architecture.md](docs/architecture.md)).
+- The app needs a connection: the diary is read from and written to the account on Convex. Built-in generic foods are the only data bundled with the app.
 - Sign in with Apple is not implemented yet, which iOS requires alongside Google sign-in; needed before App Store submission.
 - Weekly goal detail defines weeks by your configured week start; partial first weeks show as-is.
 
 ## Roadmap
 
-Cloud sync on top of the accounts added here, Sign in with Apple, MFA, iCloud backup, Apple Health integration, widgets, Android polish, web dashboard.
+Sign in with Apple, MFA, offline queueing of writes, Apple Health integration, widgets, Android polish, web dashboard.
 
 ## Documentation
 
 - [Architecture notes](docs/architecture.md)
 - [Database schema](docs/schema.md)
-- [Accounts + Supabase setup](docs/accounts.md)
+- [Accounts, the Convex backend and deployment](docs/accounts.md)
 - [Security review](docs/security.md)
 - [Food-data providers + adding your own](docs/providers.md)
