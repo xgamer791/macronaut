@@ -1,12 +1,27 @@
 # Accounts (Supabase)
 
-Macronaut runs in one of two modes, decided at build time by whether
-`EXPO_PUBLIC_SUPABASE_URL` and `EXPO_PUBLIC_SUPABASE_ANON_KEY` are set.
+Macronaut runs in one of two modes, decided at build time by whether a Supabase
+project URL and publishable key are configured.
 
 | Mode | When | Sign-in | Data |
 |---|---|---|---|
-| Local-only | Supabase env vars absent (the public GitHub Pages demo) | "Continue on this device" | One local database, nothing leaves the device |
-| Accounts | Supabase env vars present | Google, or a six-digit email code | One local database **per account** on the device |
+| Local-only | No project configured (the public GitHub Pages demo) | "Continue on this device" | One local database, nothing leaves the device |
+| Accounts | A project is configured | Google, or a six-digit email code | One local database **per account** on the device |
+
+Two places supply that configuration, and an environment variable wins over the
+file:
+
+| Source | Use it for |
+|---|---|
+| [`supabase.json`](../supabase.json) at the repo root | The project this app deploys with. Committed, because both values are public. |
+| `EXPO_PUBLIC_SUPABASE_URL` / `EXPO_PUBLIC_SUPABASE_ANON_KEY` | A local `.env`, or a fork pointing at a different project, without editing tracked files. |
+
+Committing these two values is deliberate, not an oversight. Both are compiled
+into the JavaScript bundle every user downloads no matter where they are stored,
+so a CI secret would hide them from contributors while publishing them to the
+world. The publishable key is designed to be public; Row Level Security is what
+protects the data. The `service_role` / `sb_secret_` key is the opposite and
+must never go in either place — the build script and the app both refuse it.
 
 Nothing syncs to the cloud yet. Signing in establishes identity and isolates
 each account's local database; the diary itself is still local-first. See
@@ -18,17 +33,23 @@ each account's local database; the diary itself is still local-first. See
 
 Create a free project at [supabase.com](https://supabase.com), then copy
 **Project URL** and the **publishable (anon) key** from Project Settings → API
-into `.env`:
+into `supabase.json`:
 
-```
-EXPO_PUBLIC_SUPABASE_URL=https://<project-ref>.supabase.co
-EXPO_PUBLIC_SUPABASE_ANON_KEY=sb_publishable_...
+```json
+{
+  "url": "https://<project-ref>.supabase.co",
+  "anonKey": "sb_publishable_..."
+}
 ```
 
-Never put the `service_role` / `sb_secret_` key here. Everything in an
-`EXPO_PUBLIC_*` variable ships inside the JavaScript bundle every user
-downloads, and the secret key bypasses Row Level Security. The app checks the
-key's role at startup and refuses to create a client if it is privileged.
+Committing that file is all it takes to turn accounts on, locally and on the
+live site. To point one machine at a different project instead, put the same
+values in `.env` as `EXPO_PUBLIC_SUPABASE_URL` and
+`EXPO_PUBLIC_SUPABASE_ANON_KEY`; they override the file.
+
+Never use the `service_role` / `sb_secret_` key. It bypasses Row Level Security,
+and every value here ships inside the JavaScript bundle. `scripts/supabase-config.mjs`
+fails the build if it sees one, and the app refuses to create a client from it.
 
 ### 2. Apply the schema
 
@@ -112,22 +133,25 @@ if it fails, stop and fix it before shipping.
 
 ## Deploying accounts to GitHub Pages
 
-`EXPO_PUBLIC_*` values are inlined when the bundle is built, so the live site
-only gets accounts if the deploy workflow is given them. Add two **repository
-secrets** (Settings → Secrets and variables → Actions), or repository variables
-of the same names — `.github/workflows/deploy.yml` accepts either:
+Filling in `supabase.json` on `main` is the whole deploy step. Editing it in the
+GitHub web UI works: the push triggers `.github/workflows/deploy.yml`, which
+compiles the values into the bundle and publishes it.
 
-| Name | Value |
-|---|---|
-| `EXPO_PUBLIC_SUPABASE_URL` | `https://<project-ref>.supabase.co` |
-| `EXPO_PUBLIC_SUPABASE_ANON_KEY` | the publishable (anon) key |
+Repository secrets or variables named `EXPO_PUBLIC_SUPABASE_URL` and
+`EXPO_PUBLIC_SUPABASE_ANON_KEY` still override the file if you would rather keep
+the project reference out of the tree.
 
-With neither set, the workflow deploys the local-only build — which is what the
-public demo has always been, so nothing breaks by leaving them out.
+With the file empty and no variables set, the workflow deploys the local-only
+build — which is what the public demo has always been, so nothing breaks by
+leaving it alone.
 
-The workflow fails the deploy if `EXPO_PUBLIC_SUPABASE_URL` is set but the
-project host is missing from the exported bundle. A misnamed secret otherwise
-produces a local-only site that looks like a successful deploy.
+Two build-time checks keep a broken config from reaching users, both in
+`scripts/supabase-config.mjs`: a source that fills in only one of `url` /
+`anonKey` fails the build rather than deploying half-configured, and a
+privileged key fails it rather than publishing the key. The workflow then fails
+the deploy if the project host is missing from the exported bundle, since a
+config that never reached the bundler otherwise produces a local-only site that
+looks like a successful deploy.
 
 After the deploy finishes, confirm which mode actually went live:
 

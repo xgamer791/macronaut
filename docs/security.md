@@ -41,13 +41,22 @@ The cache is now cleared on sign-out and on any database scope change.
 
 ### A privileged key could have been bundled
 
-`EXPO_PUBLIC_*` values are compiled into the JavaScript every user downloads.
-Pasting a `service_role` / `sb_secret_` key into `EXPO_PUBLIC_SUPABASE_ANON_KEY`
-would have published a credential that bypasses Row Level Security entirely.
+The project URL and key are compiled into the JavaScript every user downloads,
+whether they come from `supabase.json` or an `EXPO_PUBLIC_*` variable. Pasting a
+`service_role` / `sb_secret_` key into either would have published a credential
+that bypasses Row Level Security entirely.
 
-`keyGuard.ts` decodes the key's role and refuses to build a client for a
-privileged one, and rejects an `http` endpoint for any non-localhost host so
-token traffic cannot be downgraded to cleartext.
+Two layers refuse it. `scripts/supabase-config.mjs` fails the build, which is
+the last point where the mistake is still recoverable — after a deploy the key
+is public and must be rotated. `keyGuard.ts` then decodes the key's role at
+runtime and refuses to build a client from a privileged one, and rejects an
+`http` endpoint for any non-localhost host so token traffic cannot be downgraded
+to cleartext.
+
+Keeping the publishable key in a committed file rather than a CI secret does not
+weaken this. The key reaches every user either way; the file only stops it being
+hidden from the people reviewing the code. What protects the data is Row Level
+Security, which is why the policies below are the real control.
 
 ### Server-side isolation is enforced by the database
 

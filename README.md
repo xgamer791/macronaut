@@ -73,8 +73,8 @@ npm run ios                # iOS simulator (needs Xcode)
 | Variable | Required | Purpose |
 |---|---|---|
 | `EXPO_PUBLIC_USDA_API_KEY` | No | USDA FoodData Central key. Falls back to `DEMO_KEY` (heavily rate-limited — fine for a quick try). Get a free key at https://fdc.nal.usda.gov/api-key-signup |
-| `EXPO_PUBLIC_SUPABASE_URL` | No | Supabase project URL. Set both Supabase vars to enable accounts; leave both empty for local-only. |
-| `EXPO_PUBLIC_SUPABASE_ANON_KEY` | No | Supabase **publishable (anon)** key. Never the `service_role` / `sb_secret_` key — the app refuses to start with one. |
+| `EXPO_PUBLIC_SUPABASE_URL` | No | Overrides `supabase.json`. Only needed to aim one machine at a different project. |
+| `EXPO_PUBLIC_SUPABASE_ANON_KEY` | No | Same, and only ever the **publishable (anon)** key — never `service_role` / `sb_secret_`, which the build and the app both refuse. |
 | `EXPO_PUBLIC_BASE_PATH` | No | Set by the Pages deploy workflow only. Leave empty locally. |
 
 No secrets are committed. `.env` is gitignored.
@@ -86,7 +86,12 @@ for a provider secret — see [docs/security.md](docs/security.md).
 
 ### Accounts
 
-With the two Supabase variables set, the app asks for a real sign-in and gives
+Accounts are configured in [`supabase.json`](supabase.json), not in `.env`.
+Paste your project URL and publishable key there and commit; both values are
+public by design, so storing them in a CI secret would hide them from
+contributors while still publishing them to every user. Empty means local-only.
+
+With a project configured the app asks for a real sign-in and gives
 each account its own local database. Apply
 [`supabase/migrations/0001_accounts_and_rls.sql`](supabase/migrations/0001_accounts_and_rls.sql)
 to the project first: it enables and forces Row Level Security so the database
@@ -114,7 +119,7 @@ The suite runs in plain Node (better-sqlite3 stands in for expo-sqlite), so no s
 
 ## Building for production
 
-- **Web:** `npm run export:web` → static site in `dist/` (deployed to GitHub Pages by `.github/workflows/deploy.yml`). Accounts go live only if `EXPO_PUBLIC_SUPABASE_URL` and `EXPO_PUBLIC_SUPABASE_ANON_KEY` exist as repository secrets or variables — without them the workflow deploys the local-only build. `./scripts/verify-live.sh` reports which mode is actually serving. See [docs/accounts.md](docs/accounts.md#deploying-accounts-to-github-pages).
+- **Web:** `npm run export:web` → static site in `dist/` (deployed to GitHub Pages by `.github/workflows/deploy.yml`). Accounts go live once `supabase.json` on `main` has a project in it; empty means the workflow deploys the local-only build. `./scripts/verify-live.sh` reports which mode is actually serving. See [docs/accounts.md](docs/accounts.md#deploying-accounts-to-github-pages).
 - **iOS:** `npx eas build --platform ios` with an Expo account, or `npx expo run:ios --configuration Release` locally with Xcode. Camera barcode scanning requires a real device.
 
 ## Known limitations
