@@ -5,7 +5,7 @@ import {
   PRIVACY_TITLE,
   TERMS_SECTIONS,
   TERMS_TITLE,
-} from '@/app/legalCopy';
+} from '@/content/legalCopy';
 
 function bodies(sections: { body: string }[]): string {
   return sections.map((s) => s.body).join(' ');

@@ -1,5 +1,5 @@
 import React from 'react';
-import { LEGAL_EFFECTIVE_DATE, TERMS_SECTIONS, TERMS_TITLE } from '@/app/legalCopy';
+import { LEGAL_EFFECTIVE_DATE, TERMS_SECTIONS, TERMS_TITLE } from '@/content/legalCopy';
 import { LegalDocument } from '@/ui/components/LegalDocument';
 
 export default function TermsScreen() {
