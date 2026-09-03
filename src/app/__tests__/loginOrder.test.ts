@@ -56,10 +56,7 @@ describe('sign-in actions', () => {
   });
 
   it('routes Apple through the native provider on iOS and the OAuth one elsewhere', () => {
-    const hook = fs.readFileSync(
-      path.join(appDir, '..', 'state', 'useProviderSignIn.ts'),
-      'utf8',
-    );
+    const hook = fs.readFileSync(path.join(appDir, '..', 'state', 'useProviderSignIn.ts'), 'utf8');
     expect(hook).toContain("signIn('apple-native'");
     expect(hook).toContain("browserSignIn('apple', 'Apple')");
     expect(hook).toContain("signIn('resend-otp'");

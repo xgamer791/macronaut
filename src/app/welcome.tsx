@@ -7,11 +7,12 @@ import { useAuth } from '@/state/AuthProvider';
 import { useSetting } from '@/state/queries';
 import { AppText } from '@/ui/components';
 import { WelcomeBackground } from '@/ui/WelcomeBackground';
-import { fonts, palette, radius } from '@/ui/theme/tokens';
+import { WelcomeCta } from '@/ui/WelcomeCta';
+import { fonts } from '@/ui/theme/tokens';
 
 /** Poster splash: full-bleed photo, mid-canvas stacked wordmark, two identical
- * CTAs, then a text link. No borrowed marks or provider pills. The buttons
- * are inert until the next pass wires them. */
+ * CTAs, then a text link. Create Account opens the legal gate; Sign In and
+ * More options stay inert until those passes. */
 export default function WelcomeScreen() {
   const { loading, signedIn } = useAuth();
   const onboarded = useSetting<boolean>('onboardingComplete', false, signedIn);
@@ -45,22 +46,8 @@ export default function WelcomeScreen() {
 
         <View style={[styles.dock, { paddingBottom: Math.max(insets.bottom, 12) + 8 }]}>
           <View style={styles.ctaStack}>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Create Account"
-              onPress={() => {}}
-              style={styles.cta}
-            >
-              <AppText style={styles.ctaLabel}>Create Account</AppText>
-            </Pressable>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Sign In"
-              onPress={() => {}}
-              style={styles.cta}
-            >
-              <AppText style={styles.ctaLabel}>Sign In</AppText>
-            </Pressable>
+            <WelcomeCta label="Create Account" href="/signup-legal" />
+            <WelcomeCta label="Sign In" onPress={() => {}} />
           </View>
           <Pressable
             accessibilityRole="button"
@@ -90,6 +77,7 @@ const styles = StyleSheet.create({
   },
   frame: {
     flex: 1,
+    zIndex: 1,
   },
   wordmarkWrap: {
     flex: 1,
@@ -121,20 +109,6 @@ const styles = StyleSheet.create({
   },
   ctaStack: {
     gap: 12,
-  },
-  cta: {
-    height: 50,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: palette.accent,
-    borderRadius: radius.md,
-  },
-  ctaLabel: {
-    fontFamily: fonts.display,
-    color: '#FFFFFF',
-    fontSize: 17,
-    lineHeight: 22,
-    fontWeight: '600',
   },
   footerHit: {
     minHeight: 44,

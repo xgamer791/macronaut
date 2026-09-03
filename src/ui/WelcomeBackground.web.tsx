@@ -54,6 +54,9 @@ export function WelcomeBackground() {
       width: '100%',
       height: '100%',
       objectFit: 'cover',
+      // Video compositor layers on iOS sit above later siblings and eat taps
+      // unless this is set — pointer-events is not inherited.
+      pointerEvents: 'none',
     });
 
     const fail = () => setUseStills(true);

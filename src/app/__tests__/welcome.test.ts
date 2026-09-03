@@ -5,13 +5,7 @@ import path from 'node:path';
 const appDir = path.join(__dirname, '..');
 const read = (file: string) => fs.readFileSync(path.join(appDir, file), 'utf8');
 
-const PHOTOS = [
-  '01-lift.jpg',
-  '02-jog.jpg',
-  '03-meal.jpg',
-  '04-yoga.jpg',
-  '05-bench.jpg',
-];
+const PHOTOS = ['01-lift.jpg', '02-jog.jpg', '03-meal.jpg', '04-yoga.jpg', '05-bench.jpg'];
 
 describe('welcome splash', () => {
   it('registers welcome outside the signed-in tab group', () => {
@@ -25,21 +19,23 @@ describe('welcome splash', () => {
     expect(read('(tabs)/_layout.tsx')).not.toContain('href="/login"');
   });
 
-  it('clones the Garmin action stack without wiring routes', () => {
+  it('sends Create Account to the legal gate and leaves Sign In inert', () => {
     const source = read('welcome.tsx');
     expect(source).toContain('Create Account');
     expect(source).toContain('Sign In');
     expect(source).toContain('More options');
-    expect(source).not.toContain('useRouter');
-    expect(source).not.toContain('router.push');
-    expect(source).not.toContain('router.replace');
+    expect(source).toContain('href="/signup-legal"');
     expect(source).not.toContain('/login');
     expect(source).not.toContain('/create-account');
+    expect(source).toContain('<WelcomeCta label="Sign In" onPress={() => {}} />');
   });
 
   it('ships five distinct athlete photos and opens on the jog, not the squat', () => {
     const dir = path.join(appDir, '../../assets/images/welcome');
-    const files = fs.readdirSync(dir).filter((f) => f.endsWith('.jpg')).sort();
+    const files = fs
+      .readdirSync(dir)
+      .filter((f) => f.endsWith('.jpg'))
+      .sort();
     expect(files).toEqual(PHOTOS);
     const source = fs.readFileSync(path.join(appDir, '../ui/welcomePhotos.ts'), 'utf8');
     for (const file of PHOTOS) {
@@ -67,16 +63,22 @@ describe('welcome splash', () => {
     const slideshow = fs.readFileSync(path.join(appDir, '../ui/WelcomeSlideshow.tsx'), 'utf8');
     const videoDir = path.join(appDir, '../../assets/video');
     expect(welcome).toContain('WelcomeBackground');
+    expect(welcome).toContain('WelcomeCta');
     expect(fs.existsSync(path.join(videoDir, 'welcome-loop.mp4'))).toBe(true);
     expect(fs.existsSync(path.join(videoDir, 'welcome-poster.jpg'))).toBe(true);
     expect(web).toContain("createElement('video')");
     expect(web).toContain('video.muted = true');
     expect(web).toContain('video.loop = true');
+    expect(web).toContain("pointerEvents: 'none'");
     expect(web).toContain('WelcomeSlideshow');
     expect(native).toContain('WelcomeSlideshow as WelcomeBackground');
     expect(welcome).toContain('veilFilm');
-    expect(welcome).toContain('radius.md');
-    expect(welcome).toContain("rgba(0,0,0,0.36)");
+    expect(welcome).toContain('rgba(0,0,0,0.36)');
+    const cta = fs.readFileSync(path.join(appDir, '../ui/WelcomeCta.tsx'), 'utf8');
+    expect(cta).toContain('radius.md');
+    expect(cta).toContain('palette.accent');
+    expect(cta).toContain('fonts.display');
+    expect(cta).toContain('fontSize: 17');
     expect(slideshow).toContain('Animated.timing');
     expect(slideshow).toContain('WELCOME_PHOTO_FADE_MS');
     expect(slideshow).toContain('WELCOME_PHOTO_HOLD_MS');
