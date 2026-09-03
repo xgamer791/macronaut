@@ -1,36 +1,67 @@
-/** Login CTA order for editorial mockup 5: Apple, then Google, then Email, with
- * create-account as the tertiary action. App Store review requires Sign in with
- * Apple wherever another third-party sign-in is offered, so the button has to
- * actually be on the screen — read the order out of the source rather than
- * restating it here, matching the rest of the (renderer-free) test setup. */
+/** Sign-in CTA order for editorial mockup 5: Apple, then Google, then Email,
+ * with create-account as the tertiary action. App Store review requires Sign
+ * in with Apple wherever another third-party sign-in is offered, so the button
+ * has to actually be on the screen. The labels come from one pure module the
+ * login and create-account screens both render through, so the order is read
+ * from there; the rest is read out of the source, matching the renderer-free
+ * test setup. */
 import fs from 'node:fs';
 import path from 'node:path';
+import { PROVIDER_ORDER, providerLabel } from '@/services/auth/providers';
 
-const LOGIN_ACTIONS = [
-  'Continue with Apple',
-  'Continue with Google',
-  'Continue with Email',
-  'Create Account',
-] as const;
+const appDir = path.join(__dirname, '..');
+const read = (file: string) => fs.readFileSync(path.join(appDir, file), 'utf8');
 
-const source = fs.readFileSync(path.join(__dirname, '..', 'login.tsx'), 'utf8');
-const rendered = [...source.matchAll(/accessibilityLabel="([^"]+)"/g)]
-  .map((match) => match[1])
-  .filter((label): label is (typeof LOGIN_ACTIONS)[number] =>
-    (LOGIN_ACTIONS as readonly string[]).includes(label),
-  );
-
-describe('login editorial mockup actions', () => {
-  it('offers every sign-in method, in order, with Apple first', () => {
-    expect(rendered).toEqual([...LOGIN_ACTIONS]);
+describe('sign-in actions', () => {
+  it('offers Apple first, then Google, then Email, on both screens', () => {
+    expect(PROVIDER_ORDER).toEqual(['apple', 'google', 'email']);
+    expect(PROVIDER_ORDER.map((p) => providerLabel('signin', p))).toEqual([
+      'Continue with Apple',
+      'Continue with Google',
+      'Continue with Email',
+    ]);
+    expect(PROVIDER_ORDER.map((p) => providerLabel('signup', p))).toEqual([
+      'Sign up with Apple',
+      'Sign up with Google',
+      'Sign up with Email',
+    ]);
   });
 
-  it('keeps create-account as the tertiary action', () => {
-    expect(LOGIN_ACTIONS[LOGIN_ACTIONS.length - 1]).toBe('Create Account');
+  it('renders the shared provider buttons on login and create-account', () => {
+    for (const file of ['login.tsx', 'create-account.tsx']) {
+      const source = read(file);
+      expect(source).toContain('<ProviderButtons');
+      expect(source).toContain('<EmailCodeFlow');
+    }
+    expect(read('login.tsx')).toContain('mode="signin"');
+    expect(read('create-account.tsx')).toContain('mode="signup"');
+  });
+
+  it('keeps create-account as the tertiary action on login, and sign-in on create-account', () => {
+    expect(read('login.tsx')).toContain('accessibilityLabel="Create Account"');
+    expect(read('login.tsx')).toContain("router.push('/create-account')");
+    expect(read('create-account.tsx')).toContain('accessibilityLabel="Sign in"');
+    expect(read('create-account.tsx')).toContain("router.replace('/login')");
+  });
+
+  it('registers create-account outside the signed-in tab group', () => {
+    expect(read('_layout.tsx')).toContain('name="create-account"');
+    expect(fs.existsSync(path.join(appDir, '(tabs)', 'create-account.tsx'))).toBe(false);
+  });
+
+  it('shows the legal line at the point of sign-up', () => {
+    const source = read('create-account.tsx');
+    expect(source).toContain("router.push('/terms')");
+    expect(source).toContain("router.push('/privacy')");
   });
 
   it('routes Apple through the native provider on iOS and the OAuth one elsewhere', () => {
-    expect(source).toContain("signIn('apple-native'");
-    expect(source).toContain("browserSignIn('apple', 'Apple')");
+    const hook = fs.readFileSync(
+      path.join(appDir, '..', 'state', 'useProviderSignIn.ts'),
+      'utf8',
+    );
+    expect(hook).toContain("signIn('apple-native'");
+    expect(hook).toContain("browserSignIn('apple', 'Apple')");
+    expect(hook).toContain("signIn('resend-otp'");
   });
 });
