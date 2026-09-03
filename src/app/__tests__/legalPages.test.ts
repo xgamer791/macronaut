@@ -17,8 +17,8 @@ describe('legal pages', () => {
   });
 
   it('registers both routes outside the signed-in tab group', () => {
-    // Anything under (tabs) redirects to /login when signed out, which would
-    // serve Google a login screen instead of the policy.
+    // Anything under (tabs) redirects to /welcome when signed out, which would
+    // serve Google a splash screen instead of the policy.
     const layout = read('_layout.tsx');
     expect(layout).toContain('name="privacy"');
     expect(layout).toContain('name="terms"');

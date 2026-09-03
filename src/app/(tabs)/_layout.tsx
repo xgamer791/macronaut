@@ -10,7 +10,7 @@ export default function TabsLayout() {
   const onboarded = useSetting<boolean>('onboardingComplete', false, signedIn);
 
   if (loading || (signedIn && onboarded.isLoading)) return null;
-  if (!signedIn) return <Redirect href="/login" />;
+  if (!signedIn) return <Redirect href="/welcome" />;
   if (!onboarded.data) return <Redirect href="/onboarding" />;
 
   return (

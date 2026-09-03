@@ -47,6 +47,7 @@ function ThemedApp() {
     >
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="(tabs)" />
+        <Stack.Screen name="welcome" />
         <Stack.Screen name="login" />
         <Stack.Screen name="create-account" />
         <Stack.Screen name="onboarding" />
