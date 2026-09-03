@@ -139,6 +139,16 @@ Free Connect still has all core health metrics, workouts, Coach plans, maps, sta
 
 Separate Garmin apps: Connect IQ Store, Garmin Golf, Garmin Dive, Tacx Training, Garmin Jr., Explore, Messenger, Drive.
 
+## Screens
+
+Screenshots supplied in chat. Not from Mobbin.
+
+### Welcome / sign-in (iPhone)
+
+Full-bleed dusk photo of a road cyclist. Centered wordmark: **GARMIN** in heavy white caps, **connect** in thinner lowercase under it, with a small flare on the first *c*. No tagline. Two identical Garmin-blue rounded rectangles stacked at the bottom: **Create Account**, then **Sign In**. White text link under those: **Advanced Settings**. No Apple / Google / email providers on this screen — those come after Sign In.
+
+What to steal for Macronaut: the *order* (photo first, identity second, two actions last) and the refusal to put providers on the splash. What not to steal: cloning the cyclist, the Garmin blue, or the flare. Macronaut’s login already has a full-bleed editorial photo, but it buries it behind a blurred veil and a 340px glass card with Apple / Google / email pills and a “Don’t have an account?” footer. Garmin’s splash is a poster. Ours is a form.
+
 ## Macronaut takeaway
 
 Steal **Home customization** (Today already has two hero modules), **tap-a-card → history**, and **workout-first activity detail**. Do not clone the rest. Most of this list is a watch OS, not an app.
