@@ -16,9 +16,9 @@ function uriOf(mod: unknown): string | undefined {
   return RNImage.resolveAssetSource(mod as number)?.uri;
 }
 
-/** Web: muted Seedance loop. Poster is the first gym frame so the cut
+/** Web: muted Seedance loop. Poster is the first jog frame so the cut
  * from launch still to motion is invisible. If the file fails to load,
- * the three stills stay on disk and take over. */
+ * the stills stay on disk and take over. */
 export function WelcomeBackground() {
   const hostRef = useRef<View | null>(null);
   const [useStills, setUseStills] = useState(false);

@@ -5,7 +5,13 @@ import path from 'node:path';
 const appDir = path.join(__dirname, '..');
 const read = (file: string) => fs.readFileSync(path.join(appDir, file), 'utf8');
 
-const PHOTOS = ['01-lift.jpg', '02-jog.jpg', '03-meal.jpg'];
+const PHOTOS = [
+  '01-lift.jpg',
+  '02-jog.jpg',
+  '03-meal.jpg',
+  '04-yoga.jpg',
+  '05-bench.jpg',
+];
 
 describe('welcome splash', () => {
   it('registers welcome outside the signed-in tab group', () => {
@@ -31,7 +37,7 @@ describe('welcome splash', () => {
     expect(source).not.toContain('/create-account');
   });
 
-  it('ships three distinct athlete photos', () => {
+  it('ships five distinct athlete photos and opens on the jog, not the squat', () => {
     const dir = path.join(appDir, '../../assets/images/welcome');
     const files = fs.readdirSync(dir).filter((f) => f.endsWith('.jpg')).sort();
     expect(files).toEqual(PHOTOS);
@@ -39,6 +45,11 @@ describe('welcome splash', () => {
     for (const file of PHOTOS) {
       expect(source).toContain(file);
     }
+    const order = [...source.matchAll(/welcome\/(\d{2}-[a-z]+)\.jpg/g)].map((m) => m[1]);
+    expect(order[0]).toBe('02-jog');
+    expect(order).toContain('01-lift');
+    expect(order[0]).not.toBe('01-lift');
+    expect(source).toContain('SESSION_WELCOME_INDEX = 0');
   });
 
   it('does not reuse Garmin branding or the login glass card', () => {
