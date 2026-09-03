@@ -465,6 +465,17 @@ export default function SettingsScreen() {
         />
       </Card>
 
+      <SectionHeader title="Apple Health" />
+      <Card padded={false} style={{ paddingHorizontal: spacing.lg, paddingVertical: spacing.xs }}>
+        <ListRow
+          title="Apple Health and Watch"
+          subtitle="Paused — what is done and what is left"
+          left={<Ionicons name="heart-outline" size={20} color={colors.accent} />}
+          right={<Ionicons name="chevron-forward" size={16} color={colors.textMuted} />}
+          onPress={() => router.push('/apple-health')}
+        />
+      </Card>
+
       <SectionHeader title="Privacy" />
       <Card>
         <AppText variant="caption" tone="secondary">

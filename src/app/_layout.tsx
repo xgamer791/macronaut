@@ -64,6 +64,7 @@ function ThemedApp() {
         {/* Reachable signed-out: Google's OAuth consent screen links to both. */}
         <Stack.Screen name="privacy" />
         <Stack.Screen name="terms" />
+        <Stack.Screen name="apple-health" />
       </Stack>
     </ThemeProvider>
   );
