@@ -1,9 +1,15 @@
+import { appleDisplayName, createAppleNonce, supportsNativeAppleAuth } from '../apple';
 import { displayNameFromUser } from '../displayName';
 import { isPlausibleEmail, normalizeEmail } from '../email';
 import { webRedirectUrl } from '../redirect';
 
 jest.mock('react-native', () => ({ Platform: { OS: 'web' } }));
 jest.mock('expo-linking', () => ({ createURL: (path: string) => `https://app.test${path}` }));
+jest.mock('expo-crypto', () => ({
+  CryptoDigestAlgorithm: { SHA256: 'SHA-256' },
+  getRandomBytes: (length: number) => new Uint8Array(length).fill(0xab),
+  digestStringAsync: async (_algorithm: string, value: string) => `hashed:${value}`,
+}));
 
 describe('webRedirectUrl', () => {
   it('keeps the base path the GitHub Pages build is served from', () => {
@@ -50,6 +56,34 @@ describe('email normalisation', () => {
     expect(isPlausibleEmail('person@example')).toBe(false);
     expect(isPlausibleEmail('person example@test.com')).toBe(false);
     expect(isPlausibleEmail('')).toBe(false);
+  });
+});
+
+describe('Sign in with Apple', () => {
+  it('joins whichever halves of the name Apple shared', () => {
+    expect(appleDisplayName({ givenName: 'Ada', familyName: 'Lovelace' })).toBe('Ada Lovelace');
+    expect(appleDisplayName({ givenName: ' Ada ', familyName: null })).toBe('Ada');
+    expect(appleDisplayName({ givenName: null, familyName: 'Lovelace' })).toBe('Lovelace');
+  });
+
+  it('returns nothing when Apple withheld the name, as it does after first consent', () => {
+    expect(appleDisplayName(null)).toBeUndefined();
+    expect(appleDisplayName(undefined)).toBeUndefined();
+    expect(appleDisplayName({ givenName: '  ', familyName: null })).toBeUndefined();
+  });
+
+  it('caps the name like every other provider-supplied one', () => {
+    expect(appleDisplayName({ givenName: 'x'.repeat(100) })).toHaveLength(60);
+  });
+
+  it('sends Apple the hash and keeps the pre-image for our backend', async () => {
+    const nonce = await createAppleNonce();
+    expect(nonce.raw).toMatch(/^[0-9a-f]{64}$/);
+    expect(nonce.hashed).toBe(`hashed:${nonce.raw}`);
+  });
+
+  it('uses the browser flow off iOS, where Apple has no native sheet', () => {
+    expect(supportsNativeAppleAuth()).toBe(false);
   });
 });
 

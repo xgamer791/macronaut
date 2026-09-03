@@ -482,7 +482,11 @@ export default function SettingsScreen() {
         <ListRow
           title={user?.email ?? 'Signed in'}
           subtitle={
-            user?.provider === 'google' ? 'Signed in with Google' : 'Signed in with an email code'
+            user?.provider === 'google'
+              ? 'Signed in with Google'
+              : user?.provider === 'apple'
+                ? 'Signed in with Apple'
+                : 'Signed in with an email code'
           }
         />
         <ListRow
@@ -503,9 +507,9 @@ export default function SettingsScreen() {
       <Card>
         <AppText variant="caption" tone="secondary">
           Your diary, foods, goals and settings are stored in your Macronaut account, which only you
-          can read. Sign-in is handled by Convex Auth with Google or an emailed code; we keep your
-          email address and, with Google, the name it returns. Macronaut has no analytics and no
-          tracking.
+          can read. Sign-in is handled by Convex Auth with Apple, Google or an emailed code; we keep
+          your email address and, with Apple or Google, the name they return. Macronaut has no
+          analytics and no tracking.
         </AppText>
       </Card>
       <Card padded={false} style={{ paddingHorizontal: spacing.lg, paddingVertical: spacing.xs }}>

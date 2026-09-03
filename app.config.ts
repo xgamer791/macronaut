@@ -15,8 +15,17 @@ const config: ExpoConfig = {
   userInterfaceStyle: 'automatic',
   ios: {
     icon: './assets/expo.icon',
-    bundleIdentifier: 'com.macronaut.app',
+    // `com.macronaut.app` was not available to register with Apple, so the App
+    // ID (and this bundle id with it) is the Mango Marketeers one.
+    bundleIdentifier: 'com.mangomarketeers.macronaut',
     supportsTablet: false,
+    // Adds the `com.apple.developer.applesignin` entitlement, which
+    // expo-apple-authentication needs and which App Store review requires now
+    // that the login screen offers Google as well. The Services ID used by the
+    // web flow (`com.mangomarketeers.macronaut.web`) must have this bundle id as
+    // its primary App ID so both give the same Apple user id — see
+    // docs/accounts.md.
+    usesAppleSignIn: true,
     infoPlist: {
       NSCameraUsageDescription:
         'Macronaut uses the camera to scan barcodes and photograph meals for AI food logging.',
@@ -43,6 +52,7 @@ const config: ExpoConfig = {
   plugins: [
     'expo-router',
     'expo-font',
+    'expo-apple-authentication',
     [
       'expo-splash-screen',
       {
