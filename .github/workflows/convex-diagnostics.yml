@@ -1,0 +1,38 @@
+name: Convex diagnostics
+
+# Manual only. Prints the production deployment's environment variable NAMES
+# (never values) and recent function logs with email addresses redacted, so a
+# sign-in failure can be diagnosed without dashboard access.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  diagnostics:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+
+      - name: Environment variable names on the production deployment
+        env:
+          CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_DEPLOY_KEY }}
+        run: |
+          echo "--- names only; values are never printed ---"
+          npx convex env list 2>&1 | sed -E 's/=.*$//' | sort
+
+      - name: Recent function logs (emails redacted)
+        env:
+          CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_DEPLOY_KEY }}
+        run: |
+          (timeout 40 npx convex logs --history 400 2>&1 || true) \
+            | sed -E 's/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/<email>/g' \
+            | grep -iE 'signIn|error|resend|fail|uncaught|refus|verif|otp' \
+            | tail -120
+          echo "--- end of logs ---"
