@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Redirect, useRouter } from 'expo-router';
+import { Link, Redirect, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import React, { useEffect, useState } from 'react';
 import { Animated, Pressable, StyleSheet, View } from 'react-native';
@@ -62,11 +62,13 @@ function LegalToggle({
   );
 }
 
-function LegalLink({ children, onPress }: { children: string; onPress: () => void }) {
+function LegalLink({ href, children }: { href: '/terms' | '/privacy'; children: string }) {
   return (
-    <AppText accessibilityRole="link" onPress={onPress} style={styles.link}>
-      {children}
-    </AppText>
+    <Link href={href} asChild>
+      <Pressable accessibilityRole="link" accessibilityLabel={children}>
+        <AppText style={styles.link}>{children}</AppText>
+      </Pressable>
+    </Link>
   );
 }
 
@@ -121,12 +123,13 @@ export default function SignupLegalScreen() {
 
           <View style={styles.cards}>
             <View style={styles.card}>
-              <AppText style={styles.cardText}>
-                I have read and agree to the{' '}
-                <LegalLink onPress={() => router.push('/terms')}>Terms of Service</LegalLink>
-                {' and '}
-                <LegalLink onPress={() => router.push('/privacy')}>Privacy Policy</LegalLink>.
-              </AppText>
+              <View style={styles.cardCopy}>
+                <AppText style={styles.cardText}>I have read and agree to the </AppText>
+                <LegalLink href="/terms">Terms of Service</LegalLink>
+                <AppText style={styles.cardText}> and </AppText>
+                <LegalLink href="/privacy">Privacy Policy</LegalLink>
+                <AppText style={styles.cardText}>.</AppText>
+              </View>
               <LegalToggle
                 value={agreed}
                 onValueChange={setAgreed}
@@ -135,7 +138,7 @@ export default function SignupLegalScreen() {
             </View>
 
             <View style={styles.card}>
-              <AppText style={styles.cardText}>
+              <AppText style={[styles.cardText, styles.cardFill]}>
                 Receive exclusive health education, tips, and special offers to get the most out of
                 your Macronaut experience.
               </AppText>
@@ -187,11 +190,11 @@ const styles = StyleSheet.create({
     marginLeft: -6,
   },
   title: {
-    fontFamily: fonts.display,
+    fontFamily: fonts.displayMedium,
     color: '#FFFFFF',
     fontSize: type.hero.fontSize,
     lineHeight: type.hero.lineHeight,
-    fontWeight: '600',
+    fontWeight: '500',
     marginTop: 12,
   },
   subtitle: {
@@ -214,8 +217,16 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(38, 40, 44, 0.92)',
     borderRadius: radius.lg,
   },
-  cardText: {
+  cardCopy: {
     flex: 1,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'baseline',
+  },
+  cardFill: {
+    flex: 1,
+  },
+  cardText: {
     color: '#FFFFFF',
     fontSize: type.body.fontSize,
     lineHeight: type.body.lineHeight,

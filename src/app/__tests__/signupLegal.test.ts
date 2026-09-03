@@ -21,8 +21,9 @@ describe('signup legal gate', () => {
 
   it('links the existing Terms of Service and Privacy Policy pages', () => {
     const source = read('signup-legal.tsx');
-    expect(source).toContain("router.push('/terms')");
-    expect(source).toContain("router.push('/privacy')");
+    expect(source).toContain('href="/terms"');
+    expect(source).toContain('href="/privacy"');
+    expect(source).toContain('<Link href={href} asChild>');
     expect(source).toContain('Terms of Service');
     expect(source).toContain('Privacy Policy');
     expect(source).not.toContain('Oura');
