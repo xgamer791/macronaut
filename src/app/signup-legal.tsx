@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Redirect, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Animated, Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '@/state/AuthProvider';
@@ -27,7 +27,7 @@ function LegalToggle({
   onValueChange: (next: boolean) => void;
   accessibilityLabel: string;
 }) {
-  const anim = useRef(new Animated.Value(value ? 1 : 0)).current;
+  const [anim] = useState(() => new Animated.Value(value ? 1 : 0));
 
   useEffect(() => {
     Animated.timing(anim, {
@@ -62,13 +62,7 @@ function LegalToggle({
   );
 }
 
-function LegalLink({
-  children,
-  onPress,
-}: {
-  children: string;
-  onPress: () => void;
-}) {
+function LegalLink({ children, onPress }: { children: string; onPress: () => void }) {
   return (
     <AppText accessibilityRole="link" onPress={onPress} style={styles.link}>
       {children}
@@ -142,8 +136,8 @@ export default function SignupLegalScreen() {
 
             <View style={styles.card}>
               <AppText style={styles.cardText}>
-                Receive exclusive health education, tips, and special offers to get the most out
-                of your Macronaut experience.
+                Receive exclusive health education, tips, and special offers to get the most out of
+                your Macronaut experience.
               </AppText>
               <LegalToggle
                 value={offers}

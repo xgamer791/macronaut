@@ -5,13 +5,7 @@ import path from 'node:path';
 const appDir = path.join(__dirname, '..');
 const read = (file: string) => fs.readFileSync(path.join(appDir, file), 'utf8');
 
-const PHOTOS = [
-  '01-lift.jpg',
-  '02-jog.jpg',
-  '03-meal.jpg',
-  '04-yoga.jpg',
-  '05-bench.jpg',
-];
+const PHOTOS = ['01-lift.jpg', '02-jog.jpg', '03-meal.jpg', '04-yoga.jpg', '05-bench.jpg'];
 
 describe('welcome splash', () => {
   it('registers welcome outside the signed-in tab group', () => {
@@ -38,7 +32,10 @@ describe('welcome splash', () => {
 
   it('ships five distinct athlete photos and opens on the jog, not the squat', () => {
     const dir = path.join(appDir, '../../assets/images/welcome');
-    const files = fs.readdirSync(dir).filter((f) => f.endsWith('.jpg')).sort();
+    const files = fs
+      .readdirSync(dir)
+      .filter((f) => f.endsWith('.jpg'))
+      .sort();
     expect(files).toEqual(PHOTOS);
     const source = fs.readFileSync(path.join(appDir, '../ui/welcomePhotos.ts'), 'utf8');
     for (const file of PHOTOS) {
@@ -75,7 +72,7 @@ describe('welcome splash', () => {
     expect(web).toContain('WelcomeSlideshow');
     expect(native).toContain('WelcomeSlideshow as WelcomeBackground');
     expect(welcome).toContain('veilFilm');
-    expect(welcome).toContain("rgba(0,0,0,0.36)");
+    expect(welcome).toContain('rgba(0,0,0,0.36)');
     const cta = fs.readFileSync(path.join(appDir, '../ui/WelcomeCta.tsx'), 'utf8');
     expect(cta).toContain('radius.md');
     expect(cta).toContain('palette.accent');

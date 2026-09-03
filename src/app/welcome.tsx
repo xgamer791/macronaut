@@ -47,10 +47,7 @@ export default function WelcomeScreen() {
 
         <View style={[styles.dock, { paddingBottom: Math.max(insets.bottom, 12) + 8 }]}>
           <View style={styles.ctaStack}>
-            <WelcomeCta
-              label="Create Account"
-              onPress={() => router.push('/signup-legal')}
-            />
+            <WelcomeCta label="Create Account" onPress={() => router.push('/signup-legal')} />
             <WelcomeCta label="Sign In" onPress={() => {}} />
           </View>
           <Pressable
