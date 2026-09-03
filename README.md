@@ -23,7 +23,7 @@ Built with React Native + Expo so the same codebase ships to iOS.
 - **Progress** — tappable charts with goal line (7/30/90-day/custom ranges), per-metric averages and adherence, weekly averages, daily and weekly goal detail views with macro distribution
 - **Edit before logging** — adjust any database food's values for one entry or save as your own custom food; flag inaccurate data locally
 - **One account, every device** — diary, foods, meals, recipes, goals, activity, notes and settings are stored in your Convex account and served live to every signed-in device; built-in generic foods still need no network
-- **Accounts** — Convex Auth sign-in with Google (OAuth code flow with PKCE) or a six-digit email code delivered by Resend; sessions in the device keychain; every row is scoped to its account on the server, so nobody can read anyone else's diary — see [docs/accounts.md](docs/accounts.md)
+- **Accounts** — Convex Auth sign-in with Apple, Google (OAuth code flow with PKCE) or a six-digit email code delivered by Resend; Apple uses its own sheet on iOS and the same OAuth round trip everywhere else; sessions in the device keychain; every row is scoped to its account on the server, so nobody can read anyone else's diary — see [docs/accounts.md](docs/accounts.md)
 - **Settings** — US/metric units, Sunday/Monday week start, light/dark/system appearance, custom meal categories, sign out, delete all data, delete account, privacy + attribution
 
 ## Tech stack
@@ -35,7 +35,7 @@ Built with React Native + Expo so the same codebase ships to iOS.
 | Data fetching | TanStack Query |
 | Ephemeral state | Zustand |
 | Backend | Convex — functions in `convex/`, every table scoped to the signed-in account on the server; the app reaches it through one repository layer |
-| Accounts | Convex Auth — Google OAuth with PKCE + six-digit email codes via Resend; every secret is a deployment variable, never in the bundle |
+| Accounts | Convex Auth — Apple and Google OAuth with PKCE, native Sign in with Apple on iOS, six-digit email codes via Resend; every secret is a deployment variable, never in the bundle |
 | Session storage | expo-secure-store (native), localStorage (web) |
 | Charts | Custom SVG (react-native-svg) |
 | Camera | expo-camera (barcode scanning) |
@@ -51,7 +51,7 @@ src/
   domain/         PURE logic: nutrition math, servings, goals, aggregation, recommendations
   repositories/   diary / food / goals / collections / settings / history / account — thin clients over the Convex API
   services/food/  USDA + Open Food Facts providers, bundled generics, layered search + barcode service
-  services/auth/  email validation, OAuth redirect URL, display name
+  services/auth/  email validation, OAuth redirect URL, Apple nonce + name, display name
   state/          AuthProvider (Convex Auth), AppProvider (repo wiring), React Query hooks, Zustand UI store
   ui/             theme tokens + ~20 components
   utils/          day-key date math, navigation helper
@@ -73,8 +73,9 @@ npm run ios                # iOS simulator (needs Xcode)
 ```
 
 `npx convex dev` needs a free Convex account. Sign-in also needs a few
-variables on that deployment (Google client, Resend key, session keys) — the
-walkthrough is in [docs/accounts.md](docs/accounts.md).
+variables on that deployment (Google client, Apple Services ID and client
+secret, Resend key, session keys) — the walkthrough is in
+[docs/accounts.md](docs/accounts.md).
 
 ### Environment variables
 
@@ -94,8 +95,9 @@ secret — see [docs/security.md](docs/security.md).
 ### Accounts and the backend
 
 The app has one backend, a Convex deployment, and requires an account. All
-secrets — the Google OAuth client secret, the Resend key, the session signing
-key — are environment variables on that deployment. The deploy workflow needs
+secrets — the Google OAuth client secret, the Apple client secret JWT, the
+Resend key, the session signing key — are environment variables on that
+deployment. The deploy workflow needs
 exactly one repository secret, `CONVEX_DEPLOY_KEY`. Setup for both is in
 [docs/accounts.md](docs/accounts.md).
 
@@ -130,12 +132,12 @@ Both suites run in plain Node against an in-memory backend, so no simulator, dev
 - Camera barcode scanning is unavailable on web (manual entry + demo barcode provided); it works on iOS/Android devices.
 - USDA `DEMO_KEY` is rate-limited (~30 req/hr). Built-in generics and Open Food Facts keep search useful regardless.
 - The app needs a connection: the diary is read from and written to the account on Convex. Built-in generic foods are the only data bundled with the app.
-- Sign in with Apple is not implemented yet, which iOS requires alongside Google sign-in; needed before App Store submission.
+- Apple refuses `localhost` and plain HTTP, so Sign in with Apple on the web can only be tested against the deployed site; the iOS sheet needs a device build, since Expo Go cannot carry the entitlement.
 - Weekly goal detail defines weeks by your configured week start; partial first weeks show as-is.
 
 ## Roadmap
 
-Sign in with Apple, MFA, offline queueing of writes, Apple Health integration, widgets, Android polish, web dashboard.
+MFA, offline queueing of writes, Apple Health integration, widgets, Android polish, web dashboard.
 
 ## Documentation
 
