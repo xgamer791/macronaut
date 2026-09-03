@@ -82,10 +82,10 @@ const styles = StyleSheet.create({
     backgroundColor: '#101418',
   },
   veil: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
   },
   veilFilm: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: 'rgba(0,0,0,0.36)',
   },
   frame: {
