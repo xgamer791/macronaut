@@ -1,4 +1,3 @@
-import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Redirect } from 'expo-router';
 import React from 'react';
@@ -7,8 +6,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '@/state/AuthProvider';
 import { useSetting } from '@/state/queries';
 import { AppText } from '@/ui/components';
+import { WelcomeSlideshow } from '@/ui/WelcomeSlideshow';
 import { fonts, palette } from '@/ui/theme/tokens';
-import { SESSION_WELCOME_PHOTO } from '@/ui/welcomePhotos';
 
 /** Poster splash: full-bleed photo, mid-canvas stacked wordmark, two identical
  * CTAs, then a text link. No borrowed marks or provider pills. The buttons
@@ -23,13 +22,18 @@ export default function WelcomeScreen() {
 
   return (
     <View style={styles.root}>
-      <Image source={SESSION_WELCOME_PHOTO} style={StyleSheet.absoluteFill} contentFit="cover" />
-      <LinearGradient
-        pointerEvents="none"
-        colors={['transparent', 'rgba(0,0,0,0.45)']}
-        locations={[0.52, 1]}
-        style={StyleSheet.absoluteFill}
-      />
+      <WelcomeSlideshow />
+      {/* Cinematic film + bottom-weighted wash — same idea as the Garmin
+       * poster: the athlete stays visible, white type and the CTAs sit on
+       * darkness. Flat colour, no blur, no glow. */}
+      <View pointerEvents="none" style={styles.veil}>
+        <View style={styles.veilFilm} />
+        <LinearGradient
+          colors={['rgba(0,0,0,0.22)', 'rgba(0,0,0,0.04)', 'rgba(0,0,0,0.58)']}
+          locations={[0, 0.4, 1]}
+          style={StyleSheet.absoluteFill}
+        />
+      </View>
 
       <View style={styles.frame}>
         <View style={styles.wordmarkWrap}>
@@ -76,6 +80,13 @@ const styles = StyleSheet.create({
   root: {
     flex: 1,
     backgroundColor: '#101418',
+  },
+  veil: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  veilFilm: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.30)',
   },
   frame: {
     flex: 1,
