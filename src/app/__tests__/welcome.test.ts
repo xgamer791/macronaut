@@ -42,7 +42,7 @@ describe('welcome splash', () => {
     const dir = path.join(appDir, '../../assets/images/welcome');
     const files = fs.readdirSync(dir).filter((f) => f.endsWith('.jpg')).sort();
     expect(files).toEqual(PHOTOS);
-    const source = read('welcome.tsx');
+    const source = fs.readFileSync(path.join(appDir, '../ui/welcomePhotos.ts'), 'utf8');
     for (const file of PHOTOS) {
       expect(source).toContain(file);
     }

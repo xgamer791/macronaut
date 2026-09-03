@@ -1,24 +1,14 @@
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Redirect } from 'expo-router';
-import React, { useMemo } from 'react';
+import React from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '@/state/AuthProvider';
 import { useSetting } from '@/state/queries';
 import { AppText } from '@/ui/components';
 import { fonts, palette } from '@/ui/theme/tokens';
-
-/** Six Higgsfield Nano Banana 2 Lite stills — 3 women, 3 men, ages 20–30.
- * One is picked per visit so the poster is not a single locked athlete. */
-const WELCOME_PHOTOS = [
-  require('../../assets/images/welcome/01-run.jpg'),
-  require('../../assets/images/welcome/02-lift.jpg'),
-  require('../../assets/images/welcome/03-climb.jpg'),
-  require('../../assets/images/welcome/04-trail.jpg'),
-  require('../../assets/images/welcome/05-box.jpg'),
-  require('../../assets/images/welcome/06-row.jpg'),
-];
+import { SESSION_WELCOME_PHOTO } from '@/ui/welcomePhotos';
 
 /** Poster splash: full-bleed photo, mid-canvas stacked wordmark, two identical
  * CTAs, then a text link. No borrowed marks or provider pills. The buttons
@@ -27,17 +17,13 @@ export default function WelcomeScreen() {
   const { loading, signedIn } = useAuth();
   const onboarded = useSetting<boolean>('onboardingComplete', false, signedIn);
   const insets = useSafeAreaInsets();
-  const photo = useMemo(
-    () => WELCOME_PHOTOS[Math.floor(Math.random() * WELCOME_PHOTOS.length)],
-    [],
-  );
 
   if (loading || (signedIn && onboarded.isLoading)) return null;
   if (signedIn) return <Redirect href={onboarded.data ? '/' : '/onboarding'} />;
 
   return (
     <View style={styles.root}>
-      <Image source={photo} style={StyleSheet.absoluteFill} contentFit="cover" />
+      <Image source={SESSION_WELCOME_PHOTO} style={StyleSheet.absoluteFill} contentFit="cover" />
       <LinearGradient
         pointerEvents="none"
         colors={['transparent', 'rgba(0,0,0,0.45)']}
