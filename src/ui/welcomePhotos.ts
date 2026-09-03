@@ -1,10 +1,10 @@
-/** Three Higgsfield Nano Banana 2 Lite stills — powerlift, jog, yoga.
+/** Three Higgsfield Nano Banana 2 Lite stills — squat, run, meal prep.
  * Chosen once per JS load so the splash is not a single locked athlete, and
  * so the screen itself never calls Math.random during render. */
 export const WELCOME_PHOTOS = [
   require('../../assets/images/welcome/01-lift.jpg'),
   require('../../assets/images/welcome/02-jog.jpg'),
-  require('../../assets/images/welcome/03-yoga.jpg'),
+  require('../../assets/images/welcome/03-meal.jpg'),
 ];
 
 export const SESSION_WELCOME_INDEX = Math.floor(Math.random() * WELCOME_PHOTOS.length);

@@ -5,7 +5,7 @@ import path from 'node:path';
 const appDir = path.join(__dirname, '..');
 const read = (file: string) => fs.readFileSync(path.join(appDir, file), 'utf8');
 
-const PHOTOS = ['01-lift.jpg', '02-jog.jpg', '03-yoga.jpg'];
+const PHOTOS = ['01-lift.jpg', '02-jog.jpg', '03-meal.jpg'];
 
 describe('welcome splash', () => {
   it('registers welcome outside the signed-in tab group', () => {
