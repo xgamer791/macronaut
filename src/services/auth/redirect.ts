@@ -11,6 +11,28 @@ export function webRedirectUrl(origin: string, basePath: string | undefined): st
   return `${origin.replace(/\/+$/, '')}${base === '/' ? '' : base}/`;
 }
 
+/** Turn a browser path (optionally including the static-export base) into the
+ * path Expo Router expects. Convex Auth's default `history.replaceState` does
+ * not update Expo Router, which can leave `?code=` in the route and wipe a
+ * valid session the next time the app opens. */
+export function expoRouterPathFromLocationUrl(
+  relativeUrl: string,
+  basePath: string | undefined,
+): string {
+  const base = (basePath ?? '').trim().replace(/^\/*/, '/').replace(/\/+$/, '');
+  const prefix = base === '/' ? '' : base;
+  let path = relativeUrl.startsWith('/') ? relativeUrl : `/${relativeUrl}`;
+  if (prefix) {
+    if (path === prefix) return '/';
+    if (path.startsWith(`${prefix}/`)) path = path.slice(prefix.length);
+    else if (path.startsWith(`${prefix}?`) || path.startsWith(`${prefix}#`)) {
+      path = `/${path.slice(prefix.length)}`;
+    }
+  }
+  if (!path.startsWith('/')) path = `/${path}`;
+  return path || '/';
+}
+
 /** Where Google sends the user back after consent. Convex Auth only honours
  * destinations its `redirect` callback allows (convex/auth.ts): the deployed
  * site, the app's own `macronaut://` scheme, and local development URLs. */
