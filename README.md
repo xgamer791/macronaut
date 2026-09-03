@@ -137,7 +137,8 @@ Both suites run in plain Node against an in-memory backend, so no simulator, dev
 
 ## Roadmap
 
-MFA, offline queueing of writes, Apple Health integration, widgets, Android polish, web dashboard.
+MFA, offline queueing of writes, [Apple Health and Apple Watch](docs/apple-health.md)
+(planned, not built), widgets, Android polish, web dashboard.
 
 ## Documentation
 
@@ -146,3 +147,4 @@ MFA, offline queueing of writes, Apple Health integration, widgets, Android poli
 - [Accounts, the Convex backend and deployment](docs/accounts.md)
 - [Security review](docs/security.md)
 - [Food-data providers + adding your own](docs/providers.md)
+- [Apple Health and Apple Watch plan](docs/apple-health.md)
