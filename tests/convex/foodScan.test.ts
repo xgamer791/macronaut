@@ -67,6 +67,15 @@ describe('AI food scan access', () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
+  it('refuses an allow-listed account when the server key is missing', async () => {
+    delete process.env.XAI_API_KEY;
+    const t = backend();
+    const owner = await signIn(t, 'lifewirecg@gmail.com');
+    await expect(owner.repos.food.analyzeFoodPhoto('data:image/jpeg;base64,abc')).rejects.toThrow(
+      /not configured/i,
+    );
+  });
+
   it('lets the partner account through as well', async () => {
     process.env.XAI_API_KEY = 'xai-test-server-key';
     globalThis.fetch = vi.fn(async () => ({

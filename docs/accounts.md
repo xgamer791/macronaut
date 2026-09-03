@@ -173,7 +173,8 @@ npx convex env set XAI_API_KEY xai-… --prod   # prod
 
 Or paste it under **Settings → Environment Variables** in the Convex
 dashboard. Rotate it there; do not store it in a database table, user
-settings, or `EXPO_PUBLIC_*`.
+settings, or `EXPO_PUBLIC_*`. Without this variable, allow-listed accounts
+see “AI food scan is not configured”.
 
 ### 8. Verify
 

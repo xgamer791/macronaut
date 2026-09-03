@@ -27,6 +27,7 @@ export const keys = {
   recents: ['recents'] as const,
   frequents: (meal?: string) => ['frequents', meal ?? ''] as const,
   favorites: ['favorites'] as const,
+  aiScanAvailable: ['ai-scan-available'] as const,
 };
 
 export function useInvalidateDiary() {

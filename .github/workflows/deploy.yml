@@ -54,6 +54,19 @@ jobs:
           CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_DEPLOY_KEY }}
         run: npx convex env set SITE_URL "https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}"
 
+      # Shared xAI key for AI food scan. Lives only on the Convex deployment.
+      # Add repository secret XAI_API_KEY (Settings → Secrets → Actions).
+      - name: Set XAI_API_KEY on the Convex deployment
+        env:
+          CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_DEPLOY_KEY }}
+          XAI_API_KEY: ${{ secrets.XAI_API_KEY }}
+        run: |
+          if [ -z "$XAI_API_KEY" ]; then
+            echo "XAI_API_KEY is not set as a repository secret; AI food scan will stay unconfigured until it is."
+            exit 0
+          fi
+          npx convex env set XAI_API_KEY "$XAI_API_KEY"
+
       - name: Deploy Convex functions and export the web build against them
         env:
           CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_DEPLOY_KEY }}

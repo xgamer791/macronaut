@@ -5,10 +5,9 @@ import { useRouter } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
 import { Platform, Pressable, StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { canUseAiFoodScan } from '../../convex/lib/aiScanAccess';
 import { GrokFoodEstimate } from '@/services/food/grokVision';
 import { useRepos } from '@/state/AppProvider';
-import { useAuth } from '@/state/AuthProvider';
+import { useAiScanAllowed } from '@/state/useAiScanAllowed';
 import { keys } from '@/state/queries';
 import { goBackOrHome } from '@/utils/navigation';
 import { AppText, Button, Card, Screen, ScreenHeader } from '@/ui/components';
@@ -27,7 +26,7 @@ export default function AiScanScreen() {
   const router = useRouter();
   const { colors } = useTheme();
   const { food } = useRepos();
-  const { user } = useAuth();
+  const allowed = useAiScanAllowed();
   const qc = useQueryClient();
   const cameraRef = useRef<CameraView>(null);
   /** Web: separate pickers so Take opens the camera and Choose opens the library. */
@@ -41,8 +40,6 @@ export default function AiScanScreen() {
   /** Captured meal photo — shown above the AI estimate on the results screen. */
   const [photoDataUrl, setPhotoDataUrl] = useState<string | null>(null);
   const [webCameraOn, setWebCameraOn] = useState(false);
-
-  const allowed = canUseAiFoodScan(user?.email);
 
   async function runAnalysis(dataUrl: string) {
     setBusy(true);

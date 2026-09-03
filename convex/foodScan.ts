@@ -16,8 +16,8 @@ export const available = query({
   },
 });
 
-/** Photo → Grok vision using the shared xAI key on the Convex deployment.
- * The key is a server env var (`XAI_API_KEY`) and is never sent to the client. */
+/** Photo → Grok vision using the shared xAI key on the Convex server.
+ * The key is `XAI_API_KEY` on the deployment and never reaches the client. */
 export const analyzePhoto = action({
   args: { dataUrl: v.string() },
   handler: async (ctx, { dataUrl }) => {

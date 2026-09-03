@@ -16,6 +16,11 @@ describe('canUseAiFoodScan', () => {
     expect(canUseAiFoodScan(undefined)).toBe(false);
   });
 
+  it('allows if any of several emails matches', () => {
+    expect(canUseAiFoodScan('other@example.com', 'lifewirecg@gmail.com')).toBe(true);
+    expect(canUseAiFoodScan('other@example.com', 'nope@example.com')).toBe(false);
+  });
+
   it('normalizes email for comparison', () => {
     expect(normalizeEmail('  A@B.com ')).toBe('a@b.com');
   });

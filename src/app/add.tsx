@@ -6,9 +6,8 @@ import { Linking, Pressable, StyleSheet, TextInput, View } from 'react-native';
 import { GroupedSearchResults } from '@/services/food/foodSearchService';
 import { webFoodLookup } from '@/services/food/webFallback';
 import { ProviderFood, SearchFilter } from '@/services/food/types';
-import { canUseAiFoodScan } from '../../convex/lib/aiScanAccess';
 import { useRepos } from '@/state/AppProvider';
-import { useAuth } from '@/state/AuthProvider';
+import { useAiScanAllowed } from '@/state/useAiScanAllowed';
 import { useFoodSearch } from '@/state/foodSearch';
 import { keys, useMealCategories } from '@/state/queries';
 import { useUiStore } from '@/state/uiStore';
@@ -93,28 +92,38 @@ function QuickTile({
   icon,
   label,
   onPress,
+  disabled = false,
 }: {
   icon: keyof typeof Ionicons.glyphMap;
   label: string;
   onPress: () => void;
+  disabled?: boolean;
 }) {
   const { colors } = useTheme();
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={label}
+      accessibilityLabel={disabled ? `${label}, locked` : label}
+      accessibilityState={{ disabled }}
+      disabled={disabled}
       onPress={onPress}
       style={({ pressed }) => [
         styles.quickTile,
         {
           backgroundColor: colors.surfaceRaised,
           borderColor: colors.border,
-          opacity: pressed ? 0.85 : 1,
+          opacity: disabled ? 0.38 : pressed ? 0.85 : 1,
         },
       ]}
     >
-      <Ionicons name={icon} size={24} color={colors.accent} />
-      <AppText variant="micro" weight="600" tone="accent" align="center" numberOfLines={2}>
+      <Ionicons name={icon} size={24} color={disabled ? colors.textMuted : colors.accent} />
+      <AppText
+        variant="micro"
+        weight="600"
+        tone={disabled ? 'muted' : 'accent'}
+        align="center"
+        numberOfLines={2}
+      >
         {label}
       </AppText>
     </Pressable>
@@ -209,9 +218,8 @@ function SearchResultSections({
 export default function AddScreen() {
   const router = useRouter();
   const { colors } = useTheme();
-  const { user } = useAuth();
   const { history, food, savedMeals, recipes } = useRepos();
-  const showAiScan = canUseAiFoodScan(user?.email);
+  const aiScanAllowed = useAiScanAllowed();
   const categories = useMealCategories();
   const date = useUiStore((s) => s.selectedDate);
   const meal = useUiStore((s) => s.targetMeal);
@@ -359,13 +367,12 @@ export default function AddScreen() {
           {!searching ? (
             <>
               <QuickTileRow>
-                {showAiScan ? (
-                  <QuickTile
-                    icon="sparkles-outline"
-                    label="AI food scan"
-                    onPress={() => router.push('/ai-scan')}
-                  />
-                ) : null}
+                <QuickTile
+                  icon="sparkles-outline"
+                  label="AI food scan"
+                  disabled={!aiScanAllowed}
+                  onPress={() => router.push('/ai-scan')}
+                />
                 <QuickTile
                   icon="flash-outline"
                   label="Quick add"
