@@ -49,6 +49,7 @@ function ThemedApp() {
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="welcome" />
         <Stack.Screen name="login" />
+        <Stack.Screen name="signup-legal" />
         <Stack.Screen name="create-account" />
         <Stack.Screen name="onboarding" />
         <Stack.Screen name="add" options={{ presentation: 'modal' }} />
