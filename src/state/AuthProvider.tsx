@@ -1,10 +1,12 @@
 import { ConvexAuthProvider, useAuthActions } from '@convex-dev/auth/react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useConvexAuth, useQuery } from 'convex/react';
+import { router } from 'expo-router';
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef } from 'react';
 import { Platform } from 'react-native';
 import { api } from '../../convex/_generated/api';
 import { AuthUser } from '@/services/auth/displayName';
+import { expoRouterPathFromLocationUrl } from '@/services/auth/redirect';
 import { getConvexClient } from '@/services/convex/client';
 import { getDeviceStore } from '@/services/storage/deviceStore';
 
@@ -32,6 +34,10 @@ function nativeTokenStorage() {
   };
 }
 
+function replaceAuthCallbackUrl(relativeUrl: string): void {
+  router.replace(expoRouterPathFromLocationUrl(relativeUrl, process.env.EXPO_PUBLIC_BASE_PATH));
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const client = getConvexClient();
   const storage = useMemo(
@@ -39,7 +45,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     [],
   );
   return (
-    <ConvexAuthProvider client={client} storage={storage}>
+    <ConvexAuthProvider client={client} storage={storage} replaceURL={replaceAuthCallbackUrl}>
       <AuthState>{children}</AuthState>
     </ConvexAuthProvider>
   );

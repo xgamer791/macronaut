@@ -1,7 +1,7 @@
 import { appleDisplayName, createAppleNonce, supportsNativeAppleAuth } from '../apple';
 import { displayNameFromUser } from '../displayName';
 import { isPlausibleEmail, normalizeEmail } from '../email';
-import { webRedirectUrl } from '../redirect';
+import { expoRouterPathFromLocationUrl, webRedirectUrl } from '../redirect';
 
 jest.mock('react-native', () => ({ Platform: { OS: 'web' } }));
 jest.mock('expo-linking', () => ({ createURL: (path: string) => `https://app.test${path}` }));
@@ -37,6 +37,22 @@ describe('webRedirectUrl', () => {
     expect(webRedirectUrl('https://example.com', '/apps/macronaut')).toBe(
       'https://example.com/apps/macronaut/',
     );
+  });
+});
+
+describe('expoRouterPathFromLocationUrl', () => {
+  it('strips the GitHub Pages base path so Expo Router sees an app-relative URL', () => {
+    expect(expoRouterPathFromLocationUrl('/macronaut/', '/macronaut')).toBe('/');
+    expect(expoRouterPathFromLocationUrl('/macronaut', '/macronaut')).toBe('/');
+    expect(expoRouterPathFromLocationUrl('/macronaut/login', '/macronaut')).toBe('/login');
+    expect(expoRouterPathFromLocationUrl('/macronaut/?foo=1', '/macronaut')).toBe('/?foo=1');
+    expect(expoRouterPathFromLocationUrl('/macronaut?foo=1', '/macronaut')).toBe('/?foo=1');
+  });
+
+  it('leaves paths alone when there is no base path', () => {
+    expect(expoRouterPathFromLocationUrl('/login', '')).toBe('/login');
+    expect(expoRouterPathFromLocationUrl('/?code=', undefined)).toBe('/?code=');
+    expect(expoRouterPathFromLocationUrl('login', undefined)).toBe('/login');
   });
 });
 

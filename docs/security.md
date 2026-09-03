@@ -124,8 +124,8 @@ Auth supports Apple as an OAuth provider; add it before submitting.
 A static host cannot set `httpOnly` cookies, so on web the session lives in
 `localStorage` and a successful XSS could steal it. What keeps that acceptable
 is that the app loads no third-party scripts and renders no raw HTML — worth
-re-checking before adding either. JWTs live one hour; refresh tokens rotate
-on use and are invalidated on reuse.
+re-checking before adding either. JWTs live one hour and are reused when the
+app reopens; refresh tokens rotate on use and are invalidated on reuse.
 
 ### No MFA
 

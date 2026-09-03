@@ -245,11 +245,14 @@ sign-in is a separate account. Nothing to fix; it is what the person asked for.
 ## Sessions
 
 Convex Auth issues a short-lived JWT (one hour) and a refresh token (thirty
-days, rotated on use). On native both go to `expo-secure-store` (Keychain /
-EncryptedSharedPreferences) through `src/services/storage/deviceStore.ts`,
-chunked because SecureStore rejects values over 2048 bytes. On web they are in
-`localStorage`, which also lets sign-in state sync across tabs. Signing out
-clears this device only.
+days, rotated on use). The client reuses that stored JWT when the app
+reopens — immediately rotating the refresh token on every launch was signing
+people out if they closed the app mid-handshake. A refresh is scheduled
+before the hour is up. On native both tokens go to `expo-secure-store`
+(Keychain / EncryptedSharedPreferences) through
+`src/services/storage/deviceStore.ts`, chunked because SecureStore rejects
+values over 2048 bytes. On web they are in `localStorage`, which also lets
+sign-in state sync across tabs. Signing out clears this device only.
 
 ## Deleting data
 
