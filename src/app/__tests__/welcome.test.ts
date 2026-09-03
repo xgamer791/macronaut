@@ -5,14 +5,7 @@ import path from 'node:path';
 const appDir = path.join(__dirname, '..');
 const read = (file: string) => fs.readFileSync(path.join(appDir, file), 'utf8');
 
-const PHOTOS = [
-  '01-run.jpg',
-  '02-lift.jpg',
-  '03-climb.jpg',
-  '04-trail.jpg',
-  '05-box.jpg',
-  '06-row.jpg',
-];
+const PHOTOS = ['01-lift.jpg', '02-jog.jpg', '03-yoga.jpg'];
 
 describe('welcome splash', () => {
   it('registers welcome outside the signed-in tab group', () => {
@@ -38,7 +31,7 @@ describe('welcome splash', () => {
     expect(source).not.toContain('/create-account');
   });
 
-  it('ships six distinct athlete photos', () => {
+  it('ships three distinct athlete photos', () => {
     const dir = path.join(appDir, '../../assets/images/welcome');
     const files = fs.readdirSync(dir).filter((f) => f.endsWith('.jpg')).sort();
     expect(files).toEqual(PHOTOS);

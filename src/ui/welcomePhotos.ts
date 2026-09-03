@@ -1,13 +1,10 @@
-/** Six Higgsfield Nano Banana 2 Lite stills — 3 women, 3 men, ages 20–30.
+/** Three Higgsfield Nano Banana 2 Lite stills — powerlift, jog, yoga.
  * Chosen once per JS load so the splash is not a single locked athlete, and
  * so the screen itself never calls Math.random during render. */
 export const WELCOME_PHOTOS = [
-  require('../../assets/images/welcome/01-run.jpg'),
-  require('../../assets/images/welcome/02-lift.jpg'),
-  require('../../assets/images/welcome/03-climb.jpg'),
-  require('../../assets/images/welcome/04-trail.jpg'),
-  require('../../assets/images/welcome/05-box.jpg'),
-  require('../../assets/images/welcome/06-row.jpg'),
+  require('../../assets/images/welcome/01-lift.jpg'),
+  require('../../assets/images/welcome/02-jog.jpg'),
+  require('../../assets/images/welcome/03-yoga.jpg'),
 ];
 
 export const SESSION_WELCOME_INDEX = Math.floor(Math.random() * WELCOME_PHOTOS.length);
