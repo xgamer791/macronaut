@@ -12,6 +12,13 @@ describe('friendlyAuthError', () => {
     expect(friendlyAuthError(new Error('Could not send the sign-in code (Resend 422)'))).toMatch(
       /could not send/i,
     );
+    expect(
+      friendlyAuthError(
+        new Error(
+          'Email sign-in is not available yet: the sender domain is not verified in Resend',
+        ),
+      ),
+    ).toMatch(/available yet/i);
     expect(friendlyAuthError(new Error('Invalid verification code'))).toMatch(/not right/i);
     expect(friendlyAuthError(new Error('Apple sign-in did not return an identity token.'))).toMatch(
       /apple/i,

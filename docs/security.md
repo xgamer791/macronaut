@@ -133,8 +133,9 @@ enforces.
 
 `AUTH_EMAIL_FROM` must be on a domain verified in Resend. Until it is, the
 `onboarding@resend.dev` sender only delivers to the Resend account owner, so
-nobody else can sign in with a code. Verify the domain before real users
-arrive.
+nobody else can sign in with a code; the login screen reports this as "Email
+sign-in isn't available yet" rather than blaming the address. Verify the
+domain before real users arrive.
 
 ### Deletion is best-effort against concurrent writes
 

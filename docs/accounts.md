@@ -150,6 +150,15 @@ Two Apple quirks worth knowing before testing:
 Resend first; until it is, `Macronaut <onboarding@resend.dev>` works, but
 **Resend only delivers from that address to the email of the Resend account
 owner**, so nobody else can sign in with a code until the domain verifies.
+Anyone else who asks for a code sees "Email sign-in isn't available yet. Use
+Apple or Google for now." and the deployment log records Resend's 403.
+
+To go live: in Resend open **Domains → Add domain**, enter the domain, create
+the DNS records it lists at the registrar (a DKIM `TXT`, an `MX` and `TXT`
+for the bounce subdomain, optionally `DMARC`), and wait for the domain to
+show **Verified**. Then set `AUTH_EMAIL_FROM` on the production deployment to
+an address on that domain. Convex reads environment variables at call time,
+so the next code goes out from the new sender without a redeploy.
 
 ### 7. Verify
 
