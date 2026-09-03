@@ -3,10 +3,11 @@ import type { Id } from './_generated/dataModel';
 import { mutation, query, type MutationCtx } from './_generated/server';
 import { requireUserId } from './lib/auth';
 
-export type AuthProviderId = 'google' | 'email';
+export type AuthProviderId = 'google' | 'apple' | 'email';
 
-/** The signed-in user as the app shows it. Provider metadata (Google's
- * `name`) is user-controlled text; it is capped here and again where shown. */
+/** The signed-in user as the app shows it. Provider metadata (the `name` Google
+ * or Apple returns) is user-controlled text; it is capped here and again where
+ * shown. */
 export const viewer = query({
   args: {},
   handler: async (ctx) => {
@@ -19,11 +20,15 @@ export const viewer = query({
       .withIndex('userIdAndProvider', (q) => q.eq('userId', userId))
       .collect();
     const providers = new Set(accounts.map((a) => a.provider));
+    // Native and web Sign in with Apple share the `apple` account, so one case
+    // covers both (convex/AppleNative.ts).
     const provider: AuthProviderId | undefined = providers.has('google')
       ? 'google'
-      : providers.has('resend-otp')
-        ? 'email'
-        : undefined;
+      : providers.has('apple')
+        ? 'apple'
+        : providers.has('resend-otp')
+          ? 'email'
+          : undefined;
     return {
       id: userId,
       email: user.email,
