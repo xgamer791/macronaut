@@ -36,7 +36,7 @@ export function CodeInput({ value, onChange, disabled, autoFocus }: CodeInputPro
             key={index}
             accessibilityElementsHidden
             importantForAccessibility="no-hide-descendants"
-            style={[styles.box, active && styles.boxActive, digit !== '' && styles.boxFilled]}
+            style={[styles.box, digit !== '' && styles.boxFilled, active && styles.boxActive]}
           >
             <AppText style={styles.digit}>{digit}</AppText>
             {active && digit === '' ? <View style={styles.caret} /> : null}
