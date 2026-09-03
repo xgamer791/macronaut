@@ -6,7 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '@/state/AuthProvider';
 import { useSetting } from '@/state/queries';
 import { AppText } from '@/ui/components';
-import { WelcomeSlideshow } from '@/ui/WelcomeSlideshow';
+import { WelcomeBackground } from '@/ui/WelcomeBackground';
 import { fonts, palette, radius } from '@/ui/theme/tokens';
 
 /** Poster splash: full-bleed photo, mid-canvas stacked wordmark, two identical
@@ -22,7 +22,7 @@ export default function WelcomeScreen() {
 
   return (
     <View style={styles.root}>
-      <WelcomeSlideshow />
+      <WelcomeBackground />
       {/* Cinematic film + bottom-weighted wash — same idea as the Garmin
        * poster: the athlete stays visible, white type and the CTAs sit on
        * darkness. Flat colour, no blur, no glow. */}

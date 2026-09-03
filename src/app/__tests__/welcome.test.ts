@@ -49,10 +49,20 @@ describe('welcome splash', () => {
     expect(source).not.toContain('backdropFilter');
   });
 
-  it('crossfades the stills under a dark veil', () => {
+  it('plays a muted Seedance loop on web and keeps the stills as fallback', () => {
     const welcome = read('welcome.tsx');
+    const web = fs.readFileSync(path.join(appDir, '../ui/WelcomeBackground.web.tsx'), 'utf8');
+    const native = fs.readFileSync(path.join(appDir, '../ui/WelcomeBackground.tsx'), 'utf8');
     const slideshow = fs.readFileSync(path.join(appDir, '../ui/WelcomeSlideshow.tsx'), 'utf8');
-    expect(welcome).toContain('WelcomeSlideshow');
+    const videoDir = path.join(appDir, '../../assets/video');
+    expect(welcome).toContain('WelcomeBackground');
+    expect(fs.existsSync(path.join(videoDir, 'welcome-loop.mp4'))).toBe(true);
+    expect(fs.existsSync(path.join(videoDir, 'welcome-poster.jpg'))).toBe(true);
+    expect(web).toContain("createElement('video')");
+    expect(web).toContain('video.muted = true');
+    expect(web).toContain('video.loop = true');
+    expect(web).toContain('WelcomeSlideshow');
+    expect(native).toContain('WelcomeSlideshow as WelcomeBackground');
     expect(welcome).toContain('veilFilm');
     expect(welcome).toContain('radius.md');
     expect(welcome).toContain("rgba(0,0,0,0.36)");
