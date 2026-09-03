@@ -450,6 +450,7 @@ export function createMemoryFoodRepo(): FoodRepo {
     async aiScanAvailable() {
       return false;
     },
+    async ensureAiScanRoster() {},
     async analyzeFoodPhoto() {
       throw new Error('AI food scan is a Pro feature');
     },

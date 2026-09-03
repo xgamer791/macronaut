@@ -1,11 +1,12 @@
 import { useQuery } from '@tanstack/react-query';
-import { canUseAiFoodScan } from '../../convex/lib/aiScanAccess';
+import { useEffect } from 'react';
+import { canUseAiFoodScanByProfile } from '../../convex/lib/aiScanAccess';
 import { useRepos } from '@/state/AppProvider';
 import { useAuth } from '@/state/AuthProvider';
 import { keys } from '@/state/queries';
 
-/** Those two preview emails always skip the key gate on the client.
- * The server still enforces the same list when the photo is analyzed. */
+/** Named preview accounts skip the key gate immediately. Everyone else
+ * follows the server roster (current users frozen; new sign-ups blocked). */
 export function useAiScanAllowed(): boolean {
   const { food } = useRepos();
   const { user } = useAuth();
@@ -13,6 +14,15 @@ export function useAiScanAllowed(): boolean {
     queryKey: keys.aiScanAvailable,
     queryFn: () => food.aiScanAvailable(),
   });
-  if (canUseAiFoodScan(user?.email)) return true;
+
+  useEffect(() => {
+    void food.ensureAiScanRoster().then(() => {
+      void server.refetch();
+    });
+    // Freeze once per mount; food/server identities are stable for the session.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [food]);
+
+  if (canUseAiFoodScanByProfile({ email: user?.email, name: user?.name })) return true;
   return server.data === true;
 }

@@ -28,6 +28,7 @@ that is the whole isolation story.
 | `searchHistory` | recent searches (deduped) | query, searchedAt | `by_user_query` (query), `by_user_time` (searchedAt) |
 | `activityEntries` | workouts | date, name, nameLower, activityType, durationMin, distanceKm, caloriesBurned, intensity | `by_user_date` (date), `by_user_name_date` (nameLower, date) |
 | `dayNotes` | per-day journal notes, many per day | date, body | `by_user_date` (date) |
+| `aiScanRoster`, `aiScanRosterMeta` | frozen set of accounts allowed to use AI food scan until Pro | userId; frozenAt | `by_user`; `by_key` |
 
 ## Conventions
 
@@ -49,7 +50,8 @@ that is the whole isolation story.
 
 ## Shared vs. per-account data
 
-Everything above except the auth tables is per account. The provider cache is
-per account too: a user's `corrected` and `flagged` marks are opinions about a
-record, and keeping them with the user avoids one account's correction
-changing what another sees.
+Everything above except the auth tables and the AI-scan roster is per account.
+The provider cache is per account too: a user's `corrected` and `flagged`
+marks are opinions about a record, and keeping them with the user avoids one
+account's correction changing what another sees. The scan roster is a single
+frozen snapshot of who may use AI food scan until Pro exists.

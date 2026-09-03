@@ -153,4 +153,15 @@ export default defineSchema({
     createdAt: v.string(),
     updatedAt: v.string(),
   }).index('by_user_date', ['userId', 'date']),
+
+  /** Frozen set of accounts that may use AI food scan until Pro. Written once
+   * by `foodScan.ensureRoster`; later sign-ups are not added. Not user-scoped. */
+  aiScanRoster: defineTable({
+    userId: v.id('users'),
+  }).index('by_user', ['userId']),
+
+  aiScanRosterMeta: defineTable({
+    key: v.string(),
+    frozenAt: v.string(),
+  }).index('by_key', ['key']),
 });

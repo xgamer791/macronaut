@@ -33,6 +33,7 @@ export interface FoodRepo {
 
   /** Server-enforced allow-list. The shared xAI key never reaches the client. */
   aiScanAvailable(): Promise<boolean>;
+  ensureAiScanRoster(): Promise<void>;
   analyzeFoodPhoto(dataUrl: string): Promise<GrokFoodEstimate>;
 }
 
@@ -96,6 +97,9 @@ export function createFoodRepo(convex: ConvexCaller): FoodRepo {
     async aiScanAvailable() {
       const row = await convex.query(api.foodScan.available, {});
       return row.allowed;
+    },
+    async ensureAiScanRoster() {
+      await convex.mutation(api.foodScan.ensureRoster, {});
     },
     analyzeFoodPhoto: (dataUrl) =>
       convex.action(api.foodScan.analyzePhoto, { dataUrl }) as Promise<GrokFoodEstimate>,

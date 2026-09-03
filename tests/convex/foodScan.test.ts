@@ -30,18 +30,44 @@ describe('AI food scan access', () => {
   it('refuses every call without a session', async () => {
     const t = backend();
     await expect(t.query(api.foodScan.available, {})).rejects.toThrow(/not signed in/i);
+    await expect(t.mutation(api.foodScan.ensureRoster, {})).rejects.toThrow(/not signed in/i);
     await expect(
       t.action(api.foodScan.analyzePhoto, { dataUrl: 'data:image/jpeg;base64,abc' }),
     ).rejects.toThrow(/not signed in/i);
   });
 
-  it('hides the feature from accounts that are not on the allow-list', async () => {
+  it('grandfathers accounts that exist when the roster freezes, and blocks later sign-ups', async () => {
     const t = backend();
-    const other = await signIn(t, 'someone@example.com');
-    expect(await other.repos.food.aiScanAvailable()).toBe(false);
+    const current = await signIn(t, 'current@example.com');
+    await current.repos.food.ensureAiScanRoster();
+    expect(await current.repos.food.aiScanAvailable()).toBe(true);
+
+    const newbie = await signIn(t, 'newbie@example.com');
+    expect(await newbie.repos.food.aiScanAvailable()).toBe(false);
     await expect(
-      other.repos.food.analyzeFoodPhoto('data:image/jpeg;base64,abc'),
+      newbie.repos.food.analyzeFoodPhoto('data:image/jpeg;base64,abc'),
     ).rejects.toThrow(/pro feature/i);
+  });
+
+  it('lets Holly Ky through by name even if she was not on the frozen roster', async () => {
+    process.env.XAI_API_KEY = 'xai-test-server-key';
+    globalThis.fetch = vi.fn(async () => ({
+      ok: true,
+      json: async () => ({ output_text: JSON.stringify(estimate) }),
+    })) as unknown as typeof fetch;
+
+    const t = backend();
+    const owner = await signIn(t, 'lifewirecg@gmail.com');
+    await owner.repos.food.ensureAiScanRoster();
+
+    const holly = await signIn(t, 'holly@example.com');
+    await t.run(async (ctx) => {
+      await ctx.db.patch(holly.userId, { name: 'Holly Ky' });
+    });
+    expect(await holly.repos.food.aiScanAvailable()).toBe(true);
+    await expect(holly.repos.food.analyzeFoodPhoto('data:image/jpeg;base64,abc')).resolves.toMatchObject({
+      name: 'Grilled chicken breast',
+    });
   });
 
   it('lets the allow-listed accounts scan, using the server key only', async () => {

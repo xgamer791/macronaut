@@ -1,4 +1,9 @@
-import { canUseAiFoodScan, normalizeEmail } from '../../../../convex/lib/aiScanAccess';
+import {
+  canUseAiFoodScan,
+  canUseAiFoodScanByName,
+  canUseAiFoodScanByProfile,
+  normalizeEmail,
+} from '../../../../convex/lib/aiScanAccess';
 
 describe('canUseAiFoodScan', () => {
   it('allows the owner and partner accounts, ignoring case and spaces', () => {
@@ -6,6 +11,13 @@ describe('canUseAiFoodScan', () => {
     expect(canUseAiFoodScan('salonnewvine@gmail.com')).toBe(true);
     expect(canUseAiFoodScan(' LifeWireCG@gmail.com ')).toBe(true);
     expect(canUseAiFoodScan('SalonNewVine@Gmail.com')).toBe(true);
+  });
+
+  it('allows Holly Ky by display name', () => {
+    expect(canUseAiFoodScanByName('Holly Ky')).toBe(true);
+    expect(canUseAiFoodScanByName('  holly   ky ')).toBe(true);
+    expect(canUseAiFoodScanByName('Holly')).toBe(false);
+    expect(canUseAiFoodScanByProfile({ email: 'other@example.com', name: 'Holly Ky' })).toBe(true);
   });
 
   it('refuses everyone else, including empty values', () => {
