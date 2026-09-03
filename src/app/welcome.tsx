@@ -1,5 +1,5 @@
 import { LinearGradient } from 'expo-linear-gradient';
-import { Redirect, useRouter } from 'expo-router';
+import { Redirect } from 'expo-router';
 import React from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -14,7 +14,6 @@ import { fonts } from '@/ui/theme/tokens';
  * CTAs, then a text link. Create Account opens the legal gate; Sign In and
  * More options stay inert until those passes. */
 export default function WelcomeScreen() {
-  const router = useRouter();
   const { loading, signedIn } = useAuth();
   const onboarded = useSetting<boolean>('onboardingComplete', false, signedIn);
   const insets = useSafeAreaInsets();
@@ -47,7 +46,7 @@ export default function WelcomeScreen() {
 
         <View style={[styles.dock, { paddingBottom: Math.max(insets.bottom, 12) + 8 }]}>
           <View style={styles.ctaStack}>
-            <WelcomeCta label="Create Account" onPress={() => router.push('/signup-legal')} />
+            <WelcomeCta label="Create Account" href="/signup-legal" />
             <WelcomeCta label="Sign In" onPress={() => {}} />
           </View>
           <Pressable
@@ -78,6 +77,7 @@ const styles = StyleSheet.create({
   },
   frame: {
     flex: 1,
+    zIndex: 1,
   },
   wordmarkWrap: {
     flex: 1,

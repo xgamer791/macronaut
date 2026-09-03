@@ -24,7 +24,7 @@ describe('welcome splash', () => {
     expect(source).toContain('Create Account');
     expect(source).toContain('Sign In');
     expect(source).toContain('More options');
-    expect(source).toContain("router.push('/signup-legal')");
+    expect(source).toContain('href="/signup-legal"');
     expect(source).not.toContain('/login');
     expect(source).not.toContain('/create-account');
     expect(source).toContain('<WelcomeCta label="Sign In" onPress={() => {}} />');
@@ -69,6 +69,7 @@ describe('welcome splash', () => {
     expect(web).toContain("createElement('video')");
     expect(web).toContain('video.muted = true');
     expect(web).toContain('video.loop = true');
+    expect(web).toContain("pointerEvents: 'none'");
     expect(web).toContain('WelcomeSlideshow');
     expect(native).toContain('WelcomeSlideshow as WelcomeBackground');
     expect(welcome).toContain('veilFilm');

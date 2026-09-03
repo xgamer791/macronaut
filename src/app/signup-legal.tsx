@@ -152,11 +152,7 @@ export default function SignupLegalScreen() {
         </View>
 
         <View style={[styles.dock, { paddingBottom: Math.max(insets.bottom, 12) + 8 }]}>
-          <WelcomeCta
-            label="Save and continue"
-            disabled={!agreed}
-            onPress={() => {}}
-          />
+          <WelcomeCta label="Save and continue" disabled={!agreed} onPress={() => {}} />
         </View>
       </View>
     </View>
@@ -178,6 +174,7 @@ const styles = StyleSheet.create({
   frame: {
     flex: 1,
     justifyContent: 'space-between',
+    zIndex: 1,
   },
   top: {
     paddingHorizontal: 24,

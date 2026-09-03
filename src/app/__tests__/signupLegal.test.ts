@@ -15,7 +15,7 @@ describe('signup legal gate', () => {
   });
 
   it('is the first screen after Create Account on welcome', () => {
-    expect(read('welcome.tsx')).toContain("router.push('/signup-legal')");
+    expect(read('welcome.tsx')).toContain('href="/signup-legal"');
     expect(read('login.tsx')).not.toContain('/signup-legal');
   });
 

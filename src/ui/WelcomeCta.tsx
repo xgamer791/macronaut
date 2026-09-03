@@ -1,22 +1,26 @@
+import { Link, type Href } from 'expo-router';
 import React from 'react';
 import { Pressable, StyleSheet } from 'react-native';
 import { AppText } from '@/ui/components';
 import { fonts, palette, radius } from '@/ui/theme/tokens';
 
 /** Same 50pt accent tile as the welcome splash — square corners, white
- * Space Grotesk label. Disabled dims in place; it does not change shape. */
+ * Space Grotesk label. Disabled dims in place; it does not change shape.
+ * Pass `href` for a real link so the tap cannot get lost behind the video. */
 export function WelcomeCta({
   label,
   onPress,
+  href,
   disabled = false,
   accessibilityLabel,
 }: {
   label: string;
-  onPress: () => void;
+  onPress?: () => void;
+  href?: Href;
   disabled?: boolean;
   accessibilityLabel?: string;
 }) {
-  return (
+  const button = (
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel ?? label}
@@ -32,6 +36,16 @@ export function WelcomeCta({
       <AppText style={styles.ctaLabel}>{label}</AppText>
     </Pressable>
   );
+
+  if (href && !disabled) {
+    return (
+      <Link href={href} asChild>
+        {button}
+      </Link>
+    );
+  }
+
+  return button;
 }
 
 const styles = StyleSheet.create({
