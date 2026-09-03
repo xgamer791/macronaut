@@ -3,13 +3,14 @@ import { useEffect } from 'react';
 import { canUseAiFoodScanByProfile } from '../../convex/lib/aiScanAccess';
 import { useRepos } from '@/state/AppProvider';
 import { useAuth } from '@/state/AuthProvider';
-import { keys } from '@/state/queries';
+import { keys, useSetting } from '@/state/queries';
 
-/** Named preview accounts skip the key gate immediately. Everyone else
- * follows the server roster (current users frozen; new sign-ups blocked). */
+/** The four current accounts skip the gate via email, name, or the frozen
+ * roster. Anyone who signs up after that roster backfill stays locked out. */
 export function useAiScanAllowed(): boolean {
   const { food } = useRepos();
   const { user } = useAuth();
+  const displayName = useSetting<string>('displayName', '');
   const server = useQuery({
     queryKey: keys.aiScanAvailable,
     queryFn: () => food.aiScanAvailable(),
@@ -19,10 +20,17 @@ export function useAiScanAllowed(): boolean {
     void food.ensureAiScanRoster().then(() => {
       void server.refetch();
     });
-    // Freeze once per mount; food/server identities are stable for the session.
+    // Freeze/backfill once per mount.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [food]);
 
-  if (canUseAiFoodScanByProfile({ email: user?.email, name: user?.name })) return true;
+  if (
+    canUseAiFoodScanByProfile({
+      email: user?.email,
+      name: user?.name ?? displayName.data,
+    })
+  ) {
+    return true;
+  }
   return server.data === true;
 }

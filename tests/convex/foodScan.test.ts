@@ -36,6 +36,28 @@ describe('AI food scan access', () => {
     ).rejects.toThrow(/not signed in/i);
   });
 
+  it('backfills accounts missed by the first freeze, then blocks later sign-ups', async () => {
+    const t = backend();
+    const early = await signIn(t, 'early@example.com');
+    await t.run(async (ctx) => {
+      await ctx.db.insert('aiScanRoster', { userId: early.userId });
+      await ctx.db.insert('aiScanRosterMeta', {
+        key: 'default',
+        frozenAt: '2026-09-03T00:00:00.000Z',
+      });
+    });
+
+    const missed = await signIn(t, 'fourth@example.com');
+    expect(await missed.repos.food.aiScanAvailable()).toBe(false);
+
+    await early.repos.food.ensureAiScanRoster();
+    expect(await missed.repos.food.aiScanAvailable()).toBe(true);
+
+    const newbie = await signIn(t, 'newbie@example.com');
+    await early.repos.food.ensureAiScanRoster();
+    expect(await newbie.repos.food.aiScanAvailable()).toBe(false);
+  });
+
   it('grandfathers accounts that exist when the roster freezes, and blocks later sign-ups', async () => {
     const t = backend();
     const current = await signIn(t, 'current@example.com');

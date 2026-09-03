@@ -1,11 +1,9 @@
-/** Named accounts that may use AI food scan even if they sign up after the
- * grandfather roster is frozen. The server enforces this. */
+/** Named accounts that may use AI food scan even if they were missed by the
+ * first roster freeze. The server enforces this. */
 export const AI_FOOD_SCAN_ALLOWED_EMAILS = [
   'lifewirecg@gmail.com',
   'salonnewvine@gmail.com',
 ] as const;
-
-export const AI_FOOD_SCAN_ALLOWED_NAMES = ['holly ky'] as const;
 
 export function normalizeEmail(email: string | null | undefined): string {
   return (email ?? '').trim().toLowerCase();
@@ -22,14 +20,21 @@ export function canUseAiFoodScan(...emails: (string | null | undefined)[]): bool
   });
 }
 
+/** Holly Ky — match display name or an email local-part that contains holly. */
 export function canUseAiFoodScanByName(name: string | null | undefined): boolean {
   const normalized = normalizeName(name);
-  return (AI_FOOD_SCAN_ALLOWED_NAMES as readonly string[]).includes(normalized);
+  if (!normalized) return false;
+  if (normalized === 'holly ky' || normalized === 'hollyky') return true;
+  if (normalized.split(' ')[0] === 'holly') return true;
+  return normalized.includes('holly ky') || normalized.includes('hollyky');
 }
 
 export function canUseAiFoodScanByProfile(opts: {
   email?: string | null;
   name?: string | null;
 }): boolean {
-  return canUseAiFoodScan(opts.email) || canUseAiFoodScanByName(opts.name);
+  if (canUseAiFoodScan(opts.email)) return true;
+  if (canUseAiFoodScanByName(opts.name)) return true;
+  const local = normalizeEmail(opts.email).split('@')[0] ?? '';
+  return local.includes('holly');
 }

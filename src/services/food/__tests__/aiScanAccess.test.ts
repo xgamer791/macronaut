@@ -13,11 +13,13 @@ describe('canUseAiFoodScan', () => {
     expect(canUseAiFoodScan('SalonNewVine@Gmail.com')).toBe(true);
   });
 
-  it('allows Holly Ky by display name', () => {
+  it('allows Holly Ky by display name or holly email', () => {
     expect(canUseAiFoodScanByName('Holly Ky')).toBe(true);
     expect(canUseAiFoodScanByName('  holly   ky ')).toBe(true);
-    expect(canUseAiFoodScanByName('Holly')).toBe(false);
+    expect(canUseAiFoodScanByName('Holly')).toBe(true);
     expect(canUseAiFoodScanByProfile({ email: 'other@example.com', name: 'Holly Ky' })).toBe(true);
+    expect(canUseAiFoodScanByProfile({ email: 'hollyky@gmail.com', name: null })).toBe(true);
+    expect(canUseAiFoodScanByName('Chris')).toBe(false);
   });
 
   it('refuses everyone else, including empty values', () => {

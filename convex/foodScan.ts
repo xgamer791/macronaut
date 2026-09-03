@@ -12,17 +12,23 @@ import {
   type QueryCtx,
 } from './_generated/server';
 import { nowIso, requireUserId } from './lib/auth';
-import { canUseAiFoodScanByProfile } from './lib/aiScanAccess';
+import { canUseAiFoodScanByName, canUseAiFoodScanByProfile } from './lib/aiScanAccess';
 import { analyzeFoodPhoto } from './lib/grokVision';
 
 const ROSTER_META_KEY = 'default';
+/** One-time pass to add accounts that existed after the first freeze missed them. */
+const ROSTER_BACKFILL_KEY = 'include-existing-20260903';
 
-async function rosterFrozen(ctx: QueryCtx | MutationCtx): Promise<boolean> {
+async function hasMeta(ctx: QueryCtx | MutationCtx, key: string): Promise<boolean> {
   const meta = await ctx.db
     .query('aiScanRosterMeta')
-    .withIndex('by_key', (q) => q.eq('key', ROSTER_META_KEY))
+    .withIndex('by_key', (q) => q.eq('key', key))
     .unique();
   return !!meta;
+}
+
+async function rosterFrozen(ctx: QueryCtx | MutationCtx): Promise<boolean> {
+  return hasMeta(ctx, ROSTER_META_KEY);
 }
 
 async function onRoster(ctx: QueryCtx | MutationCtx, userId: Id<'users'>): Promise<boolean> {
@@ -33,19 +39,55 @@ async function onRoster(ctx: QueryCtx | MutationCtx, userId: Id<'users'>): Promi
   return !!row;
 }
 
-async function freezeRoster(ctx: MutationCtx): Promise<void> {
-  if (await rosterFrozen(ctx)) return;
+async function writeMeta(ctx: MutationCtx, key: string): Promise<void> {
+  if (await hasMeta(ctx, key)) return;
+  await ctx.db.insert('aiScanRosterMeta', { key, frozenAt: nowIso() });
+}
+
+async function addMissingUsers(ctx: MutationCtx): Promise<void> {
   const users = await ctx.db.query('users').collect();
   for (const user of users) {
-    await ctx.db.insert('aiScanRoster', { userId: user._id });
+    if (!(await onRoster(ctx, user._id))) {
+      await ctx.db.insert('aiScanRoster', { userId: user._id });
+    }
   }
-  await ctx.db.insert('aiScanRosterMeta', { key: ROSTER_META_KEY, frozenAt: nowIso() });
+}
+
+/** Freeze the current user set. If the first freeze already ran (and missed
+ * later current accounts), one backfill adds everyone who exists now. After
+ * that, later sign-ups are not added. */
+async function freezeRoster(ctx: MutationCtx): Promise<void> {
+  const frozen = await rosterFrozen(ctx);
+  const backfilled = await hasMeta(ctx, ROSTER_BACKFILL_KEY);
+  if (frozen && backfilled) return;
+  await addMissingUsers(ctx);
+  await writeMeta(ctx, ROSTER_META_KEY);
+  await writeMeta(ctx, ROSTER_BACKFILL_KEY);
+}
+
+async function displayNameSetting(ctx: QueryCtx | MutationCtx, userId: Id<'users'>): Promise<string | null> {
+  const row = await ctx.db
+    .query('settings')
+    .withIndex('by_user_key', (q) => q.eq('userId', userId).eq('key', 'displayName'))
+    .first();
+  if (!row?.value) return null;
+  try {
+    const parsed = JSON.parse(row.value) as unknown;
+    return typeof parsed === 'string' ? parsed : String(row.value);
+  } catch {
+    return row.value;
+  }
 }
 
 async function callerAllowed(ctx: QueryCtx | MutationCtx, userId: Id<'users'>): Promise<boolean> {
   const user = await ctx.db.get(userId);
-  if (canUseAiFoodScanByProfile({ email: user?.email, name: user?.name })) return true;
-  // Until the roster is frozen, every existing account is a "current user".
+  const displayName = await displayNameSetting(ctx, userId);
+  if (
+    canUseAiFoodScanByProfile({ email: user?.email, name: user?.name }) ||
+    canUseAiFoodScanByName(displayName)
+  ) {
+    return true;
+  }
   if (!(await rosterFrozen(ctx))) return true;
   return onRoster(ctx, userId);
 }
