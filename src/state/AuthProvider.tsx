@@ -1,7 +1,7 @@
 import { ConvexAuthProvider, useAuthActions } from '@convex-dev/auth/react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useConvexAuth, useQuery } from 'convex/react';
-import { router } from 'expo-router';
+import { type Href, router } from 'expo-router';
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef } from 'react';
 import { Platform } from 'react-native';
 import { api } from '../../convex/_generated/api';
@@ -35,7 +35,14 @@ function nativeTokenStorage() {
 }
 
 function replaceAuthCallbackUrl(relativeUrl: string): void {
-  router.replace(expoRouterPathFromLocationUrl(relativeUrl, process.env.EXPO_PUBLIC_BASE_PATH));
+  // `typedRoutes` narrows Href to the literal route list once .expo/types has
+  // been generated, and an OAuth callback path read from window.location at
+  // runtime cannot be proven to be one of them.
+  const path = expoRouterPathFromLocationUrl(
+    relativeUrl,
+    process.env.EXPO_PUBLIC_BASE_PATH,
+  ) as Href;
+  router.replace(path);
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
