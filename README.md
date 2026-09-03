@@ -138,7 +138,7 @@ Both suites run in plain Node against an in-memory backend, so no simulator, dev
 ## Roadmap
 
 MFA, offline queueing of writes, [Apple Health and Apple Watch](docs/apple-health.md)
-(planned, not built), widgets, Android polish, web dashboard.
+(paused — Settings → Apple Health and Watch), widgets, Android polish, web dashboard.
 
 ## Documentation
 

@@ -1,8 +1,13 @@
 # Apple Health and Apple Watch — plan
 
-Status: **proposal, nothing built yet.** This document is the plan for reading
-Apple Health data (steps, heart rate, calories burned) and for starting and
-stopping workouts from the app on an Apple Watch.
+Status: **paused.** Groundwork is in the repo (EAS + HealthKit entitlement);
+nothing reads Health data yet. Picked back up after the rest of the build,
+once a development iOS build is on a real iPhone. The same checklist is in
+the app at Settings → Apple Health and Watch (`/apple-health`).
+
+This document is the plan for reading Apple Health data (steps, heart rate,
+calories burned) and for starting and stopping workouts from the app on an
+Apple Watch.
 
 Read this before writing any code, because the two halves of the feature have
 very different costs and one of them is not a React Native task at all.
