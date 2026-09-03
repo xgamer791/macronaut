@@ -1,9 +1,20 @@
 import { getAuthUserId } from '@convex-dev/auth/server';
 import type { Id } from './_generated/dataModel';
-import { mutation, query, type MutationCtx } from './_generated/server';
+import { internalQuery, mutation, query, type MutationCtx } from './_generated/server';
 import { requireUserId } from './lib/auth';
 
 export type AuthProviderId = 'google' | 'apple' | 'email';
+
+/** Email of the signed-in user. Internal so actions can check allow-lists
+ * without exposing a second public viewer shape. */
+export const viewerEmail = internalQuery({
+  args: {},
+  handler: async (ctx) => {
+    const userId = await requireUserId(ctx);
+    const user = await ctx.db.get(userId);
+    return user?.email ?? null;
+  },
+});
 
 /** The signed-in user as the app shows it. Provider metadata (the `name` Google
  * or Apple returns) is user-controlled text; it is capped here and again where

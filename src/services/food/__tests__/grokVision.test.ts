@@ -44,6 +44,6 @@ describe('analyzeFoodPhoto', () => {
   it('rejects a missing API key', async () => {
     await expect(
       analyzeFoodPhoto({ apiKey: '  ', dataUrl: 'data:image/jpeg;base64,abc' }),
-    ).rejects.toThrow(/Grok API key/);
+    ).rejects.toThrow(/not configured/);
   });
 });

@@ -34,6 +34,7 @@ export function convexConfigStatus(): ConvexConfigStatus {
 export interface ConvexCaller {
   query: ConvexReactClient['query'];
   mutation: ConvexReactClient['mutation'];
+  action: ConvexReactClient['action'];
 }
 
 let client: ConvexReactClient | null = null;

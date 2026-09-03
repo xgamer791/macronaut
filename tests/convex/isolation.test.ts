@@ -44,6 +44,10 @@ describe('account isolation', () => {
       /not signed in/i,
     );
     await expect(t.mutation(api.account.deleteAllData, {})).rejects.toThrow(/not signed in/i);
+    await expect(t.query(api.foodScan.available, {})).rejects.toThrow(/not signed in/i);
+    await expect(
+      t.action(api.foodScan.analyzePhoto, { dataUrl: 'data:image/jpeg;base64,abc' }),
+    ).rejects.toThrow(/not signed in/i);
   });
 
   it('deleteAllData erases only the caller, and deleteAccount removes the user', async () => {

@@ -5,9 +5,11 @@ import { useRouter } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
 import { Platform, Pressable, StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { analyzeFoodPhoto, GrokFoodEstimate } from '@/services/food/grokVision';
+import { canUseAiFoodScan } from '../../convex/lib/aiScanAccess';
+import { GrokFoodEstimate } from '@/services/food/grokVision';
 import { useRepos } from '@/state/AppProvider';
-import { keys, useSetting } from '@/state/queries';
+import { useAuth } from '@/state/AuthProvider';
+import { keys } from '@/state/queries';
 import { goBackOrHome } from '@/utils/navigation';
 import { AppText, Button, Card, Screen, ScreenHeader } from '@/ui/components';
 import { useTheme } from '@/ui/theme/ThemeProvider';
@@ -18,14 +20,15 @@ const SCAN_DESCRIPTION =
 
 /**
  * Paid AI food scan — photo → Grok vision → custom food → confirm & log.
- * Unlocked by a user-supplied Grok API key in Settings (owner/preview use for now).
+ * The shared xAI key stays on the Convex server. Until Pro ships, only the
+ * allow-listed accounts can open this screen; everyone else sees a paywall.
  */
 export default function AiScanScreen() {
   const router = useRouter();
   const { colors } = useTheme();
   const { food } = useRepos();
+  const { user } = useAuth();
   const qc = useQueryClient();
-  const apiKey = useSetting<string>('grokApiKey', '');
   const cameraRef = useRef<CameraView>(null);
   /** Web: separate pickers so Take opens the camera and Choose opens the library. */
   const takePhotoRef = useRef<HTMLInputElement | null>(null);
@@ -39,7 +42,7 @@ export default function AiScanScreen() {
   const [photoDataUrl, setPhotoDataUrl] = useState<string | null>(null);
   const [webCameraOn, setWebCameraOn] = useState(false);
 
-  const keyReady = (apiKey.data ?? '').trim().length > 0;
+  const allowed = canUseAiFoodScan(user?.email);
 
   async function runAnalysis(dataUrl: string) {
     setBusy(true);
@@ -48,10 +51,7 @@ export default function AiScanScreen() {
     setWebCameraOn(false);
     setPhotoDataUrl(dataUrl);
     try {
-      const result = await analyzeFoodPhoto({
-        apiKey: apiKey.data ?? '',
-        dataUrl,
-      });
+      const result = await food.analyzeFoodPhoto(dataUrl);
       setEstimate(result);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'AI scan failed');
@@ -121,37 +121,18 @@ export default function AiScanScreen() {
     }
   }
 
-  if (apiKey.isLoading) {
-    return (
-      <Screen>
-        <ScreenHeader title="AI food scan" />
-        <AppText variant="caption" tone="muted" align="center">
-          Loading…
-        </AppText>
-      </Screen>
-    );
-  }
-
-  if (!keyReady) {
+  if (!allowed) {
     return (
       <Screen>
         <ScreenHeader title="AI food scan" />
         <Card style={{ gap: spacing.md }}>
           <AppText variant="heading" weight="600" display>
-            Grok key required
+            Pro feature
           </AppText>
           <AppText variant="caption" tone="secondary">
-            AI food scan is a paid feature. For now it runs with your personal xAI Grok API key
-            stored only on this device.
+            AI food scan will be part of Macronaut Pro. It is not available on this account yet.
           </AppText>
-          <Button
-            title="Add Grok API key"
-            onPress={() => {
-              goBackOrHome(router);
-              setTimeout(() => router.push('/settings'), 50);
-            }}
-          />
-          <Button title="Cancel" variant="ghost" onPress={() => goBackOrHome(router)} />
+          <Button title="Back" variant="ghost" onPress={() => goBackOrHome(router)} />
         </Card>
       </Screen>
     );

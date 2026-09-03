@@ -26,6 +26,7 @@ export async function signIn(t: Backend, email = 'person@example.com') {
   const caller = {
     query: (fn: unknown, args: unknown) => (as.query as Function)(fn, args),
     mutation: (fn: unknown, args: unknown) => (as.mutation as Function)(fn, args),
+    action: (fn: unknown, args: unknown) => (as.action as Function)(fn, args),
   } as unknown as ConvexCaller;
   return { userId: userId as Id<'users'>, sessionId, as, repos: createRepos(caller) };
 }

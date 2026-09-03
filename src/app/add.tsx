@@ -6,7 +6,9 @@ import { Linking, Pressable, StyleSheet, TextInput, View } from 'react-native';
 import { GroupedSearchResults } from '@/services/food/foodSearchService';
 import { webFoodLookup } from '@/services/food/webFallback';
 import { ProviderFood, SearchFilter } from '@/services/food/types';
+import { canUseAiFoodScan } from '../../convex/lib/aiScanAccess';
 import { useRepos } from '@/state/AppProvider';
+import { useAuth } from '@/state/AuthProvider';
 import { useFoodSearch } from '@/state/foodSearch';
 import { keys, useMealCategories } from '@/state/queries';
 import { useUiStore } from '@/state/uiStore';
@@ -207,7 +209,9 @@ function SearchResultSections({
 export default function AddScreen() {
   const router = useRouter();
   const { colors } = useTheme();
+  const { user } = useAuth();
   const { history, food, savedMeals, recipes } = useRepos();
+  const showAiScan = canUseAiFoodScan(user?.email);
   const categories = useMealCategories();
   const date = useUiStore((s) => s.selectedDate);
   const meal = useUiStore((s) => s.targetMeal);
@@ -355,11 +359,13 @@ export default function AddScreen() {
           {!searching ? (
             <>
               <QuickTileRow>
-                <QuickTile
-                  icon="sparkles-outline"
-                  label="AI food scan"
-                  onPress={() => router.push('/ai-scan')}
-                />
+                {showAiScan ? (
+                  <QuickTile
+                    icon="sparkles-outline"
+                    label="AI food scan"
+                    onPress={() => router.push('/ai-scan')}
+                  />
+                ) : null}
                 <QuickTile
                   icon="flash-outline"
                   label="Quick add"

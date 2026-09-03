@@ -421,8 +421,8 @@ export default function SettingsScreen() {
       <SectionHeader title="AI features" />
       <Card style={{ gap: spacing.md }}>
         <AppText variant="caption" tone="secondary">
-          Paste your personal xAI Grok API key for AI food scan and the voice assistant. The key
-          stays on this device.
+          Paste your personal xAI Grok API key for the voice assistant. The key stays in your
+          account. AI food scan uses a server key and does not read this field.
         </AppText>
         <TextField
           label="Grok API key"

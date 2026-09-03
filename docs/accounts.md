@@ -13,6 +13,7 @@ Sign-in is [Convex Auth](https://labs.convex.dev/auth) with three methods:
 | Google | OAuth code flow with PKCE. The consent screen returns to the Convex **site** URL, which holds the client secret; the app only ever sees a one-time code. | `AUTH_GOOGLE_ID`, `AUTH_GOOGLE_SECRET` |
 | Apple | Same OAuth code flow on web and Android. On iOS, Apple's own sheet returns an identity token that the backend verifies against Apple's published keys (`apple-native` in `convex/AppleNative.ts`) — no secret involved. Both paths write the same `apple` account, so one Apple ID is one Macronaut account. | `AUTH_APPLE_ID`, `AUTH_APPLE_SECRET` |
 | Email code | A six-digit code sent through [Resend](https://resend.com), valid for ten minutes. Works identically on web, iOS and Android with no deep-link setup. | `AUTH_RESEND_KEY`, `AUTH_EMAIL_FROM` |
+| AI food scan | A Convex action calls xAI with a shared key. The client never sees it. Until Pro exists, only allow-listed accounts can invoke the action. | `XAI_API_KEY` |
 
 Apple is not optional: the App Store requires Sign in with Apple in any app that
 offers another third-party sign-in, which Google is.
@@ -160,7 +161,21 @@ show **Verified**. Then set `AUTH_EMAIL_FROM` on the production deployment to
 an address on that domain. Convex reads environment variables at call time,
 so the next code goes out from the new sender without a redeploy.
 
-### 7. Verify
+### 7. AI food scan (`XAI_API_KEY`)
+
+The shared xAI key belongs on the Convex deployment, not in a table and not
+in the app bundle:
+
+```
+npx convex env set XAI_API_KEY xai-…          # dev
+npx convex env set XAI_API_KEY xai-… --prod   # prod
+```
+
+Or paste it under **Settings → Environment Variables** in the Convex
+dashboard. Rotate it there; do not store it in a database table, user
+settings, or `EXPO_PUBLIC_*`.
+
+### 8. Verify
 
 ```bash
 npm run web

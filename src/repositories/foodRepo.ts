@@ -1,5 +1,6 @@
 import { api } from '../../convex/_generated/api';
 import type { Id } from '../../convex/_generated/dataModel';
+import type { GrokFoodEstimate } from '@/services/food/grokVision';
 import { clean, ConvexCaller } from './convexCall';
 import { CachedFood, CustomFood } from './types';
 
@@ -29,6 +30,10 @@ export interface FoodRepo {
   isFavorite(foodKey: string): Promise<boolean>;
   setFavorite(foodKey: string, favorite: boolean): Promise<void>;
   listFavoriteKeys(): Promise<string[]>;
+
+  /** Server-enforced allow-list. The shared xAI key never reaches the client. */
+  aiScanAvailable(): Promise<boolean>;
+  analyzeFoodPhoto(dataUrl: string): Promise<GrokFoodEstimate>;
 }
 
 const customId = (id: string) => id as Id<'customFoods'>;
@@ -87,6 +92,13 @@ export function createFoodRepo(convex: ConvexCaller): FoodRepo {
       await convex.mutation(api.foods.setFavorite, { foodKey, favorite });
     },
     listFavoriteKeys: () => convex.query(api.foods.listFavoriteKeys, {}),
+
+    async aiScanAvailable() {
+      const row = await convex.query(api.foodScan.available, {});
+      return row.allowed;
+    },
+    analyzeFoodPhoto: (dataUrl) =>
+      convex.action(api.foodScan.analyzePhoto, { dataUrl }) as Promise<GrokFoodEstimate>,
   };
   return repo;
 }

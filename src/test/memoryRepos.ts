@@ -447,6 +447,12 @@ export function createMemoryFoodRepo(): FoodRepo {
     async listFavoriteKeys() {
       return [...favorites.entries()].sort((a, b) => b[1].localeCompare(a[1])).map(([k]) => k);
     },
+    async aiScanAvailable() {
+      return false;
+    },
+    async analyzeFoodPhoto() {
+      throw new Error('AI food scan is a Pro feature');
+    },
   };
   return repo;
 }
