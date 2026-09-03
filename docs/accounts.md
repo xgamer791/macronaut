@@ -97,18 +97,23 @@ through the portal screens; the Macronaut-specific values are:
 
 | Thing | Value |
 |---|---|
-| App ID (explicit bundle ID) | `com.macronaut.app`, with **Sign in with Apple** checked |
-| Services ID | `com.macronaut.app.web`, with `com.macronaut.app` as its **primary App ID** |
+| App ID (explicit bundle ID) | `com.mangomarketeers.macronaut`, with **Sign in with Apple** checked |
+| Services ID | `com.mangomarketeers.macronaut.web`, with `com.mangomarketeers.macronaut` as its **primary App ID** |
 | Domain | `brainy-cobra-467.convex.site` (prod), `zany-hornet-105.convex.site` (dev) |
 | Return URL | `https://brainy-cobra-467.convex.site/api/auth/callback/apple` (prod)<br>`https://zany-hornet-105.convex.site/api/auth/callback/apple` (dev) |
-| Key | A **Sign in with Apple** key whose primary App ID is `com.macronaut.app`; downloads once as `AuthKey_XXXXXXXXXX.p8` |
+| Key | A **Sign in with Apple** key whose primary App ID is `com.mangomarketeers.macronaut`; downloads once as `AuthKey_XXXXXXXXXX.p8` |
 
-The Services ID must share `com.macronaut.app` as its primary App ID. That is
-what makes Apple return the same user identifier (`sub`) to the web flow and to
-the iOS sheet, which is what lets both sign in to the same account.
+`com.macronaut.app` was already taken in Apple's registry, which is why the App
+ID is under the Mango Marketeers prefix. `app.config.ts` uses the same string as
+the iOS bundle identifier, because Apple ties Sign in with Apple to the App ID
+and the two have to agree.
+
+The Services ID must share `com.mangomarketeers.macronaut` as its primary App
+ID. That is what makes Apple return the same user identifier (`sub`) to the web
+flow and to the iOS sheet, which is what lets both sign in to the same account.
 
 ```
-npx convex env set AUTH_APPLE_ID com.macronaut.app.web
+npx convex env set AUTH_APPLE_ID com.mangomarketeers.macronaut.web
 npx convex env set AUTH_APPLE_SECRET <client-secret-jwt>
 ```
 
@@ -122,8 +127,10 @@ the `.p8` out of the repository (`.gitignore` already covers `*.p8`).
 
 Native iOS sign-in needs nothing else. It verifies Apple's identity token
 against `https://appleid.apple.com/auth/keys` and checks the token was issued
-for `com.macronaut.app`, so it has no secret to configure or rotate. Set
-`AUTH_APPLE_NATIVE_ID` only if the iOS bundle identifier ever changes.
+for `com.mangomarketeers.macronaut`, so it has no secret to configure or rotate.
+That bundle id is the default in `convex/AppleNative.ts`; set
+`AUTH_APPLE_NATIVE_ID` to override it, and only if the iOS bundle identifier ever
+changes again.
 
 Two Apple quirks worth knowing before testing:
 

@@ -15,7 +15,8 @@ const APPLE_JWKS_URL = new URL('https://appleid.apple.com/auth/keys');
  * `ios.bundleIdentifier`); the web flow's tokens are addressed to the Services
  * ID in `AUTH_APPLE_ID` instead. Both are public identifiers, so this one is a
  * constant with an override for the day the bundle id changes. */
-export const APPLE_NATIVE_AUDIENCE = process.env.AUTH_APPLE_NATIVE_ID ?? 'com.macronaut.app';
+export const APPLE_NATIVE_AUDIENCE =
+  process.env.AUTH_APPLE_NATIVE_ID ?? 'com.mangomarketeers.macronaut';
 
 /** Names longer than this are truncated, matching `displayNameFromUser`. */
 const NAME_MAX = 60;

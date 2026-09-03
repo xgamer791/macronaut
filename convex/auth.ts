@@ -38,8 +38,9 @@ const AppleOAuth = Apple({
  * Sign-in providers:
  *   - Google OAuth — `AUTH_GOOGLE_ID` / `AUTH_GOOGLE_SECRET` on the deployment.
  *     Google's authorised redirect URI is `<CONVEX_SITE_URL>/api/auth/callback/google`.
- *   - Apple OAuth (web and Android) — `AUTH_APPLE_ID` (the Services ID, e.g.
- *     `com.macronaut.app.web`) / `AUTH_APPLE_SECRET` (the client secret JWT).
+ *   - Apple OAuth (web and Android) — `AUTH_APPLE_ID` (the Services ID,
+ *     `com.mangomarketeers.macronaut.web`) / `AUTH_APPLE_SECRET` (the client
+ *     secret JWT).
  *     Apple's return URL is `<CONVEX_SITE_URL>/api/auth/callback/apple`, and it
  *     POSTs the callback (`response_mode=form_post`), which Convex Auth handles.
  *   - Apple native (iOS) — see AppleNative.ts. Writes to the same `apple`
