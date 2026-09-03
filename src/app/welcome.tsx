@@ -7,7 +7,7 @@ import { useAuth } from '@/state/AuthProvider';
 import { useSetting } from '@/state/queries';
 import { AppText } from '@/ui/components';
 import { WelcomeSlideshow } from '@/ui/WelcomeSlideshow';
-import { fonts, palette } from '@/ui/theme/tokens';
+import { fonts, palette, radius } from '@/ui/theme/tokens';
 
 /** Poster splash: full-bleed photo, mid-canvas stacked wordmark, two identical
  * CTAs, then a text link. No borrowed marks or provider pills. The buttons
@@ -127,7 +127,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: palette.accent,
-    borderRadius: 0,
+    borderRadius: radius.md,
   },
   ctaLabel: {
     fontFamily: fonts.display,

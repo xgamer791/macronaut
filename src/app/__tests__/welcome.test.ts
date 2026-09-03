@@ -61,6 +61,7 @@ describe('welcome splash', () => {
     const slideshow = fs.readFileSync(path.join(appDir, '../ui/WelcomeSlideshow.tsx'), 'utf8');
     expect(welcome).toContain('WelcomeSlideshow');
     expect(welcome).toContain('veilFilm');
+    expect(welcome).toContain('radius.md');
     expect(welcome).toContain("rgba(0,0,0,0.36)");
     expect(slideshow).toContain('Animated.timing');
     expect(slideshow).toContain('WELCOME_PHOTO_FADE_MS');
