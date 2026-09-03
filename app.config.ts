@@ -64,6 +64,24 @@ const config: ExpoConfig = {
           'Macronaut uses the camera to scan barcodes and photograph meals for AI food logging.',
       },
     ],
+    [
+      // Adds the `com.apple.developer.healthkit` entitlement, so the App ID
+      // needs the HealthKit capability before a build can be signed — see
+      // docs/ios-setup.md. iOS only; the web and Android builds never load the
+      // native module.
+      '@kingstinct/react-native-healthkit',
+      {
+        NSHealthShareUsageDescription:
+          'Macronaut reads your steps, heart rate and workout calories from Apple Health so your activity and calorie budget stay in sync with your Apple Watch.',
+        NSHealthUpdateUsageDescription:
+          'Macronaut saves workouts you start in the app to Apple Health so they count towards your activity rings.',
+        // The plugin adds the background-delivery entitlement unless this is
+        // false. Kept on so enabling background sync later does not need a new
+        // provisioning profile; no `UIBackgroundModes` is claimed until we
+        // actually observe changes in the background.
+        background: true,
+      },
+    ],
   ],
   experiments: {
     typedRoutes: true,

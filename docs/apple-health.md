@@ -72,7 +72,9 @@ HealthKit entitlement.
 
 That means the first phase is not a feature at all — it is standing up an iOS
 build: an Apple Developer account, `eas.json`, a dev client, provisioning, and
-eventually App Store review with health-data privacy disclosures.
+eventually App Store review with health-data privacy disclosures. The
+Apple-side half of that is written up in [docs/ios-setup.md](ios-setup.md); the
+repository half (`eas.json`, the config plugin, the entitlement) is done.
 
 Everything below is invisible on web and on Android. The web build stays the
 primary product and must keep working untouched, so every Health surface is
@@ -89,18 +91,11 @@ a workout.
 ### Library
 
 [`@kingstinct/react-native-healthkit`](https://kingstinct.com/react-native-healthkit/).
-It ships an Expo config plugin, so `app.config.ts` gains:
-
-```ts
-[
-  '@kingstinct/react-native-healthkit',
-  {
-    NSHealthShareUsageDescription: '…why we read your activity…',
-    NSHealthUpdateUsageDescription: '…why we write workouts…',
-    background: true,
-  },
-],
-```
+It ships an Expo config plugin, which is now wired up in `app.config.ts`. Note
+that its `background` option is opt-*out*: the plugin adds the
+`com.apple.developer.healthkit.background-delivery` entitlement unless you pass
+`false`. It does not add `UIBackgroundModes`, which is a separate decision for
+whenever background observers actually land.
 
 It covers everything Phase 1 needs: `queryWorkoutSamplesWithAnchor`,
 `queryStatisticsCollectionForQuantity` for daily step and energy totals,
