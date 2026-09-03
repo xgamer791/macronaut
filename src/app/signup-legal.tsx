@@ -72,8 +72,8 @@ function LegalLink({ href, children }: { href: '/terms' | '/privacy'; children: 
   );
 }
 
-/** First step of create-account: agree to the existing Terms and Privacy
- * pages before the provider picker. Layout matches the supplied consent
+/** Create-account legal gate only. Save and continue stays on this page
+ * until the next screen is built. Layout matches the supplied consent
  * frame; type, accent and the CTA come from the welcome splash. */
 export default function SignupLegalScreen() {
   const router = useRouter();
@@ -155,7 +155,7 @@ export default function SignupLegalScreen() {
           <WelcomeCta
             label="Save and continue"
             disabled={!agreed}
-            onPress={() => router.push('/create-account')}
+            onPress={() => {}}
           />
         </View>
       </View>

@@ -67,7 +67,7 @@ export default function LoginScreen() {
             disabled={auth.busy}
             onPress={() => {
               auth.clearError();
-              router.push('/signup-legal');
+              router.push('/create-account');
             }}
             style={styles.footerRow}
           >

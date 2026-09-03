@@ -39,7 +39,7 @@ describe('sign-in actions', () => {
 
   it('keeps create-account as the tertiary action on login, and sign-in on create-account', () => {
     expect(read('login.tsx')).toContain('accessibilityLabel="Create Account"');
-    expect(read('login.tsx')).toContain("router.push('/signup-legal')");
+    expect(read('login.tsx')).toContain("router.push('/create-account')");
     expect(read('create-account.tsx')).toContain('accessibilityLabel="Sign in"');
     expect(read('create-account.tsx')).toContain("router.replace('/login')");
   });

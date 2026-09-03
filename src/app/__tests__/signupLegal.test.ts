@@ -14,9 +14,9 @@ describe('signup legal gate', () => {
     expect(fs.existsSync(path.join(appDir, '(tabs)', 'signup-legal.tsx'))).toBe(false);
   });
 
-  it('is the first screen after Create Account on welcome and login', () => {
+  it('is the first screen after Create Account on welcome', () => {
     expect(read('welcome.tsx')).toContain("router.push('/signup-legal')");
-    expect(read('login.tsx')).toContain("router.push('/signup-legal')");
+    expect(read('login.tsx')).not.toContain('/signup-legal');
   });
 
   it('links the existing Terms of Service and Privacy Policy pages', () => {
@@ -41,12 +41,14 @@ describe('signup legal gate', () => {
     expect(source).toContain('type.body');
     expect(source).toContain('palette.accent');
     expect(source).toContain('Save and continue');
-    expect(source).toContain("router.push('/create-account')");
+    expect(source).not.toContain('/create-account');
   });
 
-  it('keeps Save and continue disabled until the required toggle is on', () => {
+  it('keeps Save and continue disabled until the required toggle is on, and does not leave this page', () => {
     const source = read('signup-legal.tsx');
     expect(source).toContain('disabled={!agreed}');
     expect(source).toContain('Agree to the Terms of Service and Privacy Policy');
+    expect(source).toContain('onPress={() => {}}');
+    expect(source).not.toContain("router.push('/create-account')");
   });
 });
