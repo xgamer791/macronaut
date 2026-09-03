@@ -1,4 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
+// Type-only, so the iOS-only module is erased from the web and Android bundles;
+// the value is `require`d in `onApple`, on iOS only.
+import type * as AppleAuth from 'expo-apple-authentication';
 import { Image } from 'expo-image';
 import { Redirect } from 'expo-router';
 import React, { useState } from 'react';
@@ -12,6 +15,11 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path, Rect } from 'react-native-svg';
 import { useAuthActions } from '@convex-dev/auth/react';
+import {
+  appleDisplayName,
+  createAppleNonce,
+  supportsNativeAppleAuth,
+} from '@/services/auth/apple';
 import { isPlausibleEmail, normalizeEmail } from '@/services/auth/email';
 import { authRedirectUrl } from '@/services/auth/redirect';
 import { useAuth } from '@/state/AuthProvider';
@@ -25,6 +33,12 @@ const NAVY = '#0B1F3A';
 const NAVY_SOFT = '#1A2F4A';
 const CARD_BG = 'rgba(255, 255, 255, 0.86)';
 const DANGER = '#B3261E';
+/** Apple's branding rules for a custom Sign in with Apple button: black or
+ * white only, and no other colour. */
+const APPLE_BLACK = '#000000';
+
+/** Apple's own sheet reports a dismissal as an error rather than a result. */
+const APPLE_CANCELLED = 'ERR_REQUEST_CANCELED';
 
 /** Keeps provider internals out of the UI while still telling the user what to
  * do next. Anything unrecognised gets a generic message rather than a raw
@@ -39,6 +53,7 @@ function friendlyAuthError(err: unknown): string {
   if (message.includes('could not send')) {
     return 'We could not send the code to that address. Check it and try again.';
   }
+  if (message.includes('apple')) return 'Apple sign-in did not finish. Please try again.';
   if (
     message.includes('code') ||
     message.includes('token') ||
@@ -94,29 +109,72 @@ export default function LoginScreen() {
   // Navigation after a successful sign-in is handled by the redirect above:
   // AuthProvider publishes the new session and this screen unmounts itself.
   //
-  // Google: the consent screen runs against the Convex site URL, which holds
-  // the client secret. On web the browser is redirected there and comes back
-  // with a one-time code that ConvexAuthProvider exchanges. On native the
-  // same round trip runs in an ASWebAuthenticationSession / Custom Tab and
-  // the code is exchanged here. Either way the code is useless without the
-  // PKCE verifier held by this client.
-  const onGoogle = () =>
+  // The consent screen runs against the Convex site URL, which holds the client
+  // secret. On web the browser is redirected there and comes back with a
+  // one-time code that ConvexAuthProvider exchanges. On native the same round
+  // trip runs in an ASWebAuthenticationSession / Custom Tab and the code is
+  // exchanged here. Either way the code is useless without the PKCE verifier
+  // held by this client.
+  async function browserSignIn(provider: 'google' | 'apple', label: string) {
+    const redirectTo = authRedirectUrl();
+    if (Platform.OS === 'web') {
+      await signIn(provider, { redirectTo });
+      return;
+    }
+    const { redirect } = await signIn(provider, { redirectTo });
+    if (!redirect) throw new Error(`${label} sign-in could not be started.`);
+    // Required lazily: the web branch above never needs the native browser.
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const WebBrowser = require('expo-web-browser') as typeof import('expo-web-browser');
+    const result = await WebBrowser.openAuthSessionAsync(redirect.toString(), redirectTo);
+    if (result.type !== 'success') return;
+    const authCode = new URL(result.url).searchParams.get('code');
+    if (!authCode) throw new Error(`${label} sign-in did not return an authorization code.`);
+    await signIn(provider, { code: authCode });
+  }
+
+  const onGoogle = () => run(() => browserSignIn('google', 'Google'));
+
+  // iOS gets Apple's own sheet — Face ID, no browser — which is what the
+  // platform and App Store review expect. It hands back an identity token that
+  // `apple-native` verifies against Apple's published keys (convex/
+  // AppleNative.ts) and turns into the same account the web flow would create.
+  // Web and Android fall back to the browser round trip above.
+  const onApple = () =>
     run(async () => {
-      const redirectTo = authRedirectUrl();
-      if (Platform.OS === 'web') {
-        await signIn('google', { redirectTo });
+      if (!supportsNativeAppleAuth()) {
+        await browserSignIn('apple', 'Apple');
         return;
       }
-      const { redirect } = await signIn('google', { redirectTo });
-      if (!redirect) throw new Error('Google sign-in could not be started.');
-      // Required lazily: the web branch above never needs the native browser.
       // eslint-disable-next-line @typescript-eslint/no-require-imports
-      const WebBrowser = require('expo-web-browser') as typeof import('expo-web-browser');
-      const result = await WebBrowser.openAuthSessionAsync(redirect.toString(), redirectTo);
-      if (result.type !== 'success') return;
-      const authCode = new URL(result.url).searchParams.get('code');
-      if (!authCode) throw new Error('Google sign-in did not return an authorization code.');
-      await signIn('google', { code: authCode });
+      const Apple = require('expo-apple-authentication') as typeof AppleAuth;
+      if (!(await Apple.isAvailableAsync())) {
+        await browserSignIn('apple', 'Apple');
+        return;
+      }
+      const nonce = await createAppleNonce();
+      let credential: AppleAuth.AppleAuthenticationCredential;
+      try {
+        credential = await Apple.signInAsync({
+          nonce: nonce.hashed,
+          requestedScopes: [
+            Apple.AppleAuthenticationScope.FULL_NAME,
+            Apple.AppleAuthenticationScope.EMAIL,
+          ],
+        });
+      } catch (err) {
+        if ((err as { code?: string }).code === APPLE_CANCELLED) return;
+        throw err;
+      }
+      if (!credential.identityToken) {
+        throw new Error('Apple sign-in did not return an identity token.');
+      }
+      const name = appleDisplayName(credential.fullName);
+      await signIn('apple-native', {
+        identityToken: credential.identityToken,
+        nonce: nonce.raw,
+        ...(name ? { name } : null),
+      });
     });
 
   // Sending a code deliberately does not reveal whether the address already
@@ -185,6 +243,22 @@ export default function LoginScreen() {
           </View>
 
           <View style={styles.actions}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Continue with Apple"
+              disabled={busy}
+              onPress={() => void onApple()}
+              style={({ pressed }) => [
+                styles.btn,
+                styles.btnApple,
+                pressed && { opacity: 0.9 },
+                busy && { opacity: 0.6 },
+              ]}
+            >
+              <AppleLogo />
+              <AppText style={styles.btnAppleLabel}>Continue with Apple</AppText>
+            </Pressable>
+
             <Pressable
               accessibilityRole="button"
               accessibilityLabel="Continue with Google"
@@ -342,6 +416,21 @@ function BarbellMMark() {
   );
 }
 
+/** Apple's Human Interface Guidelines allow a custom Sign in with Apple button
+ * as long as it keeps the official logo, an approved title and Apple's own
+ * black/white colours — which is what this and `btnApple` do, so the button can
+ * match the Google and Email ones instead of standing apart from them. */
+function AppleLogo() {
+  return (
+    <Svg width={15} height={20} viewBox="0 0 384 512" accessibilityLabel="Apple logo">
+      <Path
+        fill="#FFFFFF"
+        d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-36.8-2.8-77 21.3-91.7 21.3-15.5 0-51.1-20.3-79.1-20.3C56.9 141.1 0 184.7 0 273.5c0 26.2 4.8 53.3 14.4 81.2 12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-57.7-90.1-57.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z"
+      />
+    </Svg>
+  );
+}
+
 /** Official-style four-color Google G. */
 function GoogleG() {
   return (
@@ -426,6 +515,21 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 10,
     paddingHorizontal: spacing.lg,
+  },
+  btnApple: {
+    backgroundColor: APPLE_BLACK,
+    shadowColor: '#0B1F3A',
+    shadowOpacity: 0.22,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 3,
+  },
+  btnAppleLabel: {
+    fontFamily: fonts.displayMedium,
+    fontSize: 16,
+    lineHeight: 22,
+    fontWeight: '600',
+    color: '#FFFFFF',
   },
   btnGoogle: {
     backgroundColor: '#FFFFFF',

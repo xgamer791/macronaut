@@ -3,7 +3,7 @@ export interface AuthUser {
   email?: string;
   name?: string;
   image?: string;
-  provider?: 'google' | 'email';
+  provider?: 'google' | 'apple' | 'email';
 }
 
 /** Human-readable display name for a user, falling back to the email local

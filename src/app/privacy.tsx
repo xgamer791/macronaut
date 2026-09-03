@@ -37,8 +37,9 @@ export default function PrivacyScreen() {
       <LegalSection
         title="Signing in"
         paragraphs={[
-          'You sign in with Google or with a six-digit code sent to your email address. We store your email address and, when you use Google, the name and profile picture Google returns, so we can show who is signed in and greet you by name.',
-          'Sign-in codes are delivered by Resend, an email delivery service, which receives your email address for that purpose. Google sign-in follows Google\u2019s own privacy terms.',
+          'You sign in with Apple, with Google, or with a six-digit code sent to your email address. We store your email address and, when you use Google, the name and profile picture Google returns, so we can show who is signed in and greet you by name.',
+          'Sign in with Apple gives us your email address and, only the first time you use it, your name. If you choose Apple\u2019s Hide My Email option we receive a relay address instead of your real one, and that is the address we store. Apple does not give us a profile picture.',
+          'Sign-in codes are delivered by Resend, an email delivery service, which receives your email address for that purpose. Apple and Google sign-in follow their own privacy terms.',
           'Your sign-in session is stored on the device \u2014 in the system keychain on iOS and Android, and in browser storage on the web. Signing out removes it from that device only.',
         ]}
       />

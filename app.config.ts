@@ -17,6 +17,12 @@ const config: ExpoConfig = {
     icon: './assets/expo.icon',
     bundleIdentifier: 'com.macronaut.app',
     supportsTablet: false,
+    // Adds the `com.apple.developer.applesignin` entitlement, which
+    // expo-apple-authentication needs and which App Store review requires now
+    // that the login screen offers Google as well. The Services ID used by the
+    // web flow (`com.macronaut.app.web`) must have this bundle id as its
+    // primary App ID so both give the same Apple user id — see docs/accounts.md.
+    usesAppleSignIn: true,
     infoPlist: {
       NSCameraUsageDescription:
         'Macronaut uses the camera to scan barcodes and photograph meals for AI food logging.',
@@ -43,6 +49,7 @@ const config: ExpoConfig = {
   plugins: [
     'expo-router',
     'expo-font',
+    'expo-apple-authentication',
     [
       'expo-splash-screen',
       {
