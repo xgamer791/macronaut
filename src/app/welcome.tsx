@@ -29,7 +29,7 @@ export default function WelcomeScreen() {
       <View pointerEvents="none" style={styles.veil}>
         <View style={styles.veilFilm} />
         <LinearGradient
-          colors={['rgba(0,0,0,0.22)', 'rgba(0,0,0,0.04)', 'rgba(0,0,0,0.58)']}
+          colors={['rgba(0,0,0,0.28)', 'rgba(0,0,0,0.10)', 'rgba(0,0,0,0.64)']}
           locations={[0, 0.4, 1]}
           style={StyleSheet.absoluteFill}
         />
@@ -86,7 +86,7 @@ const styles = StyleSheet.create({
   },
   veilFilm: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.30)',
+    backgroundColor: 'rgba(0,0,0,0.36)',
   },
   frame: {
     flex: 1,
