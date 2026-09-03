@@ -1,4 +1,4 @@
-import { analyzeFoodPhoto } from '../grokVision';
+import { analyzeFoodPhoto } from '../../../../convex/lib/grokVision';
 
 describe('analyzeFoodPhoto', () => {
   const originalFetch = global.fetch;
