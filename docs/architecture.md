@@ -45,8 +45,8 @@ WebSocket.
 - **Auth is not a local flag.** Route guards read Convex Auth's verified
   session state, never a value the device can edit. There is no signed-out
   mode with data in it: without a session nothing loads.
-- **Settings are JSON text per key.** Shapes vary per key (profile, assistant
-  memory, meal times) and grow over time; storing them as text on the server
+- **Settings are JSON text per key.** Shapes vary per key (profile, meal
+  times, goals) and grow over time; storing them as text on the server
   keeps that flexibility without schema churn. Everything queried by field
   has real columns and indexes.
 - **Saved meals and recipes embed their items.** A parent and its items are

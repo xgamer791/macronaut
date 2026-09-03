@@ -24,9 +24,9 @@ describe('settings', () => {
 
   it('overwrites a key in place and stores arbitrary shapes', async () => {
     const { settings } = await signedInRepos(backend());
-    await settings.set('assistantMemory', { turns: [{ role: 'user', content: 'hi' }], facts: [] });
-    await settings.set('assistantMemory', { turns: [], facts: ['likes oats'] });
-    expect(await settings.get('assistantMemory', null)).toEqual({ turns: [], facts: ['likes oats'] });
+    await settings.set('mealTimes', { breakfast: '7:00 AM' });
+    await settings.set('mealTimes', { breakfast: '8:00 AM' });
+    expect(await settings.get('mealTimes', null)).toEqual({ breakfast: '8:00 AM' });
   });
 
   it('lists default meal categories and adds custom ones', async () => {

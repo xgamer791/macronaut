@@ -3,4 +3,4 @@
 
 export const CONTACT_EMAIL = 'chris@mangomarketeers.com';
 
-export const LEGAL_LAST_UPDATED = '2 September 2026';
+export const LEGAL_LAST_UPDATED = '3 September 2026';

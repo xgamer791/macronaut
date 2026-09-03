@@ -102,19 +102,16 @@ forwarding search and barcode requests, after which the client needs no
 provider credentials at all. Until then, treat any configured FatSecret or
 Nutritionix credential as public and scope it to nothing else.
 
-### The user's own xAI key is stored as a plain setting
+### Shared xAI key for AI food scan
 
-`grokApiKey` is a settings row in the account, used only by the voice
-assistant. It is protected by the same isolation as everything else, but it
-is a credential to a third-party service stored in plain text on our side.
-Options: keep it on the device only (`expo-secure-store`), or proxy those
-calls through a Convex action as AI food scan already does.
+AI food scan's key is `XAI_API_KEY` on the Convex deployment. A public query
+only returns `{ allowed }`; the action reads the env var, calls xAI, and
+returns the food estimate. Putting that key in a Convex table would show it
+in the data browser, backups, and any query that listed the row — worse
+than a server env var for a shared secret.
 
-AI food scan does **not** use that setting. Its key is `XAI_API_KEY` on the
-Convex deployment. A public query only returns `{ allowed }`; the action
-reads the env var, calls xAI, and returns the food estimate. Putting that
-key in a Convex table would show it in the data browser, backups, and any
-query that listed the row — worse than a server env var for a shared secret.
+The voice assistant that stored a personal key as `grokApiKey` has been
+removed. Leftover `grokApiKey` / `assistantMemory` settings rows are unused.
 
 ### App Store requirement
 

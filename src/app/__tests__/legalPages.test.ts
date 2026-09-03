@@ -46,7 +46,7 @@ describe('legal pages', () => {
       'Your account and what it holds',
       'Signing in',
       'Searching for foods',
-      'Camera and microphone',
+      'Camera',
       'What we never do',
       'Deleting your data',
       'Children',

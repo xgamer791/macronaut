@@ -1,5 +1,5 @@
 /** In-memory repositories for the Jest suites that exercise services on top
- * of the repository interfaces (food engine, assistant tools, demo seed).
+ * of the repository interfaces (food engine, demo seed).
  * Persistence itself is covered by tests/convex, which runs the real Convex
  * functions; these fakes only need the interface contract. */
 import { sumNutrition, scaleNutrition } from '@/domain/nutrition';

@@ -56,9 +56,9 @@ export default function TermsScreen() {
       />
 
       <LegalSection
-        title="Your own API keys"
+        title="AI food scan"
         paragraphs={[
-          'The optional AI photo and voice features require your own xAI (Grok) API key. If you supply one, any usage, cost and rate limit on that key is yours, and your use of that service is governed by xAI\u2019s terms rather than these.',
+          'When AI food scan is available on your account, a meal photo is sent from our server to xAI to estimate the food and nutrition. That call uses our key, not one you supply. The estimate is still covered by these terms; xAI handles the photo under its own terms.',
         ]}
       />
 

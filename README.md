@@ -113,7 +113,7 @@ To add a provider, see [docs/providers.md](docs/providers.md).
 
 ```bash
 npm test             # Jest: domain math, servings, goals, aggregation, food engine,
-                     # assistant tools, demo data (in-memory repositories)
+                     # demo data (in-memory repositories)
 npm run test:convex  # Vitest + convex-test: the real Convex functions, driven through
                      # the app's repositories, including the account-isolation check
 npm run typecheck    # tsc --noEmit (strict), app and backend

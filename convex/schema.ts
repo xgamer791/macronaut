@@ -24,7 +24,7 @@ export default defineSchema({
   ...authTables,
 
   /** Key/value settings, JSON-encoded exactly as the app hands them over —
-   * shapes vary per key (profile, assistant memory, meal times, …). */
+   * shapes vary per key (profile, meal times, goals, …). */
   settings: defineTable({
     userId: v.id('users'),
     key: v.string(),

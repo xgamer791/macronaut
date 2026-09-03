@@ -36,4 +36,3 @@ export { LiquidGlassCard } from './LiquidGlassCard';
 export { GlassPopup } from './GlassPopup';
 export { DayNotesPopup } from './DayNotesPopup';
 export { DayInfoPopup } from './DayInfoPopup';
-export { VoiceAssistant } from './VoiceAssistant';
