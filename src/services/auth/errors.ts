@@ -8,6 +8,9 @@ export function friendlyAuthError(err: unknown): string {
     return 'Too many attempts. Wait a minute and try again.';
   }
   if (message.includes('expired')) return 'That code has expired. Request a new one.';
+  if (message.includes('not available yet')) {
+    return "Email sign-in isn't available yet. Use Apple or Google for now.";
+  }
   if (message.includes('could not send')) {
     return 'We could not send the code to that address. Check it and try again.';
   }

@@ -1,5 +1,6 @@
 import { Email } from '@convex-dev/auth/providers/Email';
 import { ConvexError } from 'convex/values';
+import { describeResendFailure } from './lib/resendErrors';
 
 const CODE_LENGTH = 6;
 const CODE_TTL_SECONDS = 10 * 60;
@@ -45,7 +46,9 @@ export const ResendOTP = Email({
     // messages with "Server Error" before they reach the client, and these
     // are the ones the login screen needs to explain.
     if (!provider.apiKey) {
-      throw new ConvexError('Could not send the sign-in code: AUTH_RESEND_KEY is not set on the deployment');
+      throw new ConvexError(
+        'Could not send the sign-in code: AUTH_RESEND_KEY is not set on the deployment',
+      );
     }
     const minutes = Math.max(1, Math.round((expires.getTime() - Date.now()) / 60_000));
     const response = await fetch('https://api.resend.com/emails', {
@@ -74,10 +77,10 @@ export const ResendOTP = Email({
     });
     if (!response.ok) {
       const detail = await response.text().catch(() => '');
-      // The detail is logged for the dashboard; the client only learns that
-      // the send was refused, which is what the person can act on.
+      // The detail is logged for the dashboard; the client only learns what
+      // kind of refusal it was, which is what the person can act on.
       console.error(`Resend refused the sign-in email (${response.status}): ${detail}`);
-      throw new ConvexError(`Could not send the sign-in code (Resend ${response.status})`);
+      throw new ConvexError(describeResendFailure(response.status, detail));
     }
   },
 });
