@@ -28,8 +28,8 @@ export function WelcomeCta({
       accessibilityState={{ disabled }}
       disabled={disabled}
       onPress={() => {
+        onPress?.();
         if (href) router.push(href);
-        else onPress?.();
       }}
       style={({ pressed }) => [
         styles.cta,

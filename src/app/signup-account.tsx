@@ -16,7 +16,7 @@ import { COUNTRIES } from '@/data/countries';
 import { isValidSignupBirthday, MONTHS } from '@/domain/signupAccount';
 import { useAuth } from '@/state/AuthProvider';
 import { useSetting } from '@/state/queries';
-import { useSignupDraft } from '@/state/signupDraft';
+import { saveSignupDraftValues, useSignupDraft } from '@/state/signupDraft';
 import { AppText } from '@/ui/components';
 import { WelcomeBackground } from '@/ui/WelcomeBackground';
 import { WelcomeCta } from '@/ui/WelcomeCta';
@@ -103,14 +103,11 @@ export default function SignupAccountScreen() {
   const insets = useSafeAreaInsets();
   const { loading, signedIn } = useAuth();
   const onboarded = useSetting<boolean>('onboardingComplete', false, signedIn);
-  const monthIndex = useSignupDraft((s) => s.monthIndex);
-  const setMonthIndex = useSignupDraft((s) => s.setMonthIndex);
-  const day = useSignupDraft((s) => s.day);
-  const setDay = useSignupDraft((s) => s.setDay);
-  const year = useSignupDraft((s) => s.year);
-  const setYear = useSignupDraft((s) => s.setYear);
-  const country = useSignupDraft((s) => s.country);
-  const setCountry = useSignupDraft((s) => s.setCountry);
+  const initial = useSignupDraft.getState();
+  const [monthIndex, setMonthIndex] = useState(initial.monthIndex);
+  const [day, setDay] = useState(initial.day);
+  const [year, setYear] = useState(initial.year);
+  const [country, setCountry] = useState(initial.country);
   const [openSelect, setOpenSelect] = useState<OpenSelect>(null);
 
   if (loading || (signedIn && onboarded.isLoading)) return null;
@@ -181,6 +178,8 @@ export default function SignupAccountScreen() {
                   placeholderTextColor="rgba(255,255,255,0.45)"
                   keyboardType="number-pad"
                   maxLength={2}
+                  autoComplete="off"
+                  textContentType="none"
                   style={styles.input}
                 />
               </View>
@@ -195,6 +194,8 @@ export default function SignupAccountScreen() {
                   placeholderTextColor="rgba(255,255,255,0.45)"
                   keyboardType="number-pad"
                   maxLength={4}
+                  autoComplete="off"
+                  textContentType="none"
                   style={styles.input}
                 />
               </View>
@@ -232,7 +233,20 @@ export default function SignupAccountScreen() {
           </View>
 
           <View style={styles.ctaWrap}>
-            <WelcomeCta label="Continue" disabled={!ready} href="/signup-credentials" />
+            <WelcomeCta
+              label="Continue"
+              disabled={!ready}
+              onPress={() => saveSignupDraftValues({ monthIndex, day, year, country })}
+              href={{
+                pathname: '/signup-credentials',
+                params: {
+                  month: String(monthIndex),
+                  day,
+                  year,
+                  country,
+                },
+              }}
+            />
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
