@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Redirect, useRouter } from 'expo-router';
+import { Redirect, useLocalSearchParams, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import React from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
@@ -13,19 +13,28 @@ import { WelcomeBackground } from '@/ui/WelcomeBackground';
 import { WelcomeCta } from '@/ui/WelcomeCta';
 import { fonts, type } from '@/ui/theme/tokens';
 
+function firstParam(value?: string | string[]): string | undefined {
+  return Array.isArray(value) ? value[0] : value;
+}
+
+/** Temporary work link: skip the post-create-account gate so the ask can be
+ * opened without making a new account. */
+export function isSignupHealthPreview(preview?: string | string[]): boolean {
+  if (firstParam(preview) === '1') return true;
+  if (typeof window === 'undefined') return false;
+  try {
+    return new URLSearchParams(window.location.search).get('preview') === '1';
+  } catch {
+    return false;
+  }
+}
+
 /** The last step of create-account, with the account already made: ask to
  * connect Apple Health for Apple Watch. Connect does nothing yet. Not now
  * leaves the stack for the dashboard. */
-export default function SignupHealthScreen() {
+export function SignupHealthView() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { loading, signedIn } = useAuth();
-  const onboarded = useSetting<boolean>('onboardingComplete', false, signedIn);
-  const signupComplete = useSignupDraft((s) => s.signupComplete);
-
-  if (loading || (signedIn && onboarded.isLoading)) return null;
-  // Signed in without having just created the account: this is not their step.
-  if (signedIn && !signupComplete) return <Redirect href={onboarded.data ? '/' : '/onboarding'} />;
 
   const goBack = () => {
     if (router.canGoBack()) router.back();
@@ -80,6 +89,21 @@ export default function SignupHealthScreen() {
       </View>
     </View>
   );
+}
+
+export default function SignupHealthScreen() {
+  const params = useLocalSearchParams<{ preview?: string }>();
+  const { loading, signedIn } = useAuth();
+  const onboarded = useSetting<boolean>('onboardingComplete', false, signedIn);
+  const signupComplete = useSignupDraft((s) => s.signupComplete);
+  const preview = isSignupHealthPreview(params.preview);
+
+  if (preview) return <SignupHealthView />;
+  if (loading || (signedIn && onboarded.isLoading)) return null;
+  // Signed in without having just created the account: this is not their step.
+  if (signedIn && !signupComplete) return <Redirect href={onboarded.data ? '/' : '/onboarding'} />;
+
+  return <SignupHealthView />;
 }
 
 const styles = StyleSheet.create({

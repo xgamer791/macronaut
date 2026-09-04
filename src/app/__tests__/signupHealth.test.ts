@@ -19,6 +19,18 @@ describe('signup apple health ask', () => {
     expect(credentials).toContain('disabled={!ready || auth.busy}');
   });
 
+  it('exposes a temporary ungated preview so the ask can be opened without signing up', () => {
+    expect(fs.existsSync(path.join(appDir, 'preview-signup-health.tsx'))).toBe(true);
+    expect(read('_layout.tsx')).toContain('name="preview-signup-health"');
+    expect(read('preview-signup-health.tsx')).toContain('SignupHealthView');
+    expect(read('preview-signup-health.tsx')).not.toContain('useAuth');
+    expect(read('preview-signup-health.tsx')).not.toContain('Redirect');
+    const source = read('signup-health.tsx');
+    expect(source).toContain('isSignupHealthPreview');
+    expect(source).toContain("get('preview') === '1'");
+    expect(source).toContain('if (preview) return <SignupHealthView />');
+  });
+
   it('asks to connect Apple Health for Apple Watch without wiring HealthKit', () => {
     const source = read('signup-health.tsx');
     const mark = fs.readFileSync(path.join(appDir, '../ui/WatchConnectMark.tsx'), 'utf8');
