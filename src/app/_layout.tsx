@@ -34,8 +34,8 @@ function ThemedApp() {
   const { signedIn } = useAuth();
   const appearance = useSetting<AppearanceMode>('appearance', 'system', signedIn);
 
-  if (signedIn && appearance.isLoading) return null;
-
+  // Renders on the default mode and switches when the stored one arrives, so
+  // signing in never unmounts the navigator below (see AccountApp).
   return (
     <ThemeProvider
       initialMode={appearance.data ?? 'system'}
@@ -74,13 +74,22 @@ function ThemedApp() {
   );
 }
 
-/** Repositories are remounted per account so nothing built for one user
- * survives into the next sign-in on the same device. */
+/**
+ * The navigator must survive signing in. Creating an account swaps the session
+ * under a mounted screen, and anything above <Stack> that unmounts on that
+ * change — blanking while the viewer loads, or a key that follows the account —
+ * throws away the navigation state with it, so the screen the flow had just
+ * moved to is replaced by whatever the router falls back to.
+ *
+ * Nothing here needs to be rebuilt per account anyway: the repositories are
+ * stateless wrappers over the one Convex client (createRepos), which account
+ * they read is decided by the session it carries, and the cached queries of the
+ * account before are dropped by AuthProvider. Each screen waits for `loading`
+ * on its own.
+ */
 function AccountApp() {
-  const { loading, userId } = useAuth();
-  if (loading) return null;
   return (
-    <AppProvider key={userId ?? 'signed-out'}>
+    <AppProvider>
       <ThemedApp />
     </AppProvider>
   );

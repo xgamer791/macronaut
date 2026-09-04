@@ -58,10 +58,19 @@ export default function Onboarding() {
   const { loading: authLoading, signedIn, user } = useAuth();
 
   const [step, setStep] = useState<Step>('welcome');
-  const [displayName, setDisplayName] = useState(() => displayNameFromUser(user) ?? '');
+  const [displayName, setDisplayName] = useState('');
   const [units, setUnits] = useState<UnitSystem>('us');
-  // The account already knows the date of birth, so nobody types their age twice.
-  const [age, setAge] = useState<number | undefined>(() => ageFromBirthdayIso(user?.birthday));
+  const [age, setAge] = useState<number | undefined>();
+  // The account already knows the name and the date of birth, so nobody types
+  // either one twice. Both arrive with the viewer, which can be a render or two
+  // behind this screen, so they are filled in when the account lands rather
+  // than when the fields are created.
+  const [filledFor, setFilledFor] = useState<string | null>(null);
+  if (user && user.id !== filledFor) {
+    setFilledFor(user.id);
+    setDisplayName(displayNameFromUser(user) ?? '');
+    setAge(ageFromBirthdayIso(user.birthday));
+  }
   const [sex, setSex] = useState<BiologicalSex>('male');
   const [heightFt, setHeightFt] = useState<number | undefined>(5);
   const [heightIn, setHeightIn] = useState<number | undefined>(9);

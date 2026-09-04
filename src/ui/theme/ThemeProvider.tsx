@@ -25,6 +25,14 @@ export function ThemeProvider({
 }) {
   const systemScheme = useColorScheme();
   const [mode, setModeState] = useState<AppearanceMode>(initialMode);
+  // The stored preference belongs to the account, so it only arrives once the
+  // session has loaded. Adopt it then rather than making the tree above wait
+  // for it, which would unmount the navigator on every sign-in.
+  const [seededWith, setSeededWith] = useState<AppearanceMode>(initialMode);
+  if (initialMode !== seededWith) {
+    setSeededWith(initialMode);
+    setModeState(initialMode);
+  }
 
   const setMode = useCallback(
     (next: AppearanceMode) => {
