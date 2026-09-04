@@ -20,32 +20,33 @@ export default function Root({ children }: { children: React.ReactNode }) {
         <style
           // Belt-and-braces: block pinch/double-tap zoom gestures in browsers
           // that ignore user-scalable, without breaking scroll or taps.
-          // Also kill the manila autofill wash, and keep dark-field text white.
+          // Also kill the manila autofill wash. Fields marked with
+          // data-darkfield sit on the dark video, and WebKit paints autofilled
+          // text with its own black, so they force white explicitly —
+          // react-native-web drops className, hence the data attribute.
           dangerouslySetInnerHTML={{
             __html: `html, body { touch-action: pan-x pan-y; } body { -webkit-text-size-adjust: 100%; }
 input:-webkit-autofill, input:-webkit-autofill:hover, input:-webkit-autofill:focus, input:-webkit-autofill:active,
 textarea:-webkit-autofill, textarea:-webkit-autofill:hover, textarea:-webkit-autofill:focus, textarea:-webkit-autofill:active {
   -webkit-box-shadow: 0 0 0 1000px transparent inset !important;
   box-shadow: 0 0 0 1000px transparent inset !important;
-  -webkit-text-fill-color: currentColor !important;
-  caret-color: currentColor;
   background-image: none !important;
   transition: background-color 99999s ease-out 0s;
 }
-.macronaut-dark-field,
-.macronaut-dark-field input {
+[data-darkfield], [data-darkfield] input, input[data-darkfield] {
   color-scheme: dark;
+  color: #FFFFFF;
+  -webkit-text-fill-color: #FFFFFF;
+  caret-color: #FFFFFF;
 }
-.macronaut-dark-field:-webkit-autofill,
-.macronaut-dark-field:-webkit-autofill:hover,
-.macronaut-dark-field:-webkit-autofill:focus,
-.macronaut-dark-field:-webkit-autofill:active,
-.macronaut-dark-field input:-webkit-autofill,
-.macronaut-dark-field input:-webkit-autofill:hover,
-.macronaut-dark-field input:-webkit-autofill:focus,
-.macronaut-dark-field input:-webkit-autofill:active {
-  -webkit-text-fill-color: #FFFFFF !important;
+[data-darkfield]:-webkit-autofill, [data-darkfield]:-webkit-autofill:hover,
+[data-darkfield]:-webkit-autofill:focus, [data-darkfield]:-webkit-autofill:active,
+input[data-darkfield]:-webkit-autofill, input[data-darkfield]:-webkit-autofill:hover,
+input[data-darkfield]:-webkit-autofill:focus, input[data-darkfield]:-webkit-autofill:active,
+[data-darkfield] input:-webkit-autofill, [data-darkfield] input:-webkit-autofill:hover,
+[data-darkfield] input:-webkit-autofill:focus, [data-darkfield] input:-webkit-autofill:active {
   color: #FFFFFF !important;
+  -webkit-text-fill-color: #FFFFFF !important;
   caret-color: #FFFFFF !important;
 }`,
           }}

@@ -27,6 +27,12 @@ import { WelcomeBackground } from '@/ui/WelcomeBackground';
 import { WelcomeCta } from '@/ui/WelcomeCta';
 import { fonts, palette, radius, type } from '@/ui/theme/tokens';
 
+/** Marks a field that sits on the dark video so the web shell can force
+ * white autofill text. react-native-web forwards dataSet, not className, and
+ * dataSet is absent from the React Native prop types. */
+const DARK_FIELD: object =
+  Platform.OS === 'web' ? { dataSet: { darkfield: 'true' } } : {};
+
 function FieldLabel({ children }: { children: string }) {
   return (
     <AppText style={styles.label}>
@@ -64,10 +70,7 @@ function OutlineInput({
   onFocus?: () => void;
 }) {
   return (
-    <View
-      style={styles.field}
-      {...(Platform.OS === 'web' ? ({ className: 'macronaut-dark-field' } as object) : {})}
-    >
+    <View style={styles.field} {...DARK_FIELD}>
       <TextInput
         accessibilityLabel={accessibilityLabel}
         value={value}
@@ -81,7 +84,7 @@ function OutlineInput({
         keyboardType={keyboardType}
         secureTextEntry={secureTextEntry}
         textContentType={textContentType}
-        {...(Platform.OS === 'web' ? ({ className: 'macronaut-dark-field' } as object) : {})}
+        {...DARK_FIELD}
         style={styles.fieldInput}
       />
       {trailing}
