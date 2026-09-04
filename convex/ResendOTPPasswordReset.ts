@@ -26,9 +26,14 @@ export const ResendOTPPasswordReset = Email({
     return randomDigits(CODE_LENGTH);
   },
 
-  async sendVerificationRequest({ identifier: email, provider, token, expires }) {
+  async sendVerificationRequest({ identifier, token, expires }) {
+    const email = identifier.trim().toLowerCase();
     const from = process.env.AUTH_EMAIL_FROM ?? 'Macronaut <onboarding@resend.dev>';
-    if (!provider.apiKey) {
+    // Read the live env, not the value captured when this module loaded:
+    // convex-auth also mutates `provider.apiKey` from the first successful
+    // test, which would hide a missing key later.
+    const apiKey = process.env.AUTH_RESEND_KEY;
+    if (!apiKey) {
       throw new ConvexError(
         'Could not send the reset code: AUTH_RESEND_KEY is not set on the deployment',
       );
@@ -37,7 +42,7 @@ export const ResendOTPPasswordReset = Email({
     const response = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: {
-        Authorization: `Bearer ${provider.apiKey}`,
+        Authorization: `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({

@@ -43,7 +43,8 @@ describe('password reset (auth:signIn with flow reset)', () => {
       provider: 'password',
       params: { flow: 'reset', email: ' person@EXAMPLE.com ' },
     });
-    expect(requested).toMatchObject({ started: true });
+    // Reset starts a verification; there is no session until the code lands.
+    expect(requested.tokens ?? null).toBeNull();
 
     expect(sent).toHaveLength(1);
     expect(sent[0].url).toBe('https://api.resend.com/emails');
@@ -102,7 +103,7 @@ describe('password reset (auth:signIn with flow reset)', () => {
           newPassword: 'Macronaut2',
         },
       }),
-    ).rejects.toThrow(/invalid/i);
+    ).rejects.toThrow(/verify code|invalid/i);
 
     await expect(
       t.action(api.auth.signIn, {

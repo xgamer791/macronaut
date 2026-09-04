@@ -54,7 +54,7 @@ export function OutlineInput({
   trailing?: React.ReactNode;
   onFocus?: () => void;
   onSubmitEditing?: () => void;
-  returnKeyType?: 'go' | 'next' | 'done';
+  returnKeyType?: 'go' | 'next' | 'done' | 'send';
 }) {
   return (
     <View style={fieldStyles.field} {...DARK_FIELD}>
