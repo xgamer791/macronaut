@@ -7,6 +7,7 @@ const LOOP = require('../../assets/video/welcome-loop.mp4');
 const POSTER = require('../../assets/video/welcome-poster.jpg');
 
 let sharedVideo: HTMLVideoElement | null = null;
+let releaseTimer: ReturnType<typeof setTimeout> | null = null;
 
 function uriOf(mod: unknown): string | undefined {
   if (typeof mod === 'string') return mod;
@@ -69,13 +70,21 @@ export function WelcomeBackground() {
     const video = acquireWelcomeVideo(src, uriOf(POSTER));
     const fail = () => setUseStills(true);
     video.addEventListener('error', fail);
+    if (releaseTimer) {
+      clearTimeout(releaseTimer);
+      releaseTimer = null;
+    }
     if (video.parentElement !== host) host.appendChild(video);
     void video.play().catch(() => {});
 
     return () => {
       video.removeEventListener('error', fail);
       if (video.parentElement === host) host.removeChild(video);
-      if (!video.isConnected) video.pause();
+      // Stay playing across create-account screens. Pause only if nothing
+      // reattaches this node after the route change.
+      releaseTimer = setTimeout(() => {
+        if (!video.isConnected) video.pause();
+      }, 400);
     };
   }, [useStills]);
 

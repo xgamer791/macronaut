@@ -24,8 +24,7 @@ describe('signup account setup', () => {
     expect(source).toContain('Day');
     expect(source).toContain('Year');
     expect(source).toContain('Country/Region');
-    expect(read('_layout.tsx')).toContain('PersistentWelcomeBackground');
-    expect(source).not.toContain('WelcomeBackground');
+    expect(source).toContain('WelcomeBackground');
     expect(source).toContain('WelcomeCta');
     expect(source).toContain('fonts.display');
     expect(source).toContain('type.title');
