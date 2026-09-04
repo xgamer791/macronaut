@@ -26,6 +26,24 @@ export default function Root({ children }: { children: React.ReactNode }) {
           // react-native-web drops className, hence the data attribute.
           dangerouslySetInnerHTML={{
             __html: `html, body { touch-action: pan-x pan-y; } body { -webkit-text-size-adjust: 100%; }
+/* iOS Safari pans the document when it sees a new-password field, which
+ * lifts the welcome screens and leaves a white gap under the photo.
+ * Pin the shell to the visible viewport so only in-app ScrollViews move. */
+html, body, #root {
+  height: 100%;
+  height: 100dvh;
+  min-height: 100dvh;
+  max-height: 100dvh;
+  width: 100%;
+  background-color: #101418;
+}
+html, body {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+#root { display: flex; }
 input:-webkit-autofill, input:-webkit-autofill:hover, input:-webkit-autofill:focus, input:-webkit-autofill:active,
 textarea:-webkit-autofill, textarea:-webkit-autofill:hover, textarea:-webkit-autofill:focus, textarea:-webkit-autofill:active {
   -webkit-box-shadow: 0 0 0 1000px transparent inset !important;

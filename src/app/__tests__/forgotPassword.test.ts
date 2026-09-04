@@ -38,6 +38,8 @@ describe('forgot password', () => {
     expect(source).toContain('OutlineInput');
     expect(source).toContain('useLocalSearchParams');
     expect(source).toContain("view === 'password'");
+    expect(source).toContain('formPassword');
+    expect(source).toContain('visualViewport');
     expect(source).toContain("router.replace('/')");
     expect(source).not.toContain('Reset code');
     expect(source).not.toContain('six-digit');

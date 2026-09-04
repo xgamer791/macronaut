@@ -10,6 +10,13 @@ describe('web html shell', () => {
     expect(html).toContain('background-color 99999s');
   });
 
+  it('pins the shell to the visible viewport so iOS Safari cannot lift it', () => {
+    expect(html).toContain('100dvh');
+    expect(html).toContain('position: fixed');
+    expect(html).toContain('background-color: #101418');
+    expect(html).toContain('overscroll-behavior: none');
+  });
+
   it('forces white autofill text on fields that sit on the dark video', () => {
     // react-native-web drops className, so the fields carry a data attribute.
     expect(html).toContain('[data-darkfield]');

@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Redirect, useLocalSearchParams, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
@@ -44,6 +44,26 @@ export default function ForgotPasswordScreen() {
   const [showConfirm, setShowConfirm] = useState(false);
 
   const view = reset ? 'password' : awaitingInbox ? 'sent' : 'request';
+
+  // iOS Safari scrolls the document to the first new-password field and
+  // leaves the photo hanging above a white gap. Keep the window pinned;
+  // the ScrollView still moves the fields.
+  useEffect(() => {
+    if (Platform.OS !== 'web' || typeof window === 'undefined') return undefined;
+    const pin = () => {
+      window.scrollTo(0, 0);
+      document.documentElement.scrollTop = 0;
+      document.body.scrollTop = 0;
+    };
+    pin();
+    const viewport = window.visualViewport;
+    viewport?.addEventListener('scroll', pin);
+    viewport?.addEventListener('resize', pin);
+    return () => {
+      viewport?.removeEventListener('scroll', pin);
+      viewport?.removeEventListener('resize', pin);
+    };
+  }, [view]);
 
   if (loading || (signedIn && !reset && onboarded.isLoading)) return null;
   if (signedIn && !reset) return <Redirect href={onboarded.data ? '/' : '/onboarding'} />;
@@ -118,7 +138,10 @@ export default function ForgotPasswordScreen() {
           <View style={styles.headerSide} />
         </View>
 
-        <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.form}>
+        <ScrollView
+          keyboardShouldPersistTaps="handled"
+          contentContainerStyle={[styles.form, view === 'password' ? styles.formPassword : null]}
+        >
           {view === 'request' ? (
             <>
               <AppText style={styles.copy}>
@@ -332,10 +355,15 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   form: {
+    flexGrow: 1,
     paddingHorizontal: 24,
     paddingTop: 28,
     paddingBottom: 32,
     gap: 20,
+  },
+  formPassword: {
+    justifyContent: 'center',
+    paddingTop: 8,
   },
   copy: {
     color: 'rgba(255,255,255,0.78)',
