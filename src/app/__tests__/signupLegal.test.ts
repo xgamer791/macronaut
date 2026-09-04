@@ -32,8 +32,7 @@ describe('signup legal gate', () => {
 
   it('reuses the welcome video, veil, fonts, and accent CTA', () => {
     const source = read('signup-legal.tsx');
-    expect(read('_layout.tsx')).toContain('PersistentWelcomeBackground');
-    expect(source).not.toContain('WelcomeBackground');
+    expect(source).toContain('WelcomeBackground');
     expect(source).toContain('WelcomeCta');
     expect(source).toContain('veilFilm');
     expect(source).toContain('rgba(0,0,0,0.50)');

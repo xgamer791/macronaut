@@ -13,18 +13,11 @@ import { convexConfigStatus } from '@/services/convex/client';
 import { AppProvider, useRepos } from '@/state/AppProvider';
 import { AuthProvider, useAuth } from '@/state/AuthProvider';
 import { keys, useSetting } from '@/state/queries';
-import { PersistentWelcomeBackground } from '@/ui/PersistentWelcomeBackground';
 import { AppearanceMode, ThemeProvider } from '@/ui/theme/ThemeProvider';
 
 SplashScreen.preventAutoHideAsync();
 
 const subscribeNever = () => () => {};
-
-const welcomeFlowScreen = {
-  animation: 'fade' as const,
-  contentStyle: { backgroundColor: 'transparent' },
-  sceneStyle: { backgroundColor: 'transparent' },
-};
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -52,35 +45,30 @@ function ThemedApp() {
         });
       }}
     >
-      <View style={styles.shell}>
-        <PersistentWelcomeBackground />
-        <View style={styles.stack}>
-          <Stack screenOptions={{ headerShown: false }}>
-            <Stack.Screen name="(tabs)" />
-            <Stack.Screen name="welcome" options={welcomeFlowScreen} />
-            <Stack.Screen name="login" />
-            <Stack.Screen name="signup-legal" options={welcomeFlowScreen} />
-            <Stack.Screen name="signup-account" options={welcomeFlowScreen} />
-            <Stack.Screen name="create-account" />
-            <Stack.Screen name="onboarding" />
-            <Stack.Screen name="add" options={{ presentation: 'modal' }} />
-            <Stack.Screen name="manual-entry" options={{ presentation: 'modal' }} />
-            <Stack.Screen name="goals" />
-            <Stack.Screen name="activity" options={{ presentation: 'modal' }} />
-            <Stack.Screen name="scan" options={{ presentation: 'modal' }} />
-            <Stack.Screen name="ai-scan" options={{ presentation: 'modal' }} />
-            <Stack.Screen name="custom-food" options={{ presentation: 'modal' }} />
-            <Stack.Screen name="log-collection" options={{ presentation: 'modal' }} />
-            <Stack.Screen name="meal-editor" options={{ presentation: 'modal' }} />
-            <Stack.Screen name="recipe-editor" options={{ presentation: 'modal' }} />
-            <Stack.Screen name="meal/[id]" />
-            {/* Reachable signed-out: Google's OAuth consent screen links to both. */}
-            <Stack.Screen name="privacy" />
-            <Stack.Screen name="terms" />
-            <Stack.Screen name="apple-health" />
-          </Stack>
-        </View>
-      </View>
+      <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="(tabs)" />
+        <Stack.Screen name="welcome" />
+        <Stack.Screen name="login" />
+        <Stack.Screen name="signup-legal" />
+        <Stack.Screen name="signup-account" />
+        <Stack.Screen name="create-account" />
+        <Stack.Screen name="onboarding" />
+        <Stack.Screen name="add" options={{ presentation: 'modal' }} />
+        <Stack.Screen name="manual-entry" options={{ presentation: 'modal' }} />
+        <Stack.Screen name="goals" />
+        <Stack.Screen name="activity" options={{ presentation: 'modal' }} />
+        <Stack.Screen name="scan" options={{ presentation: 'modal' }} />
+        <Stack.Screen name="ai-scan" options={{ presentation: 'modal' }} />
+        <Stack.Screen name="custom-food" options={{ presentation: 'modal' }} />
+        <Stack.Screen name="log-collection" options={{ presentation: 'modal' }} />
+        <Stack.Screen name="meal-editor" options={{ presentation: 'modal' }} />
+        <Stack.Screen name="recipe-editor" options={{ presentation: 'modal' }} />
+        <Stack.Screen name="meal/[id]" />
+        {/* Reachable signed-out: Google's OAuth consent screen links to both. */}
+        <Stack.Screen name="privacy" />
+        <Stack.Screen name="terms" />
+        <Stack.Screen name="apple-health" />
+      </Stack>
     </ThemeProvider>
   );
 }
@@ -145,13 +133,6 @@ export default function RootLayout() {
 }
 
 const styles = StyleSheet.create({
-  shell: {
-    flex: 1,
-    backgroundColor: '#101418',
-  },
-  stack: {
-    flex: 1,
-  },
   notConfigured: {
     flex: 1,
     alignItems: 'center',
