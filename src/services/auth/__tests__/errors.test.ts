@@ -43,6 +43,7 @@ describe('friendlyAuthError', () => {
 
   it('treats a missing password account as something the reset screen can hide', () => {
     expect(isUnknownPasswordAccount(new Error('InvalidAccountId'))).toBe(true);
+    expect(isUnknownPasswordAccount(new Error('[Request ID: abc] Server Error'))).toBe(true);
     expect(isUnknownPasswordAccount(new Error('Could not send the reset code'))).toBe(false);
   });
 

@@ -23,7 +23,9 @@ export function isUnknownPasswordAccount(err: unknown): boolean {
     message.includes('invalidaccountid') ||
     message.includes('could not find') ||
     message.includes('no account') ||
-    message.includes('cannot find account')
+    message.includes('cannot find account') ||
+    // Production redacts Convex Auth's InvalidAccountId to this.
+    message.includes('server error')
   );
 }
 

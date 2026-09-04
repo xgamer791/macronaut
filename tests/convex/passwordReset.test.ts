@@ -127,12 +127,13 @@ describe('password reset (auth:signIn with flow reset)', () => {
   it('does not send mail when that address has no password account', async () => {
     const sent = stubResend();
     const t = backend();
-    await expect(
-      t.action(api.auth.signIn, {
-        provider: 'password',
-        params: { flow: 'reset', email: 'nobody@example.com' },
-      }),
-    ).rejects.toThrow(/InvalidAccountId|account/i);
+    const result = await t.action(api.auth.signIn, {
+      provider: 'password',
+      params: { flow: 'reset', email: 'nobody@example.com' },
+    });
+    // Same "started, no session" shape as a real send, so the API cannot
+    // be used to see whether an address is registered.
+    expect(result.tokens ?? null).toBeNull();
     expect(sent).toHaveLength(0);
   });
 
