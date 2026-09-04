@@ -72,9 +72,7 @@ function LegalLink({ href, children }: { href: '/terms' | '/privacy'; children: 
   );
 }
 
-/** Create-account legal gate only. Save and continue stays on this page
- * until the next screen is built. Layout matches the supplied consent
- * frame; type, accent and the CTA come from the welcome splash. */
+/** Create-account legal gate. Save and continue opens account setup. */
 export default function SignupLegalScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -152,7 +150,7 @@ export default function SignupLegalScreen() {
         </View>
 
         <View style={[styles.dock, { paddingBottom: Math.max(insets.bottom, 12) + 8 }]}>
-          <WelcomeCta label="Save and continue" disabled={!agreed} onPress={() => {}} />
+          <WelcomeCta label="Save and continue" disabled={!agreed} href="/signup-account" />
         </View>
       </View>
     </View>
