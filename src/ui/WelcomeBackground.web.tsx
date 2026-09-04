@@ -6,6 +6,8 @@ import { WelcomeSlideshow } from '@/ui/WelcomeSlideshow';
 const LOOP = require('../../assets/video/welcome-loop.mp4');
 const POSTER = require('../../assets/video/welcome-poster.jpg');
 
+let sharedVideo: HTMLVideoElement | null = null;
+
 function uriOf(mod: unknown): string | undefined {
   if (typeof mod === 'string') return mod;
   if (mod && typeof mod === 'object') {
@@ -16,9 +18,41 @@ function uriOf(mod: unknown): string | undefined {
   return RNImage.resolveAssetSource(mod as number)?.uri;
 }
 
-/** Web: muted Seedance loop. Poster is the first jog frame so the cut
- * from launch still to motion is invisible. If the file fails to load,
- * the stills stay on disk and take over. */
+function acquireWelcomeVideo(src: string, poster: string | undefined): HTMLVideoElement {
+  if (sharedVideo) return sharedVideo;
+
+  const video = document.createElement('video');
+  video.src = src;
+  if (poster) video.poster = poster;
+  video.autoplay = true;
+  video.muted = true;
+  video.defaultMuted = true;
+  video.loop = true;
+  video.playsInline = true;
+  video.preload = 'auto';
+  video.controls = false;
+  video.disablePictureInPicture = true;
+  video.setAttribute('playsinline', 'true');
+  video.setAttribute('muted', 'true');
+  video.setAttribute('autoplay', 'true');
+  video.setAttribute('disablepictureinpicture', 'true');
+  Object.assign(video.style, {
+    position: 'absolute',
+    inset: '0',
+    width: '100%',
+    height: '100%',
+    objectFit: 'cover',
+    // Video compositor layers on iOS sit above later siblings and eat taps
+    // unless this is set — pointer-events is not inherited.
+    pointerEvents: 'none',
+  });
+  sharedVideo = video;
+  return video;
+}
+
+/** Web: muted Seedance loop. One shared <video> so create-account navigation
+ * does not restart playback. Poster is the first jog frame. If the file fails
+ * to load, the stills stay on disk and take over. */
 export function WelcomeBackground() {
   const hostRef = useRef<View | null>(null);
   const [useStills, setUseStills] = useState(false);
@@ -32,44 +66,16 @@ export function WelcomeBackground() {
       return;
     }
 
-    const video = document.createElement('video');
-    video.src = src;
-    const poster = uriOf(POSTER);
-    if (poster) video.poster = poster;
-    video.autoplay = true;
-    video.muted = true;
-    video.defaultMuted = true;
-    video.loop = true;
-    video.playsInline = true;
-    video.preload = 'auto';
-    video.controls = false;
-    video.disablePictureInPicture = true;
-    video.setAttribute('playsinline', 'true');
-    video.setAttribute('muted', 'true');
-    video.setAttribute('autoplay', 'true');
-    video.setAttribute('disablepictureinpicture', 'true');
-    Object.assign(video.style, {
-      position: 'absolute',
-      inset: '0',
-      width: '100%',
-      height: '100%',
-      objectFit: 'cover',
-      // Video compositor layers on iOS sit above later siblings and eat taps
-      // unless this is set — pointer-events is not inherited.
-      pointerEvents: 'none',
-    });
-
+    const video = acquireWelcomeVideo(src, uriOf(POSTER));
     const fail = () => setUseStills(true);
     video.addEventListener('error', fail);
-    host.appendChild(video);
+    if (video.parentElement !== host) host.appendChild(video);
     void video.play().catch(() => {});
 
     return () => {
       video.removeEventListener('error', fail);
-      video.pause();
-      video.removeAttribute('src');
-      video.load();
-      video.remove();
+      if (video.parentElement === host) host.removeChild(video);
+      if (!video.isConnected) video.pause();
     };
   }, [useStills]);
 
