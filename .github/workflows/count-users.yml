@@ -1,0 +1,37 @@
+name: Count registered users
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [cursor/count-registered-users-46a8]
+
+permissions:
+  contents: read
+
+jobs:
+  count:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Count rows in users and authAccounts
+        env:
+          CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_DEPLOY_KEY }}
+        run: |
+          npx convex run --prod --typecheck disable --codegen disable --inline-query '
+            const users = await ctx.db.query("users").collect();
+            const accounts = await ctx.db.query("authAccounts").collect();
+            const byProvider = {};
+            for (const account of accounts) {
+              byProvider[account.provider] = (byProvider[account.provider] ?? 0) + 1;
+            }
+            return {
+              users: users.length,
+              authAccounts: accounts.length,
+              byProvider,
+            };
+          '
