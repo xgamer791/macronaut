@@ -1,0 +1,10 @@
+# Agent instructions
+
+Always deploy your work on whatever you're working on.
+
+This is mandatory. Opening a pull request is not enough.
+
+For this repo that means shipping completed work to the live site. Land it on
+`main` so `.github/workflows/deploy.yml` deploys Convex and the web app to
+GitHub Pages (https://xgamer791.github.io/macronaut/). Do not leave finished
+work sitting only on a branch or pull request.
