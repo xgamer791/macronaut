@@ -1,5 +1,6 @@
+import { useFocusEffect } from 'expo-router';
 import { Image } from 'expo-image';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Image as RNImage, StyleSheet, View } from 'react-native';
 import { WelcomeSlideshow } from '@/ui/WelcomeSlideshow';
 
@@ -8,6 +9,7 @@ const POSTER = require('../../assets/video/welcome-poster.jpg');
 
 let sharedVideo: HTMLVideoElement | null = null;
 let releaseTimer: ReturnType<typeof setTimeout> | null = null;
+const hosts: HTMLElement[] = [];
 
 function uriOf(mod: unknown): string | undefined {
   if (typeof mod === 'string') return mod;
@@ -17,6 +19,43 @@ function uriOf(mod: unknown): string | undefined {
     if (rec.default != null) return uriOf(rec.default);
   }
   return RNImage.resolveAssetSource(mod as number)?.uri;
+}
+
+function resumeWelcomeVideo() {
+  if (hosts.length === 0 || !sharedVideo) return;
+  void sharedVideo.play().catch(() => {});
+}
+
+function attachToTop() {
+  const video = sharedVideo;
+  const top = hosts[hosts.length - 1];
+  if (!video || !top) return;
+  if (releaseTimer) {
+    clearTimeout(releaseTimer);
+    releaseTimer = null;
+  }
+  if (video.parentElement !== top) top.appendChild(video);
+  resumeWelcomeVideo();
+}
+
+function claimHost(host: HTMLElement) {
+  const i = hosts.indexOf(host);
+  if (i >= 0) hosts.splice(i, 1);
+  hosts.push(host);
+  attachToTop();
+}
+
+function releaseHost(host: HTMLElement) {
+  const i = hosts.indexOf(host);
+  if (i >= 0) hosts.splice(i, 1);
+  if (hosts.length > 0) {
+    attachToTop();
+    return;
+  }
+  if (sharedVideo?.parentElement === host) sharedVideo.remove();
+  releaseTimer = setTimeout(() => {
+    if (hosts.length === 0) sharedVideo?.pause();
+  }, 400);
 }
 
 function acquireWelcomeVideo(src: string, poster: string | undefined): HTMLVideoElement {
@@ -47,13 +86,17 @@ function acquireWelcomeVideo(src: string, poster: string | undefined): HTMLVideo
     // unless this is set — pointer-events is not inherited.
     pointerEvents: 'none',
   });
+  video.addEventListener('pause', resumeWelcomeVideo);
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') resumeWelcomeVideo();
+  });
   sharedVideo = video;
   return video;
 }
 
-/** Web: muted Seedance loop. One shared <video> so create-account navigation
- * does not restart playback. Poster is the first jog frame. If the file fails
- * to load, the stills stay on disk and take over. */
+/** Web: muted Seedance loop. One shared <video> is handed between create-account
+ * screens so back/forward never restarts or leaves it paused. Poster is the
+ * first jog frame. If the file fails to load, the stills take over. */
 export function WelcomeBackground() {
   const hostRef = useRef<View | null>(null);
   const [useStills, setUseStills] = useState(false);
@@ -70,23 +113,20 @@ export function WelcomeBackground() {
     const video = acquireWelcomeVideo(src, uriOf(POSTER));
     const fail = () => setUseStills(true);
     video.addEventListener('error', fail);
-    if (releaseTimer) {
-      clearTimeout(releaseTimer);
-      releaseTimer = null;
-    }
-    if (video.parentElement !== host) host.appendChild(video);
-    void video.play().catch(() => {});
-
+    claimHost(host);
     return () => {
       video.removeEventListener('error', fail);
-      if (video.parentElement === host) host.removeChild(video);
-      // Stay playing across create-account screens. Pause only if nothing
-      // reattaches this node after the route change.
-      releaseTimer = setTimeout(() => {
-        if (!video.isConnected) video.pause();
-      }, 400);
+      releaseHost(host);
     };
   }, [useStills]);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (useStills) return;
+      const host = hostRef.current as unknown as HTMLElement | null;
+      if (host) claimHost(host);
+    }, [useStills]),
+  );
 
   if (useStills) return <WelcomeSlideshow />;
 

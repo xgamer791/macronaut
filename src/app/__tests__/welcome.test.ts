@@ -72,6 +72,9 @@ describe('welcome splash', () => {
     expect(web).toContain("pointerEvents: 'none'");
     expect(web).toContain('sharedVideo');
     expect(web).toContain('acquireWelcomeVideo');
+    expect(web).toContain('claimHost');
+    expect(web).toContain('useFocusEffect');
+    expect(web).toContain('resumeWelcomeVideo');
     expect(web).not.toContain("removeAttribute('src')");
     expect(web).toContain('WelcomeSlideshow');
     expect(native).toContain('WelcomeSlideshow as WelcomeBackground');
@@ -95,5 +98,8 @@ describe('welcome splash', () => {
     expect(read('_layout.tsx')).not.toContain('PersistentWelcomeBackground');
     const web = fs.readFileSync(path.join(appDir, '../ui/WelcomeBackground.web.tsx'), 'utf8');
     expect(web).toContain('sharedVideo');
+    expect(web).toContain('claimHost');
+    expect(web).toContain('useFocusEffect');
+    expect(web).toContain("addEventListener('pause'");
   });
 });
