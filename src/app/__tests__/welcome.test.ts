@@ -96,6 +96,7 @@ describe('welcome splash', () => {
     expect(read('signup-legal.tsx')).toContain('WelcomeBackground');
     expect(read('signup-account.tsx')).toContain('WelcomeBackground');
     expect(read('signup-credentials.tsx')).toContain('WelcomeBackground');
+    expect(read('signup-health.tsx')).toContain('WelcomeBackground');
     expect(read('_layout.tsx')).not.toContain('PersistentWelcomeBackground');
     const web = fs.readFileSync(path.join(appDir, '../ui/WelcomeBackground.web.tsx'), 'utf8');
     expect(web).toContain('sharedVideo');

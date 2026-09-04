@@ -43,7 +43,7 @@ describe('signup credentials', () => {
     expect(source).toContain('palette.accent');
     expect(source).toContain('label="Create Account"');
     expect(source).toContain('disabled={!ready}');
-    expect(source).toContain('onPress={() => {}}');
+    expect(source).toContain('href="/signup-health"');
     expect(source).not.toContain('/create-account');
     expect(source).toContain("outlineStyle: 'none'");
     expect(source).not.toContain('Modal');

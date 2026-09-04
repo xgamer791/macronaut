@@ -147,7 +147,7 @@ function OptionList({
 
 /** Name, email, password, birthday, and country. Layout follows the supplied
  * create-account frame; type, accent and the CTA stay Macronaut. Create
- * Account does not leave this page until the next screen is built. */
+ * Account opens the Apple Health ask. */
 export default function SignupCredentialsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -396,7 +396,7 @@ export default function SignupCredentialsScreen() {
         </ScrollView>
 
         <View style={[styles.dock, { paddingBottom: Math.max(insets.bottom, 12) + 8 }]}>
-          <WelcomeCta label="Create Account" disabled={!ready} onPress={() => {}} />
+          <WelcomeCta label="Create Account" disabled={!ready} href="/signup-health" />
         </View>
       </KeyboardAvoidingView>
     </View>
