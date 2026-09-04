@@ -6,6 +6,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '@/state/AuthProvider';
 import { useSetting } from '@/state/queries';
+import { markEnteredApp } from '@/state/signupDraft';
 import { AppText } from '@/ui/components';
 import { WatchConnectMark } from '@/ui/WatchConnectMark';
 import { WelcomeBackground } from '@/ui/WelcomeBackground';
@@ -67,7 +68,10 @@ export default function SignupHealthScreen() {
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="Not now"
-            onPress={() => router.replace('/')}
+            onPress={() => {
+              markEnteredApp();
+              router.replace('/');
+            }}
             style={styles.skipHit}
           >
             <AppText style={styles.skipLabel}>Not now</AppText>

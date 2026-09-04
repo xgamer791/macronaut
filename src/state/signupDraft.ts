@@ -13,6 +13,9 @@ export interface SignupDraftValues {
 }
 
 export interface SignupDraft extends SignupDraftValues {
+  /** Set when create-account finishes so Not now can open the dashboard
+   * without a session. The tab group otherwise bounces to Welcome. */
+  enteredApp: boolean;
   setMonthIndex: (monthIndex: number) => void;
   setDay: (day: string) => void;
   setYear: (year: string) => void;
@@ -20,6 +23,7 @@ export interface SignupDraft extends SignupDraftValues {
 }
 
 export const SIGNUP_DRAFT_STORAGE_KEY = 'macronaut-signup-draft';
+export const ENTERED_APP_STORAGE_KEY = 'macronaut-entered-app';
 
 export const SIGNUP_DRAFT_DEFAULTS: SignupDraftValues = {
   monthIndex: 0,
@@ -27,6 +31,14 @@ export const SIGNUP_DRAFT_DEFAULTS: SignupDraftValues = {
   year: '',
   country: COUNTRIES[0],
 };
+
+function readEnteredAppFlag(): boolean {
+  try {
+    return getStorage().getItem(ENTERED_APP_STORAGE_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
 
 export type SignupDraftRouteParams = {
   month?: string | string[];
@@ -149,8 +161,14 @@ function bootDraft(): SignupDraftValues {
   return readStoredDraft() ?? { ...SIGNUP_DRAFT_DEFAULTS };
 }
 
+export function markEnteredApp() {
+  getStorage().setItem(ENTERED_APP_STORAGE_KEY, '1');
+  useSignupDraft.setState({ enteredApp: true });
+}
+
 export const useSignupDraft = create<SignupDraft>((set) => ({
   ...bootDraft(),
+  enteredApp: readEnteredAppFlag(),
   setMonthIndex: (monthIndex) =>
     set((state) => {
       const next = { ...pickValues(state), monthIndex };
@@ -188,12 +206,14 @@ function pickValues(state: SignupDraftValues): SignupDraftValues {
 
 export function resetSignupDraft() {
   memoryStorage.delete(SIGNUP_DRAFT_STORAGE_KEY);
+  memoryStorage.delete(ENTERED_APP_STORAGE_KEY);
   try {
     if (typeof sessionStorage !== 'undefined') {
       sessionStorage.removeItem(SIGNUP_DRAFT_STORAGE_KEY);
+      sessionStorage.removeItem(ENTERED_APP_STORAGE_KEY);
     }
   } catch {
     /* ignore */
   }
-  useSignupDraft.setState({ ...SIGNUP_DRAFT_DEFAULTS });
+  useSignupDraft.setState({ ...SIGNUP_DRAFT_DEFAULTS, enteredApp: false });
 }

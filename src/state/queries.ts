@@ -5,8 +5,16 @@ import { GoalConfig } from '@/domain/goals';
 import { WeekStart } from '@/domain/types';
 import { NewActivityEntry } from '@/repositories/activityRepo';
 import { NewDiaryEntry } from '@/repositories/diaryRepo';
-import { DiaryEntry } from '@/repositories/types';
+import { DiaryEntry, MealCategory } from '@/repositories/types';
 import { useRepos } from './AppProvider';
+import { useAuth } from './AuthProvider';
+
+const GUEST_MEALS: MealCategory[] = [
+  { id: 'breakfast', name: 'Breakfast', position: 0, builtin: true },
+  { id: 'lunch', name: 'Lunch', position: 1, builtin: true },
+  { id: 'dinner', name: 'Dinner', position: 2, builtin: true },
+  { id: 'snacks', name: 'Snacks', position: 3, builtin: true },
+];
 
 /** Query keys — every mutation invalidates by prefix so Today, Diary, weekly
  * and Progress views recompute immediately after any change. */
@@ -49,15 +57,22 @@ export function useInvalidateActivity() {
 }
 
 export function useDayNotes(date: DayKey) {
+  const { signedIn } = useAuth();
   const { dayNotes } = useRepos();
-  return useQuery({ queryKey: keys.dayNotes(date), queryFn: () => dayNotes.listForDate(date) });
+  return useQuery({
+    queryKey: keys.dayNotes(date),
+    queryFn: () => dayNotes.listForDate(date),
+    enabled: signedIn,
+  });
 }
 
 export function useDayNotesRange(from: DayKey, to: DayKey) {
+  const { signedIn } = useAuth();
   const { dayNotes } = useRepos();
   return useQuery({
     queryKey: keys.dayNotesRange(from, to),
     queryFn: () => dayNotes.datesWithNotes(from, to),
+    enabled: signedIn,
   });
 }
 
@@ -99,49 +114,74 @@ export function useDeleteDayNote() {
 }
 
 export function useDiaryEntries(date: DayKey) {
+  const { signedIn } = useAuth();
   const { diary } = useRepos();
-  return useQuery({ queryKey: keys.diary(date), queryFn: () => diary.entriesForDate(date) });
+  return useQuery({
+    queryKey: keys.diary(date),
+    queryFn: () => diary.entriesForDate(date),
+    enabled: signedIn,
+  });
 }
 
 export function useDiaryRange(from: DayKey, to: DayKey) {
+  const { signedIn } = useAuth();
   const { diary } = useRepos();
   return useQuery({
     queryKey: keys.diaryRange(from, to),
     queryFn: () => diary.entriesForRange(from, to),
+    enabled: signedIn,
   });
 }
 
 export function useActivityEntries(date: DayKey) {
+  const { signedIn } = useAuth();
   const { activity } = useRepos();
-  return useQuery({ queryKey: keys.activity(date), queryFn: () => activity.entriesForDate(date) });
+  return useQuery({
+    queryKey: keys.activity(date),
+    queryFn: () => activity.entriesForDate(date),
+    enabled: signedIn,
+  });
 }
 
 export function useActivityRange(from: DayKey, to: DayKey) {
+  const { signedIn } = useAuth();
   const { activity } = useRepos();
   return useQuery({
     queryKey: keys.activityRange(from, to),
     queryFn: () => activity.entriesForRange(from, to),
+    enabled: signedIn,
   });
 }
 
 export function useGoalConfigs() {
+  const { signedIn } = useAuth();
   const { goals } = useRepos();
-  return useQuery({ queryKey: keys.goals, queryFn: () => goals.listConfigs() });
+  return useQuery({
+    queryKey: keys.goals,
+    queryFn: () => goals.listConfigs(),
+    enabled: signedIn,
+  });
 }
 
 export function useDayTypeMarks() {
+  const { signedIn } = useAuth();
   const { goals } = useRepos();
-  return useQuery({ queryKey: keys.marks, queryFn: () => goals.allMarks() });
+  return useQuery({
+    queryKey: keys.marks,
+    queryFn: () => goals.allMarks(),
+    enabled: signedIn,
+  });
 }
 
 /** Settings live in the account, so a signed-out screen must not ask for
- * them; pass `enabled: false` there and `data` stays undefined. */
-export function useSetting<T>(key: string, fallback: T, enabled = true) {
+ * them. Defaults to the current session; pass a boolean to override. */
+export function useSetting<T>(key: string, fallback: T, enabled?: boolean) {
+  const { signedIn } = useAuth();
   const { settings } = useRepos();
   return useQuery({
     queryKey: keys.setting(key),
     queryFn: () => settings.get<T>(key, fallback),
-    enabled,
+    enabled: enabled ?? signedIn,
   });
 }
 
@@ -150,8 +190,14 @@ export function useWeekStart(): WeekStart {
 }
 
 export function useMealCategories() {
+  const { signedIn } = useAuth();
   const { settings } = useRepos();
-  return useQuery({ queryKey: keys.mealCategories, queryFn: () => settings.getMealCategories() });
+  const query = useQuery({
+    queryKey: keys.mealCategories,
+    queryFn: () => settings.getMealCategories(),
+    enabled: signedIn,
+  });
+  return { ...query, data: query.data ?? (signedIn ? undefined : GUEST_MEALS) };
 }
 
 /** Add a diary entry + record history, invalidating all totals. */
