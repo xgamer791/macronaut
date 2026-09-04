@@ -1,4 +1,3 @@
-import { LinearGradient } from 'expo-linear-gradient';
 import { Redirect } from 'expo-router';
 import React from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
@@ -24,16 +23,9 @@ export default function WelcomeScreen() {
   return (
     <View style={styles.root}>
       <WelcomeBackground />
-      {/* Cinematic film + bottom-weighted wash — same idea as the Garmin
-       * poster: the athlete stays visible, white type and the CTAs sit on
-       * darkness. Flat colour, no blur, no glow. */}
+      {/* Flat 45% film so white type stays readable. No extra gradient. */}
       <View pointerEvents="none" style={styles.veil}>
         <View style={styles.veilFilm} />
-        <LinearGradient
-          colors={['rgba(0,0,0,0.28)', 'rgba(0,0,0,0.10)', 'rgba(0,0,0,0.64)']}
-          locations={[0, 0.4, 1]}
-          style={StyleSheet.absoluteFill}
-        />
       </View>
 
       <View style={styles.frame}>
@@ -73,7 +65,7 @@ const styles = StyleSheet.create({
   },
   veilFilm: {
     ...StyleSheet.absoluteFill,
-    backgroundColor: 'rgba(0,0,0,0.36)',
+    backgroundColor: 'rgba(0,0,0,0.45)',
   },
   frame: {
     flex: 1,
