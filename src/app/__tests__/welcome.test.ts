@@ -79,6 +79,8 @@ describe('welcome splash', () => {
     expect(cta).toContain('palette.accent');
     expect(cta).toContain('fonts.display');
     expect(cta).toContain('fontSize: 17');
+    expect(cta).toContain('<Link href={href}');
+    expect(cta).not.toContain('asChild');
     expect(slideshow).toContain('Animated.timing');
     expect(slideshow).toContain('WELCOME_PHOTO_FADE_MS');
     expect(slideshow).toContain('WELCOME_PHOTO_HOLD_MS');
