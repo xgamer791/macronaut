@@ -34,6 +34,7 @@ export function OutlineInput({
   keyboardType,
   secureTextEntry,
   textContentType,
+  maxLength,
   trailing,
   onFocus,
   onSubmitEditing,
@@ -44,11 +45,12 @@ export function OutlineInput({
   accessibilityLabel: string;
   placeholder?: string;
   autoCapitalize?: 'none' | 'words';
-  autoComplete?: 'name' | 'email' | 'password' | 'password-new' | 'off';
+  autoComplete?: 'name' | 'email' | 'password' | 'password-new' | 'one-time-code' | 'off';
   autoCorrect?: boolean;
-  keyboardType?: 'default' | 'email-address';
+  keyboardType?: 'default' | 'email-address' | 'number-pad';
   secureTextEntry?: boolean;
-  textContentType?: 'name' | 'emailAddress' | 'password' | 'newPassword';
+  textContentType?: 'name' | 'emailAddress' | 'password' | 'newPassword' | 'oneTimeCode';
+  maxLength?: number;
   trailing?: React.ReactNode;
   onFocus?: () => void;
   onSubmitEditing?: () => void;
@@ -71,6 +73,7 @@ export function OutlineInput({
         keyboardType={keyboardType}
         secureTextEntry={secureTextEntry}
         textContentType={textContentType}
+        maxLength={maxLength}
         {...DARK_FIELD}
         style={fieldStyles.fieldInput}
       />

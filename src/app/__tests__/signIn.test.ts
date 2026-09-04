@@ -48,6 +48,13 @@ describe('sign in', () => {
     expect(source).not.toContain('/create-account');
   });
 
+  it('opens a working forgot-password reset from the password field', () => {
+    const source = read('login.tsx');
+    expect(source).toContain('accessibilityLabel="Forgot password"');
+    expect(source).toContain("pathname: '/forgot-password'");
+    expect(source).toContain('Forgot password?');
+  });
+
   it('is what the welcome Sign In button opens', () => {
     expect(read('welcome.tsx')).toContain('<WelcomeCta label="Sign In" href="/login" />');
     expect(read('_layout.tsx')).toContain('name="login"');
@@ -72,6 +79,8 @@ describe('sign in', () => {
     expect(hook).toContain("convexSignIn('password'");
     expect(hook).toContain("flow: 'signIn'");
     expect(hook).toContain("flow: 'signUp'");
+    expect(hook).toContain("flow: 'reset'");
+    expect(hook).toContain("flow: 'reset-verification'");
     expect(hook).toContain('normalizeEmail');
     expect(hook).not.toContain('google');
     expect(hook).not.toContain('apple');

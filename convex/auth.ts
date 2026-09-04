@@ -40,7 +40,9 @@ const AppleOAuth = Apple({
  *   - Email and password — see PasswordAccount.ts. The only one the app
  *     offers: create-account collects the address, the password, the name,
  *     the date of birth and the country, and sign-in takes the address and
- *     the password.
+ *     the password. Forgot-password emails a six-digit reset code through
+ *     Resend (`password-reset` in ResendOTPPasswordReset.ts) and then
+ *     accepts the code plus a new password.
  *   - Google OAuth — `AUTH_GOOGLE_ID` / `AUTH_GOOGLE_SECRET` on the deployment.
  *     Google's authorised redirect URI is `<CONVEX_SITE_URL>/api/auth/callback/google`.
  *   - Apple OAuth (web and Android) — `AUTH_APPLE_ID` (the Services ID,

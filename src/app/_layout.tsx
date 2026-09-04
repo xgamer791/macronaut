@@ -49,6 +49,7 @@ function ThemedApp() {
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="welcome" />
         <Stack.Screen name="login" />
+        <Stack.Screen name="forgot-password" />
         <Stack.Screen name="signup-legal" />
         <Stack.Screen name="signup-account" />
         <Stack.Screen name="signup-credentials" />

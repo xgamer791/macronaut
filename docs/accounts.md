@@ -11,7 +11,7 @@ method:
 
 | Provider | How it works | Deployment variables |
 |---|---|---|
-| Email and password | `convex/PasswordAccount.ts`. Create Account sends the address, the password, the name, the date of birth and the country in one call; Convex Auth hashes the password with Scrypt and stores only the hash on the account row. Signing in sends the address and the password. | none |
+| Email and password | `convex/PasswordAccount.ts`. Create Account sends the address, the password, the name, the date of birth and the country in one call; Convex Auth hashes the password with Scrypt and stores only the hash on the account row. Signing in sends the address and the password. Forgot password emails a six-digit reset code and then accepts the code plus a new password. | `AUTH_RESEND_KEY`, `AUTH_EMAIL_FROM` (reset email only) |
 | AI food scan | A Convex action calls xAI with a shared key. The client never sees it. Until Pro exists, accounts that already existed when the roster froze (plus Holly Ky and the two preview emails) can invoke the action. Later sign-ups cannot. | `XAI_API_KEY` |
 
 No third-party sign-in is offered, so Sign in with Apple is not required: the
@@ -263,8 +263,9 @@ and Apple both do, so an account created with Apple after Google — same addres
 lands in the same diary rather than a second empty one. A password is deliberately
 not linked that way: proving you can receive mail at an address does not prove
 you chose its password, so a password sign-up on an address that already has a
-Google or Apple account is refused. Adding a password to one of those older
-accounts needs the reset flow, which is not built yet.
+Google or Apple account is refused. Forgot password only resets an existing
+password account; it does not attach a password to an older Google or Apple
+account.
 
 Apple's Hide My Email option is the exception, and unavoidably so: it hands over
 a `@privaterelay.appleid.com` address instead, which nothing else shares, so that

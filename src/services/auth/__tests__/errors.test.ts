@@ -1,5 +1,5 @@
 import { ConvexError } from 'convex/values';
-import { friendlyAuthError } from '../errors';
+import { friendlyAuthError, isUnknownPasswordAccount } from '../errors';
 
 describe('friendlyAuthError', () => {
   it('never echoes a raw server message', () => {
@@ -29,7 +29,21 @@ describe('friendlyAuthError', () => {
     const redacted = new Error('[Request ID: abc] Server Error');
     expect(friendlyAuthError(redacted, 'signin')).toMatch(/do not match an account/i);
     expect(friendlyAuthError(redacted, 'signup')).toMatch(/may already have one/i);
+    expect(friendlyAuthError(redacted, 'reset')).toMatch(/could not reset/i);
     expect(friendlyAuthError(redacted)).toMatch(/something went wrong/i);
+  });
+
+  it('explains a reset code that is wrong or expired', () => {
+    expect(friendlyAuthError(new Error('Invalid code'), 'reset')).toMatch(/not right/i);
+    expect(friendlyAuthError(new Error('Token expired'), 'reset')).toMatch(/expired/i);
+    expect(friendlyAuthError(new Error('Could not send the reset code to that address'), 'reset')).toMatch(
+      /could not send/i,
+    );
+  });
+
+  it('treats a missing password account as something the reset screen can hide', () => {
+    expect(isUnknownPasswordAccount(new Error('InvalidAccountId'))).toBe(true);
+    expect(isUnknownPasswordAccount(new Error('Could not send the reset code'))).toBe(false);
   });
 
   it('falls back to a generic message for anything else', () => {

@@ -140,7 +140,7 @@ describe('create account (auth:signIn with the password provider)', () => {
 
     // Knowing an address is not knowing its password, so the sign-up cannot
     // claim that account: it gets its own, and the old rows stay where they
-    // are. Reuniting the two needs a password reset, which is not built yet.
+    // are. Forgot-password only resets an existing password account.
     const users = await t.run(async (ctx) => ctx.db.query('users').collect());
     expect(users).toHaveLength(2);
     const created = users.find((u) => u._id !== older)!;

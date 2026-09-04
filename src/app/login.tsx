@@ -125,6 +125,21 @@ export default function LoginScreen() {
                 </Pressable>
               }
             />
+            <Pressable
+              accessibilityRole="link"
+              accessibilityLabel="Forgot password"
+              disabled={auth.busy}
+              onPress={() => {
+                auth.clearError();
+                router.push({
+                  pathname: '/forgot-password',
+                  params: isPlausibleEmail(email) ? { email: email.trim() } : {},
+                });
+              }}
+              style={styles.forgotHit}
+            >
+              <AppText style={styles.forgotLink}>Forgot password?</AppText>
+            </Pressable>
           </View>
 
           {auth.error ? (
@@ -203,6 +218,19 @@ const styles = StyleSheet.create({
     paddingTop: 28,
     paddingBottom: 32,
     gap: 20,
+  },
+  forgotHit: {
+    alignSelf: 'flex-start',
+    minHeight: 44,
+    justifyContent: 'center',
+    marginTop: 4,
+  },
+  forgotLink: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    lineHeight: 20,
+    fontWeight: '600',
+    textDecorationLine: 'underline',
   },
   ctaWrap: {
     marginTop: 8,
