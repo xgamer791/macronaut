@@ -5,18 +5,16 @@
  *   node scripts/probe-signup.mjs [baseUrl]
  *
  * Defaults to the live site. Set CHROME_PATH for a non-standard Chrome. */
+import { existsSync } from 'node:fs';
 import puppeteer from 'puppeteer-core';
 
 const BASE = process.argv[2] ?? 'https://xgamer791.github.io/macronaut';
 const CHROME =
   process.env.CHROME_PATH ??
-  ['/usr/local/bin/google-chrome', '/usr/bin/google-chrome', '/usr/bin/chromium'].find((p) => {
-    try {
-      return require('node:fs').existsSync(p);
-    } catch {
-      return false;
-    }
-  });
+  ['/usr/local/bin/google-chrome', '/usr/bin/google-chrome', '/usr/bin/chromium'].find((p) =>
+    existsSync(p),
+  );
+if (!CHROME) throw new Error('no Chrome found; set CHROME_PATH');
 
 const browser = await puppeteer.launch({
   executablePath: CHROME,
