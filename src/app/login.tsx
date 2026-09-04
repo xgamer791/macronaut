@@ -21,8 +21,9 @@ import { WelcomeBackground } from '@/ui/WelcomeBackground';
 import { WelcomeCta } from '@/ui/WelcomeCta';
 import { fonts, type } from '@/ui/theme/tokens';
 
-/** Sign in with the email and password the account was created with — the only
- * way in, and the same welcome loop and outlined fields create-account uses. */
+/** Sign in with the email and password the account was created with. Same
+ * chrome as Account Setup: the welcome loop, a back chevron, outlined
+ * white-on-video fields, and the accent tile sitting in the form. */
 export default function LoginScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -125,20 +126,22 @@ export default function LoginScreen() {
               }
             />
           </View>
-        </ScrollView>
 
-        <View style={[styles.dock, { paddingBottom: Math.max(insets.bottom, 12) + 8 }]}>
           {auth.error ? (
             <AppText accessibilityRole="alert" style={fieldStyles.error}>
               {auth.error}
             </AppText>
           ) : null}
-          <WelcomeCta
-            label={auth.busy ? 'Signing in…' : 'Sign In'}
-            accessibilityLabel="Sign In"
-            disabled={!ready || auth.busy}
-            onPress={() => void signIn()}
-          />
+
+          <View style={styles.ctaWrap}>
+            <WelcomeCta
+              label={auth.busy ? 'Signing in…' : 'Sign In'}
+              accessibilityLabel="Sign In"
+              disabled={!ready || auth.busy}
+              onPress={() => void signIn()}
+            />
+          </View>
+
           <Pressable
             accessibilityRole="link"
             accessibilityLabel="Create Account"
@@ -152,7 +155,7 @@ export default function LoginScreen() {
             <AppText style={styles.footerLabel}>Don&apos;t have an account? </AppText>
             <AppText style={styles.footerLink}>Create Account.</AppText>
           </Pressable>
-        </View>
+        </ScrollView>
       </KeyboardAvoidingView>
     </View>
   );
@@ -198,13 +201,11 @@ const styles = StyleSheet.create({
   form: {
     paddingHorizontal: 24,
     paddingTop: 28,
-    paddingBottom: 16,
+    paddingBottom: 32,
     gap: 20,
   },
-  dock: {
-    paddingHorizontal: 24,
-    paddingTop: 8,
-    gap: 10,
+  ctaWrap: {
+    marginTop: 8,
   },
   footerHit: {
     minHeight: 44,

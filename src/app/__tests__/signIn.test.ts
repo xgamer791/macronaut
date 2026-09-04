@@ -23,6 +23,13 @@ describe('sign in', () => {
     expect(source).toContain('WelcomeBackground');
     expect(source).toContain('WelcomeCta');
     expect(source).toContain('OutlineInput');
+    expect(source).toContain('FieldLabel');
+    // Same layout as Account Setup: fields then the tile in the form, not a
+    // dock at the bottom of the screen.
+    expect(source).toContain('ctaWrap');
+    expect(source).toContain('paddingTop: 28');
+    expect(source).toContain('rgba(0,0,0,0.50)');
+    expect(source).not.toContain('styles.dock');
     expect(source).not.toContain('AuthShell');
     expect(source).not.toContain('backdropFilter');
   });
