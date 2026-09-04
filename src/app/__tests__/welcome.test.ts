@@ -1,6 +1,7 @@
 /** Welcome splash is a source-level check, same as loginOrder — no renderer. */
 import fs from 'node:fs';
 import path from 'node:path';
+import { welcomeFlowSegment } from '@/ui/welcomeFlow';
 
 const appDir = path.join(__dirname, '..');
 const read = (file: string) => fs.readFileSync(path.join(appDir, file), 'utf8');
@@ -58,11 +59,16 @@ describe('welcome splash', () => {
 
   it('plays a muted Seedance loop on web and keeps the stills as fallback', () => {
     const welcome = read('welcome.tsx');
+    const layout = read('_layout.tsx');
+    const flow = fs.readFileSync(path.join(appDir, '../ui/welcomeFlow.ts'), 'utf8');
     const web = fs.readFileSync(path.join(appDir, '../ui/WelcomeBackground.web.tsx'), 'utf8');
     const native = fs.readFileSync(path.join(appDir, '../ui/WelcomeBackground.tsx'), 'utf8');
     const slideshow = fs.readFileSync(path.join(appDir, '../ui/WelcomeSlideshow.tsx'), 'utf8');
     const videoDir = path.join(appDir, '../../assets/video');
-    expect(welcome).toContain('WelcomeBackground');
+    expect(layout).toContain('PersistentWelcomeBackground');
+    expect(flow).toContain("'/welcome'");
+    expect(flow).toContain("'/signup-legal'");
+    expect(flow).toContain("'/signup-account'");
     expect(welcome).toContain('WelcomeCta');
     expect(fs.existsSync(path.join(videoDir, 'welcome-loop.mp4'))).toBe(true);
     expect(fs.existsSync(path.join(videoDir, 'welcome-poster.jpg'))).toBe(true);
@@ -70,6 +76,9 @@ describe('welcome splash', () => {
     expect(web).toContain('video.muted = true');
     expect(web).toContain('video.loop = true');
     expect(web).toContain("pointerEvents: 'none'");
+    expect(web).toContain('sharedVideo');
+    expect(web).toContain('acquireWelcomeVideo');
+    expect(web).not.toContain("removeAttribute('src')");
     expect(web).toContain('WelcomeSlideshow');
     expect(native).toContain('WelcomeSlideshow as WelcomeBackground');
     expect(welcome).toContain('veilFilm');
@@ -83,5 +92,16 @@ describe('welcome splash', () => {
     expect(slideshow).toContain('Animated.timing');
     expect(slideshow).toContain('WELCOME_PHOTO_FADE_MS');
     expect(slideshow).toContain('WELCOME_PHOTO_HOLD_MS');
+  });
+
+  it('keeps one welcome video across create-account screens', () => {
+    expect(read('_layout.tsx')).toContain('PersistentWelcomeBackground');
+    expect(read('welcome.tsx')).not.toContain('WelcomeBackground');
+    expect(read('signup-legal.tsx')).not.toContain('WelcomeBackground');
+    expect(read('signup-account.tsx')).not.toContain('WelcomeBackground');
+    expect(welcomeFlowSegment('/welcome')).toBe('/welcome');
+    expect(welcomeFlowSegment('/signup-legal')).toBe('/signup-legal');
+    expect(welcomeFlowSegment('/signup-account')).toBe('/signup-account');
+    expect(welcomeFlowSegment('/macronaut/signup-legal')).toBe('/signup-legal');
   });
 });

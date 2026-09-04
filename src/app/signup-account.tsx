@@ -17,7 +17,6 @@ import { isValidSignupBirthday, MONTHS } from '@/domain/signupAccount';
 import { useAuth } from '@/state/AuthProvider';
 import { useSetting } from '@/state/queries';
 import { AppText } from '@/ui/components';
-import { WelcomeBackground } from '@/ui/WelcomeBackground';
 import { WelcomeCta } from '@/ui/WelcomeCta';
 import { fonts, palette, radius, type } from '@/ui/theme/tokens';
 
@@ -125,7 +124,6 @@ export default function SignupAccountScreen() {
   return (
     <View style={styles.root}>
       <StatusBar style="light" />
-      <WelcomeBackground />
       <View pointerEvents="none" style={styles.veil}>
         <View style={styles.veilFilm} />
       </View>
@@ -240,7 +238,7 @@ const FIELD_H = 50;
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: '#101418',
+    backgroundColor: 'transparent',
   },
   veil: {
     ...StyleSheet.absoluteFill,

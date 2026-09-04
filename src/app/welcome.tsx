@@ -5,7 +5,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '@/state/AuthProvider';
 import { useSetting } from '@/state/queries';
 import { AppText } from '@/ui/components';
-import { WelcomeBackground } from '@/ui/WelcomeBackground';
 import { WelcomeCta } from '@/ui/WelcomeCta';
 import { fonts } from '@/ui/theme/tokens';
 
@@ -22,7 +21,6 @@ export default function WelcomeScreen() {
 
   return (
     <View style={styles.root}>
-      <WelcomeBackground />
       {/* Flat 50% film so white type stays readable. No extra gradient. */}
       <View pointerEvents="none" style={styles.veil}>
         <View style={styles.veilFilm} />
@@ -58,7 +56,7 @@ export default function WelcomeScreen() {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: '#101418',
+    backgroundColor: 'transparent',
   },
   veil: {
     ...StyleSheet.absoluteFill,
