@@ -44,11 +44,11 @@ describe('signup legal gate', () => {
     expect(source).not.toContain('/create-account');
   });
 
-  it('keeps Save and continue disabled until the required toggle is on, and does not leave this page', () => {
+  it('keeps Save and continue disabled until the required toggle is on, then opens account setup', () => {
     const source = read('signup-legal.tsx');
     expect(source).toContain('disabled={!agreed}');
     expect(source).toContain('Agree to the Terms of Service and Privacy Policy');
-    expect(source).toContain('onPress={() => {}}');
+    expect(source).toContain('href="/signup-account"');
     expect(source).not.toContain("router.push('/create-account')");
   });
 });
