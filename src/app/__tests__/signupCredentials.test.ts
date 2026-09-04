@@ -32,6 +32,12 @@ describe('signup credentials', () => {
     expect(source).toContain('Year');
     expect(source).toContain('Country/Region');
     expect(source).toContain('Once set, it cannot be changed.');
+    expect(source).toContain('useSignupDraft');
+    expect(source).toContain('fieldLocked');
+    expect(source).toContain('disabled: true');
+    expect(source).toContain("pointerEvents=\"none\"");
+    expect(source).not.toContain("toggle('month')");
+    expect(source).not.toContain('setMonthIndex');
     expect(source).toContain('inlineMenu');
     expect(source).toContain('isValidSignupBirthday');
     expect(source).toContain('WelcomeBackground');

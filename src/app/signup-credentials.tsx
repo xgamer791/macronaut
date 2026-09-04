@@ -17,6 +17,7 @@ import { isValidSignupBirthday, MONTHS } from '@/domain/signupAccount';
 import { isValidSignupCredentials } from '@/domain/signupCredentials';
 import { useAuth } from '@/state/AuthProvider';
 import { useSetting } from '@/state/queries';
+import { useSignupDraft } from '@/state/signupDraft';
 import { AppText } from '@/ui/components';
 import { WelcomeBackground } from '@/ui/WelcomeBackground';
 import { WelcomeCta } from '@/ui/WelcomeCta';
@@ -80,7 +81,35 @@ function OutlineInput({
   );
 }
 
-type OpenSelect = 'month' | 'country' | null;
+function LockedField({
+  value,
+  accessibilityLabel,
+  centered,
+}: {
+  value: string;
+  accessibilityLabel: string;
+  centered?: boolean;
+}) {
+  return (
+    <View
+      accessible
+      accessibilityRole="text"
+      accessibilityLabel={accessibilityLabel}
+      accessibilityState={{ disabled: true }}
+      pointerEvents="none"
+      style={[styles.fieldLocked, centered ? styles.fieldLockedCenter : null]}
+    >
+      <AppText
+        style={[styles.fieldValue, centered ? styles.fieldLockedCenterValue : null]}
+        numberOfLines={1}
+      >
+        {value}
+      </AppText>
+    </View>
+  );
+}
+
+type OpenSelect = 'country' | null;
 
 function SelectTrigger({
   value,
@@ -160,10 +189,11 @@ export default function SignupCredentialsScreen() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
-  const [monthIndex, setMonthIndex] = useState(0);
-  const [day, setDay] = useState('');
-  const [year, setYear] = useState('');
-  const [country, setCountry] = useState<string>(COUNTRIES[0]);
+  const monthIndex = useSignupDraft((s) => s.monthIndex);
+  const day = useSignupDraft((s) => s.day);
+  const year = useSignupDraft((s) => s.year);
+  const country = useSignupDraft((s) => s.country);
+  const setCountry = useSignupDraft((s) => s.setCountry);
   const [openSelect, setOpenSelect] = useState<OpenSelect>(null);
 
   if (loading || (signedIn && onboarded.isLoading)) return null;
@@ -318,52 +348,17 @@ export default function SignupCredentialsScreen() {
             <View style={styles.birthdayRow}>
               <View style={styles.monthCol}>
                 <FieldLabel>Month</FieldLabel>
-                <SelectTrigger
-                  value={MONTHS[monthIndex]}
-                  open={openSelect === 'month'}
-                  accessibilityLabel="Month"
-                  onPress={() => toggle('month')}
-                />
+                <LockedField value={MONTHS[monthIndex]} accessibilityLabel="Month" />
               </View>
               <View style={styles.dayCol}>
                 <FieldLabel>Day</FieldLabel>
-                <TextInput
-                  accessibilityLabel="Day"
-                  value={day}
-                  onChangeText={(next) => setDay(next.replace(/\D/g, '').slice(0, 2))}
-                  onFocus={closeMenus}
-                  placeholder="DD"
-                  placeholderTextColor="rgba(255,255,255,0.45)"
-                  keyboardType="number-pad"
-                  maxLength={2}
-                  style={styles.dateInput}
-                />
+                <LockedField value={day} accessibilityLabel="Day" centered />
               </View>
               <View style={styles.yearCol}>
                 <FieldLabel>Year</FieldLabel>
-                <TextInput
-                  accessibilityLabel="Year"
-                  value={year}
-                  onChangeText={(next) => setYear(next.replace(/\D/g, '').slice(0, 4))}
-                  onFocus={closeMenus}
-                  placeholder="YYYY"
-                  placeholderTextColor="rgba(255,255,255,0.45)"
-                  keyboardType="number-pad"
-                  maxLength={4}
-                  style={styles.dateInput}
-                />
+                <LockedField value={year} accessibilityLabel="Year" centered />
               </View>
             </View>
-            {openSelect === 'month' ? (
-              <OptionList
-                options={MONTHS}
-                selected={MONTHS[monthIndex]}
-                onSelect={(item) => {
-                  setMonthIndex(MONTHS.indexOf(item as (typeof MONTHS)[number]));
-                  setOpenSelect(null);
-                }}
-              />
-            ) : null}
             <AppText style={styles.helper}>
               Date of birth helps us comply with global regulations and calculate certain metrics.
               Once set, it cannot be changed.
@@ -508,18 +503,24 @@ const styles = StyleSheet.create({
   yearCol: {
     flex: 1,
   },
-  dateInput: {
-    height: FIELD_H,
+  fieldLocked: {
+    minHeight: FIELD_H,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.55)',
     borderRadius: radius.md,
-    color: '#FFFFFF',
-    fontSize: type.body.fontSize,
-    lineHeight: type.body.lineHeight,
-    textAlign: 'center',
+    paddingHorizontal: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  fieldLockedCenter: {
+    height: FIELD_H,
+    justifyContent: 'center',
     paddingHorizontal: 8,
-    backgroundColor: 'transparent',
-    ...Platform.select({ web: { outlineStyle: 'none', outlineWidth: 0 } as object, default: {} }),
+  },
+  fieldLockedCenterValue: {
+    flex: 0,
+    textAlign: 'center',
+    width: '100%',
   },
   inlineMenu: {
     marginTop: 8,
