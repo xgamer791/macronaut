@@ -334,6 +334,7 @@ const styles = StyleSheet.create({
     lineHeight: type.body.lineHeight,
     textAlign: 'center',
     paddingHorizontal: 8,
+    ...Platform.select({ web: { outlineStyle: 'none', outlineWidth: 0 } as object, default: {} }),
   },
   inlineMenu: {
     marginTop: 8,
