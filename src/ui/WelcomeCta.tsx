@@ -1,11 +1,11 @@
-import { Link, type Href } from 'expo-router';
+import { useRouter, type Href } from 'expo-router';
 import React from 'react';
-import { Platform, Pressable, StyleSheet } from 'react-native';
+import { Pressable, StyleSheet } from 'react-native';
 import { AppText } from '@/ui/components';
 import { fonts, palette, radius } from '@/ui/theme/tokens';
 
-/** Same 50pt accent tile as the welcome splash. `href` renders a real
- * expo-router Link (an <a> on web), not a Pressable slot wrapper. */
+/** Same 50pt accent tile for every welcome action. `href` navigates through
+ * the same Pressable as `onPress`, so the label stays centered. */
 export function WelcomeCta({
   label,
   onPress,
@@ -19,31 +19,25 @@ export function WelcomeCta({
   disabled?: boolean;
   accessibilityLabel?: string;
 }) {
-  const labelEl = <AppText style={styles.ctaLabel}>{label}</AppText>;
-  const a11y = accessibilityLabel ?? label;
-
-  if (href && !disabled) {
-    return (
-      <Link href={href} accessibilityRole="button" accessibilityLabel={a11y} style={styles.cta}>
-        {labelEl}
-      </Link>
-    );
-  }
+  const router = useRouter();
 
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={a11y}
+      accessibilityLabel={accessibilityLabel ?? label}
       accessibilityState={{ disabled }}
       disabled={disabled}
-      onPress={onPress}
+      onPress={() => {
+        if (href) router.push(href);
+        else onPress?.();
+      }}
       style={({ pressed }) => [
         styles.cta,
         disabled && styles.ctaDisabled,
         pressed && !disabled && styles.ctaPressed,
       ]}
     >
-      {labelEl}
+      <AppText style={styles.ctaLabel}>{label}</AppText>
     </Pressable>
   );
 }
@@ -55,8 +49,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: palette.accent,
     borderRadius: radius.md,
-    textDecorationLine: 'none',
-    ...Platform.select({ web: { cursor: 'pointer' } }),
   },
   ctaDisabled: {
     opacity: 0.4,
@@ -70,6 +62,5 @@ const styles = StyleSheet.create({
     fontSize: 17,
     lineHeight: 22,
     fontWeight: '600',
-    textDecorationLine: 'none',
   },
 });
