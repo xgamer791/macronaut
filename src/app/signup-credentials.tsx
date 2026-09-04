@@ -12,6 +12,8 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { COUNTRIES } from '@/data/countries';
+import { isValidSignupBirthday, MONTHS } from '@/domain/signupAccount';
 import { isValidSignupCredentials } from '@/domain/signupCredentials';
 import { useAuth } from '@/state/AuthProvider';
 import { useSetting } from '@/state/queries';
@@ -41,6 +43,7 @@ function OutlineInput({
   secureTextEntry,
   textContentType,
   trailing,
+  onFocus,
 }: {
   value: string;
   onChangeText: (next: string) => void;
@@ -53,6 +56,7 @@ function OutlineInput({
   secureTextEntry?: boolean;
   textContentType?: 'name' | 'emailAddress' | 'newPassword';
   trailing?: React.ReactNode;
+  onFocus?: () => void;
 }) {
   return (
     <View style={styles.field}>
@@ -60,6 +64,7 @@ function OutlineInput({
         accessibilityLabel={accessibilityLabel}
         value={value}
         onChangeText={onChangeText}
+        onFocus={onFocus}
         placeholder={placeholder}
         placeholderTextColor="rgba(255,255,255,0.45)"
         autoCapitalize={autoCapitalize}
@@ -75,9 +80,74 @@ function OutlineInput({
   );
 }
 
-/** Name, email, and password after birthday + country. Layout follows the
- * supplied create-account frame; type, accent and the CTA stay Macronaut.
- * Create Account does not leave this page until the next screen is built. */
+type OpenSelect = 'month' | 'country' | null;
+
+function SelectTrigger({
+  value,
+  open,
+  onPress,
+  accessibilityLabel,
+}: {
+  value: string;
+  open: boolean;
+  onPress: () => void;
+  accessibilityLabel: string;
+}) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel}
+      accessibilityState={{ expanded: open }}
+      onPress={onPress}
+      style={styles.field}
+    >
+      <AppText style={styles.fieldValue} numberOfLines={1}>
+        {value}
+      </AppText>
+      <Ionicons name={open ? 'chevron-up' : 'chevron-down'} size={16} color="#FFFFFF" />
+    </Pressable>
+  );
+}
+
+function OptionList({
+  options,
+  selected,
+  onSelect,
+}: {
+  options: readonly string[];
+  selected: string;
+  onSelect: (item: string) => void;
+}) {
+  return (
+    <View style={styles.inlineMenu}>
+      <ScrollView
+        nestedScrollEnabled
+        keyboardShouldPersistTaps="handled"
+        style={styles.inlineMenuScroll}
+      >
+        {options.map((item) => {
+          const isSelected = item === selected;
+          return (
+            <Pressable
+              key={item}
+              accessibilityRole="button"
+              accessibilityState={{ selected: isSelected }}
+              onPress={() => onSelect(item)}
+              style={styles.inlineRow}
+            >
+              <AppText style={styles.inlineRowLabel}>{item}</AppText>
+              {isSelected ? <Ionicons name="checkmark" size={18} color={palette.accent} /> : null}
+            </Pressable>
+          );
+        })}
+      </ScrollView>
+    </View>
+  );
+}
+
+/** Name, email, password, birthday, and country. Layout follows the supplied
+ * create-account frame; type, accent and the CTA stay Macronaut. Create
+ * Account does not leave this page until the next screen is built. */
 export default function SignupCredentialsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -90,11 +160,24 @@ export default function SignupCredentialsScreen() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
+  const [monthIndex, setMonthIndex] = useState(0);
+  const [day, setDay] = useState('');
+  const [year, setYear] = useState('');
+  const [country, setCountry] = useState<string>(COUNTRIES[0]);
+  const [openSelect, setOpenSelect] = useState<OpenSelect>(null);
 
   if (loading || (signedIn && onboarded.isLoading)) return null;
   if (signedIn) return <Redirect href={onboarded.data ? '/' : '/onboarding'} />;
 
-  const ready = isValidSignupCredentials(name, email, confirmEmail, password, confirmPassword);
+  const ready =
+    isValidSignupCredentials(name, email, confirmEmail, password, confirmPassword) &&
+    isValidSignupBirthday(monthIndex, day, year) &&
+    country.length > 0;
+
+  const closeMenus = () => setOpenSelect(null);
+  const toggle = (which: Exclude<OpenSelect, null>) => {
+    setOpenSelect((current) => (current === which ? null : which));
+  };
 
   const goBack = () => {
     if (router.canGoBack()) router.back();
@@ -142,6 +225,7 @@ export default function SignupCredentialsScreen() {
               autoCapitalize="words"
               autoComplete="name"
               textContentType="name"
+              onFocus={closeMenus}
             />
           </View>
 
@@ -156,6 +240,7 @@ export default function SignupCredentialsScreen() {
               autoCorrect={false}
               keyboardType="email-address"
               textContentType="emailAddress"
+              onFocus={closeMenus}
             />
           </View>
 
@@ -170,6 +255,7 @@ export default function SignupCredentialsScreen() {
               autoCorrect={false}
               keyboardType="email-address"
               textContentType="emailAddress"
+              onFocus={closeMenus}
             />
           </View>
 
@@ -184,6 +270,7 @@ export default function SignupCredentialsScreen() {
               autoCorrect={false}
               secureTextEntry={!showPassword}
               textContentType="newPassword"
+              onFocus={closeMenus}
               trailing={
                 <Pressable
                   accessibilityRole="button"
@@ -212,6 +299,7 @@ export default function SignupCredentialsScreen() {
               autoCorrect={false}
               secureTextEntry={!showConfirm}
               textContentType="newPassword"
+              onFocus={closeMenus}
               trailing={
                 <Pressable
                   accessibilityRole="button"
@@ -223,6 +311,87 @@ export default function SignupCredentialsScreen() {
                 </Pressable>
               }
             />
+          </View>
+
+          <View>
+            <FieldLabel>Date of birth</FieldLabel>
+            <View style={styles.birthdayRow}>
+              <View style={styles.monthCol}>
+                <FieldLabel>Month</FieldLabel>
+                <SelectTrigger
+                  value={MONTHS[monthIndex]}
+                  open={openSelect === 'month'}
+                  accessibilityLabel="Month"
+                  onPress={() => toggle('month')}
+                />
+              </View>
+              <View style={styles.dayCol}>
+                <FieldLabel>Day</FieldLabel>
+                <TextInput
+                  accessibilityLabel="Day"
+                  value={day}
+                  onChangeText={(next) => setDay(next.replace(/\D/g, '').slice(0, 2))}
+                  onFocus={closeMenus}
+                  placeholder="DD"
+                  placeholderTextColor="rgba(255,255,255,0.45)"
+                  keyboardType="number-pad"
+                  maxLength={2}
+                  style={styles.dateInput}
+                />
+              </View>
+              <View style={styles.yearCol}>
+                <FieldLabel>Year</FieldLabel>
+                <TextInput
+                  accessibilityLabel="Year"
+                  value={year}
+                  onChangeText={(next) => setYear(next.replace(/\D/g, '').slice(0, 4))}
+                  onFocus={closeMenus}
+                  placeholder="YYYY"
+                  placeholderTextColor="rgba(255,255,255,0.45)"
+                  keyboardType="number-pad"
+                  maxLength={4}
+                  style={styles.dateInput}
+                />
+              </View>
+            </View>
+            {openSelect === 'month' ? (
+              <OptionList
+                options={MONTHS}
+                selected={MONTHS[monthIndex]}
+                onSelect={(item) => {
+                  setMonthIndex(MONTHS.indexOf(item as (typeof MONTHS)[number]));
+                  setOpenSelect(null);
+                }}
+              />
+            ) : null}
+            <AppText style={styles.helper}>
+              Date of birth helps us comply with global regulations and calculate certain metrics.
+              Once set, it cannot be changed.
+            </AppText>
+          </View>
+
+          <View>
+            <FieldLabel>Country/Region</FieldLabel>
+            <SelectTrigger
+              value={country}
+              open={openSelect === 'country'}
+              accessibilityLabel="Country or region"
+              onPress={() => toggle('country')}
+            />
+            {openSelect === 'country' ? (
+              <OptionList
+                options={COUNTRIES}
+                selected={country}
+                onSelect={(item) => {
+                  setCountry(item);
+                  setOpenSelect(null);
+                }}
+              />
+            ) : null}
+            <AppText style={styles.helper}>
+              Country or region of residence helps us comply with global regulations and calculate
+              certain metrics. Once set, it cannot be changed.
+            </AppText>
           </View>
         </ScrollView>
 
@@ -318,6 +487,65 @@ const styles = StyleSheet.create({
     lineHeight: type.micro.lineHeight,
     fontWeight: '400',
     marginTop: 8,
+  },
+  fieldValue: {
+    flex: 1,
+    color: '#FFFFFF',
+    fontSize: type.body.fontSize,
+    lineHeight: type.body.lineHeight,
+    fontWeight: '400',
+  },
+  birthdayRow: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  monthCol: {
+    flex: 1.35,
+  },
+  dayCol: {
+    flex: 0.85,
+  },
+  yearCol: {
+    flex: 1,
+  },
+  dateInput: {
+    height: FIELD_H,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.55)',
+    borderRadius: radius.md,
+    color: '#FFFFFF',
+    fontSize: type.body.fontSize,
+    lineHeight: type.body.lineHeight,
+    textAlign: 'center',
+    paddingHorizontal: 8,
+    backgroundColor: 'transparent',
+    ...Platform.select({ web: { outlineStyle: 'none', outlineWidth: 0 } as object, default: {} }),
+  },
+  inlineMenu: {
+    marginTop: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.55)',
+    borderRadius: radius.md,
+    backgroundColor: 'rgba(16,20,24,0.92)',
+    overflow: 'hidden',
+    maxHeight: 240,
+  },
+  inlineMenuScroll: {
+    maxHeight: 240,
+  },
+  inlineRow: {
+    minHeight: 48,
+    paddingHorizontal: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: 'rgba(255,255,255,0.12)',
+  },
+  inlineRowLabel: {
+    color: '#FFFFFF',
+    fontSize: type.body.fontSize,
+    lineHeight: type.body.lineHeight,
   },
   dock: {
     paddingHorizontal: 24,
