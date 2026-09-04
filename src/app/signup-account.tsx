@@ -180,6 +180,7 @@ export default function SignupAccountScreen() {
                   maxLength={2}
                   autoComplete="off"
                   textContentType="none"
+                  {...(Platform.OS === 'web' ? ({ className: 'macronaut-dark-field' } as object) : {})}
                   style={styles.input}
                 />
               </View>
@@ -196,6 +197,7 @@ export default function SignupAccountScreen() {
                   maxLength={4}
                   autoComplete="off"
                   textContentType="none"
+                  {...(Platform.OS === 'web' ? ({ className: 'macronaut-dark-field' } as object) : {})}
                   style={styles.input}
                 />
               </View>
@@ -354,7 +356,15 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     paddingHorizontal: 8,
     backgroundColor: 'transparent',
-    ...Platform.select({ web: { outlineStyle: 'none', outlineWidth: 0 } as object, default: {} }),
+    ...Platform.select({
+      web: {
+        outlineStyle: 'none',
+        outlineWidth: 0,
+        WebkitTextFillColor: '#FFFFFF',
+        caretColor: '#FFFFFF',
+      } as object,
+      default: {},
+    }),
   },
   inlineMenu: {
     marginTop: 8,

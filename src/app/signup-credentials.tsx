@@ -64,7 +64,10 @@ function OutlineInput({
   onFocus?: () => void;
 }) {
   return (
-    <View style={styles.field}>
+    <View
+      style={styles.field}
+      {...(Platform.OS === 'web' ? ({ className: 'macronaut-dark-field' } as object) : {})}
+    >
       <TextInput
         accessibilityLabel={accessibilityLabel}
         value={value}
@@ -78,6 +81,7 @@ function OutlineInput({
         keyboardType={keyboardType}
         secureTextEntry={secureTextEntry}
         textContentType={textContentType}
+        {...(Platform.OS === 'web' ? ({ className: 'macronaut-dark-field' } as object) : {})}
         style={styles.fieldInput}
       />
       {trailing}
@@ -501,7 +505,15 @@ const styles = StyleSheet.create({
     lineHeight: type.body.lineHeight,
     padding: 0,
     backgroundColor: 'transparent',
-    ...Platform.select({ web: { outlineStyle: 'none', outlineWidth: 0 } as object, default: {} }),
+    ...Platform.select({
+      web: {
+        outlineStyle: 'none',
+        outlineWidth: 0,
+        WebkitTextFillColor: '#FFFFFF',
+        caretColor: '#FFFFFF',
+      } as object,
+      default: {},
+    }),
   },
   helper: {
     color: 'rgba(255,255,255,0.62)',
