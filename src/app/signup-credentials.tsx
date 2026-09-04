@@ -309,6 +309,7 @@ const styles = StyleSheet.create({
     fontSize: type.body.fontSize,
     lineHeight: type.body.lineHeight,
     padding: 0,
+    ...Platform.select({ web: { outlineStyle: 'none', outlineWidth: 0 } as object, default: {} }),
   },
   helper: {
     color: 'rgba(255,255,255,0.62)',

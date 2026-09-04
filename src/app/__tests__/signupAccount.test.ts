@@ -39,6 +39,7 @@ describe('signup account setup', () => {
   it('expands month and country in the page instead of a slide-up overlay', () => {
     const account = read('signup-account.tsx');
     const legal = read('signup-legal.tsx');
+    expect(account).toContain("outlineStyle: 'none'");
     expect(account).toContain('inlineMenu');
     expect(account).not.toContain('Modal');
     expect(account).not.toContain('animationType');
