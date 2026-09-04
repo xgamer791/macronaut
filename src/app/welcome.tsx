@@ -10,8 +10,8 @@ import { WelcomeCta } from '@/ui/WelcomeCta';
 import { fonts } from '@/ui/theme/tokens';
 
 /** Poster splash: full-bleed photo, mid-canvas stacked wordmark, two identical
- * CTAs, then a text link. Create Account opens the legal gate; Sign In and
- * More options stay inert until those passes. */
+ * CTAs, then a text link. Create Account opens the legal gate, Sign In the
+ * email and password form; More options stays inert until that pass. */
 export default function WelcomeScreen() {
   const { loading, signedIn } = useAuth();
   const onboarded = useSetting<boolean>('onboardingComplete', false, signedIn);
@@ -39,7 +39,7 @@ export default function WelcomeScreen() {
         <View style={[styles.dock, { paddingBottom: Math.max(insets.bottom, 12) + 8 }]}>
           <View style={styles.ctaStack}>
             <WelcomeCta label="Create Account" href="/signup-legal" />
-            <WelcomeCta label="Sign In" onPress={() => {}} />
+            <WelcomeCta label="Sign In" href="/login" />
           </View>
           <Pressable
             accessibilityRole="button"

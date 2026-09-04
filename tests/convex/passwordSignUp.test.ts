@@ -118,6 +118,42 @@ describe('create account (auth:signIn with the password provider)', () => {
     expect(accounts).toHaveLength(1);
   });
 
+  it('does not adopt an older account on the same address, or touch its data', async () => {
+    const t = backend();
+    // A Google-era account on the same address, from before create-account
+    // asked for a password.
+    const older = await t.run(async (ctx) => {
+      const userId = await ctx.db.insert('users', {
+        email: 'person@example.com',
+        name: 'Ada from Google',
+      });
+      await ctx.db.insert('authAccounts', {
+        userId,
+        provider: 'google',
+        providerAccountId: 'google-1234',
+      });
+      await ctx.db.insert('settings', { userId, key: 'displayName', value: '"Ada"' });
+      return userId;
+    });
+
+    await t.action(api.auth.signIn, SIGN_UP);
+
+    // Knowing an address is not knowing its password, so the sign-up cannot
+    // claim that account: it gets its own, and the old rows stay where they
+    // are. Reuniting the two needs a password reset, which is not built yet.
+    const users = await t.run(async (ctx) => ctx.db.query('users').collect());
+    expect(users).toHaveLength(2);
+    const created = users.find((u) => u._id !== older)!;
+    expect(created.name).toBe('Ada Lovelace');
+    const accounts = await t.run(async (ctx) => ctx.db.query('authAccounts').collect());
+    expect(accounts.filter((a) => a.userId === older).map((a) => a.provider)).toEqual(['google']);
+    expect(accounts.filter((a) => a.userId === created._id).map((a) => a.provider)).toEqual([
+      'password',
+    ]);
+    const settings = await t.run(async (ctx) => ctx.db.query('settings').collect());
+    expect(settings.map((s) => s.userId)).toEqual([older]);
+  });
+
   it('refuses a password the form would not have accepted', async () => {
     const t = backend();
     for (const password of ['short1A', 'macronaut1', 'MACRONAUT1', 'Macronauts']) {

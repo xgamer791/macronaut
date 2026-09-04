@@ -12,9 +12,11 @@ describe('signup apple health ask', () => {
     expect(fs.existsSync(path.join(appDir, '(tabs)', 'signup-health.tsx'))).toBe(false);
   });
 
-  it('opens from Create Account on credentials', () => {
-    expect(read('signup-credentials.tsx')).toContain('href="/signup-health"');
-    expect(read('signup-credentials.tsx')).toContain('disabled={!ready}');
+  it('opens once Create Account has made the account', () => {
+    const credentials = read('signup-credentials.tsx');
+    expect(credentials).toContain("router.replace('/signup-health')");
+    expect(credentials).toContain('auth.createAccount');
+    expect(credentials).toContain('disabled={!ready || auth.busy}');
   });
 
   it('asks to connect Apple Health for Apple Watch without wiring HealthKit', () => {
@@ -28,8 +30,10 @@ describe('signup apple health ask', () => {
     expect(source).toContain('label="Connect"');
     expect(source).toContain('onPress={() => {}}');
     expect(source).toContain('Not now');
-    expect(source).toContain('markEnteredApp');
     expect(source).toContain("router.replace('/')");
+    // The session already exists by now, so the ask stays put instead of
+    // redirecting the new account into the onboarding wizard.
+    expect(source).toContain('signupComplete');
     expect(source).toContain('veilFilm');
     expect(source).toContain('rgba(0,0,0,0.50)');
     expect(source).toContain('fonts.display');

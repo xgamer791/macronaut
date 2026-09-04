@@ -53,7 +53,6 @@ function ThemedApp() {
         <Stack.Screen name="signup-account" />
         <Stack.Screen name="signup-credentials" />
         <Stack.Screen name="signup-health" />
-        <Stack.Screen name="create-account" />
         <Stack.Screen name="onboarding" />
         <Stack.Screen name="add" options={{ presentation: 'modal' }} />
         <Stack.Screen name="manual-entry" options={{ presentation: 'modal' }} />
@@ -66,7 +65,7 @@ function ThemedApp() {
         <Stack.Screen name="meal-editor" options={{ presentation: 'modal' }} />
         <Stack.Screen name="recipe-editor" options={{ presentation: 'modal' }} />
         <Stack.Screen name="meal/[id]" />
-        {/* Reachable signed-out: Google's OAuth consent screen links to both. */}
+        {/* Reachable signed-out: the create-account legal gate links to both. */}
         <Stack.Screen name="privacy" />
         <Stack.Screen name="terms" />
         <Stack.Screen name="apple-health" />

@@ -1,7 +1,8 @@
 import { COUNTRIES } from '@/data/countries';
 import {
   applySignupDraftFromRoute,
-  markEnteredApp,
+  clearSignupComplete,
+  markSignupComplete,
   readStoredDraft,
   resetSignupDraft,
   saveSignupDraftValues,
@@ -70,10 +71,16 @@ describe('signup draft', () => {
     expect(useSignupDraft.getState().year).toBe('1992');
   });
 
-  it('marks create-account as finished so the dashboard can open', () => {
-    expect(useSignupDraft.getState().enteredApp).toBe(false);
-    markEnteredApp();
-    expect(useSignupDraft.getState().enteredApp).toBe(true);
+  it('marks the account as created so the last steps do not bounce to onboarding', () => {
+    expect(useSignupDraft.getState().signupComplete).toBe(false);
+    markSignupComplete();
+    expect(useSignupDraft.getState().signupComplete).toBe(true);
+  });
+
+  it('clears the mark when the account was not created after all', () => {
+    markSignupComplete();
+    clearSignupComplete();
+    expect(useSignupDraft.getState().signupComplete).toBe(false);
   });
 
   it('resets to the empty defaults', () => {

@@ -3,6 +3,7 @@ import React, { useMemo, useState } from 'react';
 import { Pressable, View } from 'react-native';
 import { useQueryClient } from '@tanstack/react-query';
 import { recommendTargets } from '@/domain/recommend';
+import { ageFromBirthdayIso } from '@/domain/signupAccount';
 import {
   ActivityLevel,
   BiologicalSex,
@@ -59,7 +60,8 @@ export default function Onboarding() {
   const [step, setStep] = useState<Step>('welcome');
   const [displayName, setDisplayName] = useState(() => displayNameFromUser(user) ?? '');
   const [units, setUnits] = useState<UnitSystem>('us');
-  const [age, setAge] = useState<number | undefined>();
+  // The account already knows the date of birth, so nobody types their age twice.
+  const [age, setAge] = useState<number | undefined>(() => ageFromBirthdayIso(user?.birthday));
   const [sex, setSex] = useState<BiologicalSex>('male');
   const [heightFt, setHeightFt] = useState<number | undefined>(5);
   const [heightIn, setHeightIn] = useState<number | undefined>(9);

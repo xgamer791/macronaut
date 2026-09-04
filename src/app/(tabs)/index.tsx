@@ -6,7 +6,9 @@ import { useRouter } from 'expo-router';
 import React, { useMemo, useState } from 'react';
 import { Pressable, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { displayNameFromUser } from '@/services/auth/displayName';
 import { useRepos } from '@/state/AppProvider';
+import { useAuth } from '@/state/AuthProvider';
 import {
   keys,
   useActivityEntries,
@@ -77,6 +79,7 @@ function TodayBody() {
   const router = useRouter();
   const qc = useQueryClient();
   const { settings } = useRepos();
+  const { user } = useAuth();
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const { width, height: windowHeight } = useWindowDimensions();
@@ -100,7 +103,8 @@ function TodayBody() {
   const [pickerSlot, setPickerSlot] = useState<'left' | 'right' | null>(null);
 
   const greeting = useMemo(() => greetingForHour(), []);
-  const firstName = displayFirstName(displayName.data);
+  // Until someone edits it here, the name they created the account with.
+  const firstName = displayFirstName(displayName.data || displayNameFromUser(user));
 
   const leftMetric: HeroMetricId = isHeroMetricId(leftSetting.data)
     ? leftSetting.data

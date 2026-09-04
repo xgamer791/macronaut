@@ -18,8 +18,27 @@ describe('signup credentials', () => {
     expect(read('signup-account.tsx')).toContain('disabled={!ready}');
   });
 
+  it('creates the account on the backend, then opens the Apple Health ask', () => {
+    const source = read('signup-credentials.tsx');
+    const hook = fs.readFileSync(path.join(appDir, '../state/useAccountAuth.ts'), 'utf8');
+    expect(source).toContain('useAccountAuth');
+    expect(source).toContain('auth.createAccount');
+    expect(source).toContain('signupBirthdayIso(monthIndex, day, year)');
+    expect(source).toContain('markSignupComplete');
+    expect(source).toContain('clearSignupComplete');
+    expect(source).toContain("router.replace('/signup-health')");
+    expect(source).toContain('auth.error');
+    // Name, date of birth and country go with the sign-up call, so the account
+    // cannot exist without them.
+    expect(hook).toContain("flow: 'signUp'");
+    for (const field of ['email', 'password', 'name', 'birthday', 'country']) {
+      expect(hook).toContain(`${field}:`);
+    }
+  });
+
   it('collects name, email, and password with Macronaut type and the welcome CTA', () => {
     const source = read('signup-credentials.tsx');
+    const fields = fs.readFileSync(path.join(appDir, '../ui/DarkField.tsx'), 'utf8');
     expect(source).toContain('Create An Account');
     expect(source).toContain('Name');
     expect(source).toContain('Email address');
@@ -51,15 +70,14 @@ describe('signup credentials', () => {
     expect(source).toContain('fonts.display');
     expect(source).toContain('type.title');
     expect(source).toContain('type.body');
-    expect(source).toContain('palette.danger');
     expect(source).toContain('palette.accent');
-    expect(source).toContain('label="Create Account"');
-    expect(source).toContain('disabled={!ready}');
-    expect(source).toContain('href="/signup-health"');
+    expect(source).toContain('accessibilityLabel="Create Account"');
+    expect(source).toContain('disabled={!ready || auth.busy}');
     expect(source).not.toContain('/create-account');
-    expect(source).toContain("outlineStyle: 'none'");
-    expect(source).toContain("dataSet: { darkfield: 'true' }");
-    expect(source).toContain("WebkitTextFillColor: '#FFFFFF'");
+    expect(fields).toContain("outlineStyle: 'none'");
+    expect(fields).toContain("dataSet: { darkfield: 'true' }");
+    expect(fields).toContain("WebkitTextFillColor: '#FFFFFF'");
+    expect(fields).toContain('palette.danger');
     expect(source).not.toContain('Modal');
     expect(source).not.toContain('animationType');
     expect(source).not.toContain('Garmin');
