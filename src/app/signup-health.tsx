@@ -6,23 +6,26 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '@/state/AuthProvider';
 import { useSetting } from '@/state/queries';
-import { markEnteredApp } from '@/state/signupDraft';
+import { useSignupDraft } from '@/state/signupDraft';
 import { AppText } from '@/ui/components';
 import { WatchConnectMark } from '@/ui/WatchConnectMark';
 import { WelcomeBackground } from '@/ui/WelcomeBackground';
 import { WelcomeCta } from '@/ui/WelcomeCta';
 import { fonts, type } from '@/ui/theme/tokens';
 
-/** After credentials: ask to connect Apple Health for Apple Watch. Connect
- * does nothing yet. Not now leaves the stack for the dashboard. */
+/** The last step of create-account, with the account already made: ask to
+ * connect Apple Health for Apple Watch. Connect does nothing yet. Not now
+ * leaves the stack for the dashboard. */
 export default function SignupHealthScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { loading, signedIn } = useAuth();
   const onboarded = useSetting<boolean>('onboardingComplete', false, signedIn);
+  const signupComplete = useSignupDraft((s) => s.signupComplete);
 
   if (loading || (signedIn && onboarded.isLoading)) return null;
-  if (signedIn) return <Redirect href={onboarded.data ? '/' : '/onboarding'} />;
+  // Signed in without having just created the account: this is not their step.
+  if (signedIn && !signupComplete) return <Redirect href={onboarded.data ? '/' : '/onboarding'} />;
 
   const goBack = () => {
     if (router.canGoBack()) router.back();
@@ -68,10 +71,7 @@ export default function SignupHealthScreen() {
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="Not now"
-            onPress={() => {
-              markEnteredApp();
-              router.replace('/');
-            }}
+            onPress={() => router.replace('/')}
             style={styles.skipHit}
           >
             <AppText style={styles.skipLabel}>Not now</AppText>

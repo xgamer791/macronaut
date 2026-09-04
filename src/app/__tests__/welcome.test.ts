@@ -14,22 +14,24 @@ describe('welcome splash', () => {
     expect(fs.existsSync(path.join(appDir, '(tabs)', 'welcome.tsx'))).toBe(false);
   });
 
-  it('sends signed-out tab visitors to the splash unless they finished create-account', () => {
+  it('sends signed-out tab visitors to the splash, and new accounts to the dashboard', () => {
     const tabs = read('(tabs)/_layout.tsx');
     expect(tabs).toContain('href="/welcome"');
-    expect(tabs).toContain('enteredApp');
+    expect(tabs).toContain('if (!signedIn)');
+    // A session straight out of create-account keeps the dashboard it was
+    // promised instead of being sent to the goal wizard.
+    expect(tabs).toContain('signupComplete');
     expect(tabs).not.toContain('href="/login"');
   });
 
-  it('sends Create Account to the legal gate and leaves Sign In inert', () => {
+  it('sends Create Account to the legal gate and Sign In to the password form', () => {
     const source = read('welcome.tsx');
     expect(source).toContain('Create Account');
     expect(source).toContain('Sign In');
     expect(source).toContain('More options');
     expect(source).toContain('href="/signup-legal"');
-    expect(source).not.toContain('/login');
+    expect(source).toContain('href="/login"');
     expect(source).not.toContain('/create-account');
-    expect(source).toContain('<WelcomeCta label="Sign In" onPress={() => {}} />');
   });
 
   it('ships five distinct athlete photos and opens on the jog, not the squat', () => {

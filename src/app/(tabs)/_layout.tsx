@@ -8,12 +8,14 @@ import { TabBar } from '@/ui/components/TabBar';
 
 export default function TabsLayout() {
   const { loading, signedIn } = useAuth();
-  const enteredApp = useSignupDraft((s) => s.enteredApp);
+  const signupComplete = useSignupDraft((s) => s.signupComplete);
   const onboarded = useSetting<boolean>('onboardingComplete', false, signedIn);
 
   if (loading || (signedIn && onboarded.isLoading)) return null;
-  if (!signedIn && !enteredApp) return <Redirect href="/welcome" />;
-  if (signedIn && !onboarded.data) return <Redirect href="/onboarding" />;
+  if (!signedIn) return <Redirect href="/welcome" />;
+  // A session that has just come through create-account gets the dashboard it
+  // was promised; the goal wizard is still there in Settings → Goals.
+  if (!onboarded.data && !signupComplete) return <Redirect href="/onboarding" />;
 
   return (
     <Tabs screenOptions={{ headerShown: false }} tabBar={(props) => <TabBar {...props} />}>

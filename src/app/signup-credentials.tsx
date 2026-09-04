@@ -8,89 +8,27 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
-  TextInput,
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { COUNTRIES } from '@/data/countries';
-import { isValidSignupBirthday, MONTHS } from '@/domain/signupAccount';
+import { isValidSignupBirthday, MONTHS, signupBirthdayIso } from '@/domain/signupAccount';
 import { isValidSignupCredentials } from '@/domain/signupCredentials';
 import { useAuth } from '@/state/AuthProvider';
 import { useSetting } from '@/state/queries';
 import {
   applySignupDraftFromRoute,
+  clearSignupComplete,
   hydrateSignupDraftFromStorage,
+  markSignupComplete,
   useSignupDraft,
 } from '@/state/signupDraft';
+import { useAccountAuth } from '@/state/useAccountAuth';
 import { AppText } from '@/ui/components';
+import { fieldStyles, FieldLabel, OutlineInput } from '@/ui/DarkField';
 import { WelcomeBackground } from '@/ui/WelcomeBackground';
 import { WelcomeCta } from '@/ui/WelcomeCta';
 import { fonts, palette, radius, type } from '@/ui/theme/tokens';
-
-/** Marks a field that sits on the dark video so the web shell can force
- * white autofill text. react-native-web forwards dataSet, not className, and
- * dataSet is absent from the React Native prop types. */
-const DARK_FIELD: object =
-  Platform.OS === 'web' ? { dataSet: { darkfield: 'true' } } : {};
-
-function FieldLabel({ children }: { children: string }) {
-  return (
-    <AppText style={styles.label}>
-      {children}
-      <AppText style={styles.required}> *</AppText>
-    </AppText>
-  );
-}
-
-function OutlineInput({
-  value,
-  onChangeText,
-  accessibilityLabel,
-  placeholder,
-  autoCapitalize,
-  autoComplete,
-  autoCorrect,
-  keyboardType,
-  secureTextEntry,
-  textContentType,
-  trailing,
-  onFocus,
-}: {
-  value: string;
-  onChangeText: (next: string) => void;
-  accessibilityLabel: string;
-  placeholder?: string;
-  autoCapitalize?: 'none' | 'words';
-  autoComplete?: 'name' | 'email' | 'password-new' | 'off';
-  autoCorrect?: boolean;
-  keyboardType?: 'default' | 'email-address';
-  secureTextEntry?: boolean;
-  textContentType?: 'name' | 'emailAddress' | 'newPassword';
-  trailing?: React.ReactNode;
-  onFocus?: () => void;
-}) {
-  return (
-    <View style={styles.field} {...DARK_FIELD}>
-      <TextInput
-        accessibilityLabel={accessibilityLabel}
-        value={value}
-        onChangeText={onChangeText}
-        onFocus={onFocus}
-        placeholder={placeholder}
-        placeholderTextColor="rgba(255,255,255,0.45)"
-        autoCapitalize={autoCapitalize}
-        autoComplete={autoComplete}
-        autoCorrect={autoCorrect}
-        keyboardType={keyboardType}
-        secureTextEntry={secureTextEntry}
-        textContentType={textContentType}
-        {...DARK_FIELD}
-        style={styles.fieldInput}
-      />
-      {trailing}
-    </View>
-  );
-}
 
 function LockedField({
   value,
@@ -139,7 +77,7 @@ function SelectTrigger({
       accessibilityLabel={accessibilityLabel}
       accessibilityState={{ expanded: open }}
       onPress={onPress}
-      style={styles.field}
+      style={fieldStyles.field}
     >
       <AppText style={styles.fieldValue} numberOfLines={1}>
         {value}
@@ -187,12 +125,14 @@ function OptionList({
 
 /** Name, email, password, birthday, and country. Layout follows the supplied
  * create-account frame; type, accent and the CTA stay Macronaut. Create
- * Account opens the Apple Health ask. */
+ * Account creates the account on the Convex deployment — name, date of birth
+ * and country included — signs in, and opens the Apple Health ask. */
 export default function SignupCredentialsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { loading, signedIn } = useAuth();
   const onboarded = useSetting<boolean>('onboardingComplete', false, signedIn);
+  const auth = useAccountAuth();
   const params = useLocalSearchParams<{
     month?: string;
     day?: string;
@@ -214,6 +154,7 @@ export default function SignupCredentialsScreen() {
   const day = useSignupDraft((s) => s.day);
   const year = useSignupDraft((s) => s.year);
   const country = useSignupDraft((s) => s.country);
+  const signupComplete = useSignupDraft((s) => s.signupComplete);
   const setCountry = useSignupDraft((s) => s.setCountry);
   const [openSelect, setOpenSelect] = useState<OpenSelect>(null);
 
@@ -231,7 +172,9 @@ export default function SignupCredentialsScreen() {
   }, [routeMonth, routeDay, routeYear, routeCountry]);
 
   if (loading || (signedIn && onboarded.isLoading)) return null;
-  if (signedIn) return <Redirect href={onboarded.data ? '/' : '/onboarding'} />;
+  // A session that arrived from this screen is on its way to the Apple Health
+  // ask; anyone else who is already signed in has no business here.
+  if (signedIn && !signupComplete) return <Redirect href={onboarded.data ? '/' : '/onboarding'} />;
 
   const ready =
     isValidSignupCredentials(name, email, confirmEmail, password, confirmPassword) &&
@@ -242,6 +185,26 @@ export default function SignupCredentialsScreen() {
   const toggle = (which: Exclude<OpenSelect, null>) => {
     setOpenSelect((current) => (current === which ? null : which));
   };
+
+  async function createAccount() {
+    if (!ready || auth.busy) return;
+    setOpenSelect(null);
+    // Set before the round trip: the new session lands mid-await, and the
+    // guard above must not send it to onboarding on the way past.
+    markSignupComplete();
+    const created = await auth.createAccount({
+      name,
+      email,
+      password,
+      birthday: signupBirthdayIso(monthIndex, day, year),
+      country,
+    });
+    if (!created) {
+      clearSignupComplete();
+      return;
+    }
+    router.replace('/signup-health');
+  }
 
   const goBack = () => {
     if (router.canGoBack()) router.back();
@@ -346,7 +309,7 @@ export default function SignupCredentialsScreen() {
                 </Pressable>
               }
             />
-            <AppText style={styles.helper}>
+            <AppText style={fieldStyles.helper}>
               Minimum password length is 8 characters. Please use at least 1 uppercase letter, 1
               lowercase letter and 1 number.
             </AppText>
@@ -393,7 +356,7 @@ export default function SignupCredentialsScreen() {
                 <LockedField value={year} accessibilityLabel="Year" centered />
               </View>
             </View>
-            <AppText style={styles.helper}>
+            <AppText style={fieldStyles.helper}>
               Date of birth helps us comply with global regulations and calculate certain metrics.
               Once set, it cannot be changed.
             </AppText>
@@ -417,7 +380,7 @@ export default function SignupCredentialsScreen() {
                 }}
               />
             ) : null}
-            <AppText style={styles.helper}>
+            <AppText style={fieldStyles.helper}>
               Country or region of residence helps us comply with global regulations and calculate
               certain metrics. Once set, it cannot be changed.
             </AppText>
@@ -425,7 +388,17 @@ export default function SignupCredentialsScreen() {
         </ScrollView>
 
         <View style={[styles.dock, { paddingBottom: Math.max(insets.bottom, 12) + 8 }]}>
-          <WelcomeCta label="Create Account" disabled={!ready} href="/signup-health" />
+          {auth.error ? (
+            <AppText accessibilityRole="alert" style={fieldStyles.error}>
+              {auth.error}
+            </AppText>
+          ) : null}
+          <WelcomeCta
+            label={auth.busy ? 'Creating account…' : 'Create Account'}
+            accessibilityLabel="Create Account"
+            disabled={!ready || auth.busy}
+            onPress={() => void createAccount()}
+          />
         </View>
       </KeyboardAvoidingView>
     </View>
@@ -476,54 +449,6 @@ const styles = StyleSheet.create({
     paddingTop: 20,
     paddingBottom: 16,
     gap: 20,
-  },
-  label: {
-    color: '#FFFFFF',
-    fontSize: type.caption.fontSize,
-    lineHeight: type.caption.lineHeight,
-    fontWeight: '600',
-    marginBottom: 8,
-  },
-  required: {
-    color: palette.danger,
-    fontSize: type.caption.fontSize,
-    lineHeight: type.caption.lineHeight,
-    fontWeight: '600',
-  },
-  field: {
-    minHeight: FIELD_H,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.55)',
-    borderRadius: radius.md,
-    paddingHorizontal: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  fieldInput: {
-    flex: 1,
-    height: FIELD_H,
-    color: '#FFFFFF',
-    fontSize: type.body.fontSize,
-    lineHeight: type.body.lineHeight,
-    padding: 0,
-    backgroundColor: 'transparent',
-    ...Platform.select({
-      web: {
-        outlineStyle: 'none',
-        outlineWidth: 0,
-        WebkitTextFillColor: '#FFFFFF',
-        caretColor: '#FFFFFF',
-      } as object,
-      default: {},
-    }),
-  },
-  helper: {
-    color: 'rgba(255,255,255,0.62)',
-    fontSize: type.micro.fontSize,
-    lineHeight: type.micro.lineHeight,
-    fontWeight: '400',
-    marginTop: 8,
   },
   fieldValue: {
     flex: 1,
@@ -592,5 +517,6 @@ const styles = StyleSheet.create({
   dock: {
     paddingHorizontal: 24,
     paddingTop: 8,
+    gap: 10,
   },
 });

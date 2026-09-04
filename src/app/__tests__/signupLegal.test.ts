@@ -14,9 +14,9 @@ describe('signup legal gate', () => {
     expect(fs.existsSync(path.join(appDir, '(tabs)', 'signup-legal.tsx'))).toBe(false);
   });
 
-  it('is the first screen after Create Account on welcome', () => {
+  it('is the first screen after Create Account, wherever that is offered', () => {
     expect(read('welcome.tsx')).toContain('href="/signup-legal"');
-    expect(read('login.tsx')).not.toContain('/signup-legal');
+    expect(read('login.tsx')).toContain("router.replace('/signup-legal')");
   });
 
   it('links the existing Terms of Service and Privacy Policy pages', () => {

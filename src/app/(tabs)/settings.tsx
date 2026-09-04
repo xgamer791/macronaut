@@ -5,6 +5,7 @@ import { useRouter } from 'expo-router';
 import React, { useMemo, useState } from 'react';
 import { Linking, Platform, Pressable, StyleSheet, View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
+import { formatBirthdayIso } from '@/domain/signupAccount';
 import { ActivityLevel, UnitSystem, WeekStart } from '@/domain/types';
 import { loadDemoData } from '@/seed/demoData';
 import { OnboardingProfile } from '@/repositories/settingsRepo';
@@ -444,13 +445,24 @@ export default function SettingsScreen() {
         <ListRow
           title={user?.email ?? 'Signed in'}
           subtitle={
-            user?.provider === 'google'
-              ? 'Signed in with Google'
-              : user?.provider === 'apple'
-                ? 'Signed in with Apple'
-                : 'Signed in with an email code'
+            user?.provider === 'password'
+              ? 'Signed in with your email and password'
+              : user?.provider === 'google'
+                ? 'Signed in with Google'
+                : user?.provider === 'apple'
+                  ? 'Signed in with Apple'
+                  : 'Signed in with an email code'
           }
         />
+        {user?.birthday ? (
+          <ListRow
+            title={formatBirthdayIso(user.birthday)}
+            subtitle="Date of birth, set when you created your account"
+          />
+        ) : null}
+        {user?.country ? (
+          <ListRow title={user.country} subtitle="Country or region of residence" />
+        ) : null}
         <ListRow
           title="Sign out"
           subtitle="Your data stays in your account for next time"

@@ -13,9 +13,10 @@ export interface SignupDraftValues {
 }
 
 export interface SignupDraft extends SignupDraftValues {
-  /** Set when create-account finishes so Not now can open the dashboard
-   * without a session. The tab group otherwise bounces to Welcome. */
-  enteredApp: boolean;
+  /** Set when the account has been created, so the last steps of the flow
+   * (the Apple Health ask, then the dashboard) do not bounce the brand new
+   * session into the onboarding wizard. */
+  signupComplete: boolean;
   setMonthIndex: (monthIndex: number) => void;
   setDay: (day: string) => void;
   setYear: (year: string) => void;
@@ -23,7 +24,7 @@ export interface SignupDraft extends SignupDraftValues {
 }
 
 export const SIGNUP_DRAFT_STORAGE_KEY = 'macronaut-signup-draft';
-export const ENTERED_APP_STORAGE_KEY = 'macronaut-entered-app';
+export const SIGNUP_COMPLETE_STORAGE_KEY = 'macronaut-signup-complete';
 
 export const SIGNUP_DRAFT_DEFAULTS: SignupDraftValues = {
   monthIndex: 0,
@@ -32,9 +33,9 @@ export const SIGNUP_DRAFT_DEFAULTS: SignupDraftValues = {
   country: COUNTRIES[0],
 };
 
-function readEnteredAppFlag(): boolean {
+function readSignupCompleteFlag(): boolean {
   try {
-    return getStorage().getItem(ENTERED_APP_STORAGE_KEY) === '1';
+    return getStorage().getItem(SIGNUP_COMPLETE_STORAGE_KEY) === '1';
   } catch {
     return false;
   }
@@ -161,14 +162,22 @@ function bootDraft(): SignupDraftValues {
   return readStoredDraft() ?? { ...SIGNUP_DRAFT_DEFAULTS };
 }
 
-export function markEnteredApp() {
-  getStorage().setItem(ENTERED_APP_STORAGE_KEY, '1');
-  useSignupDraft.setState({ enteredApp: true });
+/** Called before the account is created, so no render between the new session
+ * arriving and the next screen can bounce the flow into onboarding. */
+export function markSignupComplete() {
+  getStorage().setItem(SIGNUP_COMPLETE_STORAGE_KEY, '1');
+  useSignupDraft.setState({ signupComplete: true });
+}
+
+/** The account was not created after all. */
+export function clearSignupComplete() {
+  getStorage().removeItem(SIGNUP_COMPLETE_STORAGE_KEY);
+  useSignupDraft.setState({ signupComplete: false });
 }
 
 export const useSignupDraft = create<SignupDraft>((set) => ({
   ...bootDraft(),
-  enteredApp: readEnteredAppFlag(),
+  signupComplete: readSignupCompleteFlag(),
   setMonthIndex: (monthIndex) =>
     set((state) => {
       const next = { ...pickValues(state), monthIndex };
@@ -206,14 +215,14 @@ function pickValues(state: SignupDraftValues): SignupDraftValues {
 
 export function resetSignupDraft() {
   memoryStorage.delete(SIGNUP_DRAFT_STORAGE_KEY);
-  memoryStorage.delete(ENTERED_APP_STORAGE_KEY);
+  memoryStorage.delete(SIGNUP_COMPLETE_STORAGE_KEY);
   try {
     if (typeof sessionStorage !== 'undefined') {
       sessionStorage.removeItem(SIGNUP_DRAFT_STORAGE_KEY);
-      sessionStorage.removeItem(ENTERED_APP_STORAGE_KEY);
+      sessionStorage.removeItem(SIGNUP_COMPLETE_STORAGE_KEY);
     }
   } catch {
     /* ignore */
   }
-  useSignupDraft.setState({ ...SIGNUP_DRAFT_DEFAULTS, enteredApp: false });
+  useSignupDraft.setState({ ...SIGNUP_DRAFT_DEFAULTS, signupComplete: false });
 }

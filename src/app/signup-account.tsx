@@ -18,26 +18,12 @@ import { useAuth } from '@/state/AuthProvider';
 import { useSetting } from '@/state/queries';
 import { saveSignupDraftValues, useSignupDraft } from '@/state/signupDraft';
 import { AppText } from '@/ui/components';
+import { DARK_FIELD, FieldLabel } from '@/ui/DarkField';
 import { WelcomeBackground } from '@/ui/WelcomeBackground';
 import { WelcomeCta } from '@/ui/WelcomeCta';
 import { fonts, palette, radius, type } from '@/ui/theme/tokens';
 
 type OpenSelect = 'month' | 'country' | null;
-
-/** Marks a field that sits on the dark video so the web shell can force
- * white autofill text. react-native-web forwards dataSet, not className, and
- * dataSet is absent from the React Native prop types. */
-const DARK_FIELD: object =
-  Platform.OS === 'web' ? { dataSet: { darkfield: 'true' } } : {};
-
-function FieldLabel({ children }: { children: string }) {
-  return (
-    <AppText style={styles.label}>
-      {children}
-      <AppText style={styles.required}> *</AppText>
-    </AppText>
-  );
-}
 
 function SelectTrigger({
   value,
@@ -319,19 +305,6 @@ const styles = StyleSheet.create({
   },
   yearCol: {
     flex: 1,
-  },
-  label: {
-    color: '#FFFFFF',
-    fontSize: type.caption.fontSize,
-    lineHeight: type.caption.lineHeight,
-    fontWeight: '600',
-    marginBottom: 8,
-  },
-  required: {
-    color: palette.danger,
-    fontSize: type.caption.fontSize,
-    lineHeight: type.caption.lineHeight,
-    fontWeight: '600',
   },
   field: {
     height: FIELD_H,

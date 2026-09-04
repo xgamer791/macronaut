@@ -6,17 +6,40 @@ day notes, settings, the food lookup cache — lives there, so the same diary
 shows up on every device the person signs in on. Nothing is kept in a local
 database any more.
 
-Sign-in is [Convex Auth](https://labs.convex.dev/auth) with three methods:
+Sign-in is [Convex Auth](https://labs.convex.dev/auth). The app offers one
+method:
 
 | Provider | How it works | Deployment variables |
 |---|---|---|
-| Google | OAuth code flow with PKCE. The consent screen returns to the Convex **site** URL, which holds the client secret; the app only ever sees a one-time code. | `AUTH_GOOGLE_ID`, `AUTH_GOOGLE_SECRET` |
-| Apple | Same OAuth code flow on web and Android. On iOS, Apple's own sheet returns an identity token that the backend verifies against Apple's published keys (`apple-native` in `convex/AppleNative.ts`) — no secret involved. Both paths write the same `apple` account, so one Apple ID is one Macronaut account. | `AUTH_APPLE_ID`, `AUTH_APPLE_SECRET` |
-| Email code | A six-digit code sent through [Resend](https://resend.com), valid for ten minutes. Works identically on web, iOS and Android with no deep-link setup. | `AUTH_RESEND_KEY`, `AUTH_EMAIL_FROM` |
+| Email and password | `convex/PasswordAccount.ts`. Create Account sends the address, the password, the name, the date of birth and the country in one call; Convex Auth hashes the password with Scrypt and stores only the hash on the account row. Signing in sends the address and the password. | none |
 | AI food scan | A Convex action calls xAI with a shared key. The client never sees it. Until Pro exists, accounts that already existed when the roster froze (plus Holly Ky and the two preview emails) can invoke the action. Later sign-ups cannot. | `XAI_API_KEY` |
 
-Apple is not optional: the App Store requires Sign in with Apple in any app that
-offers another third-party sign-in, which Google is.
+No third-party sign-in is offered, so Sign in with Apple is not required: the
+App Store asks for it only in apps that offer another third-party sign-in.
+
+Three older providers are still configured on the deployment — Google OAuth
+(`AUTH_GOOGLE_ID` / `AUTH_GOOGLE_SECRET`), Apple on web, Android and iOS
+(`AUTH_APPLE_ID` / `AUTH_APPLE_SECRET`, plus `apple-native` in
+`convex/AppleNative.ts`), and the six-digit email code through
+[Resend](https://resend.com) (`AUTH_RESEND_KEY` / `AUTH_EMAIL_FROM`) — so
+accounts created with them still resolve to the same user and their sections
+below still apply. Nothing in the app starts those flows any more.
+
+## What an account is
+
+`users` carries the name, the email, and the two facts create-account captures
+and nothing may change afterwards: `birthday` (ISO `YYYY-MM-DD`) and `country`.
+They are written in the same transaction that creates the account, so an
+account cannot exist without them, and they are validated on the server as well
+as on the form (`convex/lib/signupAccount.ts`): a real calendar date, at least
+13 years ago, and a country. Everything else about a person — display name,
+goals, meal times, appearance — is a row in `settings` they can edit whenever
+they like.
+
+Passwords must be eight characters or more with an upper case letter, a lower
+case letter and a digit. The form greys out its button until they are, and the
+server refuses anything less; `tests/convex/passwordSignUp.test.ts` keeps the
+two rules in step.
 
 The app bundle contains exactly one backend value, `EXPO_PUBLIC_CONVEX_URL`,
 which is public by design (it is the address clients connect to). Every secret
@@ -182,14 +205,12 @@ see “AI food scan is not configured”.
 npm run web
 ```
 
-Sign in with an email code, add a diary entry, sign out, then sign in as a
-second address. The second account must see an empty diary; sign back in as
-the first and the entry must be there. Apple cannot be exercised this way
-because it refuses `localhost` — check it on the deployed site, and check the
-iOS sheet on a device build (Expo Go cannot carry the Sign in with Apple
-entitlement). `tests/convex/isolation.test.ts` runs
-the same check against the functions on every push, but the round trip through
-a real browser is still worth doing after any change to auth.
+Create an account, add a diary entry, sign out, then create a second one on a
+different address. The second account must see an empty diary; sign back in as
+the first and the entry must be there. `tests/convex/passwordSignUp.test.ts`
+and `tests/convex/isolation.test.ts` run the same checks against the functions
+on every push, but the round trip through a real browser is still worth doing
+after any change to auth.
 
 ## Deploying
 
@@ -233,10 +254,17 @@ row id gets you nothing: reads return null, writes throw.
 
 ## One person, several sign-in methods
 
+An address is one account: create-account lower-cases and trims it, and a second
+sign-up on the same address is refused rather than made into a duplicate.
+
 Convex Auth links a new sign-in to an existing user when the provider hands over
 an email address it has verified and exactly one account already has it. Google
-and Apple both do, so signing in with Apple after Google — same address — lands
-in the same diary rather than a second empty one.
+and Apple both do, so an account created with Apple after Google — same address —
+lands in the same diary rather than a second empty one. A password is deliberately
+not linked that way: proving you can receive mail at an address does not prove
+you chose its password, so a password sign-up on an address that already has a
+Google or Apple account is refused. Adding a password to one of those older
+accounts needs the reset flow, which is not built yet.
 
 Apple's Hide My Email option is the exception, and unavoidably so: it hands over
 a `@privaterelay.appleid.com` address instead, which nothing else shares, so that

@@ -22,8 +22,10 @@ const privateKey = await exportPKCS8(keys.privateKey);
 const publicKey = await exportJWK(keys.publicKey);
 const jwks = JSON.stringify({ keys: [{ use: 'sig', ...publicKey }] });
 
+// `NAME=value`, not `NAME value`: a PKCS8 PEM opens with `-----BEGIN`, which
+// the CLI's argument parser reads as an unknown option.
 function setEnv(name, value) {
-  const args = ['convex', 'env', 'set', ...(prod ? ['--prod'] : []), name, value];
+  const args = ['convex', 'env', 'set', ...(prod ? ['--prod'] : []), `${name}=${value}`];
   const result = spawnSync('npx', args, { stdio: ['ignore', 'inherit', 'inherit'] });
   if (result.status !== 0) {
     console.error(`Failed to set ${name} on the ${prod ? 'production' : 'dev'} deployment.`);

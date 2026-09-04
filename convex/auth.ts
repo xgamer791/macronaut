@@ -2,6 +2,7 @@ import Apple from '@auth/core/providers/apple';
 import Google from '@auth/core/providers/google';
 import { convexAuth } from '@convex-dev/auth/server';
 import { AppleNative } from './AppleNative';
+import { PasswordAccount } from './PasswordAccount';
 import { ResendOTP } from './ResendOTP';
 
 /** Native builds return to the app's own scheme (app.config.ts → `scheme`);
@@ -36,6 +37,10 @@ const AppleOAuth = Apple({
 
 /**
  * Sign-in providers:
+ *   - Email and password — see PasswordAccount.ts. The only one the app
+ *     offers: create-account collects the address, the password, the name,
+ *     the date of birth and the country, and sign-in takes the address and
+ *     the password.
  *   - Google OAuth — `AUTH_GOOGLE_ID` / `AUTH_GOOGLE_SECRET` on the deployment.
  *     Google's authorised redirect URI is `<CONVEX_SITE_URL>/api/auth/callback/google`.
  *   - Apple OAuth (web and Android) — `AUTH_APPLE_ID` (the Services ID,
@@ -47,11 +52,15 @@ const AppleOAuth = Apple({
  *     accounts, and needs no secret of its own.
  *   - Email code — see ResendOTP.ts.
  *
+ * The app only offers email and password. Google, Apple and the email code
+ * stay configured so accounts created with them still resolve to the same
+ * user, but no screen starts those flows any more (docs/accounts.md).
+ *
  * Sessions are JWTs signed with `JWT_PRIVATE_KEY`, verified against `JWKS`;
  * both are deployment environment variables (scripts/convex-auth-keys.mjs).
  */
 export const { auth, signIn, signOut, store, isAuthenticated } = convexAuth({
-  providers: [Google, AppleOAuth, AppleNative, ResendOTP],
+  providers: [PasswordAccount, Google, AppleOAuth, AppleNative, ResendOTP],
   callbacks: {
     async redirect({ redirectTo }) {
       if (isAllowedRedirect(redirectTo, process.env.SITE_URL)) return redirectTo;
