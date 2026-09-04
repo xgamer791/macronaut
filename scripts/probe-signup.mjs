@@ -119,6 +119,24 @@ await dumpFields('account setup filled');
 await clickText('Continue');
 await new Promise((r) => setTimeout(r, 2000));
 const after = await dumpFields('credentials');
+
+const fieldColors = await page.evaluate(() =>
+  ['Name', 'Email address'].map((label) => {
+    const el = document.querySelector(`input[aria-label="${label}"]`);
+    if (!el) return { label, missing: true };
+    const cs = getComputedStyle(el);
+    return {
+      label,
+      dataset: { ...el.dataset },
+      matchesDarkField: el.matches('[data-darkfield]'),
+      color: cs.color,
+      webkitTextFillColor: cs.webkitTextFillColor,
+      colorScheme: cs.colorScheme,
+    };
+  }),
+);
+log('\n===== field colors =====');
+log(JSON.stringify(fieldColors, null, 2));
 await page.screenshot({ path: '/tmp/credentials.png', fullPage: true });
 log('\nscreenshot: /tmp/credentials.png');
 

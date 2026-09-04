@@ -58,7 +58,7 @@ describe('signup credentials', () => {
     expect(source).toContain('href="/signup-health"');
     expect(source).not.toContain('/create-account');
     expect(source).toContain("outlineStyle: 'none'");
-    expect(source).toContain('macronaut-dark-field');
+    expect(source).toContain("dataSet: { darkfield: 'true' }");
     expect(source).toContain("WebkitTextFillColor: '#FFFFFF'");
     expect(source).not.toContain('Modal');
     expect(source).not.toContain('animationType');

@@ -24,6 +24,12 @@ import { fonts, palette, radius, type } from '@/ui/theme/tokens';
 
 type OpenSelect = 'month' | 'country' | null;
 
+/** Marks a field that sits on the dark video so the web shell can force
+ * white autofill text. react-native-web forwards dataSet, not className, and
+ * dataSet is absent from the React Native prop types. */
+const DARK_FIELD: object =
+  Platform.OS === 'web' ? { dataSet: { darkfield: 'true' } } : {};
+
 function FieldLabel({ children }: { children: string }) {
   return (
     <AppText style={styles.label}>
@@ -180,7 +186,7 @@ export default function SignupAccountScreen() {
                   maxLength={2}
                   autoComplete="off"
                   textContentType="none"
-                  {...(Platform.OS === 'web' ? ({ className: 'macronaut-dark-field' } as object) : {})}
+                  {...DARK_FIELD}
                   style={styles.input}
                 />
               </View>
@@ -197,7 +203,7 @@ export default function SignupAccountScreen() {
                   maxLength={4}
                   autoComplete="off"
                   textContentType="none"
-                  {...(Platform.OS === 'web' ? ({ className: 'macronaut-dark-field' } as object) : {})}
+                  {...DARK_FIELD}
                   style={styles.input}
                 />
               </View>

@@ -8,8 +8,14 @@ describe('web html shell', () => {
   it('strips the autofill manila wash from every input', () => {
     expect(html).toContain(':-webkit-autofill');
     expect(html).toContain('background-color 99999s');
-    expect(html).toContain('-webkit-text-fill-color: currentColor');
-    expect(html).toContain('macronaut-dark-field');
-    expect(html).toContain('-webkit-text-fill-color: #FFFFFF');
+  });
+
+  it('forces white autofill text on fields that sit on the dark video', () => {
+    // react-native-web drops className, so the fields carry a data attribute.
+    expect(html).toContain('[data-darkfield]');
+    expect(html).toContain('input[data-darkfield]:-webkit-autofill');
+    expect(html).toContain('color-scheme: dark');
+    expect(html).toContain('-webkit-text-fill-color: #FFFFFF !important');
+    expect(html).not.toContain('-webkit-text-fill-color: currentColor');
   });
 });

@@ -42,7 +42,7 @@ describe('signup account setup', () => {
     const account = read('signup-account.tsx');
     const legal = read('signup-legal.tsx');
     expect(account).toContain("outlineStyle: 'none'");
-    expect(account).toContain('macronaut-dark-field');
+    expect(account).toContain("dataSet: { darkfield: 'true' }");
     expect(account).toContain("WebkitTextFillColor: '#FFFFFF'");
     expect(account).toContain('inlineMenu');
     expect(account).not.toContain('Modal');
