@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Redirect, useRouter } from 'expo-router';
+import { Redirect, useLocalSearchParams, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import React, { useState } from 'react';
+import React, { useLayoutEffect, useState } from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
@@ -17,7 +17,11 @@ import { isValidSignupBirthday, MONTHS } from '@/domain/signupAccount';
 import { isValidSignupCredentials } from '@/domain/signupCredentials';
 import { useAuth } from '@/state/AuthProvider';
 import { useSetting } from '@/state/queries';
-import { useSignupDraft } from '@/state/signupDraft';
+import {
+  applySignupDraftFromRoute,
+  hydrateSignupDraftFromStorage,
+  useSignupDraft,
+} from '@/state/signupDraft';
 import { AppText } from '@/ui/components';
 import { WelcomeBackground } from '@/ui/WelcomeBackground';
 import { WelcomeCta } from '@/ui/WelcomeCta';
@@ -182,6 +186,16 @@ export default function SignupCredentialsScreen() {
   const insets = useSafeAreaInsets();
   const { loading, signedIn } = useAuth();
   const onboarded = useSetting<boolean>('onboardingComplete', false, signedIn);
+  const params = useLocalSearchParams<{
+    month?: string;
+    day?: string;
+    year?: string;
+    country?: string;
+  }>();
+  const routeMonth = Array.isArray(params.month) ? params.month[0] : params.month;
+  const routeDay = Array.isArray(params.day) ? params.day[0] : params.day;
+  const routeYear = Array.isArray(params.year) ? params.year[0] : params.year;
+  const routeCountry = Array.isArray(params.country) ? params.country[0] : params.country;
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [confirmEmail, setConfirmEmail] = useState('');
@@ -195,6 +209,19 @@ export default function SignupCredentialsScreen() {
   const country = useSignupDraft((s) => s.country);
   const setCountry = useSignupDraft((s) => s.setCountry);
   const [openSelect, setOpenSelect] = useState<OpenSelect>(null);
+
+  useLayoutEffect(() => {
+    if (
+      !applySignupDraftFromRoute({
+        month: routeMonth,
+        day: routeDay,
+        year: routeYear,
+        country: routeCountry,
+      })
+    ) {
+      hydrateSignupDraftFromStorage();
+    }
+  }, [routeMonth, routeDay, routeYear, routeCountry]);
 
   if (loading || (signedIn && onboarded.isLoading)) return null;
   if (signedIn) return <Redirect href={onboarded.data ? '/' : '/onboarding'} />;
@@ -506,11 +533,12 @@ const styles = StyleSheet.create({
   fieldLocked: {
     minHeight: FIELD_H,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.55)',
+    borderColor: 'rgba(255,255,255,0.35)',
     borderRadius: radius.md,
     paddingHorizontal: 12,
     flexDirection: 'row',
     alignItems: 'center',
+    opacity: 0.72,
   },
   fieldLockedCenter: {
     height: FIELD_H,

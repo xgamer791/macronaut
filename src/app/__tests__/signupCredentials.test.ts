@@ -13,7 +13,8 @@ describe('signup credentials', () => {
   });
 
   it('opens from account setup Continue', () => {
-    expect(read('signup-account.tsx')).toContain('href="/signup-credentials"');
+    expect(read('signup-account.tsx')).toContain("pathname: '/signup-credentials'");
+    expect(read('signup-account.tsx')).toContain('saveSignupDraftValues');
     expect(read('signup-account.tsx')).toContain('disabled={!ready}');
   });
 
@@ -33,6 +34,8 @@ describe('signup credentials', () => {
     expect(source).toContain('Country/Region');
     expect(source).toContain('Once set, it cannot be changed.');
     expect(source).toContain('useSignupDraft');
+    expect(source).toContain('applySignupDraftFromRoute');
+    expect(source).toContain('useLocalSearchParams');
     expect(source).toContain('fieldLocked');
     expect(source).toContain('disabled: true');
     expect(source).toContain("pointerEvents=\"none\"");
