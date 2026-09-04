@@ -14,15 +14,17 @@ export function useAiScanAllowed(): boolean {
   const server = useQuery({
     queryKey: keys.aiScanAvailable,
     queryFn: () => food.aiScanAvailable(),
+    enabled: !!user,
   });
 
   useEffect(() => {
+    if (!user) return;
     void food.ensureAiScanRoster().then(() => {
       void server.refetch();
     });
-    // Freeze/backfill once per mount.
+    // Freeze/backfill once per signed-in mount.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [food]);
+  }, [food, user]);
 
   if (
     canUseAiFoodScanByProfile({

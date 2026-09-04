@@ -28,6 +28,7 @@ describe('signup apple health ask', () => {
     expect(source).toContain('label="Connect"');
     expect(source).toContain('onPress={() => {}}');
     expect(source).toContain('Not now');
+    expect(source).toContain('markEnteredApp');
     expect(source).toContain("router.replace('/')");
     expect(source).toContain('veilFilm');
     expect(source).toContain('rgba(0,0,0,0.50)');

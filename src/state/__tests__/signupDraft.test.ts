@@ -1,6 +1,7 @@
 import { COUNTRIES } from '@/data/countries';
 import {
   applySignupDraftFromRoute,
+  markEnteredApp,
   readStoredDraft,
   resetSignupDraft,
   saveSignupDraftValues,
@@ -67,6 +68,12 @@ describe('signup draft', () => {
     expect(applySignupDraftFromRoute({ month: '7', day: '', year: '' })).toBe(false);
     expect(useSignupDraft.getState().day).toBe('4');
     expect(useSignupDraft.getState().year).toBe('1992');
+  });
+
+  it('marks create-account as finished so the dashboard can open', () => {
+    expect(useSignupDraft.getState().enteredApp).toBe(false);
+    markEnteredApp();
+    expect(useSignupDraft.getState().enteredApp).toBe(true);
   });
 
   it('resets to the empty defaults', () => {

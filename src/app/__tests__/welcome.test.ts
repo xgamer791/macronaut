@@ -14,9 +14,11 @@ describe('welcome splash', () => {
     expect(fs.existsSync(path.join(appDir, '(tabs)', 'welcome.tsx'))).toBe(false);
   });
 
-  it('sends signed-out tab visitors to the splash', () => {
-    expect(read('(tabs)/_layout.tsx')).toContain('href="/welcome"');
-    expect(read('(tabs)/_layout.tsx')).not.toContain('href="/login"');
+  it('sends signed-out tab visitors to the splash unless they finished create-account', () => {
+    const tabs = read('(tabs)/_layout.tsx');
+    expect(tabs).toContain('href="/welcome"');
+    expect(tabs).toContain('enteredApp');
+    expect(tabs).not.toContain('href="/login"');
   });
 
   it('sends Create Account to the legal gate and leaves Sign In inert', () => {
