@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { APPLE_PROVIDER_ID, appleIdentityFromClaims, sha256Hex } from '../../convex/AppleNative';
-import { randomDigits } from '../../convex/ResendOTP';
+import { randomDigits, randomUrlToken } from '../../convex/ResendOTP';
 import { isAllowedRedirect } from '../../convex/auth';
 
 describe('OAuth redirect allow-list', () => {
@@ -15,7 +15,9 @@ describe('OAuth redirect allow-list', () => {
 
   it('refuses anything else, including look-alike hosts', () => {
     expect(isAllowedRedirect('https://evil.example/', site)).toBe(false);
-    expect(isAllowedRedirect('https://xgamer791.github.io.evil.example/macronaut/', site)).toBe(false);
+    expect(isAllowedRedirect('https://xgamer791.github.io.evil.example/macronaut/', site)).toBe(
+      false,
+    );
     expect(isAllowedRedirect('http://localhost.evil.example/', site)).toBe(false);
     expect(isAllowedRedirect('https://xgamer791.github.io/macronaut/', undefined)).toBe(false);
   });
@@ -24,6 +26,10 @@ describe('OAuth redirect allow-list', () => {
 describe('email code generation', () => {
   it('produces the requested number of digits only', () => {
     for (let i = 0; i < 50; i += 1) expect(randomDigits(6)).toMatch(/^\d{6}$/);
+  });
+
+  it('produces URL-safe hex tokens for reset links', () => {
+    for (let i = 0; i < 20; i += 1) expect(randomUrlToken(32)).toMatch(/^[0-9a-f]{64}$/);
   });
 });
 

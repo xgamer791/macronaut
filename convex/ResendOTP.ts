@@ -5,6 +5,14 @@ import { describeResendFailure } from './lib/resendErrors';
 const CODE_LENGTH = 6;
 const CODE_TTL_SECONDS = 10 * 60;
 
+/** Uniformly random lowercase hex from the platform CSPRNG. URL-safe, so it
+ * can sit in an emailed reset link without encoding surprises. */
+export function randomUrlToken(byteLength: number): string {
+  const bytes = new Uint8Array(byteLength);
+  crypto.getRandomValues(bytes);
+  return Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('');
+}
+
 /** Uniformly random decimal digits from the platform CSPRNG. Bytes at or
  * above 250 are discarded so `byte % 10` is unbiased. */
 export function randomDigits(length: number): string {

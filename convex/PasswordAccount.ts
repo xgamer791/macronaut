@@ -16,7 +16,8 @@ import {
  *
  * `profile` runs on every flow, so it only demands the create-account fields
  * when one is being created. Signing in sends the address and the password and
- * nothing else. Reset sends the address, then the code plus a new password.
+ * nothing else. Reset emails a link, then the token from that link plus a
+ * new password.
  * Name, date of birth and country are written with the user row
  * in the same transaction that creates the account, so an account cannot exist
  * without them.

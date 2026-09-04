@@ -26,12 +26,12 @@ export interface AccountAuth {
   /** Signs in an existing account. On success AuthProvider publishes the
    * session and the screen moves on. */
   signIn: (email: string, password: string) => Promise<boolean>;
-  /** Emails a six-digit reset code. Resolves true when the person should
-   * check their inbox — including when no password account exists, so the
-   * screen cannot be used to see whether an email is registered. */
+  /** Emails a reset link. Resolves true when the person should check their
+   * inbox — including when no password account exists, so the screen cannot
+   * be used to see whether an email is registered. */
   requestPasswordReset: (email: string) => Promise<boolean>;
-  /** Exchanges the code for a new password and a session. */
-  confirmPasswordReset: (email: string, code: string, newPassword: string) => Promise<boolean>;
+  /** Exchanges the token from the reset link for a new password and a session. */
+  confirmPasswordReset: (email: string, token: string, newPassword: string) => Promise<boolean>;
 }
 
 /** The ways into Macronaut: create an account, sign in, or reset a password.
@@ -105,12 +105,12 @@ export function useAccountAuth(): AccountAuth {
   );
 
   const confirmPasswordReset = useCallback(
-    (email: string, code: string, newPassword: string) =>
+    (email: string, token: string, newPassword: string) =>
       run('reset', async () => {
         await convexSignIn('password', {
           flow: 'reset-verification',
           email: normalizeEmail(email),
-          code: code.replace(/\s+/g, ''),
+          code: token.replace(/\s+/g, ''),
           newPassword,
         });
       }),

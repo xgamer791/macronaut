@@ -11,7 +11,7 @@ method:
 
 | Provider | How it works | Deployment variables |
 |---|---|---|
-| Email and password | `convex/PasswordAccount.ts`. Create Account sends the address, the password, the name, the date of birth and the country in one call; Convex Auth hashes the password with Scrypt and stores only the hash on the account row. Signing in sends the address and the password. Forgot password emails a six-digit reset code and then accepts the code plus a new password. | `AUTH_RESEND_KEY`, `AUTH_EMAIL_FROM` (reset email only) |
+| Email and password | `convex/PasswordAccount.ts`. Create Account sends the address, the password, the name, the date of birth and the country in one call; Convex Auth hashes the password with Scrypt and stores only the hash on the account row. Signing in sends the address and the password. Forgot password emails a reset link to the live site (`SITE_URL/forgot-password`) and then accepts the token from that link plus a new password. | `AUTH_RESEND_KEY`, `AUTH_EMAIL_FROM`, `SITE_URL` (reset email) |
 | AI food scan | A Convex action calls xAI with a shared key. The client never sees it. Until Pro exists, accounts that already existed when the roster froze (plus Holly Ky and the two preview emails) can invoke the action. Later sign-ups cannot. | `XAI_API_KEY` |
 
 No third-party sign-in is offered, so Sign in with Apple is not required: the

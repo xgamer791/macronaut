@@ -1,5 +1,7 @@
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { api } from '../../convex/_generated/api';
+import { parsePasswordResetLink, passwordResetLink } from '../../convex/lib/passwordResetLink';
+import { randomUrlToken } from '../../convex/ResendOTP';
 import { backend, stubAuthKeys } from './helpers';
 
 const SIGN_UP = {
@@ -14,16 +16,25 @@ const SIGN_UP = {
   },
 } as const;
 
+const SITE = 'https://xgamer791.github.io/macronaut';
+
 function stubResend() {
   vi.stubEnv('AUTH_RESEND_KEY', 're_test_key');
   vi.stubEnv('AUTH_EMAIL_FROM', 'Macronaut <onboarding@resend.dev>');
-  vi.stubEnv('SITE_URL', 'https://xgamer791.github.io/macronaut');
+  vi.stubEnv('SITE_URL', SITE);
   const sent: { url: string; body: Record<string, unknown> }[] = [];
   vi.stubGlobal('fetch', async (url: string, init?: RequestInit) => {
     sent.push({ url, body: JSON.parse(String(init?.body ?? '{}')) });
     return new Response(JSON.stringify({ id: 'email_123' }), { status: 200 });
   });
   return sent;
+}
+
+function resetFromEmail(sent: { body: Record<string, unknown> }[]) {
+  const text = String(sent[0]?.body.text ?? '');
+  const match = text.match(/https:\/\/\S+/);
+  expect(match?.[0]).toBeTruthy();
+  return parsePasswordResetLink(match![0]);
 }
 
 /** The real `auth:signIn` reset flows, with Resend stubbed so a broken
@@ -34,7 +45,7 @@ describe('password reset (auth:signIn with flow reset)', () => {
     vi.unstubAllGlobals();
   });
 
-  it('emails a six-digit code and then accepts it with a new password', async () => {
+  it('emails a reset link and then accepts that token with a new password', async () => {
     const sent = stubResend();
     const t = backend();
     await t.action(api.auth.signIn, SIGN_UP);
@@ -43,24 +54,33 @@ describe('password reset (auth:signIn with flow reset)', () => {
       provider: 'password',
       params: { flow: 'reset', email: ' person@EXAMPLE.com ' },
     });
-    // Reset starts a verification; there is no session until the code lands.
+    // Reset starts a verification; there is no session until the link is used.
     expect(requested.tokens ?? null).toBeNull();
 
     expect(sent).toHaveLength(1);
     expect(sent[0].url).toBe('https://api.resend.com/emails');
     expect(sent[0].body.to).toEqual(['person@example.com']);
-    expect(String(sent[0].body.subject)).toMatch(/^\d{6} is your Macronaut password reset code$/);
-    const code = String(sent[0].body.subject).slice(0, 6);
+    expect(sent[0].body.subject).toBe('Reset your Macronaut password');
+    expect(String(sent[0].body.subject)).not.toMatch(/\d{6}/);
+    expect(String(sent[0].body.html)).toContain('Choose a new password');
+    expect(String(sent[0].body.html)).toContain(`${SITE}/forgot-password?`);
+    expect(String(sent[0].body.text)).not.toContain('code=');
+    expect(String(sent[0].body.html)).not.toContain('code=');
+
+    const { email, token } = resetFromEmail(sent);
+    expect(email).toBe('person@example.com');
+    expect(token).toMatch(/^[0-9a-f]{64}$/);
 
     const codes = await t.run(async (ctx) => ctx.db.query('authVerificationCodes').collect());
     expect(codes).toHaveLength(1);
+    expect(codes[0]?.code).not.toBe(token);
 
     const reset = await t.action(api.auth.signIn, {
       provider: 'password',
       params: {
         flow: 'reset-verification',
-        email: 'person@example.com',
-        code,
+        email,
+        code: token,
         newPassword: 'Macronaut2',
       },
     });
@@ -83,7 +103,7 @@ describe('password reset (auth:signIn with flow reset)', () => {
     expect(users).toHaveLength(1);
   });
 
-  it('refuses a wrong code and a weak new password', async () => {
+  it('refuses a wrong token and a weak new password', async () => {
     const sent = stubResend();
     const t = backend();
     await t.action(api.auth.signIn, SIGN_UP);
@@ -91,7 +111,7 @@ describe('password reset (auth:signIn with flow reset)', () => {
       provider: 'password',
       params: { flow: 'reset', email: 'person@example.com' },
     });
-    const code = String(sent[0].body.subject).slice(0, 6);
+    const { token } = resetFromEmail(sent);
 
     await expect(
       t.action(api.auth.signIn, {
@@ -99,7 +119,7 @@ describe('password reset (auth:signIn with flow reset)', () => {
         params: {
           flow: 'reset-verification',
           email: 'person@example.com',
-          code: '000000',
+          code: '0'.repeat(64),
           newPassword: 'Macronaut2',
         },
       }),
@@ -111,7 +131,7 @@ describe('password reset (auth:signIn with flow reset)', () => {
         params: {
           flow: 'reset-verification',
           email: 'person@example.com',
-          code,
+          code: token,
           newPassword: 'short1A',
         },
       }),
@@ -138,7 +158,7 @@ describe('password reset (auth:signIn with flow reset)', () => {
   });
 
   it('fails before sending when the Resend key is missing', async () => {
-    vi.stubEnv('SITE_URL', 'https://xgamer791.github.io/macronaut');
+    vi.stubEnv('SITE_URL', SITE);
     vi.stubEnv('AUTH_RESEND_KEY', '');
     const fetchSpy = vi.fn();
     vi.stubGlobal('fetch', fetchSpy);
@@ -151,5 +171,39 @@ describe('password reset (auth:signIn with flow reset)', () => {
       }),
     ).rejects.toThrow(/AUTH_RESEND_KEY/i);
     expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it('fails before sending when SITE_URL is missing', async () => {
+    vi.unstubAllEnvs();
+    await stubAuthKeys();
+    vi.stubEnv('AUTH_RESEND_KEY', 're_test_key');
+    const fetchSpy = vi.fn();
+    vi.stubGlobal('fetch', fetchSpy);
+    const t = backend();
+    await t.action(api.auth.signIn, SIGN_UP);
+    await expect(
+      t.action(api.auth.signIn, {
+        provider: 'password',
+        params: { flow: 'reset', email: 'person@example.com' },
+      }),
+    ).rejects.toThrow(/SITE_URL/);
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+});
+
+describe('password reset link', () => {
+  it('points at the live forgot-password page with email and token, not code', () => {
+    const token = randomUrlToken(32);
+    const href = passwordResetLink(SITE, ' Person@Example.com ', token);
+    expect(href.startsWith(`${SITE}/forgot-password?`)).toBe(true);
+    expect(parsePasswordResetLink(href)).toEqual({
+      email: 'person@example.com',
+      token,
+    });
+    expect(href).not.toContain('code=');
+  });
+
+  it('produces 64 lowercase hex characters', () => {
+    for (let i = 0; i < 20; i += 1) expect(randomUrlToken(32)).toMatch(/^[0-9a-f]{64}$/);
   });
 });

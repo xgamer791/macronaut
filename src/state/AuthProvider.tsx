@@ -6,7 +6,10 @@ import React, { createContext, useCallback, useContext, useEffect, useMemo, useR
 import { Platform } from 'react-native';
 import { api } from '../../convex/_generated/api';
 import { AuthUser } from '@/services/auth/displayName';
-import { expoRouterPathFromLocationUrl } from '@/services/auth/redirect';
+import {
+  expoRouterPathFromLocationUrl,
+  shouldHandleAuthCodeFromUrl,
+} from '@/services/auth/redirect';
 import { getConvexClient } from '@/services/convex/client';
 import { getDeviceStore } from '@/services/storage/deviceStore';
 
@@ -47,12 +50,16 @@ function replaceAuthCallbackUrl(relativeUrl: string): void {
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const client = getConvexClient();
-  const storage = useMemo(
-    () => (Platform.OS === 'web' ? undefined : nativeTokenStorage()),
-    [],
-  );
+  const storage = useMemo(() => (Platform.OS === 'web' ? undefined : nativeTokenStorage()), []);
   return (
-    <ConvexAuthProvider client={client} storage={storage} replaceURL={replaceAuthCallbackUrl}>
+    <ConvexAuthProvider
+      client={client}
+      storage={storage}
+      replaceURL={replaceAuthCallbackUrl}
+      shouldHandleCode={() =>
+        typeof window === 'undefined' || shouldHandleAuthCodeFromUrl(window.location.pathname)
+      }
+    >
       <AuthState>{children}</AuthState>
     </ConvexAuthProvider>
   );

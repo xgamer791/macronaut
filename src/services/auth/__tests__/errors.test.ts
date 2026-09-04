@@ -33,12 +33,12 @@ describe('friendlyAuthError', () => {
     expect(friendlyAuthError(redacted)).toMatch(/something went wrong/i);
   });
 
-  it('explains a reset code that is wrong or expired', () => {
-    expect(friendlyAuthError(new Error('Invalid code'), 'reset')).toMatch(/not right/i);
+  it('explains a reset link that is wrong or expired', () => {
+    expect(friendlyAuthError(new Error('Invalid code'), 'reset')).toMatch(/not valid/i);
     expect(friendlyAuthError(new Error('Token expired'), 'reset')).toMatch(/expired/i);
-    expect(friendlyAuthError(new Error('Could not send the reset code to that address'), 'reset')).toMatch(
-      /could not send/i,
-    );
+    expect(
+      friendlyAuthError(new Error('Could not send the reset link to that address'), 'reset'),
+    ).toMatch(/reset link/i);
   });
 
   it('treats a missing password account as something the reset screen can hide', () => {

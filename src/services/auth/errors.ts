@@ -9,7 +9,7 @@ const FALLBACK: Record<AuthFlow, string> = {
   signup:
     'We could not create that account. That email may already have one — try signing in instead.',
   signin: 'That email and password do not match an account.',
-  reset: 'We could not reset that password. Check the code and try again.',
+  reset: 'We could not reset that password. Request a new link and try again.',
   generic: 'Something went wrong signing in. Please try again.',
 };
 
@@ -42,12 +42,18 @@ export function friendlyAuthError(err: unknown, flow: AuthFlow = 'generic'): str
   if (message.includes('rate limit') || message.includes('too many')) {
     return 'Too many attempts. Wait a minute and try again.';
   }
-  if (message.includes('expired')) return 'That code has expired. Request a new one.';
+  if (message.includes('expired')) {
+    return flow === 'reset'
+      ? 'That reset link has expired. Request a new one.'
+      : 'That code has expired. Request a new one.';
+  }
   if (message.includes('not available yet')) {
     return "Email isn't available yet. Try again later.";
   }
   if (message.includes('could not send')) {
-    return 'We could not send the code to that address. Check it and try again.';
+    return flow === 'reset'
+      ? 'We could not send the reset link to that address. Check it and try again.'
+      : 'We could not send the code to that address. Check it and try again.';
   }
   if (message.includes('already exists')) {
     return 'That email already has an account. Sign in instead.';
@@ -58,7 +64,7 @@ export function friendlyAuthError(err: unknown, flow: AuthFlow = 'generic'): str
       message.includes('verification') ||
       message.includes('token'))
   ) {
-    return 'That code is not right. Check it and try again.';
+    return 'That reset link is not valid. Request a new one.';
   }
   // `InvalidSecret` is Convex Auth's own wording for a password that does not
   // match the account.

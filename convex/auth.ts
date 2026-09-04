@@ -42,7 +42,7 @@ const AppleOAuth = Apple({
  *     the date of birth and the country, and sign-in takes the address and
  *     the password. Forgot-password emails a six-digit reset code through
  *     Resend (`password-reset` in ResendOTPPasswordReset.ts) and then
- *     accepts the code plus a new password.
+ *     accepts the token from that link plus a new password.
  *   - Google OAuth — `AUTH_GOOGLE_ID` / `AUTH_GOOGLE_SECRET` on the deployment.
  *     Google's authorised redirect URI is `<CONVEX_SITE_URL>/api/auth/callback/google`.
  *   - Apple OAuth (web and Android) — `AUTH_APPLE_ID` (the Services ID,

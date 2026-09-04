@@ -62,6 +62,15 @@ Six digits from the platform CSPRNG with unbiased sampling, ten-minute
 expiry, hashed at rest by Convex Auth, and a failed-attempt limit per account.
 Sending a code does not reveal whether the address already has an account.
 
+### Password-reset links are a credential, not a typed code
+
+Forgot-password emails a one-hour link to `/forgot-password` on `SITE_URL`.
+The token is 32 CSPRNG bytes (64 hex chars), hashed at rest by Convex Auth.
+The query uses `token`, not `code`, so Convex Auth's client does not
+auto-redeem it as a sign-in and spend it before a new password is set.
+The new-password fields are not shown until that link is opened. Sending a
+link does not reveal whether the address already has a password account.
+
 ### Accounts can be deleted from the app
 
 Both stores require it. Settings → Account → **Delete account** erases every

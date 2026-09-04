@@ -13,6 +13,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { isValidSignupPassword, passwordsMatch } from '@/domain/signupCredentials';
 import { isPlausibleEmail } from '@/services/auth/email';
+import { passwordResetFromParams } from '@/services/auth/passwordReset';
 import { useAuth } from '@/state/AuthProvider';
 import { useSetting } from '@/state/queries';
 import { useAccountAuth } from '@/state/useAccountAuth';
@@ -22,61 +23,71 @@ import { WelcomeBackground } from '@/ui/WelcomeBackground';
 import { WelcomeCta } from '@/ui/WelcomeCta';
 import { fonts, type } from '@/ui/theme/tokens';
 
-const RESET_CODE_LENGTH = 6;
-
-/** Email a six-digit code, then set a new password. Same chrome as Sign In.
- * Requesting a code never reveals whether the address has an account. */
+/** Email a reset link, then set a new password on the page that link opens.
+ * Same chrome as Sign In. Requesting a link never reveals whether the
+ * address has an account. The new-password fields stay hidden until the
+ * emailed link is opened with a valid token. */
 export default function ForgotPasswordScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { loading, signedIn } = useAuth();
   const onboarded = useSetting<boolean>('onboardingComplete', false, signedIn);
   const auth = useAccountAuth();
-  const params = useLocalSearchParams<{ email?: string }>();
+  const params = useLocalSearchParams<{ email?: string; token?: string }>();
+  const reset = passwordResetFromParams(params);
   const routeEmail = Array.isArray(params.email) ? params.email[0] : params.email;
-  const [stage, setStage] = useState<'request' | 'confirm'>('request');
+  const [awaitingInbox, setAwaitingInbox] = useState(false);
   const [email, setEmail] = useState(routeEmail ?? '');
-  const [code, setCode] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
 
-  if (loading || (signedIn && onboarded.isLoading)) return null;
-  if (signedIn) return <Redirect href={onboarded.data ? '/' : '/onboarding'} />;
+  const view = reset ? 'password' : awaitingInbox ? 'sent' : 'request';
+
+  if (loading || (signedIn && !reset && onboarded.isLoading)) return null;
+  if (signedIn && !reset) return <Redirect href={onboarded.data ? '/' : '/onboarding'} />;
 
   const requestReady = isPlausibleEmail(email);
   const confirmReady =
-    code.replace(/\s+/g, '').length === RESET_CODE_LENGTH &&
-    isValidSignupPassword(password) &&
-    passwordsMatch(password, confirmPassword);
+    reset !== null && isValidSignupPassword(password) && passwordsMatch(password, confirmPassword);
 
   const goBack = () => {
-    if (stage === 'confirm') {
-      auth.clearError();
-      setStage('request');
-      setCode('');
-      setPassword('');
-      setConfirmPassword('');
+    auth.clearError();
+    if (view === 'sent') {
+      setAwaitingInbox(false);
       return;
     }
     if (router.canGoBack()) router.back();
     else router.replace('/login');
   };
 
-  async function sendCode() {
+  function startOver(nextEmail?: string) {
+    auth.clearError();
+    setAwaitingInbox(false);
+    setPassword('');
+    setConfirmPassword('');
+    if (nextEmail) setEmail(nextEmail);
+    router.replace({
+      pathname: '/forgot-password',
+      params: isPlausibleEmail(nextEmail ?? email) ? { email: (nextEmail ?? email).trim() } : {},
+    });
+  }
+
+  async function sendLink() {
     if (!requestReady || auth.busy) return;
     if (await auth.requestPasswordReset(email)) {
-      setStage('confirm');
-      setCode('');
+      setAwaitingInbox(true);
       setPassword('');
       setConfirmPassword('');
     }
   }
 
   async function resetPassword() {
-    if (!confirmReady || auth.busy) return;
-    await auth.confirmPasswordReset(email, code, password);
+    if (!reset || !confirmReady || auth.busy) return;
+    if (await auth.confirmPasswordReset(reset.email, reset.token, password)) {
+      router.replace('/');
+    }
   }
 
   return (
@@ -102,17 +113,16 @@ export default function ForgotPasswordScreen() {
             <Ionicons name="chevron-back" size={28} color="#FFFFFF" />
           </Pressable>
           <AppText accessibilityRole="header" style={styles.headerTitle}>
-            Forgot password
+            {view === 'password' ? 'Reset password' : 'Forgot password'}
           </AppText>
           <View style={styles.headerSide} />
         </View>
 
         <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.form}>
-          {stage === 'request' ? (
+          {view === 'request' ? (
             <>
               <AppText style={styles.copy}>
-                Enter the email on your account. If it has a password, we will send a six-digit
-                code.
+                Enter the email on your account. If it has a password, we will send a reset link.
               </AppText>
 
               <View>
@@ -130,7 +140,7 @@ export default function ForgotPasswordScreen() {
                   keyboardType="email-address"
                   textContentType="emailAddress"
                   returnKeyType="send"
-                  onSubmitEditing={() => void sendCode()}
+                  onSubmitEditing={() => void sendLink()}
                 />
               </View>
 
@@ -142,38 +152,52 @@ export default function ForgotPasswordScreen() {
 
               <View style={styles.ctaWrap}>
                 <WelcomeCta
-                  label={auth.busy ? 'Sending…' : 'Send code'}
-                  accessibilityLabel="Send code"
+                  label={auth.busy ? 'Sending…' : 'Send reset link'}
+                  accessibilityLabel="Send reset link"
                   disabled={!requestReady || auth.busy}
-                  onPress={() => void sendCode()}
+                  onPress={() => void sendLink()}
                 />
               </View>
             </>
-          ) : (
+          ) : null}
+
+          {view === 'sent' ? (
             <>
               <AppText style={styles.copy}>
-                If {email.trim()} has a password on Macronaut, we sent a six-digit code. Enter it
-                and choose a new password.
+                If {email.trim()} has a password on Macronaut, we sent a reset link. Open it to
+                choose a new password.
               </AppText>
 
-              <View>
-                <FieldLabel>Reset code</FieldLabel>
-                <OutlineInput
-                  accessibilityLabel="Reset code"
-                  value={code}
-                  onChangeText={(next) => {
-                    if (auth.error) auth.clearError();
-                    setCode(next.replace(/[^0-9]/g, '').slice(0, RESET_CODE_LENGTH));
-                  }}
-                  autoCapitalize="none"
-                  autoComplete="one-time-code"
-                  autoCorrect={false}
-                  keyboardType="number-pad"
-                  textContentType="oneTimeCode"
-                  maxLength={RESET_CODE_LENGTH}
-                  returnKeyType="next"
+              {auth.error ? (
+                <AppText accessibilityRole="alert" style={fieldStyles.error}>
+                  {auth.error}
+                </AppText>
+              ) : null}
+
+              <View style={styles.ctaWrap}>
+                <WelcomeCta
+                  label={auth.busy ? 'Sending…' : 'Send again'}
+                  accessibilityLabel="Send again"
+                  disabled={!requestReady || auth.busy}
+                  onPress={() => void sendLink()}
                 />
               </View>
+
+              <Pressable
+                accessibilityRole="link"
+                accessibilityLabel="Use a different email"
+                disabled={auth.busy}
+                onPress={goBack}
+                style={styles.footerHit}
+              >
+                <AppText style={styles.footerLink}>Use a different email</AppText>
+              </Pressable>
+            </>
+          ) : null}
+
+          {view === 'password' && reset ? (
+            <>
+              <AppText style={styles.copy}>Choose a new password for {reset.email}.</AppText>
 
               <View>
                 <FieldLabel>New password</FieldLabel>
@@ -255,15 +279,15 @@ export default function ForgotPasswordScreen() {
 
               <Pressable
                 accessibilityRole="link"
-                accessibilityLabel="Use a different email"
+                accessibilityLabel="Request a new link"
                 disabled={auth.busy}
-                onPress={goBack}
+                onPress={() => startOver(reset.email)}
                 style={styles.footerHit}
               >
-                <AppText style={styles.footerLink}>Use a different email</AppText>
+                <AppText style={styles.footerLink}>Request a new link</AppText>
               </Pressable>
             </>
-          )}
+          ) : null}
         </ScrollView>
       </KeyboardAvoidingView>
     </View>

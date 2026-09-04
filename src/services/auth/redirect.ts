@@ -1,3 +1,11 @@
+/** Convex Auth auto-redeems `?code=` as a sign-in. Password-reset links use
+ * a different query (`token`) on `/forgot-password`; never consume `code`
+ * there even if one is present, or the token is spent before a password is set. */
+export function shouldHandleAuthCodeFromUrl(pathname: string): boolean {
+  const path = (pathname.split('?')[0] ?? '').replace(/\/+$/, '') || '/';
+  return !path.endsWith('/forgot-password');
+}
+
 /** Turn a browser path (optionally including the static-export base) into the
  * path Expo Router expects. Convex Auth's default `history.replaceState` does
  * not update Expo Router, which can leave `?code=` in the route and wipe a
