@@ -96,7 +96,7 @@ function OptionList({
 }
 
 /** Birthday + country after the legal gate. Month and country expand in the
- * page instead of a slide-up overlay. Continue stays on this screen. */
+ * page instead of a slide-up overlay. Continue opens credentials. */
 export default function SignupAccountScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -227,7 +227,7 @@ export default function SignupAccountScreen() {
           </View>
 
           <View style={styles.ctaWrap}>
-            <WelcomeCta label="Continue" disabled={!ready} onPress={() => {}} />
+            <WelcomeCta label="Continue" disabled={!ready} href="/signup-credentials" />
           </View>
         </ScrollView>
       </KeyboardAvoidingView>

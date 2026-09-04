@@ -51,6 +51,7 @@ function ThemedApp() {
         <Stack.Screen name="login" />
         <Stack.Screen name="signup-legal" />
         <Stack.Screen name="signup-account" />
+        <Stack.Screen name="signup-credentials" />
         <Stack.Screen name="create-account" />
         <Stack.Screen name="onboarding" />
         <Stack.Screen name="add" options={{ presentation: 'modal' }} />
