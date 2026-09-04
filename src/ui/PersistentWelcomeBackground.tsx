@@ -1,5 +1,5 @@
 import { usePathname } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { WelcomeBackground } from '@/ui/WelcomeBackground';
 import { WELCOME_VIDEO_KEEP, WELCOME_VIDEO_SHOW, welcomeFlowSegment } from '@/ui/welcomeFlow';
@@ -15,10 +15,8 @@ export function PersistentWelcomeBackground() {
   const keep = KEEP.has(segment);
   const [started, setStarted] = useState(show);
 
-  useEffect(() => {
-    if (show) setStarted(true);
-    if (!keep) setStarted(false);
-  }, [show, keep]);
+  if (show && !started) setStarted(true);
+  if (!keep && started) setStarted(false);
 
   if (!started || !keep) return null;
 
