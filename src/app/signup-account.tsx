@@ -1,5 +1,4 @@
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Redirect, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import React, { useState } from 'react';
@@ -129,11 +128,6 @@ export default function SignupAccountScreen() {
       <WelcomeBackground />
       <View pointerEvents="none" style={styles.veil}>
         <View style={styles.veilFilm} />
-        <LinearGradient
-          colors={['rgba(0,0,0,0.42)', 'rgba(0,0,0,0.28)', 'rgba(0,0,0,0.72)']}
-          locations={[0, 0.4, 1]}
-          style={StyleSheet.absoluteFill}
-        />
       </View>
 
       <KeyboardAvoidingView
@@ -253,7 +247,7 @@ const styles = StyleSheet.create({
   },
   veilFilm: {
     ...StyleSheet.absoluteFill,
-    backgroundColor: 'rgba(0,0,0,0.36)',
+    backgroundColor: 'rgba(0,0,0,0.45)',
   },
   frame: {
     flex: 1,
