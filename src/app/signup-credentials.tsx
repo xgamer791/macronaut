@@ -558,9 +558,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
   },
   fieldLockedCenterValue: {
-    flex: 0,
     textAlign: 'center',
-    width: '100%',
   },
   inlineMenu: {
     marginTop: 8,
