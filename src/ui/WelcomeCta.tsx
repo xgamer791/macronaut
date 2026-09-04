@@ -1,12 +1,11 @@
 import { Link, type Href } from 'expo-router';
 import React from 'react';
-import { Pressable, StyleSheet } from 'react-native';
+import { Platform, Pressable, StyleSheet } from 'react-native';
 import { AppText } from '@/ui/components';
 import { fonts, palette, radius } from '@/ui/theme/tokens';
 
-/** Same 50pt accent tile as the welcome splash — square corners, white
- * Space Grotesk label. Disabled dims in place; it does not change shape.
- * Pass `href` for a real link so the tap cannot get lost behind the video. */
+/** Same 50pt accent tile as the welcome splash. `href` renders a real
+ * expo-router Link (an <a> on web), not a Pressable slot wrapper. */
 export function WelcomeCta({
   label,
   onPress,
@@ -20,10 +19,21 @@ export function WelcomeCta({
   disabled?: boolean;
   accessibilityLabel?: string;
 }) {
-  const button = (
+  const labelEl = <AppText style={styles.ctaLabel}>{label}</AppText>;
+  const a11y = accessibilityLabel ?? label;
+
+  if (href && !disabled) {
+    return (
+      <Link href={href} accessibilityRole="button" accessibilityLabel={a11y} style={styles.cta}>
+        {labelEl}
+      </Link>
+    );
+  }
+
+  return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={accessibilityLabel ?? label}
+      accessibilityLabel={a11y}
       accessibilityState={{ disabled }}
       disabled={disabled}
       onPress={onPress}
@@ -33,19 +43,9 @@ export function WelcomeCta({
         pressed && !disabled && styles.ctaPressed,
       ]}
     >
-      <AppText style={styles.ctaLabel}>{label}</AppText>
+      {labelEl}
     </Pressable>
   );
-
-  if (href && !disabled) {
-    return (
-      <Link href={href} asChild>
-        {button}
-      </Link>
-    );
-  }
-
-  return button;
 }
 
 const styles = StyleSheet.create({
@@ -55,6 +55,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: palette.accent,
     borderRadius: radius.md,
+    textDecorationLine: 'none',
+    ...Platform.select({ web: { cursor: 'pointer' } }),
   },
   ctaDisabled: {
     opacity: 0.4,
@@ -68,5 +70,6 @@ const styles = StyleSheet.create({
     fontSize: 17,
     lineHeight: 22,
     fontWeight: '600',
+    textDecorationLine: 'none',
   },
 });
