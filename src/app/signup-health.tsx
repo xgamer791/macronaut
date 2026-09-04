@@ -2,14 +2,13 @@ import { Ionicons } from '@expo/vector-icons';
 import { Redirect, useLocalSearchParams, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import React from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '@/state/AuthProvider';
 import { useSetting } from '@/state/queries';
 import { useSignupDraft } from '@/state/signupDraft';
 import { AppText } from '@/ui/components';
-import { WatchConnectMark } from '@/ui/WatchConnectMark';
-import { WelcomeBackground } from '@/ui/WelcomeBackground';
+import { SignupHealthBackground } from '@/ui/SignupHealthBackground';
 import { WelcomeCta } from '@/ui/WelcomeCta';
 import { fonts, type } from '@/ui/theme/tokens';
 
@@ -35,6 +34,10 @@ export function isSignupHealthPreview(preview?: string | string[]): boolean {
 export function SignupHealthView() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { height } = useWindowDimensions();
+  // The still places the watch at ~28% of its height, slightly above center.
+  // This slot is the band under the header so the headline sits under the watch.
+  const watchSlotHeight = Math.round(height * 0.46);
 
   const goBack = () => {
     if (router.canGoBack()) router.back();
@@ -44,10 +47,7 @@ export function SignupHealthView() {
   return (
     <View style={styles.root}>
       <StatusBar style="light" />
-      <WelcomeBackground />
-      <View pointerEvents="none" style={styles.veil}>
-        <View style={styles.veilFilm} />
-      </View>
+      <SignupHealthBackground />
 
       <View style={[styles.frame, { paddingTop: insets.top + 4 }]}>
         <View style={styles.header}>
@@ -66,14 +66,17 @@ export function SignupHealthView() {
           <View style={styles.headerSide} />
         </View>
 
+        <View style={{ height: watchSlotHeight }} />
+
         <View style={styles.body}>
-          <WatchConnectMark />
           <AppText style={styles.headline}>Connect Apple Health to use Apple Watch</AppText>
           <AppText style={styles.copy}>
             Bring workouts, heart rate, and activity from Apple Watch into Macronaut so your
             calories and macros stay in sync. You can change this later.
           </AppText>
         </View>
+
+        <View style={styles.grow} />
 
         <View style={[styles.dock, { paddingBottom: Math.max(insets.bottom, 12) + 8 }]}>
           <WelcomeCta label="Connect" onPress={() => {}} />
@@ -111,17 +114,12 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#101418',
   },
-  veil: {
-    ...StyleSheet.absoluteFill,
-  },
-  veilFilm: {
-    ...StyleSheet.absoluteFill,
-    backgroundColor: 'rgba(0,0,0,0.50)',
-  },
   frame: {
     flex: 1,
     zIndex: 1,
-    justifyContent: 'space-between',
+  },
+  grow: {
+    flex: 1,
   },
   header: {
     flexDirection: 'row',
