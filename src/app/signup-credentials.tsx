@@ -309,6 +309,7 @@ const styles = StyleSheet.create({
     fontSize: type.body.fontSize,
     lineHeight: type.body.lineHeight,
     padding: 0,
+    backgroundColor: 'transparent',
     ...Platform.select({ web: { outlineStyle: 'none', outlineWidth: 0 } as object, default: {} }),
   },
   helper: {
