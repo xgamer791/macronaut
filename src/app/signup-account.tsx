@@ -2,10 +2,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Redirect, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import React, { useMemo, useState } from 'react';
+import React, { useState } from 'react';
 import {
   KeyboardAvoidingView,
-  Modal,
   Platform,
   Pressable,
   ScrollView,
@@ -23,7 +22,7 @@ import { WelcomeBackground } from '@/ui/WelcomeBackground';
 import { WelcomeCta } from '@/ui/WelcomeCta';
 import { fonts, palette, radius, type } from '@/ui/theme/tokens';
 
-type Picker = 'month' | 'country' | null;
+type OpenSelect = 'month' | 'country' | null;
 
 function FieldLabel({ children }: { children: string }) {
   return (
@@ -34,12 +33,14 @@ function FieldLabel({ children }: { children: string }) {
   );
 }
 
-function SelectField({
+function SelectTrigger({
   value,
+  open,
   onPress,
   accessibilityLabel,
 }: {
   value: string;
+  open: boolean;
   onPress: () => void;
   accessibilityLabel: string;
 }) {
@@ -47,20 +48,56 @@ function SelectField({
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
+      accessibilityState={{ expanded: open }}
       onPress={onPress}
       style={styles.field}
     >
       <AppText style={styles.fieldValue} numberOfLines={1}>
         {value}
       </AppText>
-      <Ionicons name="chevron-down" size={16} color="#FFFFFF" />
+      <Ionicons name={open ? 'chevron-up' : 'chevron-down'} size={16} color="#FFFFFF" />
     </Pressable>
   );
 }
 
-/** Birthday + country after the legal gate. Layout follows the supplied
- * account-setup frame; type, accent and the CTA stay Macronaut. Continue
- * does not leave this page until the next screen is built. */
+function OptionList({
+  options,
+  selected,
+  onSelect,
+}: {
+  options: readonly string[];
+  selected: string;
+  onSelect: (item: string) => void;
+}) {
+  return (
+    <View style={styles.inlineMenu}>
+      <ScrollView
+        nestedScrollEnabled
+        keyboardShouldPersistTaps="handled"
+        style={styles.inlineMenuScroll}
+      >
+        {options.map((item) => {
+          const isSelected = item === selected;
+          return (
+            <Pressable
+              key={item}
+              accessibilityRole="button"
+              accessibilityState={{ selected: isSelected }}
+              onPress={() => onSelect(item)}
+              style={styles.inlineRow}
+            >
+              <AppText style={styles.inlineRowLabel}>{item}</AppText>
+              {isSelected ? <Ionicons name="checkmark" size={18} color={palette.accent} /> : null}
+            </Pressable>
+          );
+        })}
+      </ScrollView>
+    </View>
+  );
+}
+
+/** Birthday + country after the legal gate. Month and country expand in the
+ * page instead of a slide-up overlay. Continue stays on this screen. */
 export default function SignupAccountScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -70,18 +107,20 @@ export default function SignupAccountScreen() {
   const [day, setDay] = useState('');
   const [year, setYear] = useState('');
   const [country, setCountry] = useState<string>(COUNTRIES[0]);
-  const [picker, setPicker] = useState<Picker>(null);
-  const pickerItems = useMemo(() => (picker === 'month' ? [...MONTHS] : [...COUNTRIES]), [picker]);
+  const [openSelect, setOpenSelect] = useState<OpenSelect>(null);
 
   if (loading || (signedIn && onboarded.isLoading)) return null;
   if (signedIn) return <Redirect href={onboarded.data ? '/' : '/onboarding'} />;
 
   const ready = isValidSignupBirthday(monthIndex, day, year) && country.length > 0;
-  const pickerTitle = picker === 'month' ? 'Month' : 'Country/Region';
 
   const goBack = () => {
     if (router.canGoBack()) router.back();
     else router.replace('/signup-legal');
+  };
+
+  const toggle = (which: Exclude<OpenSelect, null>) => {
+    setOpenSelect((current) => (current === which ? null : which));
   };
 
   return (
@@ -117,102 +156,87 @@ export default function SignupAccountScreen() {
           <View style={styles.headerSide} />
         </View>
 
-        <View style={styles.form}>
-          <View style={styles.birthdayRow}>
-            <View style={styles.monthCol}>
-              <FieldLabel>Month</FieldLabel>
-              <SelectField
-                value={MONTHS[monthIndex]}
-                accessibilityLabel="Month"
-                onPress={() => setPicker('month')}
-              />
+        <ScrollView
+          keyboardShouldPersistTaps="handled"
+          contentContainerStyle={styles.form}
+        >
+          <View>
+            <View style={styles.birthdayRow}>
+              <View style={styles.monthCol}>
+                <FieldLabel>Month</FieldLabel>
+                <SelectTrigger
+                  value={MONTHS[monthIndex]}
+                  open={openSelect === 'month'}
+                  accessibilityLabel="Month"
+                  onPress={() => toggle('month')}
+                />
+              </View>
+              <View style={styles.dayCol}>
+                <FieldLabel>Day</FieldLabel>
+                <TextInput
+                  accessibilityLabel="Day"
+                  value={day}
+                  onChangeText={(next) => setDay(next.replace(/\D/g, '').slice(0, 2))}
+                  onFocus={() => setOpenSelect(null)}
+                  placeholder="DD"
+                  placeholderTextColor="rgba(255,255,255,0.45)"
+                  keyboardType="number-pad"
+                  maxLength={2}
+                  style={styles.input}
+                />
+              </View>
+              <View style={styles.yearCol}>
+                <FieldLabel>Year</FieldLabel>
+                <TextInput
+                  accessibilityLabel="Year"
+                  value={year}
+                  onChangeText={(next) => setYear(next.replace(/\D/g, '').slice(0, 4))}
+                  onFocus={() => setOpenSelect(null)}
+                  placeholder="YYYY"
+                  placeholderTextColor="rgba(255,255,255,0.45)"
+                  keyboardType="number-pad"
+                  maxLength={4}
+                  style={styles.input}
+                />
+              </View>
             </View>
-            <View style={styles.dayCol}>
-              <FieldLabel>Day</FieldLabel>
-              <TextInput
-                accessibilityLabel="Day"
-                value={day}
-                onChangeText={(next) => setDay(next.replace(/\D/g, '').slice(0, 2))}
-                placeholder="DD"
-                placeholderTextColor="rgba(255,255,255,0.45)"
-                keyboardType="number-pad"
-                maxLength={2}
-                style={styles.input}
+            {openSelect === 'month' ? (
+              <OptionList
+                options={MONTHS}
+                selected={MONTHS[monthIndex]}
+                onSelect={(item) => {
+                  setMonthIndex(MONTHS.indexOf(item as (typeof MONTHS)[number]));
+                  setOpenSelect(null);
+                }}
               />
-            </View>
-            <View style={styles.yearCol}>
-              <FieldLabel>Year</FieldLabel>
-              <TextInput
-                accessibilityLabel="Year"
-                value={year}
-                onChangeText={(next) => setYear(next.replace(/\D/g, '').slice(0, 4))}
-                placeholder="YYYY"
-                placeholderTextColor="rgba(255,255,255,0.45)"
-                keyboardType="number-pad"
-                maxLength={4}
-                style={styles.input}
-              />
-            </View>
+            ) : null}
           </View>
 
           <View>
             <FieldLabel>Country/Region</FieldLabel>
-            <SelectField
+            <SelectTrigger
               value={country}
+              open={openSelect === 'country'}
               accessibilityLabel="Country or region"
-              onPress={() => setPicker('country')}
+              onPress={() => toggle('country')}
             />
+            {openSelect === 'country' ? (
+              <OptionList
+                options={COUNTRIES}
+                selected={country}
+                onSelect={(item) => {
+                  setCountry(item);
+                  setOpenSelect(null);
+                }}
+              />
+            ) : null}
           </View>
 
           <View style={styles.ctaWrap}>
             <WelcomeCta label="Continue" disabled={!ready} onPress={() => {}} />
           </View>
-        </View>
+        </ScrollView>
       </KeyboardAvoidingView>
-
-      <Modal
-        visible={picker !== null}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setPicker(null)}
-      >
-        <View style={styles.sheetRoot}>
-          <Pressable
-            style={styles.sheetScrim}
-            onPress={() => setPicker(null)}
-            accessibilityRole="button"
-            accessibilityLabel="Close"
-          />
-          <View style={[styles.sheet, { paddingBottom: Math.max(insets.bottom, 12) + 8 }]}>
-            <AppText style={styles.sheetTitle}>{pickerTitle}</AppText>
-            <ScrollView keyboardShouldPersistTaps="handled">
-              {pickerItems.map((item) => {
-                const selected =
-                  picker === 'month' ? item === MONTHS[monthIndex] : item === country;
-                return (
-                  <Pressable
-                    key={item}
-                    accessibilityRole="button"
-                    accessibilityState={{ selected }}
-                    onPress={() => {
-                      if (picker === 'month')
-                        setMonthIndex(MONTHS.indexOf(item as (typeof MONTHS)[number]));
-                      else setCountry(item);
-                      setPicker(null);
-                    }}
-                    style={styles.sheetRow}
-                  >
-                    <AppText style={styles.sheetRowLabel}>{item}</AppText>
-                    {selected ? (
-                      <Ionicons name="checkmark" size={18} color={palette.accent} />
-                    ) : null}
-                  </Pressable>
-                );
-              })}
-            </ScrollView>
-          </View>
-        </View>
-      </Modal>
     </View>
   );
 }
@@ -259,6 +283,7 @@ const styles = StyleSheet.create({
   form: {
     paddingHorizontal: 24,
     paddingTop: 28,
+    paddingBottom: 32,
     gap: 20,
   },
   birthdayRow: {
@@ -316,44 +341,33 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     paddingHorizontal: 8,
   },
-  ctaWrap: {
+  inlineMenu: {
     marginTop: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.55)',
+    borderRadius: radius.md,
+    backgroundColor: 'rgba(16,20,24,0.92)',
+    overflow: 'hidden',
+    maxHeight: 240,
   },
-  sheetRoot: {
-    flex: 1,
-    justifyContent: 'flex-end',
+  inlineMenuScroll: {
+    maxHeight: 240,
   },
-  sheetScrim: {
-    ...StyleSheet.absoluteFill,
-    backgroundColor: 'rgba(0,0,0,0.55)',
-  },
-  sheet: {
-    maxHeight: '70%',
-    backgroundColor: '#171B20',
-    borderTopLeftRadius: radius.xl,
-    borderTopRightRadius: radius.xl,
-    paddingTop: 16,
-    paddingHorizontal: 20,
-  },
-  sheetTitle: {
-    fontFamily: fonts.display,
-    color: '#FFFFFF',
-    fontSize: type.heading.fontSize,
-    lineHeight: type.heading.lineHeight,
-    fontWeight: '600',
-    marginBottom: 8,
-  },
-  sheetRow: {
+  inlineRow: {
     minHeight: 48,
+    paddingHorizontal: 12,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: 'rgba(255,255,255,0.12)',
   },
-  sheetRowLabel: {
+  inlineRowLabel: {
     color: '#FFFFFF',
     fontSize: type.body.fontSize,
     lineHeight: type.body.lineHeight,
+  },
+  ctaWrap: {
+    marginTop: 8,
   },
 });

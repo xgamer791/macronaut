@@ -35,4 +35,17 @@ describe('signup account setup', () => {
     expect(source).toContain('onPress={() => {}}');
     expect(source).not.toContain('/create-account');
   });
+
+  it('expands month and country in the page instead of a slide-up overlay', () => {
+    const account = read('signup-account.tsx');
+    const legal = read('signup-legal.tsx');
+    expect(account).toContain('inlineMenu');
+    expect(account).not.toContain('Modal');
+    expect(account).not.toContain('animationType');
+    expect(account).not.toContain('sheetRoot');
+    expect(account).not.toContain("from '@/ui/components/Sheet'");
+    expect(legal).not.toContain('Modal');
+    expect(legal).not.toContain('animationType');
+    expect(legal).not.toContain("from '@/ui/components/Sheet'");
+  });
 });
