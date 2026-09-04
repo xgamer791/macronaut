@@ -37,6 +37,9 @@ describe('signup credentials', () => {
     expect(source).toContain('applySignupDraftFromRoute');
     expect(source).toContain('useLocalSearchParams');
     expect(source).toContain('fieldLocked');
+    // `flex: 0` resolves to flex-basis 0 on web, which collapses the locked
+    // day and year text to zero width.
+    expect(source).not.toContain('flex: 0,');
     expect(source).toContain('disabled: true');
     expect(source).toContain("pointerEvents=\"none\"");
     expect(source).not.toContain("toggle('month')");
