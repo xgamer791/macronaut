@@ -33,6 +33,7 @@ describe('signup account setup', () => {
     expect(source).toContain('label="Continue"');
     expect(source).toContain('disabled={!ready}');
     expect(source).toContain('href="/signup-credentials"');
+    expect(source).toContain('useSignupDraft');
     expect(source).not.toContain('/create-account');
   });
 

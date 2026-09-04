@@ -16,6 +16,7 @@ import { COUNTRIES } from '@/data/countries';
 import { isValidSignupBirthday, MONTHS } from '@/domain/signupAccount';
 import { useAuth } from '@/state/AuthProvider';
 import { useSetting } from '@/state/queries';
+import { useSignupDraft } from '@/state/signupDraft';
 import { AppText } from '@/ui/components';
 import { WelcomeBackground } from '@/ui/WelcomeBackground';
 import { WelcomeCta } from '@/ui/WelcomeCta';
@@ -102,10 +103,14 @@ export default function SignupAccountScreen() {
   const insets = useSafeAreaInsets();
   const { loading, signedIn } = useAuth();
   const onboarded = useSetting<boolean>('onboardingComplete', false, signedIn);
-  const [monthIndex, setMonthIndex] = useState(0);
-  const [day, setDay] = useState('');
-  const [year, setYear] = useState('');
-  const [country, setCountry] = useState<string>(COUNTRIES[0]);
+  const monthIndex = useSignupDraft((s) => s.monthIndex);
+  const setMonthIndex = useSignupDraft((s) => s.setMonthIndex);
+  const day = useSignupDraft((s) => s.day);
+  const setDay = useSignupDraft((s) => s.setDay);
+  const year = useSignupDraft((s) => s.year);
+  const setYear = useSignupDraft((s) => s.setYear);
+  const country = useSignupDraft((s) => s.country);
+  const setCountry = useSignupDraft((s) => s.setCountry);
   const [openSelect, setOpenSelect] = useState<OpenSelect>(null);
 
   if (loading || (signedIn && onboarded.isLoading)) return null;
