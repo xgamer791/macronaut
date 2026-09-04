@@ -161,7 +161,7 @@ const styles = StyleSheet.create({
   },
   veilFilm: {
     ...StyleSheet.absoluteFill,
-    backgroundColor: 'rgba(0,0,0,0.45)',
+    backgroundColor: 'rgba(0,0,0,0.50)',
   },
   frame: {
     flex: 1,

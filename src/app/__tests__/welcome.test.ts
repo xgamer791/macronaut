@@ -73,7 +73,7 @@ describe('welcome splash', () => {
     expect(web).toContain('WelcomeSlideshow');
     expect(native).toContain('WelcomeSlideshow as WelcomeBackground');
     expect(welcome).toContain('veilFilm');
-    expect(welcome).toContain('rgba(0,0,0,0.45)');
+    expect(welcome).toContain('rgba(0,0,0,0.50)');
     const cta = fs.readFileSync(path.join(appDir, '../ui/WelcomeCta.tsx'), 'utf8');
     expect(cta).toContain('radius.md');
     expect(cta).toContain('palette.accent');

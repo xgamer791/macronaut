@@ -23,7 +23,7 @@ export default function WelcomeScreen() {
   return (
     <View style={styles.root}>
       <WelcomeBackground />
-      {/* Flat 45% film so white type stays readable. No extra gradient. */}
+      {/* Flat 50% film so white type stays readable. No extra gradient. */}
       <View pointerEvents="none" style={styles.veil}>
         <View style={styles.veilFilm} />
       </View>
@@ -65,7 +65,7 @@ const styles = StyleSheet.create({
   },
   veilFilm: {
     ...StyleSheet.absoluteFill,
-    backgroundColor: 'rgba(0,0,0,0.45)',
+    backgroundColor: 'rgba(0,0,0,0.50)',
   },
   frame: {
     flex: 1,
