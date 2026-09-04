@@ -1,5 +1,7 @@
 /// <reference types="vite/client" />
 import { convexTest } from 'convex-test';
+import { exportJWK, exportPKCS8, generateKeyPair } from 'jose';
+import { vi } from 'vitest';
 import type { Id } from '../../convex/_generated/dataModel';
 import schema from '../../convex/schema';
 import { createRepos, type Repos } from '../../src/state/AppProvider';
@@ -14,6 +16,20 @@ export function backend() {
 }
 
 export type Backend = ReturnType<typeof backend>;
+
+/** The session signing keys Convex Auth mints tokens with, in the single-line
+ * form scripts/convex-auth-keys.mjs stores on a deployment. Any test that
+ * completes a sign-in needs them; `vi.unstubAllEnvs()` clears them. */
+export async function stubAuthKeys(): Promise<void> {
+  // The issuer of the session JWT: the deployment's own site URL, which Convex
+  // sets on every real deployment.
+  vi.stubEnv('CONVEX_SITE_URL', 'https://brainy-cobra-467.convex.site');
+  const keys = await generateKeyPair('RS256', { extractable: true });
+  const privateKey = await exportPKCS8(keys.privateKey);
+  const publicKey = await exportJWK(keys.publicKey);
+  vi.stubEnv('JWT_PRIVATE_KEY', privateKey.trimEnd().replace(/\n/g, ' '));
+  vi.stubEnv('JWKS', JSON.stringify({ keys: [{ use: 'sig', ...publicKey }] }));
+}
 
 /** A signed-in user. Convex Auth encodes `userId|sessionId` in the JWT
  * subject, which is all `getAuthUserId` reads. */

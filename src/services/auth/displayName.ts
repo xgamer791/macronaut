@@ -3,7 +3,10 @@ export interface AuthUser {
   email?: string;
   name?: string;
   image?: string;
-  provider?: 'google' | 'apple' | 'email';
+  /** ISO `YYYY-MM-DD`, set when the account was created. */
+  birthday?: string;
+  country?: string;
+  provider?: 'password' | 'google' | 'apple' | 'email';
 }
 
 /** Human-readable display name for a user, falling back to the email local

@@ -18,10 +18,23 @@ import {
  * another account's rows. See docs/security.md.
  *
  * `authTables` adds `users`, `authAccounts`, `authSessions`, and the other
- * tables Convex Auth needs for Google OAuth and email codes.
+ * tables Convex Auth needs.
  */
 export default defineSchema({
   ...authTables,
+
+  /** Convex Auth's own `users` table plus the two facts create-account
+   * captures and the app never lets anyone change. Written in the same
+   * transaction that creates the account (convex/PasswordAccount.ts);
+   * optional because accounts created before it existed have neither. */
+  users: defineTable({
+    ...authTables.users.validator.fields,
+    /** ISO `YYYY-MM-DD`. */
+    birthday: v.optional(v.string()),
+    country: v.optional(v.string()),
+  })
+    .index('email', ['email'])
+    .index('phone', ['phone']),
 
   /** Key/value settings, JSON-encoded exactly as the app hands them over —
    * shapes vary per key (profile, meal times, goals, …). */
