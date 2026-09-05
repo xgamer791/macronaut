@@ -37,7 +37,9 @@ describe('signup apple health ask', () => {
     expect(source).toContain('Apple Health');
     expect(source).toContain('Apple Watch');
     expect(source).toContain('SignupHealthBackground');
-    expect(source).toContain('watchSlot');
+    expect(source).toContain('WATCH_TOP');
+    expect(source).toContain('WATCH_BOTTOM');
+    expect(source).toContain('useWindowDimensions');
     expect(source).toContain('WelcomeCta');
     expect(source).toContain('label="Connect"');
     expect(source).toContain('onPress={() => {}}');
