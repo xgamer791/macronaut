@@ -8,7 +8,8 @@ import { useAuth } from '@/state/AuthProvider';
 import { useSetting } from '@/state/queries';
 import { useSignupDraft } from '@/state/signupDraft';
 import { AppText } from '@/ui/components';
-import { SignupHealthBackground } from '@/ui/SignupHealthBackground';
+import { WatchConnectMark } from '@/ui/WatchConnectMark';
+import { WelcomeBackground } from '@/ui/WelcomeBackground';
 import { WelcomeCta } from '@/ui/WelcomeCta';
 import { fonts, type } from '@/ui/theme/tokens';
 
@@ -43,6 +44,10 @@ export function SignupHealthView() {
   return (
     <View style={styles.root}>
       <StatusBar style="light" />
+      <WelcomeBackground />
+      <View pointerEvents="none" style={styles.veil}>
+        <View style={styles.veilFilm} />
+      </View>
 
       <View style={[styles.frame, { paddingTop: insets.top + 4 }]}>
         <View style={styles.header}>
@@ -61,11 +66,8 @@ export function SignupHealthView() {
           <View style={styles.headerSide} />
         </View>
 
-        <View style={styles.watchSlot}>
-          <SignupHealthBackground />
-        </View>
-
         <View style={styles.body}>
+          <WatchConnectMark />
           <AppText style={styles.headline}>Connect Apple Health to use Apple Watch</AppText>
           <AppText style={styles.copy}>
             Bring workouts, heart rate, and activity from Apple Watch into Macronaut so your
@@ -107,15 +109,19 @@ export default function SignupHealthScreen() {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: '#000000',
+    backgroundColor: '#101418',
+  },
+  veil: {
+    ...StyleSheet.absoluteFill,
+  },
+  veilFilm: {
+    ...StyleSheet.absoluteFill,
+    backgroundColor: 'rgba(0,0,0,0.50)',
   },
   frame: {
     flex: 1,
-  },
-  watchSlot: {
-    flex: 1,
-    minHeight: 180,
-    marginVertical: 8,
+    zIndex: 1,
+    justifyContent: 'space-between',
   },
   header: {
     flexDirection: 'row',
