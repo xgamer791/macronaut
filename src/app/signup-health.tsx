@@ -1,8 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Redirect, useLocalSearchParams, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import React, { useEffect } from 'react';
-import { Platform, Pressable, StyleSheet, View } from 'react-native';
+import React from 'react';
+import { Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '@/state/AuthProvider';
 import { useSetting } from '@/state/queries';
@@ -28,13 +28,6 @@ export function isSignupHealthPreview(preview?: string | string[]): boolean {
   }
 }
 
-function pinVisualViewport() {
-  if (typeof window === 'undefined') return;
-  window.scrollTo(0, 0);
-  document.documentElement.scrollTop = 0;
-  document.body.scrollTop = 0;
-}
-
 /** The last step of create-account, with the account already made: ask to
  * connect Apple Health for Apple Watch. Connect does nothing yet. Not now
  * leaves the stack for the dashboard. */
@@ -42,73 +35,50 @@ export function SignupHealthView() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
-  useEffect(() => {
-    if (Platform.OS !== 'web' || typeof window === 'undefined') return undefined;
-    pinVisualViewport();
-    const viewport = window.visualViewport;
-    viewport?.addEventListener('scroll', pinVisualViewport);
-    viewport?.addEventListener('resize', pinVisualViewport);
-    return () => {
-      viewport?.removeEventListener('scroll', pinVisualViewport);
-      viewport?.removeEventListener('resize', pinVisualViewport);
-    };
-  }, []);
-
   const goBack = () => {
     if (router.canGoBack()) router.back();
     else router.replace('/signup-credentials');
   };
 
   return (
-    <View nativeID="signup-health-root" style={styles.root}>
+    <View style={styles.root}>
       <StatusBar style="light" />
       <SignupHealthBackground />
 
-      <View
-        nativeID="signup-health-frame"
-        style={[styles.frame, { paddingTop: insets.top + 4 }]}
-      >
-        <View style={styles.header}>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Back"
-            hitSlop={8}
-            onPress={goBack}
-            style={styles.headerSide}
-          >
-            <Ionicons name="chevron-back" size={28} color="#FFFFFF" />
-          </Pressable>
-          <AppText accessibilityRole="header" style={styles.headerTitle}>
-            Apple Health
-          </AppText>
-          <View style={styles.headerSide} />
-        </View>
-
-        <View style={styles.intro}>
+      <View style={[styles.frame, { paddingTop: insets.top + 4 }]}>
+        <View style={styles.top}>
+          <View style={styles.header}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Back"
+              hitSlop={8}
+              onPress={goBack}
+              style={styles.headerSide}
+            >
+              <Ionicons name="chevron-back" size={28} color="#FFFFFF" />
+            </Pressable>
+            <AppText accessibilityRole="header" style={styles.headerTitle}>
+              Apple Health
+            </AppText>
+            <View style={styles.headerSide} />
+          </View>
           <AppText style={styles.headline}>Connect Apple Health to use Apple Watch</AppText>
         </View>
 
-        <View style={styles.watchSlot} />
-
-        <View
-          nativeID="signup-health-lower"
-          style={[styles.lower, { paddingBottom: Math.max(insets.bottom, 12) + 8 }]}
-        >
+        <View style={[styles.bottom, { paddingBottom: Math.max(insets.bottom, 12) + 8 }]}>
           <AppText style={styles.copy}>
             Bring workouts, heart rate, and activity from Apple Watch into Macronaut so your
             calories and macros stay in sync. You can change this later.
           </AppText>
-          <View style={styles.dock}>
-            <WelcomeCta label="Connect" onPress={() => {}} />
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Not now"
-              onPress={() => router.replace('/')}
-              style={styles.skipHit}
-            >
-              <AppText style={styles.skipLabel}>Not now</AppText>
-            </Pressable>
-          </View>
+          <WelcomeCta label="Connect" onPress={() => {}} />
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Not now"
+            onPress={() => router.replace('/')}
+            style={styles.skipHit}
+          >
+            <AppText style={styles.skipLabel}>Not now</AppText>
+          </Pressable>
         </View>
       </View>
     </View>
@@ -132,17 +102,21 @@ export default function SignupHealthScreen() {
 
 const styles = StyleSheet.create({
   root: {
-    ...StyleSheet.absoluteFill,
+    flex: 1,
     backgroundColor: '#000000',
   },
   frame: {
     flex: 1,
     zIndex: 1,
+    justifyContent: 'space-between',
+  },
+  top: {
+    paddingHorizontal: 16,
+    gap: 8,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
     minHeight: 44,
   },
   headerSide: {
@@ -160,14 +134,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     textAlign: 'center',
   },
-  intro: {
-    paddingHorizontal: 24,
-    paddingTop: 8,
-    alignItems: 'center',
-  },
-  watchSlot: {
-    flex: 1,
-  },
   headline: {
     fontFamily: fonts.display,
     color: '#FFFFFF',
@@ -175,10 +141,10 @@ const styles = StyleSheet.create({
     lineHeight: type.heading.lineHeight,
     fontWeight: '600',
     textAlign: 'center',
+    paddingHorizontal: 8,
   },
-  lower: {
+  bottom: {
     paddingHorizontal: 24,
-    alignItems: 'center',
     gap: 20,
   },
   copy: {
@@ -187,10 +153,6 @@ const styles = StyleSheet.create({
     lineHeight: type.body.lineHeight,
     fontWeight: '400',
     textAlign: 'center',
-  },
-  dock: {
-    alignSelf: 'stretch',
-    gap: 8,
   },
   skipHit: {
     minHeight: 44,

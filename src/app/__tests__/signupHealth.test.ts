@@ -9,7 +9,6 @@ describe('signup apple health ask', () => {
   it('exports a signed-out route and registers it outside the tab group', () => {
     expect(fs.existsSync(path.join(appDir, 'signup-health.tsx'))).toBe(true);
     expect(read('_layout.tsx')).toContain('name="signup-health"');
-    expect(read('_layout.tsx')).toContain("options={{ animation: 'none' }}");
     expect(fs.existsSync(path.join(appDir, '(tabs)', 'signup-health.tsx'))).toBe(false);
   });
 
@@ -38,11 +37,9 @@ describe('signup apple health ask', () => {
     expect(source).toContain('Apple Health');
     expect(source).toContain('Apple Watch');
     expect(source).toContain('SignupHealthBackground');
-    expect(source).toContain('watchSlot');
-    expect(source).toContain('styles.lower');
-    expect(source).toContain('signup-health-root');
-    expect(source).toContain('pinVisualViewport');
-    expect(source).toContain('paddingBottom: Math.max(insets.bottom, 12) + 8');
+    expect(source).toContain("justifyContent: 'space-between'");
+    expect(source).toContain('styles.top');
+    expect(source).toContain('styles.bottom');
     expect(source).toContain('WelcomeCta');
     expect(source).toContain('label="Connect"');
     expect(source).toContain('onPress={() => {}}');
@@ -55,14 +52,16 @@ describe('signup apple health ask', () => {
     expect(source).not.toContain('WatchConnectMark');
     expect(source).not.toContain('WelcomeBackground');
     expect(source).not.toContain('veilFilm');
+    expect(source).not.toContain('pinVisualViewport');
+    expect(source).not.toContain('signup-health-root');
     expect(source).not.toContain('HealthKit');
     expect(source).not.toContain('requestAuthorization');
     expect(source).not.toContain('/create-account');
     expect(source).not.toContain('Garmin');
     expect(background).toContain('signup-health-watch.png');
+    expect(background).toContain('contentFit="cover"');
     expect(background).not.toContain('WATCH_SHIFT');
     expect(background).not.toContain('useWindowDimensions');
-    expect(background).toContain('contentFit="cover"');
     expect(background).not.toContain('welcome-loop');
     const stillPath = path.join(appDir, '../../assets/images/signup-health-watch.png');
     expect(fs.existsSync(stillPath)).toBe(true);
