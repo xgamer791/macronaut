@@ -44,6 +44,22 @@ html, body {
   overscroll-behavior: none;
 }
 #root { display: flex; }
+/* Lock the Apple Health ask to the visible viewport on the first paint.
+ * JS insets and window height start at 0 and then update, which lifts
+ * the screen and drops it. CSS env() and 100dvh are known immediately. */
+#signup-health-root {
+  position: fixed !important;
+  inset: 0 !important;
+  height: 100dvh !important;
+  width: 100% !important;
+  max-height: 100dvh !important;
+}
+#signup-health-frame {
+  padding-top: calc(env(safe-area-inset-top, 0px) + 4px) !important;
+}
+#signup-health-lower {
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 20px) !important;
+}
 input:-webkit-autofill, input:-webkit-autofill:hover, input:-webkit-autofill:focus, input:-webkit-autofill:active,
 textarea:-webkit-autofill, textarea:-webkit-autofill:hover, textarea:-webkit-autofill:focus, textarea:-webkit-autofill:active {
   -webkit-box-shadow: 0 0 0 1000px transparent inset !important;

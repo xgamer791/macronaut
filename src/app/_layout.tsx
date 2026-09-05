@@ -53,8 +53,8 @@ function ThemedApp() {
         <Stack.Screen name="signup-legal" />
         <Stack.Screen name="signup-account" />
         <Stack.Screen name="signup-credentials" />
-        <Stack.Screen name="signup-health" />
-        <Stack.Screen name="preview-signup-health" />
+        <Stack.Screen name="signup-health" options={{ animation: 'none' }} />
+        <Stack.Screen name="preview-signup-health" options={{ animation: 'none' }} />
         <Stack.Screen name="onboarding" />
         <Stack.Screen name="add" options={{ presentation: 'modal' }} />
         <Stack.Screen name="manual-entry" options={{ presentation: 'modal' }} />

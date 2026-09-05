@@ -17,6 +17,14 @@ describe('web html shell', () => {
     expect(html).toContain('overscroll-behavior: none');
   });
 
+  it('pins the Apple Health ask to the visible viewport on the first paint', () => {
+    expect(html).toContain('#signup-health-root');
+    expect(html).toContain('#signup-health-frame');
+    expect(html).toContain('#signup-health-lower');
+    expect(html).toContain('env(safe-area-inset-top, 0px)');
+    expect(html).toContain('env(safe-area-inset-bottom, 0px)');
+  });
+
   it('forces white autofill text on fields that sit on the dark video', () => {
     // react-native-web drops className, so the fields carry a data attribute.
     expect(html).toContain('[data-darkfield]');

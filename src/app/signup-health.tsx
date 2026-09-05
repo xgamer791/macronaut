@@ -1,8 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Redirect, useLocalSearchParams, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import React from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import React, { useEffect } from 'react';
+import { Platform, Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '@/state/AuthProvider';
 import { useSetting } from '@/state/queries';
@@ -28,6 +28,13 @@ export function isSignupHealthPreview(preview?: string | string[]): boolean {
   }
 }
 
+function pinVisualViewport() {
+  if (typeof window === 'undefined') return;
+  window.scrollTo(0, 0);
+  document.documentElement.scrollTop = 0;
+  document.body.scrollTop = 0;
+}
+
 /** The last step of create-account, with the account already made: ask to
  * connect Apple Health for Apple Watch. Connect does nothing yet. Not now
  * leaves the stack for the dashboard. */
@@ -35,17 +42,32 @@ export function SignupHealthView() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
+  useEffect(() => {
+    if (Platform.OS !== 'web' || typeof window === 'undefined') return undefined;
+    pinVisualViewport();
+    const viewport = window.visualViewport;
+    viewport?.addEventListener('scroll', pinVisualViewport);
+    viewport?.addEventListener('resize', pinVisualViewport);
+    return () => {
+      viewport?.removeEventListener('scroll', pinVisualViewport);
+      viewport?.removeEventListener('resize', pinVisualViewport);
+    };
+  }, []);
+
   const goBack = () => {
     if (router.canGoBack()) router.back();
     else router.replace('/signup-credentials');
   };
 
   return (
-    <View style={styles.root}>
+    <View nativeID="signup-health-root" style={styles.root}>
       <StatusBar style="light" />
       <SignupHealthBackground />
 
-      <View style={[styles.frame, { paddingTop: insets.top + 4 }]}>
+      <View
+        nativeID="signup-health-frame"
+        style={[styles.frame, { paddingTop: insets.top + 4 }]}
+      >
         <View style={styles.header}>
           <Pressable
             accessibilityRole="button"
@@ -68,7 +90,10 @@ export function SignupHealthView() {
 
         <View style={styles.watchSlot} />
 
-        <View style={[styles.lower, { paddingBottom: Math.max(insets.bottom, 12) + 8 }]}>
+        <View
+          nativeID="signup-health-lower"
+          style={[styles.lower, { paddingBottom: Math.max(insets.bottom, 12) + 8 }]}
+        >
           <AppText style={styles.copy}>
             Bring workouts, heart rate, and activity from Apple Watch into Macronaut so your
             calories and macros stay in sync. You can change this later.
@@ -107,7 +132,7 @@ export default function SignupHealthScreen() {
 
 const styles = StyleSheet.create({
   root: {
-    flex: 1,
+    ...StyleSheet.absoluteFill,
     backgroundColor: '#000000',
   },
   frame: {
