@@ -29,8 +29,7 @@ export function isSignupHealthPreview(preview?: string | string[]): boolean {
 }
 
 /** The last step of create-account, with the account already made: ask to
- * connect Apple Health for Apple Watch. Connect does nothing yet. Not now
- * leaves the stack for the dashboard. */
+ * connect Apple Health for Apple Watch, then continue into personalization. */
 export function SignupHealthView() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -39,6 +38,8 @@ export function SignupHealthView() {
     if (router.canGoBack()) router.back();
     else router.replace('/signup-credentials');
   };
+
+  const continueToOnboarding = () => router.replace('/onboarding');
 
   return (
     <View style={styles.root}>
@@ -70,11 +71,11 @@ export function SignupHealthView() {
             Bring workouts, heart rate, and activity from Apple Watch into Macronaut so your
             calories and macros stay in sync. You can change this later.
           </AppText>
-          <WelcomeCta label="Connect" onPress={() => {}} />
+          <WelcomeCta label="Connect" onPress={continueToOnboarding} />
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="Not now"
-            onPress={() => router.replace('/')}
+            onPress={continueToOnboarding}
             style={styles.skipHit}
           >
             <AppText style={styles.skipLabel}>Not now</AppText>

@@ -14,13 +14,13 @@ describe('welcome splash', () => {
     expect(fs.existsSync(path.join(appDir, '(tabs)', 'welcome.tsx'))).toBe(false);
   });
 
-  it('sends signed-out tab visitors to the splash, and new accounts to the dashboard', () => {
+  it('sends signed-out tab visitors to the splash, and unfinished accounts to onboarding', () => {
     const tabs = read('(tabs)/_layout.tsx');
     expect(tabs).toContain('href="/welcome"');
     expect(tabs).toContain('if (!signedIn)');
-    // A session straight out of create-account keeps the dashboard it was
-    // promised instead of being sent to the goal wizard.
-    expect(tabs).toContain('signupComplete');
+    expect(tabs).toContain('if (!onboarded.data)');
+    expect(tabs).toContain('href="/onboarding"');
+    expect(tabs).not.toContain('signupComplete');
     expect(tabs).not.toContain('href="/login"');
   });
 

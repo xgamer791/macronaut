@@ -13,9 +13,8 @@ export interface SignupDraftValues {
 }
 
 export interface SignupDraft extends SignupDraftValues {
-  /** Set when the account has been created, so the last steps of the flow
-   * (the Apple Health ask, then the dashboard) do not bounce the brand new
-   * session into the onboarding wizard. */
+  /** Set while a newly created account moves through Apple Health and
+   * onboarding, so route guards keep that in-progress signup on its path. */
   signupComplete: boolean;
   setMonthIndex: (monthIndex: number) => void;
   setDay: (day: string) => void;

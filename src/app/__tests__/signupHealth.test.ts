@@ -31,9 +31,12 @@ describe('signup apple health ask', () => {
     expect(source).toContain('if (preview) return <SignupHealthView />');
   });
 
-  it('asks to connect Apple Health for Apple Watch without wiring HealthKit', () => {
+  it('continues from either Apple Health choice into onboarding without wiring HealthKit', () => {
     const source = read('signup-health.tsx');
-    const background = fs.readFileSync(path.join(appDir, '../ui/SignupHealthBackground.tsx'), 'utf8');
+    const background = fs.readFileSync(
+      path.join(appDir, '../ui/SignupHealthBackground.tsx'),
+      'utf8',
+    );
     expect(source).toContain('Apple Health');
     expect(source).toContain('Apple Watch');
     expect(source).toContain('SignupHealthBackground');
@@ -42,11 +45,12 @@ describe('signup apple health ask', () => {
     expect(source).toContain('styles.bottom');
     expect(source).toContain('WelcomeCta');
     expect(source).toContain('label="Connect"');
-    expect(source).toContain('onPress={() => {}}');
+    expect(source).toContain('onPress={continueToOnboarding}');
     expect(source).toContain('Not now');
-    expect(source).toContain("router.replace('/')");
-    // The session already exists by now, so the ask stays put instead of
-    // redirecting the new account into the onboarding wizard.
+    expect(source).toContain("router.replace('/onboarding')");
+    expect(source).not.toContain("router.replace('/')");
+    // The session already exists by now, so the Apple Health ask stays put
+    // until the user chooses either path forward.
     expect(source).toContain('signupComplete');
     expect(source).toContain('fonts.display');
     expect(source).not.toContain('WatchConnectMark');

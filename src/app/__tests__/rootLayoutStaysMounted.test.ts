@@ -44,13 +44,13 @@ describe('the navigator survives signing in', () => {
     expect(theme).toContain('setModeState(initialMode)');
   });
 
-  it('fills the goal wizard from the account when the account lands', () => {
+  it('uses the stored birthday without asking a new account for age again', () => {
     const onboarding = read('onboarding.tsx');
-    // Seeding useState directly would capture the render before the viewer
-    // resolved, leaving the name and the age blank for a new account.
-    expect(onboarding).not.toContain('useState(() => displayNameFromUser(user)');
-    expect(onboarding).not.toContain('useState<number | undefined>(() => ageFromBirthdayIso');
-    expect(onboarding).toContain('user.id !== filledFor');
-    expect(onboarding).toContain('setAge(ageFromBirthdayIso(user.birthday))');
+    expect(onboarding).not.toContain('displayNameFromUser');
+    expect(onboarding).not.toContain('What should we call you?');
+    expect(onboarding).toContain('ageFromBirthdayIso(user?.birthday)');
+    expect(onboarding).toContain('accountAge ?? fallbackAge');
+    // Legacy accounts without a stored birthday still have a safe fallback.
+    expect(onboarding).toContain('accountAge === undefined');
   });
 });
