@@ -33,10 +33,8 @@ describe('signup apple health ask', () => {
 
   it('asks to connect Apple Health for Apple Watch without wiring HealthKit', () => {
     const source = read('signup-health.tsx');
-    const mark = fs.readFileSync(path.join(appDir, '../ui/WatchConnectMark.tsx'), 'utf8');
     expect(source).toContain('Apple Health');
     expect(source).toContain('Apple Watch');
-    expect(source).toContain('WatchConnectMark');
     expect(source).toContain('WelcomeBackground');
     expect(source).toContain('WelcomeCta');
     expect(source).toContain('label="Connect"');
@@ -49,13 +47,13 @@ describe('signup apple health ask', () => {
     expect(source).toContain('veilFilm');
     expect(source).toContain('rgba(0,0,0,0.50)');
     expect(source).toContain('fonts.display');
+    expect(source).not.toContain('WatchConnectMark');
+    expect(source).not.toContain('SignupHealthBackground');
+    expect(source).not.toContain('signup-health-watch');
     expect(source).not.toContain('HealthKit');
     expect(source).not.toContain('requestAuthorization');
     expect(source).not.toContain('/create-account');
     expect(source).not.toContain('Garmin');
-    expect(mark).toContain('Animated.loop');
-    expect(mark).toContain('palette.accent');
-    expect(mark).not.toContain('heart');
-    expect(mark).not.toContain('HealthKit');
+    expect(fs.existsSync(path.join(appDir, '../ui/WatchConnectMark.tsx'))).toBe(false);
   });
 });

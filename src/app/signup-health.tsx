@@ -8,7 +8,6 @@ import { useAuth } from '@/state/AuthProvider';
 import { useSetting } from '@/state/queries';
 import { useSignupDraft } from '@/state/signupDraft';
 import { AppText } from '@/ui/components';
-import { WatchConnectMark } from '@/ui/WatchConnectMark';
 import { WelcomeBackground } from '@/ui/WelcomeBackground';
 import { WelcomeCta } from '@/ui/WelcomeCta';
 import { fonts, type } from '@/ui/theme/tokens';
@@ -67,7 +66,6 @@ export function SignupHealthView() {
         </View>
 
         <View style={styles.body}>
-          <WatchConnectMark />
           <AppText style={styles.headline}>Connect Apple Health to use Apple Watch</AppText>
           <AppText style={styles.copy}>
             Bring workouts, heart rate, and activity from Apple Watch into Macronaut so your
