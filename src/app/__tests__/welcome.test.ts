@@ -70,6 +70,34 @@ describe('welcome splash', () => {
     expect(welcome).toContain('WelcomeCta');
     expect(fs.existsSync(path.join(videoDir, 'welcome-loop.mp4'))).toBe(true);
     expect(fs.existsSync(path.join(videoDir, 'welcome-poster.jpg'))).toBe(true);
+    // Poster is the first jog frame on the 1080×2340 phone canvas. A shorter
+    // 9:16 plate left a black band under the runner once the splash opened
+    // on that clip.
+    const poster = fs.readFileSync(path.join(videoDir, 'welcome-poster.jpg'));
+    expect(poster[0]).toBe(0xff);
+    expect(poster[1]).toBe(0xd8);
+    let i = 2;
+    let posterW = 0;
+    let posterH = 0;
+    while (i < poster.length - 8) {
+      if (poster[i] !== 0xff) {
+        i += 1;
+        continue;
+      }
+      const marker = poster[i + 1];
+      if (marker === 0xc0 || marker === 0xc1 || marker === 0xc2) {
+        posterH = poster.readUInt16BE(i + 5);
+        posterW = poster.readUInt16BE(i + 7);
+        break;
+      }
+      if (marker === 0xd8 || marker === 0xd9) {
+        i += 2;
+        continue;
+      }
+      i += 2 + poster.readUInt16BE(i + 2);
+    }
+    expect(posterW).toBe(1080);
+    expect(posterH).toBe(2340);
     expect(web).toContain("createElement('video')");
     expect(web).toContain('video.muted = true');
     expect(web).toContain('video.loop = true');
