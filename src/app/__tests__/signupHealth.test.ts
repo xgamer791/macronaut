@@ -67,7 +67,7 @@ describe('signup apple health ask', () => {
     expect(fs.existsSync(stillPath)).toBe(true);
     const still = fs.readFileSync(stillPath);
     expect(still.toString('ascii', 1, 4)).toBe('PNG');
-    expect(still.readUInt32BE(16)).toBe(1024);
-    expect(still.readUInt32BE(20)).toBe(1536);
+    expect(still.readUInt32BE(16)).toBe(1080);
+    expect(still.readUInt32BE(20)).toBe(1935);
   });
 });
