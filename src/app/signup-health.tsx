@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Redirect, useLocalSearchParams, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import React from 'react';
-import { Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '@/state/AuthProvider';
 import { useSetting } from '@/state/queries';
@@ -34,10 +34,6 @@ export function isSignupHealthPreview(preview?: string | string[]): boolean {
 export function SignupHealthView() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { height } = useWindowDimensions();
-  // The still places the watch at ~28% of its height, slightly above center.
-  // This slot is the band under the header so the headline sits under the watch.
-  const watchSlotHeight = Math.round(height * 0.46);
 
   const goBack = () => {
     if (router.canGoBack()) router.back();
@@ -47,7 +43,6 @@ export function SignupHealthView() {
   return (
     <View style={styles.root}>
       <StatusBar style="light" />
-      <SignupHealthBackground />
 
       <View style={[styles.frame, { paddingTop: insets.top + 4 }]}>
         <View style={styles.header}>
@@ -66,7 +61,9 @@ export function SignupHealthView() {
           <View style={styles.headerSide} />
         </View>
 
-        <View style={{ height: watchSlotHeight }} />
+        <View style={styles.watchSlot}>
+          <SignupHealthBackground />
+        </View>
 
         <View style={styles.body}>
           <AppText style={styles.headline}>Connect Apple Health to use Apple Watch</AppText>
@@ -75,8 +72,6 @@ export function SignupHealthView() {
             calories and macros stay in sync. You can change this later.
           </AppText>
         </View>
-
-        <View style={styles.grow} />
 
         <View style={[styles.dock, { paddingBottom: Math.max(insets.bottom, 12) + 8 }]}>
           <WelcomeCta label="Connect" onPress={() => {}} />
@@ -112,14 +107,15 @@ export default function SignupHealthScreen() {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: '#101418',
+    backgroundColor: '#000000',
   },
   frame: {
     flex: 1,
-    zIndex: 1,
   },
-  grow: {
+  watchSlot: {
     flex: 1,
+    minHeight: 180,
+    marginVertical: 8,
   },
   header: {
     flexDirection: 'row',
