@@ -37,8 +37,10 @@ export function OutlineInput({
   maxLength,
   trailing,
   onFocus,
+  onBlur,
   onSubmitEditing,
   returnKeyType,
+  invalid,
 }: {
   value: string;
   onChangeText: (next: string) => void;
@@ -53,16 +55,21 @@ export function OutlineInput({
   maxLength?: number;
   trailing?: React.ReactNode;
   onFocus?: () => void;
+  onBlur?: () => void;
   onSubmitEditing?: () => void;
   returnKeyType?: 'go' | 'next' | 'done' | 'send';
+  /** Outlines the field in the danger colour. The reason belongs next to it,
+   * in words — the outline alone is not something everyone can see. */
+  invalid?: boolean;
 }) {
   return (
-    <View style={fieldStyles.field} {...DARK_FIELD}>
+    <View style={[fieldStyles.field, invalid ? fieldStyles.fieldInvalid : null]} {...DARK_FIELD}>
       <TextInput
         accessibilityLabel={accessibilityLabel}
         value={value}
         onChangeText={onChangeText}
         onFocus={onFocus}
+        onBlur={onBlur}
         onSubmitEditing={onSubmitEditing}
         returnKeyType={returnKeyType}
         placeholder={placeholder}
@@ -106,6 +113,9 @@ export const fieldStyles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
   },
+  fieldInvalid: {
+    borderColor: palette.danger,
+  },
   fieldInput: {
     flex: 1,
     height: FIELD_HEIGHT,
@@ -136,5 +146,16 @@ export const fieldStyles = StyleSheet.create({
     fontSize: type.caption.fontSize,
     lineHeight: type.caption.lineHeight,
     fontWeight: '600',
+  },
+  /** Sits where the error would, so a field settling from bad to good does not
+   * shift the rest of the form. */
+  ok: {
+    color: palette.accent,
+    fontSize: type.caption.fontSize,
+    lineHeight: type.caption.lineHeight,
+    fontWeight: '600',
+  },
+  fieldNote: {
+    marginTop: 8,
   },
 });

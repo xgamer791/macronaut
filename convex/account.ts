@@ -1,4 +1,5 @@
 import { getAuthUserId } from '@convex-dev/auth/server';
+import { v } from 'convex/values';
 import type { Id } from './_generated/dataModel';
 import { internalQuery, mutation, query, type MutationCtx } from './_generated/server';
 import { requireUserId } from './lib/auth';
@@ -51,6 +52,37 @@ export const viewer = query({
       country: user.country,
       provider,
     };
+  },
+});
+
+/**
+ * Whether create-account can still use this address. The password provider
+ * keys its `authAccounts` row on the address itself, so a second sign-up on
+ * one that is taken fails — the form asks as the address is typed rather than
+ * letting someone fill the rest of it in first.
+ *
+ * Only the password provider counts. An address that reached Macronaut through
+ * Google or Apple can still be given a password account of its own, which is
+ * what the sign-up call does (tests/convex/passwordSignUp.test.ts), so
+ * reporting those as taken would refuse a sign-up the server accepts.
+ *
+ * This does tell an unauthenticated caller whether an address has an account.
+ * Any create-account form gives that away — a taken address cannot be signed
+ * up either way — so it is answered here plainly instead of after a round trip
+ * that fails. Forgot-password stays deliberately silent (convex/PasswordAccount.ts).
+ */
+export const passwordAccountExists = query({
+  args: { email: v.string() },
+  handler: async (ctx, { email }) => {
+    const address = email.trim().toLowerCase();
+    if (!address) return false;
+    const account = await ctx.db
+      .query('authAccounts')
+      .withIndex('providerAndAccountId', (q) =>
+        q.eq('provider', 'password').eq('providerAccountId', address),
+      )
+      .first();
+    return account !== null;
   },
 });
 

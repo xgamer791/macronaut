@@ -563,6 +563,10 @@ export const createMemoryRecipeRepo = (): RecipeRepo =>
  * this is a no-op rather than a half-implementation. */
 export function createMemoryAccountRepo(): AccountRepo {
   return {
+    // No accounts here, so every address is free.
+    async emailTaken() {
+      return false;
+    },
     async deleteAllData() {},
     async deleteAccount() {},
   };

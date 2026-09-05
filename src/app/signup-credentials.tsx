@@ -13,7 +13,13 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { COUNTRIES } from '@/data/countries';
 import { isValidSignupBirthday, MONTHS, signupBirthdayIso } from '@/domain/signupAccount';
-import { isValidSignupCredentials } from '@/domain/signupCredentials';
+import {
+  confirmationSettled,
+  emailAllowsSignup,
+  emailsMatch,
+  isValidSignupCredentials,
+  passwordsMatch,
+} from '@/domain/signupCredentials';
 import { useAuth } from '@/state/AuthProvider';
 import { useSetting } from '@/state/queries';
 import {
@@ -24,6 +30,7 @@ import {
   useSignupDraft,
 } from '@/state/signupDraft';
 import { useAccountAuth } from '@/state/useAccountAuth';
+import { useEmailAvailability } from '@/state/useEmailAvailability';
 import { AppText } from '@/ui/components';
 import { fieldStyles, FieldLabel, OutlineInput } from '@/ui/DarkField';
 import { WelcomeBackground } from '@/ui/WelcomeBackground';
@@ -150,6 +157,11 @@ export default function SignupCredentialsScreen() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
+  // A half-typed confirmation is not a mismatch yet; the notes wait for the
+  // field to be left, or for it to be as long as what it is copying.
+  const [confirmEmailTouched, setConfirmEmailTouched] = useState(false);
+  const [confirmPasswordTouched, setConfirmPasswordTouched] = useState(false);
+  const emailStatus = useEmailAvailability(email);
   const monthIndex = useSignupDraft((s) => s.monthIndex);
   const day = useSignupDraft((s) => s.day);
   const year = useSignupDraft((s) => s.year);
@@ -176,10 +188,22 @@ export default function SignupCredentialsScreen() {
   // ask; anyone else who is already signed in has no business here.
   if (signedIn && !signupComplete) return <Redirect href={onboarded.data ? '/' : '/onboarding'} />;
 
+  const emailTaken = emailStatus === 'taken';
+  const checkingEmail = emailStatus === 'checking';
+  const emailMismatch =
+    confirmationSettled(confirmEmail, email, confirmEmailTouched) &&
+    !emailsMatch(email, confirmEmail);
+  const emailConfirmed = confirmEmail.length > 0 && emailsMatch(email, confirmEmail);
+  const passwordMismatch =
+    confirmationSettled(confirmPassword, password, confirmPasswordTouched) &&
+    !passwordsMatch(password, confirmPassword);
+  const passwordConfirmed = passwordsMatch(password, confirmPassword);
+
   const ready =
     isValidSignupCredentials(name, email, confirmEmail, password, confirmPassword) &&
     isValidSignupBirthday(monthIndex, day, year) &&
-    country.length > 0;
+    country.length > 0 &&
+    emailAllowsSignup(emailStatus);
 
   const closeMenus = () => setOpenSelect(null);
   const toggle = (which: Exclude<OpenSelect, null>) => {
@@ -268,7 +292,19 @@ export default function SignupCredentialsScreen() {
               keyboardType="email-address"
               textContentType="emailAddress"
               onFocus={closeMenus}
+              invalid={emailTaken}
             />
+            {emailTaken ? (
+              <AppText
+                accessibilityRole="alert"
+                style={[fieldStyles.error, fieldStyles.fieldNote]}
+              >
+                An account already uses this email address. Sign in instead, or use another
+                address.
+              </AppText>
+            ) : checkingEmail ? (
+              <AppText style={fieldStyles.helper}>Checking this email address…</AppText>
+            ) : null}
           </View>
 
           <View>
@@ -283,7 +319,21 @@ export default function SignupCredentialsScreen() {
               keyboardType="email-address"
               textContentType="emailAddress"
               onFocus={closeMenus}
+              onBlur={() => setConfirmEmailTouched(true)}
+              invalid={emailMismatch}
             />
+            {emailMismatch ? (
+              <AppText
+                accessibilityRole="alert"
+                style={[fieldStyles.error, fieldStyles.fieldNote]}
+              >
+                Email addresses do not match.
+              </AppText>
+            ) : emailConfirmed ? (
+              <AppText style={[fieldStyles.ok, fieldStyles.fieldNote]}>
+                Email addresses match.
+              </AppText>
+            ) : null}
           </View>
 
           <View>
@@ -327,6 +377,8 @@ export default function SignupCredentialsScreen() {
               secureTextEntry={!showConfirm}
               textContentType="newPassword"
               onFocus={closeMenus}
+              onBlur={() => setConfirmPasswordTouched(true)}
+              invalid={passwordMismatch}
               trailing={
                 <Pressable
                   accessibilityRole="button"
@@ -338,6 +390,16 @@ export default function SignupCredentialsScreen() {
                 </Pressable>
               }
             />
+            {passwordMismatch ? (
+              <AppText
+                accessibilityRole="alert"
+                style={[fieldStyles.error, fieldStyles.fieldNote]}
+              >
+                Passwords do not match.
+              </AppText>
+            ) : passwordConfirmed ? (
+              <AppText style={[fieldStyles.ok, fieldStyles.fieldNote]}>Passwords match.</AppText>
+            ) : null}
           </View>
 
           <View>

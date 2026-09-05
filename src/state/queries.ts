@@ -36,6 +36,7 @@ export const keys = {
   frequents: (meal?: string) => ['frequents', meal ?? ''] as const,
   favorites: ['favorites'] as const,
   aiScanAvailable: ['ai-scan-available'] as const,
+  emailTaken: (email: string) => ['email-taken', email] as const,
 };
 
 export function useInvalidateDiary() {

@@ -36,6 +36,43 @@ describe('signup credentials', () => {
     }
   });
 
+  it('says so on the form when the two passwords differ', () => {
+    const source = read('signup-credentials.tsx');
+    const fields = fs.readFileSync(path.join(appDir, '../ui/DarkField.tsx'), 'utf8');
+    expect(source).toContain('passwordsMatch');
+    expect(source).toContain('confirmationSettled');
+    expect(source).toContain('Passwords do not match.');
+    expect(source).toContain('Passwords match.');
+    expect(source).toContain('Email addresses do not match.');
+    // The outline alone is not something everyone can see, so each one is
+    // announced as well.
+    expect(source).toContain('accessibilityRole="alert"');
+    expect(source).toContain('invalid={passwordMismatch}');
+    expect(source).toContain('invalid={emailMismatch}');
+    expect(fields).toContain('invalid?: boolean');
+    expect(fields).toContain('fieldStyles.fieldInvalid');
+    expect(fields).toContain('borderColor: palette.danger');
+  });
+
+  it('checks the address against the backend as it is typed, and gates Continue on it', () => {
+    const source = read('signup-credentials.tsx');
+    const hook = fs.readFileSync(path.join(appDir, '../state/useEmailAvailability.ts'), 'utf8');
+    const repo = fs.readFileSync(path.join(appDir, '../repositories/accountRepo.ts'), 'utf8');
+    const backend = fs.readFileSync(path.join(appDir, '../../convex/account.ts'), 'utf8');
+    expect(source).toContain('useEmailAvailability');
+    expect(source).toContain('emailAllowsSignup(emailStatus)');
+    expect(source).toContain('An account already uses this email address');
+    expect(source).toContain('invalid={emailTaken}');
+    // Grey while the answer is still coming, so the button is never wrong.
+    expect(source).toContain('Checking this email address…');
+    expect(source).toContain('disabled={!ready || auth.busy}');
+    expect(hook).toContain('EMAIL_CHECK_DEBOUNCE_MS');
+    expect(hook).toContain('account.emailTaken');
+    expect(repo).toContain('api.account.passwordAccountExists');
+    expect(backend).toContain('passwordAccountExists');
+    expect(backend).toContain("q.eq('provider', 'password')");
+  });
+
   it('collects name, email, and password with Macronaut type and the welcome CTA', () => {
     const source = read('signup-credentials.tsx');
     const fields = fs.readFileSync(path.join(appDir, '../ui/DarkField.tsx'), 'utf8');
