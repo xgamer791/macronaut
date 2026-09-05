@@ -8,7 +8,7 @@ import { useAuth } from '@/state/AuthProvider';
 import { useSetting } from '@/state/queries';
 import { useSignupDraft } from '@/state/signupDraft';
 import { AppText } from '@/ui/components';
-import { WelcomeBackground } from '@/ui/WelcomeBackground';
+import { SignupHealthBackground } from '@/ui/SignupHealthBackground';
 import { WelcomeCta } from '@/ui/WelcomeCta';
 import { fonts, type } from '@/ui/theme/tokens';
 
@@ -43,10 +43,7 @@ export function SignupHealthView() {
   return (
     <View style={styles.root}>
       <StatusBar style="light" />
-      <WelcomeBackground />
-      <View pointerEvents="none" style={styles.veil}>
-        <View style={styles.veilFilm} />
-      </View>
+      <SignupHealthBackground />
 
       <View style={[styles.frame, { paddingTop: insets.top + 4 }]}>
         <View style={styles.header}>
@@ -65,8 +62,13 @@ export function SignupHealthView() {
           <View style={styles.headerSide} />
         </View>
 
-        <View style={styles.body}>
+        <View style={styles.intro}>
           <AppText style={styles.headline}>Connect Apple Health to use Apple Watch</AppText>
+        </View>
+
+        <View style={styles.watchSlot} />
+
+        <View style={styles.body}>
           <AppText style={styles.copy}>
             Bring workouts, heart rate, and activity from Apple Watch into Macronaut so your
             calories and macros stay in sync. You can change this later.
@@ -107,19 +109,11 @@ export default function SignupHealthScreen() {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: '#101418',
-  },
-  veil: {
-    ...StyleSheet.absoluteFill,
-  },
-  veilFilm: {
-    ...StyleSheet.absoluteFill,
-    backgroundColor: 'rgba(0,0,0,0.50)',
+    backgroundColor: '#000000',
   },
   frame: {
     flex: 1,
     zIndex: 1,
-    justifyContent: 'space-between',
   },
   header: {
     flexDirection: 'row',
@@ -142,10 +136,14 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     textAlign: 'center',
   },
-  body: {
+  intro: {
     paddingHorizontal: 24,
+    paddingTop: 8,
     alignItems: 'center',
-    gap: 20,
+  },
+  watchSlot: {
+    flex: 1,
+    minHeight: 180,
   },
   headline: {
     fontFamily: fonts.display,
@@ -154,6 +152,11 @@ const styles = StyleSheet.create({
     lineHeight: type.heading.lineHeight,
     fontWeight: '600',
     textAlign: 'center',
+  },
+  body: {
+    paddingHorizontal: 24,
+    paddingBottom: 20,
+    alignItems: 'center',
   },
   copy: {
     color: 'rgba(255,255,255,0.78)',

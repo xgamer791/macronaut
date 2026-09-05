@@ -33,9 +33,11 @@ describe('signup apple health ask', () => {
 
   it('asks to connect Apple Health for Apple Watch without wiring HealthKit', () => {
     const source = read('signup-health.tsx');
+    const background = fs.readFileSync(path.join(appDir, '../ui/SignupHealthBackground.tsx'), 'utf8');
     expect(source).toContain('Apple Health');
     expect(source).toContain('Apple Watch');
-    expect(source).toContain('WelcomeBackground');
+    expect(source).toContain('SignupHealthBackground');
+    expect(source).toContain('watchSlot');
     expect(source).toContain('WelcomeCta');
     expect(source).toContain('label="Connect"');
     expect(source).toContain('onPress={() => {}}');
@@ -44,16 +46,22 @@ describe('signup apple health ask', () => {
     // The session already exists by now, so the ask stays put instead of
     // redirecting the new account into the onboarding wizard.
     expect(source).toContain('signupComplete');
-    expect(source).toContain('veilFilm');
-    expect(source).toContain('rgba(0,0,0,0.50)');
     expect(source).toContain('fonts.display');
     expect(source).not.toContain('WatchConnectMark');
-    expect(source).not.toContain('SignupHealthBackground');
-    expect(source).not.toContain('signup-health-watch');
+    expect(source).not.toContain('WelcomeBackground');
+    expect(source).not.toContain('veilFilm');
     expect(source).not.toContain('HealthKit');
     expect(source).not.toContain('requestAuthorization');
     expect(source).not.toContain('/create-account');
     expect(source).not.toContain('Garmin');
-    expect(fs.existsSync(path.join(appDir, '../ui/WatchConnectMark.tsx'))).toBe(false);
+    expect(background).toContain('signup-health-watch.png');
+    expect(background).toContain('contentFit="cover"');
+    expect(background).not.toContain('welcome-loop');
+    const stillPath = path.join(appDir, '../../assets/images/signup-health-watch.png');
+    expect(fs.existsSync(stillPath)).toBe(true);
+    const still = fs.readFileSync(stillPath);
+    expect(still.toString('ascii', 1, 4)).toBe('PNG');
+    expect(still.readUInt32BE(16)).toBe(1024);
+    expect(still.readUInt32BE(20)).toBe(1536);
   });
 });
