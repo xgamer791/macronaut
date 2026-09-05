@@ -68,6 +68,10 @@ describe('signup credentials', () => {
     expect(source).toContain('disabled={!ready || auth.busy}');
     expect(hook).toContain('EMAIL_CHECK_DEBOUNCE_MS');
     expect(hook).toContain('account.emailTaken');
+    // An offline Convex client queues the call instead of failing it, which
+    // would leave Create Account disabled until the network came back.
+    expect(hook).toContain('EMAIL_CHECK_TIMEOUT_MS');
+    expect(hook).toContain('withTimeout(account.emailTaken');
     expect(repo).toContain('api.account.passwordAccountExists');
     expect(backend).toContain('passwordAccountExists');
     expect(backend).toContain("q.eq('provider', 'password')");
