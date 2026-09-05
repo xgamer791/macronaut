@@ -1,8 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Redirect, useLocalSearchParams, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import React, { useState } from 'react';
-import { Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
+import React from 'react';
+import { Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '@/state/AuthProvider';
 import { useSetting } from '@/state/queries';
@@ -28,27 +28,12 @@ export function isSignupHealthPreview(preview?: string | string[]): boolean {
   }
 }
 
-/** Watch bbox in the 1024×1536 still when it is `cover`-scaled on a
- * portrait phone. Headline sits just above the band; copy and actions
- * sit just below it. */
-const WATCH_TOP = 0.156;
-const WATCH_BOTTOM = 0.633;
-const AROUND = 24;
-
 /** The last step of create-account, with the account already made: ask to
  * connect Apple Health for Apple Watch. Connect does nothing yet. Not now
  * leaves the stack for the dashboard. */
 export function SignupHealthView() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { height } = useWindowDimensions();
-  const [introH, setIntroH] = useState(48);
-
-  const watchTop = height * WATCH_TOP;
-  const watchBottom = height * WATCH_BOTTOM;
-  const headerBottom = insets.top + 4 + 44;
-  const introTop = Math.max(headerBottom + 4, watchTop - introH - AROUND);
-  const lowerTop = watchBottom + AROUND;
 
   const goBack = () => {
     if (router.canGoBack()) router.back();
@@ -60,8 +45,8 @@ export function SignupHealthView() {
       <StatusBar style="light" />
       <SignupHealthBackground />
 
-      <View style={styles.frame} pointerEvents="box-none">
-        <View style={[styles.header, { paddingTop: insets.top + 4 }]}>
+      <View style={[styles.frame, { paddingTop: insets.top + 4 }]}>
+        <View style={styles.header}>
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="Back"
@@ -77,14 +62,13 @@ export function SignupHealthView() {
           <View style={styles.headerSide} />
         </View>
 
-        <View
-          style={[styles.intro, { top: introTop }]}
-          onLayout={(e) => setIntroH(e.nativeEvent.layout.height)}
-        >
+        <View style={styles.intro}>
           <AppText style={styles.headline}>Connect Apple Health to use Apple Watch</AppText>
         </View>
 
-        <View style={[styles.lower, { top: lowerTop, paddingBottom: Math.max(insets.bottom, 12) + 8 }]}>
+        <View style={styles.watchSlot} />
+
+        <View style={[styles.lower, { paddingBottom: Math.max(insets.bottom, 12) + 8 }]}>
           <AppText style={styles.copy}>
             Bring workouts, heart rate, and activity from Apple Watch into Macronaut so your
             calories and macros stay in sync. You can change this later.
@@ -127,7 +111,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#000000',
   },
   frame: {
-    ...StyleSheet.absoluteFill,
+    flex: 1,
     zIndex: 1,
   },
   header: {
@@ -152,11 +136,12 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   intro: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
     paddingHorizontal: 24,
+    paddingTop: 8,
     alignItems: 'center',
+  },
+  watchSlot: {
+    flex: 1,
   },
   headline: {
     fontFamily: fonts.display,
@@ -167,9 +152,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   lower: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
     paddingHorizontal: 24,
     alignItems: 'center',
     gap: 20,
