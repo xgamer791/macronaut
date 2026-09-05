@@ -28,18 +28,22 @@ export default function Root({ children }: { children: React.ReactNode }) {
             __html: `html, body { touch-action: pan-x pan-y; } body { -webkit-text-size-adjust: 100%; }
 /* iOS Safari pans the document when it sees a new-password field, which
  * lifts the welcome screens and leaves a white gap under the photo.
- * Pin the shell to the visible viewport so only in-app ScrollViews move. */
+ * Pin the shell to the visible viewport so only in-app ScrollViews move.
+ * The height and top come from visualViewport (see the script below):
+ * dvh resolves against the URL-bar-collapsed viewport, so while the bar is
+ * still open the shell is taller than what is on screen and anchored above
+ * it, which cuts the top off every screen. */
 html, body, #root {
   height: 100%;
-  height: 100dvh;
-  min-height: 100dvh;
-  max-height: 100dvh;
+  height: var(--app-viewport-height, 100%);
   width: 100%;
   background-color: #101418;
 }
 html, body {
   position: fixed;
-  inset: 0;
+  left: 0;
+  right: 0;
+  top: var(--app-viewport-top, 0px);
   overflow: hidden;
   overscroll-behavior: none;
 }
@@ -67,6 +71,39 @@ input[data-darkfield]:-webkit-autofill:focus, input[data-darkfield]:-webkit-auto
   -webkit-text-fill-color: #FFFFFF !important;
   caret-color: #FFFFFF !important;
 }`,
+          }}
+        />
+        <script
+          // Keep the shell exactly on the pixels the browser is showing.
+          // Skipped while a field is focused so the soft keyboard does not
+          // squash the layout; the blur re-syncs it.
+          dangerouslySetInnerHTML={{
+            __html: `(function () {
+  var root = document.documentElement;
+  var vv = window.visualViewport;
+  function typing() {
+    var el = document.activeElement;
+    if (!el) return false;
+    var tag = el.tagName;
+    return tag === 'INPUT' || tag === 'TEXTAREA' || el.isContentEditable === true;
+  }
+  function sync() {
+    if (typing()) return;
+    var height = vv ? vv.height : window.innerHeight;
+    var top = vv ? vv.offsetTop : 0;
+    root.style.setProperty('--app-viewport-height', Math.round(height) + 'px');
+    root.style.setProperty('--app-viewport-top', Math.round(top) + 'px');
+  }
+  sync();
+  if (vv) {
+    vv.addEventListener('resize', sync);
+    vv.addEventListener('scroll', sync);
+  }
+  window.addEventListener('orientationchange', sync);
+  window.addEventListener('pageshow', sync);
+  window.addEventListener('load', sync);
+  document.addEventListener('focusout', function () { setTimeout(sync, 0); });
+})();`,
           }}
         />
       </head>
