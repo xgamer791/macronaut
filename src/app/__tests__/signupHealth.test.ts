@@ -37,7 +37,7 @@ describe('signup apple health ask', () => {
     expect(source).toContain('Apple Health');
     expect(source).toContain('Apple Watch');
     expect(source).toContain('SignupHealthBackground');
-    expect(source).toContain('watchSlotHeight');
+    expect(source).toContain('watchSlot');
     expect(source).toContain('WelcomeCta');
     expect(source).toContain('label="Connect"');
     expect(source).toContain('onPress={() => {}}');
@@ -55,7 +55,7 @@ describe('signup apple health ask', () => {
     expect(source).not.toContain('/create-account');
     expect(source).not.toContain('Garmin');
     expect(background).toContain('signup-health-watch.png');
-    expect(background).toContain('contentFit="cover"');
+    expect(background).toContain('contentFit="contain"');
     expect(background).not.toContain('welcome-loop');
     const stillPath = path.join(appDir, '../../assets/images/signup-health-watch.png');
     expect(fs.existsSync(stillPath)).toBe(true);
