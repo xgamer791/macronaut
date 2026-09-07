@@ -21,8 +21,9 @@ export interface ScreenProps {
    */
   stickyHeader?: React.ReactNode;
   /**
-   * Draw the page under a collapsing sticky header. Today uses this so the
-   * gym hero meets the hairline instead of sitting on a reserved band.
+   * Draw the page under a collapsing sticky header. Pages that need a
+   * measured gap below the hairline should leave this off so `Screen`
+   * reserves the painted bar and the first child starts under it.
    */
   overlayHeader?: boolean;
   /** When false, `stickyHeader` stays put instead of hiding on scroll. */
