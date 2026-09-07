@@ -116,11 +116,11 @@ input[data-darkfield]:-webkit-autofill:focus, input[data-darkfield]:-webkit-auto
   will-change: transform;
   transition: transform 420ms cubic-bezier(0.22, 1, 0.36, 1);
 }
-/* Today / profile chrome: one slab, 840ms curve. */
+/* Today / profile chrome: one slab, same 420ms curve as stack / friends feed. */
 [data-headerhide] {
   will-change: transform, margin-bottom;
-  transition: transform 840ms cubic-bezier(0.22, 1, 0.36, 1),
-    margin-bottom 840ms cubic-bezier(0.22, 1, 0.36, 1);
+  transition: transform 420ms cubic-bezier(0.22, 1, 0.36, 1),
+    margin-bottom 420ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 [data-headerhide="out"] {
   transform: translateY(-100%);

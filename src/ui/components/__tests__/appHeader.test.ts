@@ -13,6 +13,13 @@ describe('Today header hamburger', () => {
     expect(header.indexOf('Add food')).toBeLessThan(header.indexOf('Open calendar'));
   });
 
+  it('opens and closes on the same 420ms friends-feed curve', () => {
+    expect(header).toContain('SLIDE_DURATION_MS');
+    expect(header).toContain('SLIDE_EASING');
+    expect(header).toContain('const DRAWER_MS = SLIDE_DURATION_MS');
+    expect(header).not.toContain('DRAWER_MS = 320');
+  });
+
   it('opens a left drawer of pages that are not in the tab bar', () => {
     expect(header).toContain('<HeaderMenu');
     expect(header).toContain("href: '/settings'");

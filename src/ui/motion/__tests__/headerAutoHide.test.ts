@@ -28,11 +28,12 @@ describe('headerHideForScroll', () => {
 });
 
 describe('header auto-hide wiring', () => {
-  it('keeps the 840ms bezier for header hide', () => {
+  it('keeps the 420ms bezier for header hide', () => {
     const hide = read('ui', 'motion', 'headerAutoHide.tsx');
     expect(hide).toContain("from './SlideScreen'");
     expect(hide).toContain("from './headerAutoHideLogic'");
-    expect(hide).toContain('HEADER_HIDE_DURATION_MS = 840');
+    expect(hide).toContain('HEADER_HIDE_DURATION_MS = SLIDE_DURATION_MS');
+    expect(hide).toContain('SLIDE_DURATION_MS');
     expect(hide).toContain('SLIDE_EASING');
     expect(hide).toContain("dataSet: { headerhide: hidden ? 'out' : 'in' }");
     expect(hide).toContain('marginBottom: hidden ? -height : 0');
