@@ -35,7 +35,7 @@ import {
 import { AppText, Button, ChatAvatar, ChatVideo, EmptyState } from '@/ui/components';
 import { useTheme } from '@/ui/theme/ThemeProvider';
 import { radius, spacing, touchTarget, type } from '@/ui/theme/tokens';
-import { useComposerKeyboardGap } from '@/ui/motion/composerKeyboardGap';
+import { useComposerKeyboardGap } from '@/ui/motion/useComposerKeyboardGap';
 import { SlideScreen, useSlideBack } from '@/ui/motion/SlideScreen';
 
 /** Avatar beside a message group. Small enough to read as a signature on the

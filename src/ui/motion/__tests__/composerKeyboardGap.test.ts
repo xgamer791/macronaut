@@ -28,10 +28,13 @@ describe('composer keyboard gap', () => {
 
   it('docks the chat composer on that 10px gap', () => {
     const chat = read('app', 'chat', '[id].tsx');
+    const hook = read('ui', 'motion', 'useComposerKeyboardGap.ts');
     expect(chat).toContain('useComposerKeyboardGap');
     expect(chat).toContain('onFocus={composer.onFocus}');
     expect(chat).toContain('onBlur={composer.onBlur}');
     expect(chat).toContain('paddingBottom: composer.paddingBottom');
     expect(chat).toContain('translateY: composer.shift');
+    expect(hook).toContain('composerPad(keyboardOpen, restingPad)');
+    expect(hook).toContain('composerShiftForGap');
   });
 });
