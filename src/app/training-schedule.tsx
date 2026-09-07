@@ -20,7 +20,10 @@ import { useAuth } from '@/state/AuthProvider';
 import {
   useRemoveTrainingScheduleDay,
   useSaveTrainingScheduleDay,
+  useSetAllTrainingScheduleRepeats,
+  useSetTrainingScheduleRepeatDay,
   useTrainingSchedule,
+  useTrainingScheduleRepeatDays,
   useWeekStart,
 } from '@/state/queries';
 import {
@@ -30,6 +33,7 @@ import {
   todayKey,
   weekDays,
   weekStartOf,
+  weekdayOf,
   type DayKey,
 } from '@/utils/date';
 import {
@@ -57,6 +61,10 @@ const newDraftId = () => `workout-${Date.now()}-${(draftSequence += 1)}`;
 /** Painted size of the empty-day add control — the circle itself, not an
  * Ionicons glyph box (those sit smaller than their `size`). */
 const ADD_ICON_SIZE = 27;
+const TOGGLE_WIDTH = 48;
+const TOGGLE_HEIGHT = 28;
+const TOGGLE_KNOB = 24;
+const TOGGLE_INSET = 2;
 
 export default function TrainingScheduleRoute() {
   const { loading, signedIn } = useAuth();
@@ -74,12 +82,18 @@ function TrainingScheduleScreen() {
   const start = weekStartOf(anchor, weekStart);
   const days = useMemo(() => weekDays(start, weekStart), [start, weekStart]);
   const schedule = useTrainingSchedule(days[0], days[6]);
+  const repeatDays = useTrainingScheduleRepeatDays();
   const saveDay = useSaveTrainingScheduleDay();
   const removeDay = useRemoveTrainingScheduleDay();
+  const setRepeatDay = useSetTrainingScheduleRepeatDay();
+  const setRepeatAll = useSetAllTrainingScheduleRepeats();
   const plans = useMemo(
     () => new Map((schedule.data ?? []).map((day) => [day.date, day])),
     [schedule.data],
   );
+  const repeatingWeekdays = useMemo(() => new Set(repeatDays.data ?? []), [repeatDays.data]);
+  const repeatCount = repeatingWeekdays.size;
+  const allDaysRepeat = repeatCount === 7;
 
   const [editingDate, setEditingDate] = useState<DayKey | null>(null);
   const [editorOpen, setEditorOpen] = useState(false);
@@ -87,6 +101,7 @@ function TrainingScheduleScreen() {
   const [draftNotes, setDraftNotes] = useState('');
   const [draftWorkouts, setDraftWorkouts] = useState<DraftWorkout[]>([]);
   const [formError, setFormError] = useState<string | null>(null);
+  const [repeatError, setRepeatError] = useState<string | null>(null);
 
   function editDay(date: DayKey) {
     const plan = plans.get(date);
@@ -100,7 +115,7 @@ function TrainingScheduleScreen() {
   }
 
   function closeEditor() {
-    if (saveDay.isPending || removeDay.isPending) return;
+    if (saveDay.isPending || removeDay.isPending || setRepeatDay.isPending) return;
     setEditorOpen(false);
     setFormError(null);
   }
@@ -169,8 +184,36 @@ function TrainingScheduleScreen() {
     }
   }
 
+  async function changeDayRepeat(enabled: boolean) {
+    if (!editingDate) return;
+    setFormError(null);
+    try {
+      await setRepeatDay.mutateAsync({ date: editingDate, enabled });
+    } catch (error) {
+      setFormError(error instanceof Error ? error.message : 'Could not update this repeat.');
+    }
+  }
+
+  async function changeAllRepeats(enabled: boolean) {
+    setRepeatError(null);
+    try {
+      await setRepeatAll.mutateAsync({ dates: days, enabled });
+    } catch (error) {
+      setRepeatError(error instanceof Error ? error.message : 'Could not update repeats.');
+    }
+  }
+
   const existingPlan = editingDate ? plans.get(editingDate) : undefined;
-  const busy = saveDay.isPending || removeDay.isPending;
+  const busy = saveDay.isPending || removeDay.isPending || setRepeatDay.isPending;
+  const repeatSummary = repeatDays.isLoading
+    ? 'Loading repeat settings…'
+    : repeatDays.isError
+      ? 'Repeat settings could not be loaded.'
+      : repeatCount === 7
+        ? 'All seven days repeat every week.'
+        : repeatCount > 0
+          ? `${repeatCount} of 7 days repeat every week.`
+          : 'Use this seven-day schedule every week.';
 
   return (
     <Screen
@@ -261,6 +304,26 @@ function TrainingScheduleScreen() {
                   onPress={() => editDay(date)}
                 />
               ))}
+              <View style={styles.masterRepeat}>
+                <RepeatSettingRow
+                  title="Repeat every day"
+                  description={repeatSummary}
+                  value={allDaysRepeat}
+                  disabled={repeatDays.isLoading || repeatDays.isError || setRepeatAll.isPending}
+                  accessibilityLabel="Repeat every training day each week"
+                  onValueChange={(enabled) => void changeAllRepeats(enabled)}
+                />
+                {repeatError ? (
+                  <AppText
+                    variant="caption"
+                    tone="danger"
+                    accessibilityLiveRegion="polite"
+                    style={styles.repeatError}
+                  >
+                    {repeatError}
+                  </AppText>
+                ) : null}
+              </View>
             </View>
           )}
         </ScrollView>
@@ -292,7 +355,7 @@ function TrainingScheduleScreen() {
                 <Button
                   title={`Save ${longWeekday(editingDate)}`}
                   loading={saveDay.isPending}
-                  disabled={removeDay.isPending}
+                  disabled={removeDay.isPending || setRepeatDay.isPending}
                   onPress={() => void save()}
                   style={{ flex: 1 }}
                 />
@@ -445,6 +508,17 @@ function TrainingScheduleScreen() {
               ) : null}
             </View>
 
+            <View style={[styles.dayRepeat, { borderTopColor: colors.border }]}>
+              <RepeatSettingRow
+                title={`Repeat every ${longWeekday(editingDate)}`}
+                description={`Use this training plan every ${longWeekday(editingDate)}.`}
+                value={repeatingWeekdays.has(weekdayOf(editingDate))}
+                disabled={repeatDays.isLoading || repeatDays.isError || setRepeatDay.isPending}
+                accessibilityLabel={`Repeat ${longWeekday(editingDate)} training every week`}
+                onValueChange={(enabled) => void changeDayRepeat(enabled)}
+              />
+            </View>
+
             {formError ? (
               <View style={[styles.formError, { backgroundColor: `${colors.danger}12` }]}>
                 <Ionicons name="alert-circle-outline" size={18} color={colors.danger} />
@@ -473,6 +547,106 @@ function TrainingScheduleScreen() {
         }}
       />
     </Screen>
+  );
+}
+
+function RepeatSettingRow({
+  title,
+  description,
+  value,
+  disabled,
+  accessibilityLabel,
+  onValueChange,
+}: {
+  title: string;
+  description: string;
+  value: boolean;
+  disabled?: boolean;
+  accessibilityLabel: string;
+  onValueChange: (value: boolean) => void;
+}) {
+  return (
+    <View style={styles.repeatRow}>
+      <View style={styles.repeatCopy}>
+        <AppText weight="700">{title}</AppText>
+        <AppText variant="caption" tone="muted">
+          {description}
+        </AppText>
+      </View>
+      <ScheduleToggle
+        value={value}
+        disabled={disabled}
+        accessibilityLabel={accessibilityLabel}
+        onValueChange={onValueChange}
+      />
+    </View>
+  );
+}
+
+function ScheduleToggle({
+  value,
+  disabled,
+  accessibilityLabel,
+  onValueChange,
+}: {
+  value: boolean;
+  disabled?: boolean;
+  accessibilityLabel: string;
+  onValueChange: (value: boolean) => void;
+}) {
+  const { colors } = useTheme();
+  const [position] = useState(() => new Animated.Value(value ? 1 : 0));
+
+  useEffect(() => {
+    let active = true;
+    let animation: Animated.CompositeAnimation | undefined;
+    void AccessibilityInfo.isReduceMotionEnabled().then((reduceMotion) => {
+      if (!active) return;
+      if (reduceMotion) {
+        position.setValue(value ? 1 : 0);
+        return;
+      }
+      animation = Animated.timing(position, {
+        toValue: value ? 1 : 0,
+        duration: 160,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      });
+      animation.start();
+    });
+    return () => {
+      active = false;
+      animation?.stop();
+    };
+  }, [position, value]);
+
+  const translateX = position.interpolate({
+    inputRange: [0, 1],
+    outputRange: [TOGGLE_INSET, TOGGLE_WIDTH - TOGGLE_KNOB - TOGGLE_INSET],
+  });
+
+  return (
+    <Pressable
+      accessibilityRole="switch"
+      accessibilityLabel={accessibilityLabel}
+      accessibilityState={{ checked: value, disabled: Boolean(disabled) }}
+      disabled={disabled}
+      onPress={() => onValueChange(!value)}
+      hitSlop={6}
+      style={({ pressed }) => [styles.toggleHit, { opacity: disabled ? 0.4 : pressed ? 0.72 : 1 }]}
+    >
+      <View style={[styles.toggleTrack, { backgroundColor: value ? colors.accent : colors.track }]}>
+        <Animated.View
+          style={[
+            styles.toggleKnob,
+            {
+              backgroundColor: value ? colors.onAccent : colors.textSecondary,
+              transform: [{ translateX }],
+            },
+          ]}
+        />
+      </View>
+    </Pressable>
   );
 }
 
@@ -749,6 +923,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scheduleContent: {
+    flexGrow: 1,
     paddingBottom: spacing.xxl,
   },
   weekNavigator: {
@@ -781,7 +956,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   dayList: {
+    flex: 1,
     paddingHorizontal: spacing.lg,
+  },
+  masterRepeat: {
+    marginTop: 'auto',
+    paddingTop: spacing.xl,
+    paddingHorizontal: spacing.xs,
   },
   dayRow: {
     minHeight: 86,
@@ -913,6 +1094,41 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  dayRepeat: {
+    borderTopWidth: StyleSheet.hairlineWidth,
+    paddingTop: spacing.xl,
+  },
+  repeatRow: {
+    minHeight: 68,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.lg,
+  },
+  repeatCopy: {
+    flex: 1,
+    minWidth: 0,
+    gap: 3,
+  },
+  repeatError: {
+    paddingBottom: spacing.sm,
+  },
+  toggleHit: {
+    width: TOGGLE_WIDTH,
+    height: touchTarget,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  toggleTrack: {
+    width: TOGGLE_WIDTH,
+    height: TOGGLE_HEIGHT,
+    borderRadius: TOGGLE_HEIGHT / 2,
+    justifyContent: 'center',
+  },
+  toggleKnob: {
+    width: TOGGLE_KNOB,
+    height: TOGGLE_KNOB,
+    borderRadius: TOGGLE_KNOB / 2,
   },
   formError: {
     flexDirection: 'row',
