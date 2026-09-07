@@ -18,6 +18,7 @@ import type * as dayNotes from '../dayNotes.js';
 import type * as diary from '../diary.js';
 import type * as foods from '../foods.js';
 import type * as foodScan from '../foodScan.js';
+import type * as fasting from '../fasting.js';
 import type * as goals from '../goals.js';
 import type * as groups from '../groups.js';
 import type * as history from '../history.js';
@@ -55,6 +56,7 @@ declare const fullApi: ApiFromModules<{
   diary: typeof diary;
   foods: typeof foods;
   foodScan: typeof foodScan;
+  fasting: typeof fasting;
   goals: typeof goals;
   groups: typeof groups;
   history: typeof history;

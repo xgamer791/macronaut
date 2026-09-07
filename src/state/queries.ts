@@ -51,6 +51,7 @@ export const keys = {
   chatPeople: (search: string) => ['chat-people', search] as const,
   chatThread: (id: string) => ['chat-thread', id] as const,
   notifications: ['notifications'] as const,
+  fasting: ['fasting'] as const,
 };
 
 export function useInvalidateDiary() {
@@ -535,6 +536,59 @@ export function useMarkAllNotificationsRead() {
   const invalidate = useInvalidateNotifications();
   return useMutation({
     mutationFn: () => notifications.markAllRead(),
+    onSuccess: invalidate,
+  });
+}
+
+export function useFastingState() {
+  const { signedIn } = useAuth();
+  const { fasting } = useRepos();
+  return useQuery({
+    queryKey: keys.fasting,
+    queryFn: () => fasting.state(),
+    enabled: signedIn,
+  });
+}
+
+function useInvalidateFasting() {
+  const qc = useQueryClient();
+  return () => qc.invalidateQueries({ queryKey: keys.fasting });
+}
+
+export function useStartFast() {
+  const { fasting } = useRepos();
+  const invalidate = useInvalidateFasting();
+  return useMutation({
+    mutationFn: ({ startAt, endAt }: { startAt: number; endAt: number }) =>
+      fasting.start(startAt, endAt),
+    onSuccess: invalidate,
+  });
+}
+
+export function useStopFast() {
+  const { fasting } = useRepos();
+  const invalidate = useInvalidateFasting();
+  return useMutation({
+    mutationFn: () => fasting.stop(),
+    onSuccess: invalidate,
+  });
+}
+
+export function useSaveFastingSlot() {
+  const { fasting } = useRepos();
+  const invalidate = useInvalidateFasting();
+  return useMutation({
+    mutationFn: ({ label, durationMinutes }: { label: string; durationMinutes: number }) =>
+      fasting.saveSlot(label, durationMinutes),
+    onSuccess: invalidate,
+  });
+}
+
+export function useRemoveFastingSlot() {
+  const { fasting } = useRepos();
+  const invalidate = useInvalidateFasting();
+  return useMutation({
+    mutationFn: (id: string) => fasting.removeSlot(id),
     onSuccess: invalidate,
   });
 }

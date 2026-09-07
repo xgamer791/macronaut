@@ -48,6 +48,23 @@ export default defineSchema({
     value: v.string(),
   }).index('by_user_key', ['userId', 'key']),
 
+  /** One durable fasting timer per account. Epoch timestamps let every client
+   * derive the correct elapsed time after a logout, app close, or device
+   * restart without relying on a background JavaScript timer. */
+  fastingStates: defineTable({
+    userId: v.id('users'),
+    activeStartAt: v.optional(v.number()),
+    activeEndAt: v.optional(v.number()),
+    customSlots: v.array(
+      v.object({
+        id: v.string(),
+        label: v.string(),
+        durationMinutes: v.number(),
+      }),
+    ),
+    updatedAt: v.string(),
+  }).index('by_user', ['userId']),
+
   goalConfigs: defineTable({
     userId: v.id('users'),
     createdAt: v.string(),

@@ -277,6 +277,11 @@ async function purgeUserData(ctx: MutationCtx, userId: Id<'users'>, budget: numb
         .take(remaining),
     () =>
       ctx.db
+        .query('fastingStates')
+        .withIndex('by_user', (q) => q.eq('userId', userId))
+        .take(remaining),
+    () =>
+      ctx.db
         .query('settings')
         .withIndex('by_user_key', (q) => q.eq('userId', userId))
         .take(remaining),

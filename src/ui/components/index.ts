@@ -45,3 +45,4 @@ export { GlassHeaderBar } from './GlassHeaderBar';
 export { GlassPopup } from './GlassPopup';
 export { DayNotesPopup } from './DayNotesPopup';
 export { DayInfoPopup } from './DayInfoPopup';
+export { ToolLauncher } from './ToolLauncher';
