@@ -61,7 +61,7 @@ describe('web html shell', () => {
 
   it('slides stack pages with a CSS transform so web actually animates', () => {
     expect(html).toContain('[data-slidescreen]');
-    expect(html).toContain('transform 420ms cubic-bezier(0.22, 1, 0.36, 1)');
+    expect(html).toContain('transform 840ms cubic-bezier(0.22, 1, 0.36, 1)');
     expect(html).toContain('prefers-reduced-motion: reduce');
   });
 });
