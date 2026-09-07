@@ -20,9 +20,9 @@ describe('training schedule route', () => {
     expect(calendar).toContain('<SlideScreen from="right">');
     expect(calendar).toContain('presentation="screen"');
     expect(calendar).toContain('dayDetail');
-    expect(calendar).toContain("import { CalendarPlusIcon } from 'phosphor-react-native'");
+    expect(calendar).toContain("import { CalendarPlus } from 'lucide-react-native'");
     expect(calendar).toContain('const HEADER_ICON_SIZE = 22');
-    expect(calendar).toContain('<CalendarPlusIcon size={HEADER_ICON_SIZE}');
+    expect(calendar).toContain('<CalendarPlus size={HEADER_ICON_SIZE}');
     expect(calendar).toContain("accessibilityLabel: 'Open training schedule'");
     expect(calendar).toContain("onPress: () => router.push('/training-schedule')");
     expect(schedule).toContain('title="Training Schedule"');

@@ -42,6 +42,8 @@ describe('calendar panel', () => {
     expect(panel).toContain('headerAction ? (');
     expect(panel).toContain('accessibilityLabel={headerAction.accessibilityLabel}');
     expect(panel).toContain('headerAction.onPress()');
+    expect(panel).toContain('style={styles.headerActionSlot}');
+    expect(panel).toContain('width: touchTarget');
     // Date-picker versions keep the familiar fallback.
     expect(panel).toContain('accessibilityLabel="Jump to today"');
   });

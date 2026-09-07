@@ -1,5 +1,5 @@
 import { Redirect, useRouter } from 'expo-router';
-import { CalendarPlusIcon } from 'phosphor-react-native';
+import { CalendarPlus } from 'lucide-react-native';
 import React from 'react';
 import { useAuth } from '@/state/AuthProvider';
 import { useUiStore } from '@/state/uiStore';
@@ -35,7 +35,7 @@ function CalendarScreen() {
       dayDetail
       headerAction={{
         accessibilityLabel: 'Open training schedule',
-        icon: <CalendarPlusIcon size={HEADER_ICON_SIZE} color={colors.accent} weight="regular" />,
+        icon: <CalendarPlus size={HEADER_ICON_SIZE} color={colors.accent} />,
         onPress: () => router.push('/training-schedule'),
       }}
       onClose={close}

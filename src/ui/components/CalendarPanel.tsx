@@ -245,7 +245,9 @@ export function CalendarPanel({
                 hitSlop={8}
                 style={[styles.headerSide, styles.headerRight]}
               >
-                {headerAction.icon}
+                <View style={styles.headerActionSlot} pointerEvents="none">
+                  {headerAction.icon}
+                </View>
               </Pressable>
             ) : (
               <Pressable
@@ -638,6 +640,12 @@ const styles = StyleSheet.create({
   },
   headerRight: {
     alignItems: 'flex-end',
+  },
+  headerActionSlot: {
+    width: touchTarget,
+    height: touchTarget,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   headerTitle: {
     flex: 1,
