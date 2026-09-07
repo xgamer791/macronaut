@@ -19,7 +19,6 @@ import { ActivityType } from '@/repositories/types';
 import {
   DEFAULT_HERO_LEFT,
   DEFAULT_HERO_RIGHT,
-  HERO_METRICS,
   isHeroMetricId,
   type HeroMetricId,
 } from '@/data/heroMetrics';
@@ -30,10 +29,9 @@ import {
   BarEntranceProvider,
   GlassHeaderBar,
   HeroMetricModule,
-  ListRow,
+  HeroMetricPicker,
   Screen,
   SectionHeader,
-  Sheet,
   ToolLauncher,
 } from '@/ui/components';
 import type { HeroMetricValues } from '@/ui/components/HeroMetricModule';
@@ -155,10 +153,12 @@ function TodayBody() {
   }
 
   async function setModuleMetric(slot: 'left' | 'right', id: HeroMetricId) {
+    const current = slot === 'left' ? leftMetric : rightMetric;
+    setPickerSlot(null);
+    if (id === current) return;
     const key = slot === 'left' ? 'heroModuleLeft' : 'heroModuleRight';
     await settings.set(key, id);
     qc.invalidateQueries({ queryKey: keys.setting(key) });
-    setPickerSlot(null);
   }
 
   const mealTotals = new Map<string, number>();
@@ -251,37 +251,16 @@ function TodayBody() {
         </View>
       </View>
 
-      <Sheet
-        visible={pickerSlot !== null}
+      <HeroMetricPicker
+        slot={pickerSlot}
+        selected={pickerSlot === 'left' ? leftMetric : rightMetric}
+        other={pickerSlot === 'left' ? rightMetric : leftMetric}
         onClose={() => setPickerSlot(null)}
-        title={
-          pickerSlot
-            ? `Show on ${pickerSlot === 'left' ? 'left' : 'right'} module`
-            : 'Choose metric'
-        }
-      >
-        <AppText variant="caption" tone="secondary" style={{ marginBottom: spacing.md }}>
-          Each module uses a layout optimized for that metric — rings, bars, cups, and stride meters
-          are intentional, not required to match.
-        </AppText>
-        {HERO_METRICS.map((m) => {
-          const selected = pickerSlot === 'left' ? m.id === leftMetric : m.id === rightMetric;
-          const usedElsewhere = pickerSlot === 'left' ? m.id === rightMetric : m.id === leftMetric;
-          return (
-            <ListRow
-              key={m.id}
-              title={m.label}
-              subtitle={usedElsewhere ? `${m.subtitle} · on other module` : m.subtitle}
-              selected={selected}
-              left={<Ionicons name={m.icon} size={20} color={colors.textSecondary} />}
-              onPress={() => {
-                if (!pickerSlot) return;
-                void setModuleMetric(pickerSlot, m.id);
-              }}
-            />
-          );
-        })}
-      </Sheet>
+        onSelect={(metric) => {
+          if (!pickerSlot) return;
+          void setModuleMetric(pickerSlot, metric);
+        }}
+      />
 
       <View style={styles.body}>
         {/* —— Macro photo cards —— */}
