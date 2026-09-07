@@ -3,11 +3,9 @@ import { useQueryClient } from '@tanstack/react-query';
 import { Image, type ImageSource } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import React, { useMemo, useState } from 'react';
+import React, { useState } from 'react';
 import { Pressable, StyleSheet, View, useWindowDimensions } from 'react-native';
-import { displayNameFromUser } from '@/services/auth/displayName';
 import { useRepos } from '@/state/AppProvider';
-import { useAuth } from '@/state/AuthProvider';
 import {
   keys,
   useActivityEntries,
@@ -17,7 +15,6 @@ import {
   useSetting,
 } from '@/state/queries';
 import { useUiStore } from '@/state/uiStore';
-import { displayFirstName, greetingForHour } from '@/utils/greeting';
 import { ActivityType } from '@/repositories/types';
 import {
   DEFAULT_HERO_LEFT,
@@ -31,19 +28,17 @@ import {
   AppHeader,
   AppText,
   BarEntranceProvider,
-  Button,
   GlassHeaderBar,
   HeroMetricModule,
   ListRow,
   Screen,
   SectionHeader,
   Sheet,
-  TextField,
   ToolLauncher,
 } from '@/ui/components';
 import type { HeroMetricValues } from '@/ui/components/HeroMetricModule';
 import { useTheme } from '@/ui/theme/ThemeProvider';
-import { fonts, radius, spacing } from '@/ui/theme/tokens';
+import { radius, spacing } from '@/ui/theme/tokens';
 
 const HERO_IMAGE = require('../../../assets/images/today/hero-gym.jpg');
 
@@ -67,7 +62,7 @@ const MACRO_ICONS: Record<'protein' | 'carbs' | 'fat', keyof typeof Ionicons.gly
   fat: 'water-outline',
 };
 
-/** Today — hero greeting + dual configurable metric modules + photo macros + meals. */
+/** Today — dual configurable metric modules + photo macros + meals. */
 export default function TodayScreen() {
   return (
     <BarEntranceProvider pageKey="today">
@@ -80,7 +75,6 @@ function TodayBody() {
   const router = useRouter();
   const qc = useQueryClient();
   const { settings } = useRepos();
-  const { user } = useAuth();
   const { colors } = useTheme();
   const { width, height: windowHeight } = useWindowDimensions();
   const date = useUiStore((s) => s.selectedDate);
@@ -90,20 +84,13 @@ function TodayBody() {
   const entries = useDiaryEntries(date);
   const activities = useActivityEntries(date);
   const categories = useMealCategories();
-  const displayName = useSetting<string>('displayName', '');
   const waterGoal = useSetting<number>('waterGoalCups', 8);
   const stepGoal = useSetting<number>('stepGoal', 10000);
   const waterCups = useSetting<number>(`waterCups:${date}`, 0);
   const stepsToday = useSetting<number>(`stepsToday:${date}`, 0);
   const leftSetting = useSetting<string>('heroModuleLeft', DEFAULT_HERO_LEFT);
   const rightSetting = useSetting<string>('heroModuleRight', DEFAULT_HERO_RIGHT);
-  const [nameOpen, setNameOpen] = useState(false);
-  const [draftName, setDraftName] = useState('');
   const [pickerSlot, setPickerSlot] = useState<'left' | 'right' | null>(null);
-
-  const greeting = useMemo(() => greetingForHour(), []);
-  // Until someone edits it here, the name they created the account with.
-  const firstName = displayFirstName(displayName.data || displayNameFromUser(user));
 
   const leftMetric: HeroMetricId = isHeroMetricId(leftSetting.data)
     ? leftSetting.data
@@ -238,28 +225,7 @@ function TodayBody() {
           style={StyleSheet.absoluteFill}
         />
 
-        {/* Greeting + dual metric modules (Daily Goals removed). */}
         <View style={styles.heroBottom}>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={
-              firstName ? `Greeting for ${firstName}. Tap to edit name.` : 'Tap to set your name'
-            }
-            onPress={() => {
-              setDraftName((displayName.data ?? '').trim());
-              setNameOpen(true);
-            }}
-            style={styles.greetingBlock}
-          >
-            <AppText style={styles.greetingLine}>{greeting},</AppText>
-            <AppText
-              style={[styles.nameLine, !firstName && styles.namePlaceholder]}
-              numberOfLines={1}
-            >
-              {firstName ?? 'Your name'}
-            </AppText>
-          </Pressable>
-
           <View style={styles.modulesRow}>
             <HeroMetricModule
               metric={leftMetric}
@@ -276,26 +242,6 @@ function TodayBody() {
           </View>
         </View>
       </View>
-
-      <Sheet visible={nameOpen} onClose={() => setNameOpen(false)} title="Your name">
-        <TextField
-          label="What should we call you?"
-          value={draftName}
-          onChangeText={setDraftName}
-          placeholder="First name"
-          autoCapitalize="words"
-          autoCorrect={false}
-          autoFocus
-        />
-        <Button
-          title="Save"
-          onPress={async () => {
-            await settings.set('displayName', draftName.trim());
-            qc.invalidateQueries({ queryKey: keys.setting('displayName') });
-            setNameOpen(false);
-          }}
-        />
-      </Sheet>
 
       <Sheet
         visible={pickerSlot !== null}
@@ -490,40 +436,9 @@ const styles = StyleSheet.create({
   },
   heroBottom: {
     paddingHorizontal: spacing.lg,
-    // Lift the greeting + modules 15px toward the top of the hero.
     paddingBottom: spacing.md + 15,
     zIndex: 3,
     gap: spacing.md,
-  },
-  greetingBlock: {
-    gap: 2,
-    marginLeft: 0,
-    paddingLeft: 0,
-    alignSelf: 'flex-start',
-  },
-  greetingLine: {
-    color: 'rgba(242,244,247,0.92)',
-    fontFamily: fonts.medium,
-    fontSize: 26,
-    lineHeight: 32,
-    fontWeight: '500',
-    marginLeft: 0,
-    paddingLeft: 0,
-    includeFontPadding: false,
-  },
-  nameLine: {
-    color: '#FFFFFF',
-    fontFamily: fonts.semibold,
-    fontSize: 30,
-    lineHeight: 36,
-    fontWeight: '700',
-    letterSpacing: -0.4,
-    marginLeft: 0,
-    paddingLeft: 0,
-    includeFontPadding: false,
-  },
-  namePlaceholder: {
-    color: 'rgba(242,244,247,0.55)',
   },
   modulesRow: {
     flexDirection: 'row',

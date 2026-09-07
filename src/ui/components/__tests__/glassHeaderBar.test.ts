@@ -44,6 +44,9 @@ describe('sticky chrome headers', () => {
     expect(today).not.toContain('headerWrap');
     expect(today).toContain('{ height: heroHeight }');
     expect(today).not.toContain('heroHeight + insets.top');
+    expect(today).not.toContain('greetingForHour');
+    expect(today).not.toContain('Good afternoon');
+    expect(today).not.toContain('greetingBlock');
   });
 
   it('gives the schedule the full-screen calendar rather than one tucked under the bar', () => {
