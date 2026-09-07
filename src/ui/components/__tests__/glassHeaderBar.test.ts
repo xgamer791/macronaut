@@ -35,13 +35,18 @@ describe('sticky glass headers', () => {
     expect(screen).toContain('useSharedValue(0)');
   });
 
-  it('uses a real material on every platform it can', () => {
-    expect(bar).toContain('isGlassEffectAPIAvailable');
-    expect(bar).toContain('GlassView');
-    expect(bar).toContain('backdropFilter');
-    expect(bar).toContain('WebkitBackdropFilter');
-    // Nothing to blur through on the rest, so the pane goes near-opaque.
-    expect(bar).toContain('solidGlass');
+  it('uses the 2025–26 liquid-glass recipe on the sticky header', () => {
+    expect(bar).toContain("headerglass: 'true'");
+    expect(bar).toContain("backgroundColor: 'rgba(10, 12, 20, 1)'");
+    expect(bar).not.toContain('GlassView');
+    expect(bar).not.toContain('blur(28px)');
+    const html = read('app', '+html.tsx');
+    expect(html).toContain('[data-headerglass]');
+    expect(html).toContain('blur(26px) saturate(140%)');
+    expect(html).toContain('rgba(10, 12, 20, 0.630)');
+    expect(html).toContain('mix-blend-mode: screen');
+    expect(html).toContain('inset 0 0 0 0.5px rgba(255, 255, 255, 0.070)');
+    expect(html).toContain('background: rgba(10, 12, 20, 1.000)');
   });
 
   it('hands Today its header instead of drawing one inside the hero', () => {
