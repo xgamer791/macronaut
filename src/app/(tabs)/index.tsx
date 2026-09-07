@@ -5,7 +5,6 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import React, { useMemo, useState } from 'react';
 import { Pressable, StyleSheet, View, useWindowDimensions } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { displayNameFromUser } from '@/services/auth/displayName';
 import { useRepos } from '@/state/AppProvider';
 import { useAuth } from '@/state/AuthProvider';
@@ -36,7 +35,6 @@ import {
   GlassHeaderBar,
   HeroMetricModule,
   ListRow,
-  MonthCalendarPopup,
   Screen,
   SectionHeader,
   Sheet,
@@ -84,7 +82,6 @@ function TodayBody() {
   const { settings } = useRepos();
   const { user } = useAuth();
   const { colors } = useTheme();
-  const insets = useSafeAreaInsets();
   const { width, height: windowHeight } = useWindowDimensions();
   const date = useUiStore((s) => s.selectedDate);
   const setSelectedDate = useUiStore((s) => s.setSelectedDate);
@@ -100,7 +97,6 @@ function TodayBody() {
   const stepsToday = useSetting<number>(`stepsToday:${date}`, 0);
   const leftSetting = useSetting<string>('heroModuleLeft', DEFAULT_HERO_LEFT);
   const rightSetting = useSetting<string>('heroModuleRight', DEFAULT_HERO_RIGHT);
-  const [calendarOpen, setCalendarOpen] = useState(false);
   const [nameOpen, setNameOpen] = useState(false);
   const [draftName, setDraftName] = useState('');
   const [pickerSlot, setPickerSlot] = useState<'left' | 'right' | null>(null);
@@ -223,7 +219,7 @@ function TodayBody() {
       safeTop={false}
       stickyHeader={
         <GlassHeaderBar>
-          <AppHeader onCalendarPress={() => setCalendarOpen(true)} />
+          <AppHeader onCalendarPress={() => router.push('/training-schedule')} />
         </GlassHeaderBar>
       }
       floatingOverlay={<ToolLauncher />}
@@ -471,17 +467,6 @@ function TodayBody() {
           }}
         />
       </View>
-
-      <MonthCalendarPopup
-        visible={calendarOpen}
-        selected={date}
-        top={insets.top + 64}
-        onClose={() => setCalendarOpen(false)}
-        onSelect={(d) => {
-          setCalendarOpen(false);
-          setSelectedDate(d);
-        }}
-      />
     </Screen>
   );
 }

@@ -6,6 +6,7 @@ import { WeekStart } from '@/domain/types';
 import { NewActivityEntry } from '@/repositories/activityRepo';
 import { NewDiaryEntry } from '@/repositories/diaryRepo';
 import { ProfileImageKind, ProfilePatch } from '@/repositories/profileRepo';
+import { TrainingScheduleDayInput } from '@/repositories/trainingScheduleRepo';
 import { DiaryEntry, MealCategory } from '@/repositories/types';
 import { useRepos } from './AppProvider';
 import { useAuth } from './AuthProvider';
@@ -52,6 +53,7 @@ export const keys = {
   chatThread: (id: string) => ['chat-thread', id] as const,
   notifications: ['notifications'] as const,
   fasting: ['fasting'] as const,
+  trainingSchedule: (from: DayKey, to: DayKey) => ['training-schedule', from, to] as const,
 };
 
 export function useInvalidateDiary() {
@@ -667,6 +669,39 @@ export function useSetting<T>(key: string, fallback: T, enabled?: boolean) {
 
 export function useWeekStart(): WeekStart {
   return useSetting<WeekStart>('weekStart', 'monday').data ?? 'monday';
+}
+
+export function useTrainingSchedule(from: DayKey, to: DayKey) {
+  const { signedIn } = useAuth();
+  const { trainingSchedule } = useRepos();
+  return useQuery({
+    queryKey: keys.trainingSchedule(from, to),
+    queryFn: () => trainingSchedule.range(from, to),
+    enabled: signedIn,
+  });
+}
+
+function useInvalidateTrainingSchedule() {
+  const qc = useQueryClient();
+  return () => qc.invalidateQueries({ queryKey: ['training-schedule'] });
+}
+
+export function useSaveTrainingScheduleDay() {
+  const { trainingSchedule } = useRepos();
+  const invalidate = useInvalidateTrainingSchedule();
+  return useMutation({
+    mutationFn: (day: TrainingScheduleDayInput) => trainingSchedule.save(day),
+    onSuccess: invalidate,
+  });
+}
+
+export function useRemoveTrainingScheduleDay() {
+  const { trainingSchedule } = useRepos();
+  const invalidate = useInvalidateTrainingSchedule();
+  return useMutation({
+    mutationFn: (date: DayKey) => trainingSchedule.remove(date),
+    onSuccess: invalidate,
+  });
 }
 
 export function useMealCategories() {

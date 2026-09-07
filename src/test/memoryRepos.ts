@@ -25,6 +25,7 @@ import { FitnessGroup, GroupRepo } from '@/repositories/groupRepo';
 import { ProfilePhoto, PhotoComment, PhotoRepo, PhotoThread } from '@/repositories/photoRepo';
 import { ProfilePost, ProfileRepo, ProfileView } from '@/repositories/profileRepo';
 import { AppearanceMode, OnboardingProfile, SettingsRepo } from '@/repositories/settingsRepo';
+import { TrainingScheduleDay, TrainingScheduleRepo } from '@/repositories/trainingScheduleRepo';
 import {
   ActivityEntry,
   CachedFood,
@@ -895,6 +896,33 @@ export function createMemoryNotificationRepo(): NotificationRepo {
   };
 }
 
+export function createMemoryTrainingScheduleRepo(): TrainingScheduleRepo {
+  const days: TrainingScheduleDay[] = [];
+  return {
+    async range(from, to) {
+      return clone(days.filter((day) => day.date >= from && day.date <= to));
+    },
+    async save(input) {
+      const index = days.findIndex((day) => day.date === input.date);
+      const previous = index >= 0 ? days[index] : undefined;
+      const timestamp = nowIso();
+      const day: TrainingScheduleDay = {
+        ...clone(input),
+        id: previous?.id ?? newId(),
+        createdAt: previous?.createdAt ?? timestamp,
+        updatedAt: timestamp,
+      };
+      if (index >= 0) days[index] = day;
+      else days.push(day);
+      return clone(day);
+    },
+    async remove(date) {
+      const index = days.findIndex((day) => day.date === date);
+      if (index >= 0) days.splice(index, 1);
+    },
+  };
+}
+
 export function createMemoryFastingRepo(): FastingRepo {
   let current: FastingState = {
     activeStartAt: null,
@@ -967,5 +995,6 @@ export function createMemoryRepos(): Repos {
     chats: createMemoryChatRepo(),
     notifications: createMemoryNotificationRepo(),
     fasting: createMemoryFastingRepo(),
+    trainingSchedule: createMemoryTrainingScheduleRepo(),
   };
 }

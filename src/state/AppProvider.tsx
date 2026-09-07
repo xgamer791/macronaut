@@ -20,6 +20,10 @@ import { createNotificationRepo, NotificationRepo } from '@/repositories/notific
 import { createPhotoRepo, PhotoRepo } from '@/repositories/photoRepo';
 import { createProfileRepo, ProfileRepo } from '@/repositories/profileRepo';
 import { createSettingsRepo, SettingsRepo } from '@/repositories/settingsRepo';
+import {
+  createTrainingScheduleRepo,
+  TrainingScheduleRepo,
+} from '@/repositories/trainingScheduleRepo';
 import { getConvexClient } from '@/services/convex/client';
 
 export interface Repos {
@@ -39,6 +43,7 @@ export interface Repos {
   chats: ChatRepo;
   notifications: NotificationRepo;
   fasting: FastingRepo;
+  trainingSchedule: TrainingScheduleRepo;
 }
 
 const ReposContext = createContext<Repos | null>(null);
@@ -64,6 +69,7 @@ export function createRepos(convex: ConvexCaller): Repos {
     chats: createChatRepo(convex),
     notifications: createNotificationRepo(convex),
     fasting: createFastingRepo(convex),
+    trainingSchedule: createTrainingScheduleRepo(convex),
   };
 }
 

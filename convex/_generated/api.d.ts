@@ -37,6 +37,7 @@ import type * as profiles from '../profiles.js';
 import type * as recipes from '../recipes.js';
 import type * as savedMeals from '../savedMeals.js';
 import type * as settings from '../settings.js';
+import type * as trainingSchedule from '../trainingSchedule.js';
 
 /**
  * A utility for referencing Convex functions in your app's API.
@@ -75,6 +76,7 @@ declare const fullApi: ApiFromModules<{
   recipes: typeof recipes;
   savedMeals: typeof savedMeals;
   settings: typeof settings;
+  trainingSchedule: typeof trainingSchedule;
 }>;
 export declare const api: FilterApi<typeof fullApi, FunctionReference<any, 'public'>>;
 export declare const internal: FilterApi<typeof fullApi, FunctionReference<any, 'internal'>>;

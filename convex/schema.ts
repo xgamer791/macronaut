@@ -13,6 +13,7 @@ import {
   profileFields,
   profilePhotoFields,
   profilePostFields,
+  scheduledWorkoutValidator,
 } from './lib/validators';
 
 /**
@@ -75,6 +76,18 @@ export default defineSchema({
     userId: v.id('users'),
     date: v.string(),
     dayType: dayTypeValidator,
+  }).index('by_user_date', ['userId', 'date']),
+
+  /** One private, free-form training plan per calendar day. Workouts are
+   * embedded because the day is always edited and rendered as one schedule. */
+  trainingScheduleDays: defineTable({
+    userId: v.id('users'),
+    date: v.string(),
+    label: v.string(),
+    notes: v.optional(v.string()),
+    workouts: v.array(scheduledWorkoutValidator),
+    createdAt: v.string(),
+    updatedAt: v.string(),
   }).index('by_user_date', ['userId', 'date']),
 
   /** Only user-created meals live here; the four built-ins are constants. */

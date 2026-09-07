@@ -67,6 +67,16 @@ export const activitySourceValidator = v.union(
   v.literal('healthkit'),
 );
 
+/** Free-form work planned for one day. The labels deliberately have no enum:
+ * a runner, climber, lifter, swimmer, or team-sport athlete can all describe
+ * their own training without being forced through a preset taxonomy. */
+export const scheduledWorkoutValidator = v.object({
+  id: v.string(),
+  label: v.string(),
+  macroLabel: v.optional(v.string()),
+  sets: v.optional(v.number()),
+});
+
 /** Items inside a saved meal or recipe. Embedded in the parent document
  * because they are always read and written together. */
 export const collectionItemValidator = v.object({

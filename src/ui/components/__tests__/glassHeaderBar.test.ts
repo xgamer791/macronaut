@@ -9,6 +9,7 @@ const bar = read('ui', 'components', 'GlassHeaderBar.tsx');
 const screen = read('ui', 'components', 'Screen.tsx');
 const tabBar = read('ui', 'components', 'TabBar.tsx');
 const today = read('app', '(tabs)', 'index.tsx');
+const trainingSchedule = read('app', 'training-schedule.tsx');
 const ownProfile = read('app', 'profile.tsx');
 const publicProfile = read('app', 'u', '[handle].tsx');
 const profileHeader = read('ui', 'components', 'ProfileHeader.tsx');
@@ -46,7 +47,7 @@ describe('sticky chrome headers', () => {
   });
 
   it('drops the calendar clear of the bar', () => {
-    expect(today).toContain('top={insets.top + 64}');
+    expect(trainingSchedule).toContain('top={insets.top + 62}');
   });
 
   it('lifts the chrome off both profile banners exactly once', () => {
