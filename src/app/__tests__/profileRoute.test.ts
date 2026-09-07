@@ -44,6 +44,16 @@ describe('profile routes', () => {
     expect(publicPage).not.toContain('pickImage');
   });
 
+  it('renders the display name at 36px, not the 40px hero token', () => {
+    const header = fs.readFileSync(
+      path.join(srcDir, 'ui', 'components', 'ProfileHeader.tsx'),
+      'utf8',
+    );
+    expect(header).toContain('variant="hero"');
+    expect(header).toContain('fontSize: 36');
+    expect(header).toContain('lineHeight: 42');
+  });
+
   it('shows followers, following and posts under the name, not the athlete row', () => {
     const header = fs.readFileSync(
       path.join(srcDir, 'ui', 'components', 'ProfileHeader.tsx'),
