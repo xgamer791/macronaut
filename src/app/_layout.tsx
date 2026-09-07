@@ -73,6 +73,7 @@ function ThemedApp() {
         <Stack.Screen name="chats" />
         <Stack.Screen name="new-chat" options={{ presentation: 'modal' }} />
         <Stack.Screen name="chat/[id]" />
+        <Stack.Screen name="notifications" />
         {/* Reachable signed-out: the create-account legal gate links to both,
             and a shared public profile link is opened by people with no
             account at all. */}

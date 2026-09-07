@@ -15,6 +15,7 @@ import { createFoodRepo, FoodRepo } from '@/repositories/foodRepo';
 import { createGoalRepo, GoalRepo } from '@/repositories/goalRepo';
 import { createGroupRepo, GroupRepo } from '@/repositories/groupRepo';
 import { createHistoryRepo, HistoryRepo } from '@/repositories/historyRepo';
+import { createNotificationRepo, NotificationRepo } from '@/repositories/notificationRepo';
 import { createPhotoRepo, PhotoRepo } from '@/repositories/photoRepo';
 import { createProfileRepo, ProfileRepo } from '@/repositories/profileRepo';
 import { createSettingsRepo, SettingsRepo } from '@/repositories/settingsRepo';
@@ -35,6 +36,7 @@ export interface Repos {
   groups: GroupRepo;
   account: AccountRepo;
   chats: ChatRepo;
+  notifications: NotificationRepo;
 }
 
 const ReposContext = createContext<Repos | null>(null);
@@ -58,6 +60,7 @@ export function createRepos(convex: ConvexCaller): Repos {
     groups: createGroupRepo(convex),
     account: createAccountRepo(convex),
     chats: createChatRepo(convex),
+    notifications: createNotificationRepo(convex),
   };
 }
 

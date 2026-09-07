@@ -5,6 +5,7 @@ import { mutation, query, type MutationCtx, type QueryCtx } from './_generated/s
 import { nowIso, requireOwned, requireUserId } from './lib/auth';
 import { firstFreeHandle, handleSeed, isValidHandle, normalizeHandle } from './lib/handles';
 import { profileEditableFields } from './lib/validators';
+import { addFriendRequestNotification, removeFriendRequestNotification } from './notifications';
 
 /** Caps on the free text a profile carries. Enforced here because the server
  * is the only place that has to hold: a public profile is readable by people
@@ -405,8 +406,10 @@ export const setFollow = mutation({
         followeeId: row.userId,
         createdAt: nowIso(),
       });
+      await addFriendRequestNotification(ctx, row.userId, userId);
     } else if (!follow && existing) {
       await ctx.db.delete(existing._id);
+      await removeFriendRequestNotification(ctx, row.userId, userId);
     }
 
     return profileView(ctx, row, { isOwner: false, viewerId: userId });

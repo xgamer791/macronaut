@@ -19,6 +19,7 @@ import { DiaryRepo, NewDiaryEntry } from '@/repositories/diaryRepo';
 import { FoodRepo, NewCustomFood } from '@/repositories/foodRepo';
 import { GoalRepo } from '@/repositories/goalRepo';
 import { FrequentFood, HistoryRepo, RecentFood } from '@/repositories/historyRepo';
+import { AppNotification, NotificationRepo } from '@/repositories/notificationRepo';
 import { FitnessGroup, GroupRepo } from '@/repositories/groupRepo';
 import { ProfilePhoto, PhotoComment, PhotoRepo, PhotoThread } from '@/repositories/photoRepo';
 import { ProfilePost, ProfileRepo, ProfileView } from '@/repositories/profileRepo';
@@ -867,6 +868,22 @@ export function createMemoryChatRepo(): ChatRepo {
   };
 }
 
+export function createMemoryNotificationRepo(): NotificationRepo {
+  const items: AppNotification[] = [];
+  return {
+    async list() {
+      return { items: clone(items), unreadCount: items.filter((item) => !item.read).length };
+    },
+    async markRead(id) {
+      const item = items.find((row) => row.id === id);
+      if (item) item.read = true;
+    },
+    async markAllRead() {
+      for (const item of items) item.read = true;
+    },
+  };
+}
+
 /** Deletion is a server concern (convex/account.ts, covered by
  * tests/convex/isolation.test.ts); the fakes hold their state privately, so
  * this is a no-op rather than a half-implementation. */
@@ -897,5 +914,6 @@ export function createMemoryRepos(): Repos {
     photos: createMemoryPhotoRepo(),
     groups: createMemoryGroupRepo(),
     chats: createMemoryChatRepo(),
+    notifications: createMemoryNotificationRepo(),
   };
 }

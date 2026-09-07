@@ -6,15 +6,15 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Animated, Easing, Pressable, StyleSheet, View } from 'react-native';
 import { displayNameFromUser } from '@/services/auth/displayName';
 import { useAuth } from '@/state/AuthProvider';
-import { useSetting } from '@/state/queries';
+import { useNotifications, useSetting } from '@/state/queries';
 import { isAppleWatchConnected } from '@/utils/appleHealthStatus';
-import { spacing, touchTarget } from '@/ui/theme/tokens';
+import { palette, spacing, touchTarget } from '@/ui/theme/tokens';
 import { AppText } from './AppText';
 
 const WATCH_FACE = require('../../../assets/images/header-watch.png');
 
 const ICON = '#FFFFFF';
-const NOTIFY_DOT = '#2EE66A';
+const NOTIFY_DOT = palette.accentDark;
 const WATCH_DOT = '#FF3B3B';
 const GLYPH = 22;
 const GLYPH_INSET = (touchTarget - GLYPH) / 2;
@@ -34,7 +34,7 @@ export interface AppHeaderProps {
  * Garmin-style chrome: avatar + bell on the left, add / calendar / watch on the right.
  * White icons — sits over the Today hero or any dark surface.
  */
-export function AppHeader({ onCalendarPress, notifyDot = true }: AppHeaderProps) {
+export function AppHeader({ onCalendarPress, notifyDot }: AppHeaderProps) {
   const router = useRouter();
 
   return (
@@ -117,16 +117,27 @@ export function HeaderAvatarButton() {
   );
 }
 
-export function HeaderNotifyButton({ notifyDot = true }: { notifyDot?: boolean }) {
+export function HeaderNotifyButton({ notifyDot }: { notifyDot?: boolean }) {
+  const router = useRouter();
+  const { signedIn } = useAuth();
+  const notifications = useNotifications();
+  const unreadCount = notifications.data?.unreadCount ?? 0;
+  const active = notifyDot ?? unreadCount > 0;
+
   return (
     <HeaderHit
-      accessibilityLabel="Notifications"
+      accessibilityLabel={active ? `${unreadCount || 'New'} unread notifications` : 'Notifications'}
       onPress={() => {
         void Haptics.selectionAsync();
+        router.push(signedIn ? '/notifications' : '/login');
       }}
-      dot={notifyDot}
+      dot={active}
     >
-      <Ionicons name="notifications" size={GLYPH} color={ICON} />
+      <Ionicons
+        name={active ? 'notifications' : 'notifications-outline'}
+        size={GLYPH}
+        color={ICON}
+      />
     </HeaderHit>
   );
 }

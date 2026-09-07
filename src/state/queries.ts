@@ -49,6 +49,7 @@ export const keys = {
   chats: ['chats'] as const,
   chatPeople: (search: string) => ['chat-people', search] as const,
   chatThread: (id: string) => ['chat-thread', id] as const,
+  notifications: ['notifications'] as const,
 };
 
 export function useInvalidateDiary() {
@@ -471,9 +472,47 @@ export function useSendChatMessage() {
 export function useMarkChatRead() {
   const { chats } = useRepos();
   const invalidate = useInvalidateChats();
+  const invalidateNotifications = useInvalidateNotifications();
   return useMutation({
     mutationFn: (id: string) => chats.markRead(id),
-    onSuccess: (_nothing, id) => invalidate(id),
+    onSuccess: (_nothing, id) => {
+      invalidate(id);
+      invalidateNotifications();
+    },
+  });
+}
+
+function useInvalidateNotifications() {
+  const qc = useQueryClient();
+  return () => qc.invalidateQueries({ queryKey: keys.notifications });
+}
+
+export function useNotifications() {
+  const { signedIn } = useAuth();
+  const { notifications } = useRepos();
+  return useQuery({
+    queryKey: keys.notifications,
+    queryFn: () => notifications.list(),
+    enabled: signedIn,
+    refetchInterval: 5_000,
+  });
+}
+
+export function useMarkNotificationRead() {
+  const { notifications } = useRepos();
+  const invalidate = useInvalidateNotifications();
+  return useMutation({
+    mutationFn: (id: string) => notifications.markRead(id),
+    onSuccess: invalidate,
+  });
+}
+
+export function useMarkAllNotificationsRead() {
+  const { notifications } = useRepos();
+  const invalidate = useInvalidateNotifications();
+  return useMutation({
+    mutationFn: () => notifications.markAllRead(),
+    onSuccess: invalidate,
   });
 }
 
