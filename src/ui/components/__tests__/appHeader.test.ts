@@ -5,7 +5,7 @@ const header = fs.readFileSync(path.join(__dirname, '..', 'AppHeader.tsx'), 'utf
 
 describe('Today header hamburger', () => {
   it('puts a menu control on the left and keeps add and calendar on the right', () => {
-    expect(header).toContain("name=\"menu-outline\"");
+    expect(header).toContain('name="menu-outline"');
     expect(header).toContain('const MENU = 30');
     expect(header).toContain('size={MENU}');
     expect(header).toContain('Open menu');
@@ -37,5 +37,11 @@ describe('Today header hamburger', () => {
     expect(header).not.toContain("href: '/chats'");
     expect(header).not.toContain("href: '/notifications'");
     expect(header).not.toContain("href: '/profile'");
+  });
+
+  it('stretches the drawer across the full viewport width', () => {
+    expect(header).toContain('const panelWidth = width || 390');
+    expect(header).not.toContain('Math.min(Math.round((width || 390) * 0.86), 360)');
+    expect(header).toContain('width: panelWidth');
   });
 });

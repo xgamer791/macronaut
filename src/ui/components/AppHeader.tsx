@@ -98,7 +98,7 @@ function HeaderMenu({ visible, onClose }: { visible: boolean; onClose: () => voi
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
-  const panelWidth = Math.min(Math.round((width || 390) * 0.86), 360);
+  const panelWidth = width || 390;
   const [mounted, setMounted] = useState(visible);
   const [prevVisible, setPrevVisible] = useState(visible);
   const [webOpen, setWebOpen] = useState(false);
@@ -142,8 +142,7 @@ function HeaderMenu({ visible, onClose }: { visible: boolean; onClose: () => voi
 
   // The drawer is a Modal, so it is portalled clear of the page and is never
   // pushed itself. `open` is what actually drives it on each platform, so the
-  // page steps aside on the same frame — by the drawer's width, not the
-  // screen's.
+  // page steps aside on the same frame by the full-width drawer's width.
   const open = Platform.OS === 'web' ? webOpen : visible;
   usePushWhileOpen(open, { x: panelWidth });
 
