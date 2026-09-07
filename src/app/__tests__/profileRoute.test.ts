@@ -66,15 +66,14 @@ describe('profile routes', () => {
     expect(read(path.join('u', '[handle].tsx'))).toContain('Follow');
   });
 
-  it('puts notifications then the home avatar on the profile banner', () => {
+  it('puts notifications on the profile banner, not chats or the home avatar', () => {
     const header = fs.readFileSync(
       path.join(srcDir, 'ui', 'components', 'ProfileHeader.tsx'),
       'utf8',
     );
     expect(header).toContain('HeaderNotifyButton');
-    expect(header).toContain('HeaderAvatarButton');
-    const menu = header.slice(header.indexOf('styles.menu'));
-    expect(menu.indexOf('HeaderNotifyButton')).toBeLessThan(menu.indexOf('HeaderAvatarButton'));
+    expect(header).not.toContain('HeaderChatsButton');
+    expect(header).not.toContain('HeaderAvatarButton');
     const today = fs.readFileSync(path.join(srcDir, 'ui', 'components', 'AppHeader.tsx'), 'utf8');
     expect(today).toContain('export function HeaderAvatarButton');
     expect(today).toContain('export function HeaderNotifyButton');

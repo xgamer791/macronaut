@@ -48,9 +48,9 @@ describe('chat routes', () => {
       'utf8',
     );
     const profileMenu = profileHeader.slice(profileHeader.indexOf('styles.menu'));
-    expect(profileMenu.indexOf('<HeaderChatsButton')).toBeLessThan(
-      profileMenu.indexOf('<HeaderNotifyButton'),
-    );
+    expect(profileMenu).toContain('<HeaderNotifyButton');
+    expect(profileMenu).not.toContain('<HeaderChatsButton');
+    expect(profileMenu).not.toContain('<HeaderAvatarButton');
   });
 
   it('keeps a plus action and searches contacts and Macronaut people', () => {
