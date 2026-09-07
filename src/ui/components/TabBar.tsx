@@ -8,7 +8,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { displayNameFromUser } from '@/services/auth/displayName';
 import { useAuth } from '@/state/AuthProvider';
-import { useNotifications, useSetting } from '@/state/queries';
+import { useMyProfile, useNotifications, useSetting } from '@/state/queries';
 import { useTheme } from '@/ui/theme/ThemeProvider';
 import { palette, spacing } from '@/ui/theme/tokens';
 import { AppText } from './AppText';
@@ -64,8 +64,9 @@ const ITEMS: TabItem[] = [
   { kind: 'profile' },
 ];
 
-const ICON = 24;
-const AVATAR = 26;
+const ICON = 27;
+/** Same circular picture the Today header used to show. */
+const AVATAR = 32;
 
 /** Bottom tab bar. Icons only — labels stay on the accessibility name. */
 export function TabBar({ state, navigation }: BottomTabBarProps) {
@@ -176,13 +177,14 @@ function ProfileTab() {
   const router = useRouter();
   const { colors } = useTheme();
   const { user } = useAuth();
+  const profile = useMyProfile();
   const savedName = useSetting<string>('displayName', '');
-  const displayName = savedName.data || displayNameFromUser(user);
+  const displayName = profile.data?.displayName || savedName.data || displayNameFromUser(user);
   const initials = useMemo(
     () => initialsFrom(displayName, user?.email),
     [displayName, user?.email],
   );
-  const avatarUri = user?.image?.trim() || undefined;
+  const avatarUri = profile.data?.avatarUrl?.trim() || user?.image?.trim() || undefined;
 
   return (
     <Pressable
