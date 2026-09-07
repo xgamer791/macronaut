@@ -205,15 +205,6 @@ function TrainingScheduleScreen() {
 
   const existingPlan = editingDate ? plans.get(editingDate) : undefined;
   const busy = saveDay.isPending || removeDay.isPending || setRepeatDay.isPending;
-  const repeatSummary = repeatDays.isLoading
-    ? 'Loading repeat settings…'
-    : repeatDays.isError
-      ? 'Repeat settings could not be loaded.'
-      : repeatCount === 7
-        ? 'All seven days repeat every week.'
-        : repeatCount > 0
-          ? `${repeatCount} of 7 days repeat every week.`
-          : 'Use this seven-day schedule every week.';
 
   return (
     <Screen
@@ -306,11 +297,10 @@ function TrainingScheduleScreen() {
               ))}
               <View style={styles.masterRepeat}>
                 <RepeatSettingRow
-                  title="Repeat every day"
-                  description={repeatSummary}
+                  title="Repeat every week"
                   value={allDaysRepeat}
                   disabled={repeatDays.isLoading || repeatDays.isError || setRepeatAll.isPending}
-                  accessibilityLabel="Repeat every training day each week"
+                  accessibilityLabel="Repeat every week"
                   onValueChange={(enabled) => void changeAllRepeats(enabled)}
                 />
                 {repeatError ? (
@@ -559,7 +549,7 @@ function RepeatSettingRow({
   onValueChange,
 }: {
   title: string;
-  description: string;
+  description?: string;
   value: boolean;
   disabled?: boolean;
   accessibilityLabel: string;
@@ -569,9 +559,11 @@ function RepeatSettingRow({
     <View style={styles.repeatRow}>
       <View style={styles.repeatCopy}>
         <AppText weight="700">{title}</AppText>
-        <AppText variant="caption" tone="muted">
-          {description}
-        </AppText>
+        {description ? (
+          <AppText variant="caption" tone="muted">
+            {description}
+          </AppText>
+        ) : null}
       </View>
       <ScheduleToggle
         value={value}
