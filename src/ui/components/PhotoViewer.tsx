@@ -1,4 +1,4 @@
-import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { Feather, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
 import React, { useState } from 'react';
@@ -21,11 +21,10 @@ import { AppText } from './AppText';
 import { Button } from './Button';
 import { TextField } from './TextField';
 
-const LIKE_BLUE = '#1877F2';
 const LOVE_RED = '#F0284F';
 const ON_PHOTO = '#FFFFFF';
-/** 5px tighter than xl so like / comment / share sit closer. */
-const ACTION_GAP = spacing.xl - 5;
+/** Keep the three actions visually grouped while preserving 44px tap targets. */
+const ACTION_GAP = spacing.sm;
 
 export interface PhotoViewerProps {
   photo: ProfilePhoto | null;
@@ -173,29 +172,27 @@ export function PhotoViewer({
             <View style={styles.actions}>
               <Engage
                 count={likeCount}
+                focusColor={colors.accent}
                 label={liked ? 'Unlike photo' : 'Like photo'}
                 onPress={tapLike}
               >
-                <MaterialCommunityIcons
-                  name={liked ? 'thumb-up' : 'thumb-up-outline'}
-                  size={22}
-                  color={liked ? LIKE_BLUE : ON_PHOTO}
-                />
+                <Feather name="thumbs-up" size={23} color={liked ? colors.accent : ON_PHOTO} />
               </Engage>
               <Engage
                 count={comments.length}
+                focusColor={colors.accent}
                 label="Comment on photo"
                 onPress={tapComment}
               >
                 <Ionicons name="chatbubble-outline" size={22} color={ON_PHOTO} />
               </Engage>
-              <Engage label="Share photo" onPress={onShare}>
+              <Engage focusColor={colors.accent} label="Share photo" onPress={onShare}>
                 <Ionicons name="arrow-redo-outline" size={22} color={ON_PHOTO} />
               </Engage>
             </View>
             {likeCount > 0 ? (
               <View style={styles.badges} accessibilityLabel={`${compactCount(likeCount)} likes`}>
-                <View style={[styles.badge, { backgroundColor: LIKE_BLUE, zIndex: 2 }]}>
+                <View style={[styles.badge, { backgroundColor: colors.accent, zIndex: 2 }]}>
                   <MaterialCommunityIcons name="thumb-up" size={10} color={ON_PHOTO} />
                 </View>
                 {likeCount > 1 ? (
@@ -294,21 +291,31 @@ export function PhotoViewer({
 function Engage({
   children,
   count,
+  focusColor,
   label,
   onPress,
 }: {
   children: React.ReactNode;
   count?: number;
+  focusColor: string;
   label: string;
   onPress: () => void;
 }) {
+  const [focused, setFocused] = useState(false);
+
   return (
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={label}
       onPress={onPress}
+      onFocus={() => setFocused(true)}
+      onBlur={() => setFocused(false)}
       hitSlop={6}
-      style={styles.engage}
+      style={[
+        styles.engage,
+        focused && styles.engageFocused,
+        focused && Platform.OS === 'web' ? ({ outlineColor: focusColor } as object) : null,
+      ]}
     >
       {children}
       {count !== undefined && count > 0 ? (
@@ -437,6 +444,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
+    borderRadius: spacing.xs,
+  },
+  engageFocused: {
+    ...Platform.select({
+      web: {
+        outlineStyle: 'solid',
+        outlineWidth: 2,
+        outlineOffset: 2,
+      } as object,
+      default: {},
+    }),
   },
   badges: {
     flexDirection: 'row',

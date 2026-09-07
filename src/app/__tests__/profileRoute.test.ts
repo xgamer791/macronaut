@@ -124,10 +124,13 @@ describe('profile routes', () => {
     expect(viewer).toContain('Like photo');
     expect(viewer).toContain('Comment on photo');
     expect(viewer).toContain('Share photo');
-    expect(viewer).toContain('thumb-up-outline');
-    expect(viewer).toContain("name={liked ? 'thumb-up' : 'thumb-up-outline'}");
-    expect(viewer).not.toContain('thumbs-up');
-    expect(viewer).toContain('ACTION_GAP = spacing.xl - 5');
+    expect(viewer).toContain('<Feather name="thumbs-up"');
+    expect(viewer).not.toContain('thumb-up-outline');
+    expect(viewer).toContain('liked ? colors.accent : ON_PHOTO');
+    expect(viewer).toContain('backgroundColor: colors.accent');
+    expect(viewer).toContain('focusColor={colors.accent}');
+    expect(viewer).not.toContain('LIKE_BLUE');
+    expect(viewer).toContain('ACTION_GAP = spacing.sm');
     expect(viewer).toContain("animationType=\"slide\"");
     expect(viewer).toContain("backgroundColor: '#000000'");
   });
