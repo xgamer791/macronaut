@@ -1,16 +1,16 @@
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
-import { useRouter, type Href } from 'expo-router';
+import { usePathname, useRouter, type Href } from 'expo-router';
 import type { BottomTabBarProps } from 'expo-router/js-tabs';
 import React, { useMemo } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { displayNameFromUser } from '@/services/auth/displayName';
 import { useAuth } from '@/state/AuthProvider';
-import { useMyProfile, useNotifications, useSetting } from '@/state/queries';
+import { useMyProfile, useSetting } from '@/state/queries';
 import { useTheme } from '@/ui/theme/ThemeProvider';
-import { palette, spacing } from '@/ui/theme/tokens';
+import { spacing } from '@/ui/theme/tokens';
 import { AppText } from './AppText';
 
 type IconName = keyof typeof Ionicons.glyphMap;
@@ -30,11 +30,10 @@ type TabItem =
       label: string;
       icon: IconName;
       iconActive: IconName;
-      notify?: boolean;
     }
   | { kind: 'profile' };
 
-/** Today, chats, friends, notifications, then the account picture. Meals,
+/** Today, chats, friends, groups, then the account picture. Meals,
  * Progress and Settings stay registered as hidden tabs so existing links work. */
 const ITEMS: TabItem[] = [
   { kind: 'tab', name: 'index', label: 'Today', icon: 'home-outline', iconActive: 'home' },
@@ -54,11 +53,10 @@ const ITEMS: TabItem[] = [
   },
   {
     kind: 'link',
-    href: '/notifications',
-    label: 'Notifications',
-    icon: 'notifications-outline',
-    iconActive: 'notifications',
-    notify: true,
+    href: '/groups',
+    label: 'Groups',
+    icon: 'people-circle-outline',
+    iconActive: 'people-circle',
   },
   { kind: 'profile' },
 ];
@@ -72,8 +70,7 @@ export function TabBar({ state, navigation }: BottomTabBarProps) {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const notifications = useNotifications();
-  const unread = (notifications.data?.unreadCount ?? 0) > 0;
+  const pathname = usePathname();
 
   return (
     <View
@@ -92,16 +89,12 @@ export function TabBar({ state, navigation }: BottomTabBarProps) {
         }
 
         if (item.kind === 'link') {
-          const active = item.notify && unread;
+          const active = pathname === item.href;
           return (
             <Pressable
               key={item.label}
               accessibilityRole="tab"
-              accessibilityLabel={
-                item.notify && unread
-                  ? `${notifications.data?.unreadCount || 'New'} unread notifications`
-                  : item.label
-              }
+              accessibilityLabel={item.label}
               onPress={() => {
                 void Haptics.selectionAsync();
                 router.push(item.href);
@@ -114,7 +107,6 @@ export function TabBar({ state, navigation }: BottomTabBarProps) {
                   size={ICON}
                   color={active ? colors.accent : colors.textMuted}
                 />
-                {active ? <View style={styles.dot} /> : null}
               </View>
             </Pressable>
           );
@@ -259,14 +251,5 @@ const styles = StyleSheet.create({
     fontSize: 11,
     lineHeight: 13,
     fontWeight: '700',
-  },
-  dot: {
-    position: 'absolute',
-    top: -1,
-    right: -1,
-    width: 7,
-    height: 7,
-    borderRadius: 3.5,
-    backgroundColor: palette.accentDark,
   },
 });

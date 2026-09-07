@@ -16,11 +16,12 @@ describe('chat routes', () => {
     expect(fs.existsSync(path.join(appDir, 'chat', '[id].tsx'))).toBe(true);
   });
 
-  it('opens chats from the tab bar, and before notifications on profiles', () => {
+  it('opens chats from the tab bar, while notifications remain on profiles and the header', () => {
     const tabBar = fs.readFileSync(path.join(srcDir, 'ui', 'components', 'TabBar.tsx'), 'utf8');
     expect(tabBar).toContain("href: '/chats'");
     expect(tabBar).toContain('router.push(item.href)');
-    expect(tabBar.indexOf("href: '/chats'")).toBeLessThan(tabBar.indexOf("href: '/notifications'"));
+    expect(tabBar.indexOf("href: '/chats'")).toBeLessThan(tabBar.indexOf("href: '/groups'"));
+    expect(tabBar).not.toContain("href: '/notifications'");
 
     const appHeader = fs.readFileSync(
       path.join(srcDir, 'ui', 'components', 'AppHeader.tsx'),
@@ -28,6 +29,7 @@ describe('chat routes', () => {
     );
     expect(appHeader).not.toContain('<HeaderChatsButton');
     expect(appHeader).not.toContain('<HeaderAvatarButton');
+    expect(appHeader).toContain('<HeaderNotifyButton iconColor={icon} />');
 
     const profileHeader = fs.readFileSync(
       path.join(srcDir, 'ui', 'components', 'ProfileHeader.tsx'),

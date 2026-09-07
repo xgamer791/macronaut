@@ -24,13 +24,13 @@ const PLUS = 30;
 const MENU_EDGE_GAP = 20;
 
 export interface AppHeaderProps {
-  /** Calendar icon on the right cluster. */
+  /** Calendar icon in the right cluster, immediately before notifications. */
   onCalendarPress?: () => void;
 }
 
 /**
- * Garmin-style chrome: hamburger on the left, add / calendar on the right.
- * Profile, chats and notifications live in the tab bar, not here.
+ * Garmin-style chrome: hamburger on the left, add / calendar / bell on the right.
+ * Notifications stay reachable without spending a primary tab-bar slot.
  */
 export function AppHeader({ onCalendarPress }: AppHeaderProps) {
   const router = useRouter();
@@ -72,6 +72,8 @@ export function AppHeader({ onCalendarPress }: AppHeaderProps) {
         >
           <Ionicons name="calendar-outline" size={GLYPH} color={icon} />
         </HeaderHit>
+
+        <HeaderNotifyButton iconColor={icon} />
       </View>
 
       <HeaderMenu visible={menuOpen} onClose={() => setMenuOpen(false)} />
@@ -276,7 +278,13 @@ export function HeaderAvatarButton() {
   );
 }
 
-export function HeaderNotifyButton({ notifyDot }: { notifyDot?: boolean }) {
+export function HeaderNotifyButton({
+  notifyDot,
+  iconColor = ICON,
+}: {
+  notifyDot?: boolean;
+  iconColor?: string;
+}) {
   const router = useRouter();
   const { signedIn } = useAuth();
   const notifications = useNotifications();
@@ -295,7 +303,7 @@ export function HeaderNotifyButton({ notifyDot }: { notifyDot?: boolean }) {
       <Ionicons
         name={active ? 'notifications' : 'notifications-outline'}
         size={GLYPH}
-        color={ICON}
+        color={iconColor}
       />
     </HeaderHit>
   );

@@ -16,7 +16,10 @@ describe('photo wall', () => {
     const pub = await owner.repos.photos.add(await storedImage(t, 'pub'), 'Sunrise', true);
     const priv = await owner.repos.photos.add(await storedImage(t, 'priv'), 'Private set', false);
     expect(pub.caption).toBe('Sunrise');
-    expect((await owner.repos.photos.mine()).map((p) => p.caption)).toEqual(['Private set', 'Sunrise']);
+    expect((await owner.repos.photos.mine()).map((p) => p.caption)).toEqual([
+      'Private set',
+      'Sunrise',
+    ]);
 
     const wall = await stranger.repos.photos.forHandle('owner_one');
     expect(wall?.isOwner).toBe(false);
@@ -35,8 +38,16 @@ describe('photo wall', () => {
     const t = backend();
     const owner = await signIn(t, 'owner@example.com');
     const stranger = await signIn(t, 'stranger@example.com');
-    await owner.repos.profile.update({ handle: 'owner_one', displayName: 'Holly Ky', isPublic: true });
-    await stranger.repos.profile.update({ handle: 'guest_one', displayName: 'Alex', isPublic: true });
+    await owner.repos.profile.update({
+      handle: 'owner_one',
+      displayName: 'Holly Ky',
+      isPublic: true,
+    });
+    await stranger.repos.profile.update({
+      handle: 'guest_one',
+      displayName: 'Alex',
+      isPublic: true,
+    });
     const photo = await owner.repos.photos.add(await storedImage(t), 'Sunrise', true);
 
     const liked = await stranger.repos.photos.setLike(photo.id, true);
@@ -168,6 +179,57 @@ describe('fitness groups', () => {
     expect(await stranger.repos.groups.mine()).toEqual([]);
   });
 
+  it('discovers public non-member groups local-first and lets owners manage details', async () => {
+    const t = backend();
+    const viewer = await signIn(t, 'viewer@example.com');
+    const localOwner = await signIn(t, 'local@example.com');
+    const remoteOwner = await signIn(t, 'remote@example.com');
+    await viewer.repos.profile.update({
+      handle: 'viewer',
+      location: 'Austin, TX',
+      primarySport: 'Running',
+      isPublic: true,
+    });
+
+    const remote = await remoteOwner.repos.groups.create({
+      name: 'Big lifting club',
+      sport: 'Strength',
+      location: 'Denver, CO',
+    });
+    const local = await localOwner.repos.groups.create({
+      name: 'Austin sunrise miles',
+      sport: 'Running',
+      location: 'Austin, TX',
+      description: 'Easy miles before work',
+    });
+
+    const discovery = await viewer.repos.groups.discover();
+    expect(discovery.viewerLocation).toBe('Austin, TX');
+    expect(discovery.viewerSport).toBe('Running');
+    expect(discovery.groups.map((group) => group.id)).toEqual([local.id, remote.id]);
+
+    await viewer.repos.groups.join(local.id);
+    expect((await viewer.repos.groups.discover()).groups.map((group) => group.id)).toEqual([
+      remote.id,
+    ]);
+
+    const updated = await localOwner.repos.groups.update(local.id, {
+      name: 'Austin social miles',
+      sport: 'Running',
+      location: 'Round Rock, TX',
+      description: 'All paces welcome',
+      isPublic: true,
+    });
+    expect(updated).toMatchObject({
+      name: 'Austin social miles',
+      location: 'Round Rock, TX',
+      description: 'All paces welcome',
+    });
+    await expect(
+      viewer.repos.groups.update(local.id, { name: 'Hijacked', isPublic: true }),
+    ).rejects.toThrow(/only the owner/i);
+  });
+
   it('deleting an account takes owned groups, memberships and wall photos', async () => {
     const t = backend();
     const owner = await signIn(t, 'owner@example.com');
@@ -184,6 +246,8 @@ describe('fitness groups', () => {
     expect(await owner.repos.groups.mine()).toEqual([]);
     expect(await other.repos.groups.mine().then((g) => g.map((x) => x.name))).toEqual(['Kept']);
     expect(await t.run(async (ctx) => ctx.db.query('fitnessGroups').collect())).toHaveLength(1);
-    expect((await t.run(async (ctx) => ctx.db.query('fitnessGroups').collect()))[0]?._id).toBe(kept.id);
+    expect((await t.run(async (ctx) => ctx.db.query('fitnessGroups').collect()))[0]?._id).toBe(
+      kept.id,
+    );
   });
 });

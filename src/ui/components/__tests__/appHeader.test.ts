@@ -4,7 +4,7 @@ import path from 'node:path';
 const header = fs.readFileSync(path.join(__dirname, '..', 'AppHeader.tsx'), 'utf8');
 
 describe('Today header hamburger', () => {
-  it('puts a menu control on the left and keeps add and calendar on the right', () => {
+  it('puts a menu control on the left and keeps add, calendar, then notifications on the right', () => {
     expect(header).toContain('name="menu-outline"');
     expect(header).toContain('const MENU = 30');
     expect(header).toContain('size={MENU}');
@@ -13,6 +13,7 @@ describe('Today header hamburger', () => {
     expect(header).toContain("justifyContent: 'space-between'");
     expect(header.indexOf('menu-outline')).toBeLessThan(header.indexOf('Add food'));
     expect(header.indexOf('Add food')).toBeLessThan(header.indexOf('Open calendar'));
+    expect(header.indexOf('Open calendar')).toBeLessThan(header.indexOf('<HeaderNotifyButton'));
   });
 
   it('opens and closes on the same friends-feed curve', () => {

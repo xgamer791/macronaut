@@ -72,6 +72,14 @@ const config: ExpoConfig = {
       },
     ],
     [
+      'expo-speech-recognition',
+      {
+        microphonePermission: 'Allow Macronaut to use the microphone for voice typing in chats.',
+        speechRecognitionPermission:
+          'Allow Macronaut to turn your speech into text for chat messages.',
+      },
+    ],
+    [
       // Adds the `com.apple.developer.healthkit` entitlement, so the App ID
       // needs the HealthKit capability before a build can be signed — see
       // docs/ios-setup.md. iOS only; the web and Android builds never load the

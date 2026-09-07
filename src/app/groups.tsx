@@ -1,7 +1,27 @@
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  TextInput,
+  View,
+} from 'react-native';
+import type { FitnessGroup, NewGroup } from '@/repositories/groupRepo';
+import { useAuth } from '@/state/AuthProvider';
+import {
+  useCreateGroup,
+  useDeleteGroup,
+  useGroupDiscovery,
+  useJoinGroup,
+  useLeaveGroup,
+  useMyGroups,
+  usePublicGroups,
+  useUpdateGroup,
+} from '@/state/queries';
 import {
   AppText,
   Button,
@@ -12,32 +32,35 @@ import {
   Sheet,
   TextField,
 } from '@/ui/components';
-import type { FitnessGroup } from '@/repositories/groupRepo';
-import { useAuth } from '@/state/AuthProvider';
-import {
-  useCreateGroup,
-  useDeleteGroup,
-  useJoinGroup,
-  useLeaveGroup,
-  useMyGroups,
-  usePublicGroups,
-} from '@/state/queries';
 import { SlideScreen } from '@/ui/motion/SlideScreen';
-import { ThemeProvider, useTheme } from '@/ui/theme/ThemeProvider';
-import { radius, spacing } from '@/ui/theme/tokens';
+import { useTheme } from '@/ui/theme/ThemeProvider';
+import { radius, spacing, touchTarget, type } from '@/ui/theme/tokens';
 
-/**
- * Groups on a profile. Your own page lists every group you belong to and
- * lets you start one. Someone else's page lists the public groups they are
- * in, and you can join those.
- */
+type GroupsPage = 'for-you' | 'yours' | 'discover' | 'manage';
+
+const PAGES: { id: GroupsPage; label: string }[] = [
+  { id: 'for-you', label: 'For you' },
+  { id: 'yours', label: 'Yours' },
+  { id: 'discover', label: 'Discover' },
+  { id: 'manage', label: 'Manage' },
+];
+
+const GROUP_GRADIENTS = [
+  ['#0D8B68', '#103B3B'],
+  ['#4263EB', '#242C5B'],
+  ['#DD7A23', '#71351D'],
+  ['#8C5BD6', '#41275F'],
+  ['#C44867', '#5C273B'],
+  ['#1885A5', '#193F54'],
+] as const;
+
+/** The Groups destination replaces the old notification tab and enters along
+ * the same right-to-left path that tab used. */
 export default function GroupsScreen() {
   return (
-    <ThemeProvider initialMode="dark">
-      <SlideScreen from="left">
-        <GroupsList />
-      </SlideScreen>
-    </ThemeProvider>
+    <SlideScreen from="right">
+      <GroupsList />
+    </SlideScreen>
   );
 }
 
@@ -47,23 +70,564 @@ function GroupsList() {
   const { colors } = useTheme();
   const { signedIn } = useAuth();
   const own = useMyGroups();
+  const discovery = useGroupDiscovery();
   const other = usePublicGroups(handle ?? '');
   const createGroup = useCreateGroup();
+  const updateGroup = useUpdateGroup();
   const joinGroup = useJoinGroup();
   const leaveGroup = useLeaveGroup();
   const deleteGroup = useDeleteGroup();
 
+  const [page, setPage] = useState<GroupsPage>('for-you');
+  const [query, setQuery] = useState('');
   const [createOpen, setCreateOpen] = useState(false);
+  const [editing, setEditing] = useState<FitnessGroup | null>(null);
   const [open, setOpen] = useState<FitnessGroup | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const isOwn = !handle;
-  const list = handle ? other.data : { isOwner: true, groups: own.data ?? [] };
-  const loading = handle ? other.isLoading : own.isLoading;
-  const groups = list?.groups ?? [];
-  const canCreate = isOwn || list?.isOwner === true;
+  if (handle) {
+    return (
+      <ProfileGroups
+        handle={handle}
+        data={other.data}
+        loading={other.isLoading}
+        onOpen={setOpen}
+        detail={open}
+        onCloseDetail={() => setOpen(null)}
+        onJoin={async (group) => {
+          if (!signedIn) {
+            router.push('/login');
+            return;
+          }
+          const joined = await joinGroup.mutateAsync(group.id);
+          setOpen(joined);
+        }}
+        onLeave={async (group) => {
+          await leaveGroup.mutateAsync(group.id);
+          setOpen(null);
+        }}
+      />
+    );
+  }
 
-  if (handle && !other.isLoading && other.data === null) {
+  const mine = own.data ?? [];
+  const discoverable = discovery.data?.groups ?? [];
+  const viewerLocation = discovery.data?.viewerLocation;
+  const viewerSport = discovery.data?.viewerSport;
+  const nearby = discoverable.filter((group) => isNearby(group.location, viewerLocation));
+  const recommended = discoverable.slice(0, 8);
+  const owned = mine.filter((group) => group.isOwner);
+  const joined = mine.filter((group) => !group.isOwner);
+  const normalizedQuery = query.trim().toLocaleLowerCase();
+  const filtered = normalizedQuery
+    ? discoverable.filter((group) =>
+        [group.name, group.sport, group.location, group.description]
+          .filter(Boolean)
+          .some((value) => value!.toLocaleLowerCase().includes(normalizedQuery)),
+      )
+    : discoverable;
+
+  async function join(group: FitnessGroup) {
+    setError(null);
+    try {
+      const next = await joinGroup.mutateAsync(group.id);
+      setOpen((current) => (current?.id === next.id ? next : current));
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : 'Could not join this group.');
+    }
+  }
+
+  async function leave(group: FitnessGroup) {
+    setError(null);
+    try {
+      await leaveGroup.mutateAsync(group.id);
+      setOpen(null);
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : 'Could not leave this group.');
+    }
+  }
+
+  return (
+    <Screen padded={false} style={styles.screenContent}>
+      <View style={styles.headerInset}>
+        <ScreenHeader
+          title="Groups"
+          right={
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Create a group"
+              onPress={() => setCreateOpen(true)}
+              style={[styles.headerAdd, { backgroundColor: colors.surfaceRaised }]}
+            >
+              <Ionicons name="add" size={25} color={colors.textPrimary} />
+            </Pressable>
+          }
+        />
+      </View>
+
+      <LinearGradient
+        colors={['#123E35', '#0D201F', '#10171A']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.hero}
+      >
+        <View style={styles.heroGlow} />
+        <View style={styles.heroIcon}>
+          <Ionicons name="people" size={25} color="#FFFFFF" />
+        </View>
+        <View style={styles.heroCopy}>
+          <AppText variant="heading" weight="700" style={styles.heroTitle}>
+            Train better, together
+          </AppText>
+          <AppText variant="caption" style={styles.heroBody}>
+            {viewerLocation
+              ? `Find active communities near ${viewerLocation}.`
+              : 'Find active communities near you and around your interests.'}
+          </AppText>
+        </View>
+        <View style={styles.heroStat}>
+          <AppText variant="heading" weight="700" style={styles.heroTitle}>
+            {mine.length}
+          </AppText>
+          <AppText variant="micro" style={styles.heroBody}>
+            YOUR GROUPS
+          </AppText>
+        </View>
+      </LinearGradient>
+
+      <View style={[styles.pageTabs, { borderBottomColor: colors.border }]}>
+        {PAGES.map((item) => {
+          const active = page === item.id;
+          return (
+            <Pressable
+              key={item.id}
+              accessibilityRole="tab"
+              accessibilityLabel={item.label}
+              accessibilityState={{ selected: active }}
+              onPress={() => setPage(item.id)}
+              style={styles.pageTab}
+            >
+              <AppText
+                variant="caption"
+                weight="600"
+                style={{ color: active ? colors.accent : colors.textSecondary }}
+              >
+                {item.label}
+              </AppText>
+              <View
+                style={[
+                  styles.pageTabLine,
+                  { backgroundColor: active ? colors.accent : 'transparent' },
+                ]}
+              />
+            </Pressable>
+          );
+        })}
+      </View>
+
+      {error ? (
+        <View style={[styles.error, { backgroundColor: `${colors.danger}18` }]}>
+          <Ionicons name="alert-circle-outline" size={18} color={colors.danger} />
+          <AppText variant="caption" tone="danger" style={{ flex: 1 }}>
+            {error}
+          </AppText>
+        </View>
+      ) : null}
+
+      {own.isLoading || discovery.isLoading ? (
+        <View style={styles.loading}>
+          <ActivityIndicator color={colors.accent} />
+          <AppText variant="caption" tone="secondary">
+            Finding your communities…
+          </AppText>
+        </View>
+      ) : page === 'for-you' ? (
+        <ForYouPage
+          mine={mine}
+          recommended={recommended}
+          nearby={nearby}
+          viewerLocation={viewerLocation}
+          viewerSport={viewerSport}
+          onChangePage={setPage}
+          onCreate={() => setCreateOpen(true)}
+          onOpen={setOpen}
+          onJoin={(group) => void join(group)}
+        />
+      ) : page === 'yours' ? (
+        <YourGroupsPage groups={mine} onCreate={() => setCreateOpen(true)} onOpen={setOpen} />
+      ) : page === 'discover' ? (
+        <DiscoverPage
+          groups={filtered}
+          query={query}
+          viewerLocation={viewerLocation}
+          onQueryChange={setQuery}
+          onOpen={setOpen}
+          onJoin={(group) => void join(group)}
+        />
+      ) : (
+        <ManagePage
+          owned={owned}
+          joined={joined}
+          onCreate={() => setCreateOpen(true)}
+          onEdit={setEditing}
+          onOpen={setOpen}
+          onLeave={(group) => void leave(group)}
+        />
+      )}
+
+      {createOpen ? (
+        <GroupEditorSheet
+          visible
+          defaultLocation={viewerLocation}
+          onClose={() => setCreateOpen(false)}
+          onSave={async (input) => {
+            await createGroup.mutateAsync(input);
+            setCreateOpen(false);
+          }}
+        />
+      ) : null}
+
+      {editing ? (
+        <GroupEditorSheet
+          visible
+          group={editing}
+          defaultLocation={viewerLocation}
+          onClose={() => setEditing(null)}
+          onSave={async (input) => {
+            await updateGroup.mutateAsync({ id: editing.id, ...input });
+            setEditing(null);
+          }}
+          onDelete={async () => {
+            await deleteGroup.mutateAsync(editing.id);
+            setEditing(null);
+          }}
+        />
+      ) : null}
+
+      <GroupDetailsSheet
+        group={open}
+        onClose={() => setOpen(null)}
+        onEdit={(group) => {
+          setOpen(null);
+          setEditing(group);
+        }}
+        onJoin={(group) => void join(group)}
+        onLeave={(group) => void leave(group)}
+      />
+    </Screen>
+  );
+}
+
+function ForYouPage({
+  mine,
+  recommended,
+  nearby,
+  viewerLocation,
+  viewerSport,
+  onChangePage,
+  onCreate,
+  onOpen,
+  onJoin,
+}: {
+  mine: FitnessGroup[];
+  recommended: FitnessGroup[];
+  nearby: FitnessGroup[];
+  viewerLocation?: string;
+  viewerSport?: string;
+  onChangePage: (page: GroupsPage) => void;
+  onCreate: () => void;
+  onOpen: (group: FitnessGroup) => void;
+  onJoin: (group: FitnessGroup) => void;
+}) {
+  return (
+    <View style={styles.content}>
+      <SectionHeading
+        title="Your groups"
+        subtitle={mine.length ? `${mine.length} communities` : 'Your team starts here'}
+        action={mine.length ? 'See all' : undefined}
+        onAction={() => onChangePage('yours')}
+      />
+      {mine.length ? (
+        <View style={styles.rowList}>
+          {mine.slice(0, 3).map((group) => (
+            <GroupRow key={group.id} group={group} onOpen={() => onOpen(group)} />
+          ))}
+        </View>
+      ) : (
+        <Card style={styles.startCard}>
+          <View style={styles.startCopy}>
+            <AppText weight="600">Build your first circle</AppText>
+            <AppText variant="caption" tone="secondary">
+              Create a local group for training partners, challenges, or accountability.
+            </AppText>
+          </View>
+          <Button compact title="Create" onPress={onCreate} />
+        </Card>
+      )}
+
+      <SectionHeading
+        title="Recommended for you"
+        subtitle={
+          viewerSport
+            ? `Based on ${viewerSport} and nearby activity`
+            : 'Popular communities with a local-first ranking'
+        }
+        action={recommended.length ? 'Explore' : undefined}
+        onAction={() => onChangePage('discover')}
+      />
+      {recommended.length ? (
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.cardRail}
+        >
+          {recommended.slice(0, 6).map((group) => (
+            <DiscoverCard
+              key={group.id}
+              group={group}
+              nearby={isNearby(group.location, viewerLocation)}
+              onOpen={() => onOpen(group)}
+              onJoin={() => onJoin(group)}
+            />
+          ))}
+        </ScrollView>
+      ) : (
+        <DiscoveryEmpty onCreate={onCreate} />
+      )}
+
+      {nearby.length ? (
+        <>
+          <SectionHeading
+            title="Closest to you"
+            subtitle={viewerLocation ? `Around ${viewerLocation}` : 'Local communities'}
+          />
+          <View style={styles.rowList}>
+            {nearby.slice(0, 4).map((group) => (
+              <GroupRow
+                key={group.id}
+                group={group}
+                badge="Nearby"
+                action="Join"
+                onOpen={() => onOpen(group)}
+                onAction={() => onJoin(group)}
+              />
+            ))}
+          </View>
+        </>
+      ) : null}
+    </View>
+  );
+}
+
+function YourGroupsPage({
+  groups,
+  onCreate,
+  onOpen,
+}: {
+  groups: FitnessGroup[];
+  onCreate: () => void;
+  onOpen: (group: FitnessGroup) => void;
+}) {
+  return (
+    <View style={styles.content}>
+      <SectionHeading
+        title="Your groups"
+        subtitle="Every community you own or have joined"
+        action="New group"
+        onAction={onCreate}
+      />
+      {groups.length ? (
+        <View style={styles.rowList}>
+          {groups.map((group) => (
+            <GroupRow
+              key={group.id}
+              group={group}
+              badge={group.isOwner ? 'Owner' : 'Member'}
+              onOpen={() => onOpen(group)}
+            />
+          ))}
+        </View>
+      ) : (
+        <EmptyState
+          title="No groups yet"
+          body="Create a community or discover one nearby to get started."
+          actionTitle="Create a group"
+          onAction={onCreate}
+        />
+      )}
+    </View>
+  );
+}
+
+function DiscoverPage({
+  groups,
+  query,
+  viewerLocation,
+  onQueryChange,
+  onOpen,
+  onJoin,
+}: {
+  groups: FitnessGroup[];
+  query: string;
+  viewerLocation?: string;
+  onQueryChange: (value: string) => void;
+  onOpen: (group: FitnessGroup) => void;
+  onJoin: (group: FitnessGroup) => void;
+}) {
+  const { colors } = useTheme();
+  return (
+    <View style={styles.content}>
+      <View
+        style={[styles.search, { backgroundColor: colors.surface, borderColor: colors.border }]}
+      >
+        <Ionicons name="search" size={20} color={colors.textMuted} />
+        <TextInput
+          accessibilityLabel="Search groups"
+          value={query}
+          onChangeText={onQueryChange}
+          placeholder="Search groups, sports, or places"
+          placeholderTextColor={colors.textMuted}
+          style={[styles.searchInput, { color: colors.textPrimary }]}
+          autoCapitalize="none"
+          autoCorrect={false}
+        />
+        {query ? (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Clear search"
+            onPress={() => onQueryChange('')}
+            hitSlop={8}
+          >
+            <Ionicons name="close-circle" size={20} color={colors.textMuted} />
+          </Pressable>
+        ) : null}
+      </View>
+      <SectionHeading
+        title={query ? 'Search results' : 'Discover communities'}
+        subtitle={
+          viewerLocation
+            ? `Closest matches to ${viewerLocation} appear first`
+            : 'Popular and interest-matched groups appear first'
+        }
+      />
+      {groups.length ? (
+        <View style={styles.discoveryGrid}>
+          {groups.map((group) => (
+            <DiscoverCard
+              key={group.id}
+              group={group}
+              nearby={isNearby(group.location, viewerLocation)}
+              fullWidth
+              onOpen={() => onOpen(group)}
+              onJoin={() => onJoin(group)}
+            />
+          ))}
+        </View>
+      ) : (
+        <EmptyState
+          title={query ? 'No matching groups' : 'No public groups yet'}
+          body={
+            query
+              ? 'Try a sport, a city, or a broader keyword.'
+              : 'New public groups will appear here as your local community grows.'
+          }
+        />
+      )}
+    </View>
+  );
+}
+
+function ManagePage({
+  owned,
+  joined,
+  onCreate,
+  onEdit,
+  onOpen,
+  onLeave,
+}: {
+  owned: FitnessGroup[];
+  joined: FitnessGroup[];
+  onCreate: () => void;
+  onEdit: (group: FitnessGroup) => void;
+  onOpen: (group: FitnessGroup) => void;
+  onLeave: (group: FitnessGroup) => void;
+}) {
+  return (
+    <View style={styles.content}>
+      <SectionHeading
+        title="Groups you manage"
+        subtitle="Edit details, visibility, and community location"
+        action="Create"
+        onAction={onCreate}
+      />
+      {owned.length ? (
+        <View style={styles.rowList}>
+          {owned.map((group) => (
+            <GroupRow
+              key={group.id}
+              group={group}
+              badge="Owner"
+              action="Edit"
+              onOpen={() => onOpen(group)}
+              onAction={() => onEdit(group)}
+            />
+          ))}
+        </View>
+      ) : (
+        <Card style={styles.manageEmpty}>
+          <Ionicons name="shield-checkmark-outline" size={28} color="#45C997" />
+          <View style={{ flex: 1, gap: 3 }}>
+            <AppText weight="600">Nothing to manage yet</AppText>
+            <AppText variant="caption" tone="secondary">
+              Groups you create will appear here.
+            </AppText>
+          </View>
+        </Card>
+      )}
+
+      <SectionHeading title="Memberships" subtitle="Communities you have joined" />
+      {joined.length ? (
+        <View style={styles.rowList}>
+          {joined.map((group) => (
+            <GroupRow
+              key={group.id}
+              group={group}
+              action="Leave"
+              onOpen={() => onOpen(group)}
+              onAction={() => onLeave(group)}
+            />
+          ))}
+        </View>
+      ) : (
+        <AppText variant="caption" tone="secondary">
+          You have not joined another community yet.
+        </AppText>
+      )}
+    </View>
+  );
+}
+
+function ProfileGroups({
+  handle,
+  data,
+  loading,
+  detail,
+  onOpen,
+  onCloseDetail,
+  onJoin,
+  onLeave,
+}: {
+  handle: string;
+  data: { groups: FitnessGroup[] } | null | undefined;
+  loading: boolean;
+  detail: FitnessGroup | null;
+  onOpen: (group: FitnessGroup) => void;
+  onCloseDetail: () => void;
+  onJoin: (group: FitnessGroup) => Promise<void>;
+  onLeave: (group: FitnessGroup) => Promise<void>;
+}) {
+  const router = useRouter();
+  if (!loading && data === null) {
     return (
       <Screen>
         <ScreenHeader title="Groups" />
@@ -76,257 +640,650 @@ function GroupsList() {
       </Screen>
     );
   }
-
   return (
     <Screen>
-      <ScreenHeader
-        title="Groups"
-        right={
-          canCreate ? (
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Create a group"
-              onPress={() => setCreateOpen(true)}
-              hitSlop={8}
-              style={{ minHeight: 44, justifyContent: 'center' }}
-            >
-              <Ionicons name="add" size={28} color={colors.textPrimary} />
-            </Pressable>
-          ) : null
-        }
-      />
-
-      {error ? (
-        <AppText variant="caption" tone="danger">
-          {error}
-        </AppText>
-      ) : null}
-
+      <ScreenHeader title={`@${handle}'s groups`} />
       {loading ? (
         <View style={styles.loading}>
-          <ActivityIndicator color={colors.accent} />
+          <ActivityIndicator />
         </View>
-      ) : groups.length === 0 ? (
-        <EmptyState
-          title={canCreate ? 'No groups yet' : 'No public groups'}
-          body={
-            canCreate
-              ? 'Start a fitness group and it will show here. Public groups are visible on your profile.'
-              : 'They have not joined any public groups yet.'
-          }
-          actionTitle={canCreate ? 'Create a group' : undefined}
-          onAction={canCreate ? () => setCreateOpen(true) : undefined}
-        />
-      ) : (
-        <View style={{ gap: spacing.md }}>
-          {groups.map((group) => (
-            <Pressable
-              key={group.id}
-              accessibilityRole="button"
-              accessibilityLabel={group.name}
-              onPress={() => setOpen(group)}
-            >
-              <Card style={styles.card}>
-                <View style={styles.mark}>
-                  <Ionicons name="people" size={22} color={colors.textPrimary} />
-                </View>
-                <View style={{ flex: 1, gap: 2 }}>
-                  <AppText variant="body" weight="600" numberOfLines={1}>
-                    {group.name}
-                  </AppText>
-                  <AppText variant="caption" tone="secondary" numberOfLines={1}>
-                    {[
-                      group.sport,
-                      `${group.memberCount} ${group.memberCount === 1 ? 'member' : 'members'}`,
-                      group.isPublic ? 'Public' : 'Private',
-                    ]
-                      .filter(Boolean)
-                      .join(' · ')}
-                  </AppText>
-                </View>
-                <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
-              </Card>
-            </Pressable>
+      ) : data?.groups.length ? (
+        <View style={styles.rowList}>
+          {data.groups.map((group) => (
+            <GroupRow key={group.id} group={group} onOpen={() => onOpen(group)} />
           ))}
         </View>
+      ) : (
+        <EmptyState title="No public groups" body="They have not joined any public groups yet." />
       )}
-
-      <CreateGroupSheet
-        visible={createOpen}
-        onClose={() => setCreateOpen(false)}
-        onCreate={async (input) => {
-          await createGroup.mutateAsync(input);
-          setCreateOpen(false);
-        }}
+      <GroupDetailsSheet
+        group={detail}
+        onClose={onCloseDetail}
+        onJoin={(group) => void onJoin(group)}
+        onLeave={(group) => void onLeave(group)}
       />
-
-      <Sheet visible={open !== null} onClose={() => setOpen(null)} title={open?.name}>
-        {open ? (
-          <>
-            <AppText variant="caption" tone="secondary">
-              {[
-                open.sport,
-                `${open.memberCount} ${open.memberCount === 1 ? 'member' : 'members'}`,
-                open.isPublic ? 'Public' : 'Private',
-                `@${open.handle}`,
-              ]
-                .filter(Boolean)
-                .join(' · ')}
-            </AppText>
-            {open.description ? <AppText variant="body">{open.description}</AppText> : null}
-            {open.isOwner ? (
-              <Button
-                title="Delete group"
-                variant="danger"
-                onPress={() => {
-                  void deleteGroup.mutateAsync(open.id);
-                  setOpen(null);
-                }}
-              />
-            ) : open.isMember ? (
-              <Button
-                title="Leave group"
-                variant="secondary"
-                onPress={() => {
-                  void leaveGroup.mutateAsync(open.id);
-                  setOpen(null);
-                }}
-              />
-            ) : (
-              <Button
-                title={signedIn ? 'Join group' : 'Sign in to join'}
-                onPress={() => {
-                  if (!signedIn) {
-                    setOpen(null);
-                    router.push('/login');
-                    return;
-                  }
-                  void joinGroup
-                    .mutateAsync(open.id)
-                    .then((next) => setOpen(next))
-                    .catch((e) => setError(e instanceof Error ? e.message : 'Could not join.'));
-                }}
-              />
-            )}
-          </>
-        ) : null}
-      </Sheet>
     </Screen>
   );
 }
 
-function CreateGroupSheet({
-  visible,
+function SectionHeading({
+  title,
+  subtitle,
+  action,
+  onAction,
+}: {
+  title: string;
+  subtitle?: string;
+  action?: string;
+  onAction?: () => void;
+}) {
+  return (
+    <View style={styles.sectionHeading}>
+      <View style={styles.sectionCopy}>
+        <AppText variant="heading" weight="700">
+          {title}
+        </AppText>
+        {subtitle ? (
+          <AppText variant="caption" tone="secondary">
+            {subtitle}
+          </AppText>
+        ) : null}
+      </View>
+      {action && onAction ? (
+        <Pressable accessibilityRole="button" accessibilityLabel={action} onPress={onAction}>
+          <AppText variant="caption" weight="600" tone="accent">
+            {action}
+          </AppText>
+        </Pressable>
+      ) : null}
+    </View>
+  );
+}
+
+function GroupRow({
+  group,
+  badge,
+  action,
+  onOpen,
+  onAction,
+}: {
+  group: FitnessGroup;
+  badge?: string;
+  action?: string;
+  onOpen: () => void;
+  onAction?: () => void;
+}) {
+  const { colors } = useTheme();
+  return (
+    <Card padded={false} style={styles.groupRow}>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={`Open ${group.name}`}
+        onPress={onOpen}
+        style={styles.groupMain}
+      >
+        <GroupIdentity group={group} size={52} />
+        <View style={styles.groupCopy}>
+          <View style={styles.titleBadgeRow}>
+            <AppText weight="600" numberOfLines={1} style={{ flexShrink: 1 }}>
+              {group.name}
+            </AppText>
+            {badge ? (
+              <View style={[styles.badge, { backgroundColor: `${colors.accent}18` }]}>
+                <AppText variant="micro" weight="600" tone="accent">
+                  {badge}
+                </AppText>
+              </View>
+            ) : null}
+          </View>
+          <AppText variant="caption" tone="secondary" numberOfLines={1}>
+            {groupMeta(group)}
+          </AppText>
+        </View>
+      </Pressable>
+      {action && onAction ? (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={`${action} ${group.name}`}
+          onPress={onAction}
+          style={[styles.rowAction, { backgroundColor: colors.surfaceRaised }]}
+        >
+          <AppText
+            variant="caption"
+            weight="600"
+            tone={action === 'Leave' ? 'secondary' : 'accent'}
+          >
+            {action}
+          </AppText>
+        </Pressable>
+      ) : (
+        <Ionicons name="chevron-forward" size={17} color={colors.textMuted} />
+      )}
+    </Card>
+  );
+}
+
+function DiscoverCard({
+  group,
+  nearby,
+  fullWidth = false,
+  onOpen,
+  onJoin,
+}: {
+  group: FitnessGroup;
+  nearby: boolean;
+  fullWidth?: boolean;
+  onOpen: () => void;
+  onJoin: () => void;
+}) {
+  const { colors } = useTheme();
+  const gradient = gradientFor(group);
+  return (
+    <Card padded={false} style={[styles.discoveryCard, fullWidth && styles.discoveryCardWide]}>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={`Open ${group.name}`}
+        onPress={onOpen}
+      >
+        <LinearGradient colors={gradient} style={styles.cardArt}>
+          <View style={styles.cardOrb} />
+          <GroupIdentity group={group} size={58} elevated />
+          {nearby ? (
+            <View style={styles.nearbyPill}>
+              <Ionicons name="location" size={12} color="#FFFFFF" />
+              <AppText variant="micro" weight="600" style={styles.whiteText}>
+                NEAR YOU
+              </AppText>
+            </View>
+          ) : null}
+        </LinearGradient>
+        <View style={styles.cardBody}>
+          <AppText weight="700" numberOfLines={1}>
+            {group.name}
+          </AppText>
+          <AppText variant="caption" tone="secondary" numberOfLines={1}>
+            {groupMeta(group)}
+          </AppText>
+          <AppText
+            variant="caption"
+            tone="secondary"
+            numberOfLines={2}
+            style={styles.cardDescription}
+          >
+            {group.description ||
+              `A community for ${group.sport?.toLocaleLowerCase() || 'active people'} to connect and progress together.`}
+          </AppText>
+        </View>
+      </Pressable>
+      <View style={[styles.cardFooter, { borderTopColor: colors.border }]}>
+        <View style={styles.memberProof}>
+          <Ionicons name="people-outline" size={16} color={colors.textMuted} />
+          <AppText variant="micro" tone="secondary">
+            {group.memberCount} {group.memberCount === 1 ? 'member' : 'members'}
+          </AppText>
+        </View>
+        <Button compact title="Join" onPress={onJoin} style={styles.joinButton} />
+      </View>
+    </Card>
+  );
+}
+
+function DiscoveryEmpty({ onCreate }: { onCreate: () => void }) {
+  const { colors } = useTheme();
+  return (
+    <Card style={styles.discoveryEmpty}>
+      <View style={[styles.emptyIcon, { backgroundColor: `${colors.accent}18` }]}>
+        <Ionicons name="compass-outline" size={28} color={colors.accent} />
+      </View>
+      <View style={{ flex: 1, gap: spacing.xs }}>
+        <AppText weight="600">Be the first nearby</AppText>
+        <AppText variant="caption" tone="secondary">
+          Public groups from your area will be recommended here.
+        </AppText>
+      </View>
+      <Button compact title="Create" variant="secondary" onPress={onCreate} />
+    </Card>
+  );
+}
+
+function GroupIdentity({
+  group,
+  size,
+  elevated = false,
+}: {
+  group: FitnessGroup;
+  size: number;
+  elevated?: boolean;
+}) {
+  const gradient = gradientFor(group);
+  return (
+    <LinearGradient
+      colors={gradient}
+      style={[
+        styles.identity,
+        {
+          width: size,
+          height: size,
+          borderRadius: Math.max(radius.md, size * 0.28),
+        },
+        elevated && styles.identityElevated,
+      ]}
+    >
+      <Ionicons name={iconFor(group.sport)} size={size * 0.48} color="#FFFFFF" />
+    </LinearGradient>
+  );
+}
+
+function GroupDetailsSheet({
+  group,
   onClose,
-  onCreate,
+  onEdit,
+  onJoin,
+  onLeave,
+}: {
+  group: FitnessGroup | null;
+  onClose: () => void;
+  onEdit?: (group: FitnessGroup) => void;
+  onJoin: (group: FitnessGroup) => void;
+  onLeave?: (group: FitnessGroup) => void;
+}) {
+  return (
+    <Sheet visible={group !== null} onClose={onClose} title={group?.name}>
+      {group ? (
+        <>
+          <View style={styles.detailLead}>
+            <GroupIdentity group={group} size={72} />
+            <View style={{ flex: 1, gap: spacing.xs }}>
+              <AppText variant="caption" tone="secondary">
+                {groupMeta(group)}
+              </AppText>
+              <View style={styles.detailTags}>
+                <DetailTag icon="earth-outline" label={group.isPublic ? 'Public' : 'Private'} />
+                {group.location ? (
+                  <DetailTag icon="location-outline" label={group.location} />
+                ) : null}
+              </View>
+            </View>
+          </View>
+          <AppText>
+            {group.description || 'This community has not added a description yet.'}
+          </AppText>
+          {group.isOwner ? (
+            <Button title="Edit group" onPress={() => onEdit?.(group)} />
+          ) : group.isMember ? (
+            <Button title="Leave group" variant="secondary" onPress={() => onLeave?.(group)} />
+          ) : (
+            <Button title="Join group" onPress={() => onJoin(group)} />
+          )}
+        </>
+      ) : null}
+    </Sheet>
+  );
+}
+
+function DetailTag({ icon, label }: { icon: keyof typeof Ionicons.glyphMap; label: string }) {
+  const { colors } = useTheme();
+  return (
+    <View style={[styles.detailTag, { backgroundColor: colors.surfaceRaised }]}>
+      <Ionicons name={icon} size={13} color={colors.textSecondary} />
+      <AppText variant="micro" tone="secondary">
+        {label}
+      </AppText>
+    </View>
+  );
+}
+
+function GroupEditorSheet({
+  visible,
+  group,
+  defaultLocation,
+  onClose,
+  onSave,
+  onDelete,
 }: {
   visible: boolean;
+  group?: FitnessGroup | null;
+  defaultLocation?: string;
   onClose: () => void;
-  onCreate: (input: {
-    name: string;
-    sport?: string;
-    description?: string;
-    isPublic: boolean;
-  }) => Promise<void>;
+  onSave: (input: NewGroup) => Promise<void>;
+  onDelete?: () => Promise<void>;
 }) {
-  const [name, setName] = useState('');
-  const [sport, setSport] = useState('');
-  const [description, setDescription] = useState('');
-  const [isPublic, setIsPublic] = useState(true);
+  const [name, setName] = useState(group?.name ?? '');
+  const [sport, setSport] = useState(group?.sport ?? '');
+  const [location, setLocation] = useState(group?.location ?? defaultLocation ?? '');
+  const [description, setDescription] = useState(group?.description ?? '');
+  const [isPublic, setIsPublic] = useState(group?.isPublic ?? true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  function reset() {
-    setName('');
-    setSport('');
-    setDescription('');
-    setIsPublic(true);
-    setError(null);
-  }
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   return (
-    <Sheet
-      visible={visible}
-      onClose={() => {
-        reset();
-        onClose();
-      }}
-      title="New group"
-    >
+    <Sheet visible={visible} onClose={onClose} title={group ? 'Manage group' : 'New group'}>
       <TextField
-        label="Name"
+        label="Group name"
         value={name}
         onChangeText={setName}
-        placeholder="Morning miles"
+        placeholder="Saturday stride club"
         maxLength={60}
+        required
       />
+      <View style={styles.editorPair}>
+        <View style={{ flex: 1 }}>
+          <TextField
+            label="Activity"
+            value={sport}
+            onChangeText={setSport}
+            placeholder="Running"
+            maxLength={40}
+          />
+        </View>
+        <View style={{ flex: 1 }}>
+          <TextField
+            label="Location"
+            value={location}
+            onChangeText={setLocation}
+            placeholder="Austin, TX"
+            maxLength={60}
+          />
+        </View>
+      </View>
       <TextField
-        label="Sport (optional)"
-        value={sport}
-        onChangeText={setSport}
-        placeholder="Running"
-        maxLength={40}
-      />
-      <TextField
-        label="About (optional)"
+        label="About"
         value={description}
         onChangeText={setDescription}
-        placeholder="Easy long runs on Saturday."
+        placeholder="What brings this community together?"
         multiline
         maxLength={280}
-        style={{ minHeight: 88, textAlignVertical: 'top', paddingTop: spacing.sm }}
+        style={styles.aboutField}
       />
-      <Button
-        title={isPublic ? 'Public group' : 'Private group'}
-        variant="secondary"
-        onPress={() => setIsPublic((v) => !v)}
-      />
+      <Pressable
+        accessibilityRole="switch"
+        accessibilityLabel="Public group"
+        accessibilityState={{ checked: isPublic }}
+        onPress={() => setIsPublic((value) => !value)}
+        style={styles.privacyRow}
+      >
+        <View style={{ flex: 1, gap: 2 }}>
+          <AppText weight="600">{isPublic ? 'Public community' : 'Private community'}</AppText>
+          <AppText variant="caption" tone="secondary">
+            {isPublic
+              ? 'People can discover and join this group.'
+              : 'Only current members can see this group.'}
+          </AppText>
+        </View>
+        <Ionicons name={isPublic ? 'earth' : 'lock-closed'} size={22} color="#45C997" />
+      </Pressable>
       {error ? (
         <AppText variant="caption" tone="danger">
           {error}
         </AppText>
       ) : null}
       <Button
-        title="Create group"
+        title={group ? 'Save changes' : 'Create group'}
         loading={saving}
         disabled={!name.trim()}
         onPress={async () => {
           setSaving(true);
           setError(null);
           try {
-            await onCreate({
-              name,
+            await onSave({
+              name: name.trim(),
               sport: sport.trim() || undefined,
+              location: location.trim() || undefined,
               description: description.trim() || undefined,
               isPublic,
             });
-            reset();
-          } catch (e) {
-            setError(e instanceof Error ? e.message : 'Could not create that group.');
+          } catch (caught) {
+            setError(caught instanceof Error ? caught.message : 'Could not save this group.');
           } finally {
             setSaving(false);
           }
         }}
       />
+      {group && onDelete ? (
+        confirmDelete ? (
+          <View style={styles.deleteConfirm}>
+            <AppText variant="caption" tone="danger" style={{ flex: 1 }}>
+              Delete this group for every member? This cannot be undone.
+            </AppText>
+            <Button compact title="Yes, delete" variant="danger" onPress={() => void onDelete()} />
+            <Button
+              compact
+              title="Cancel"
+              variant="ghost"
+              onPress={() => setConfirmDelete(false)}
+            />
+          </View>
+        ) : (
+          <Button title="Delete group" variant="ghost" onPress={() => setConfirmDelete(true)} />
+        )
+      ) : null}
     </Sheet>
   );
 }
 
+function groupMeta(group: FitnessGroup) {
+  return [
+    group.sport,
+    group.location,
+    `${group.memberCount} ${group.memberCount === 1 ? 'member' : 'members'}`,
+  ]
+    .filter(Boolean)
+    .join(' · ');
+}
+
+function isNearby(groupLocation?: string, viewerLocation?: string) {
+  if (!groupLocation || !viewerLocation) return false;
+  const first = (value: string) =>
+    value
+      .toLocaleLowerCase()
+      .split(',')[0]
+      ?.replace(/[^a-z0-9]+/g, ' ')
+      .trim();
+  return first(groupLocation) === first(viewerLocation);
+}
+
+function gradientFor(group: FitnessGroup): readonly [string, string] {
+  let hash = 0;
+  for (const char of group.name) hash = (hash * 31 + char.charCodeAt(0)) | 0;
+  return GROUP_GRADIENTS[Math.abs(hash) % GROUP_GRADIENTS.length] ?? GROUP_GRADIENTS[0];
+}
+
+function iconFor(sport?: string): keyof typeof Ionicons.glyphMap {
+  const value = sport?.toLocaleLowerCase() ?? '';
+  if (/run|walk|hike|trail/.test(value)) return 'walk';
+  if (/strength|lift|gym|crossfit/.test(value)) return 'barbell';
+  if (/cycle|bike|spin/.test(value)) return 'bicycle';
+  if (/swim|water/.test(value)) return 'water';
+  if (/football|soccer/.test(value)) return 'football';
+  if (/basketball/.test(value)) return 'basketball';
+  if (/tennis/.test(value)) return 'tennisball';
+  return 'fitness';
+}
+
 const styles = StyleSheet.create({
-  loading: {
-    paddingVertical: spacing.xxl,
-    alignItems: 'center',
-  },
-  card: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-    borderRadius: radius.md,
-  },
-  mark: {
-    width: 44,
-    height: 44,
+  screenContent: { paddingBottom: spacing.xxl },
+  headerInset: { paddingHorizontal: spacing.lg },
+  headerAdd: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
     alignItems: 'center',
     justifyContent: 'center',
   },
+  hero: {
+    minHeight: 132,
+    marginHorizontal: spacing.lg,
+    marginTop: spacing.sm,
+    borderRadius: radius.xl,
+    padding: spacing.lg,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    overflow: 'hidden',
+  },
+  heroGlow: {
+    position: 'absolute',
+    width: 180,
+    height: 180,
+    borderRadius: 90,
+    backgroundColor: 'rgba(42, 219, 160, 0.16)',
+    right: -58,
+    top: -92,
+  },
+  heroIcon: {
+    width: 52,
+    height: 52,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.14)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.14)',
+  },
+  heroCopy: { flex: 1, gap: spacing.xs },
+  heroTitle: { color: '#FFFFFF' },
+  heroBody: { color: 'rgba(255,255,255,0.72)' },
+  heroStat: { alignItems: 'center', gap: 1 },
+  pageTabs: {
+    flexDirection: 'row',
+    marginTop: spacing.md,
+    paddingHorizontal: spacing.sm,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  pageTab: {
+    flex: 1,
+    minHeight: 48,
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    gap: 10,
+  },
+  pageTabLine: {
+    height: 3,
+    alignSelf: 'stretch',
+    borderRadius: 2,
+    marginHorizontal: spacing.sm,
+  },
+  error: {
+    marginHorizontal: spacing.lg,
+    marginTop: spacing.md,
+    padding: spacing.md,
+    borderRadius: radius.md,
+    flexDirection: 'row',
+    gap: spacing.sm,
+    alignItems: 'center',
+  },
+  loading: { paddingVertical: 64, alignItems: 'center', gap: spacing.md },
+  content: { padding: spacing.lg, gap: spacing.lg },
+  sectionHeading: { flexDirection: 'row', alignItems: 'flex-end', gap: spacing.md },
+  sectionCopy: { flex: 1, gap: 2 },
+  rowList: { gap: spacing.sm },
+  startCard: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  startCopy: { flex: 1, gap: spacing.xs },
+  cardRail: { gap: spacing.md, paddingRight: spacing.lg },
+  discoveryGrid: { gap: spacing.md },
+  groupRow: {
+    minHeight: 74,
+    padding: spacing.sm,
+    paddingRight: spacing.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  groupMain: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  groupCopy: { flex: 1, gap: 3 },
+  titleBadgeRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  badge: { paddingHorizontal: 7, paddingVertical: 2, borderRadius: radius.full },
+  rowAction: {
+    minWidth: 54,
+    minHeight: 34,
+    borderRadius: radius.full,
+    paddingHorizontal: spacing.sm,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  identity: { alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
+  identityElevated: {
+    borderWidth: 2,
+    borderColor: 'rgba(255,255,255,0.82)',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 5 },
+    shadowOpacity: 0.22,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  discoveryCard: { width: 258, overflow: 'hidden' },
+  discoveryCardWide: { width: '100%' },
+  cardArt: {
+    minHeight: 104,
+    padding: spacing.lg,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    overflow: 'hidden',
+  },
+  cardOrb: {
+    position: 'absolute',
+    width: 130,
+    height: 130,
+    borderRadius: 65,
+    backgroundColor: 'rgba(255,255,255,0.09)',
+    right: -25,
+    bottom: -72,
+  },
+  nearbyPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 5,
+    borderRadius: radius.full,
+    backgroundColor: 'rgba(0,0,0,0.28)',
+  },
+  whiteText: { color: '#FFFFFF' },
+  cardBody: { padding: spacing.md, gap: 3 },
+  cardDescription: { minHeight: 36, marginTop: 2 },
+  cardFooter: {
+    borderTopWidth: StyleSheet.hairlineWidth,
+    padding: spacing.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
+  },
+  memberProof: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
+  joinButton: { minWidth: 62, borderRadius: radius.full },
+  discoveryEmpty: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  emptyIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  search: {
+    minHeight: touchTarget,
+    borderWidth: 1,
+    borderRadius: radius.full,
+    paddingHorizontal: spacing.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  searchInput: { ...type.body, flex: 1, minHeight: touchTarget },
+  manageEmpty: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  detailLead: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  detailTags: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
+  detailTag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 4,
+    borderRadius: radius.full,
+  },
+  editorPair: { flexDirection: 'row', gap: spacing.sm },
+  aboutField: { minHeight: 92, textAlignVertical: 'top', paddingTop: spacing.sm },
+  privacyRow: { minHeight: 58, flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  deleteConfirm: { gap: spacing.sm },
 });

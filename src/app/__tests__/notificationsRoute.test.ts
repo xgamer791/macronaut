@@ -6,16 +6,18 @@ const srcDir = path.join(appDir, '..');
 const readApp = (file: string) => fs.readFileSync(path.join(appDir, file), 'utf8');
 
 describe('notification center', () => {
-  it('registers the route and opens it from the tab bar bell', () => {
+  it('registers the route and opens it from the header bell', () => {
     expect(readApp('_layout.tsx')).toContain('name="notifications"');
     const tabBar = fs.readFileSync(path.join(srcDir, 'ui', 'components', 'TabBar.tsx'), 'utf8');
-    expect(tabBar).toContain('useNotifications');
-    expect(tabBar).toContain("href: '/notifications'");
+    expect(tabBar).not.toContain('useNotifications');
+    expect(tabBar).not.toContain("href: '/notifications'");
+    expect(tabBar).toContain("href: '/groups'");
+    expect(tabBar).toContain('people-circle-outline');
     expect(tabBar).toContain('router.push(item.href)');
-    expect(tabBar).toContain('notifications-outline');
-    expect(tabBar).toContain('palette.accentDark');
     const header = fs.readFileSync(path.join(srcDir, 'ui', 'components', 'AppHeader.tsx'), 'utf8');
-    expect(header).not.toContain('<HeaderNotifyButton');
+    expect(header).toContain('<HeaderNotifyButton iconColor={icon} />');
+    expect(header).toContain("router.push(signedIn ? '/notifications' : '/login')");
+    expect(header.indexOf('Open calendar')).toBeLessThan(header.indexOf('<HeaderNotifyButton'));
   });
 
   it('shows themed unread and earlier sections with useful destinations', () => {
@@ -34,7 +36,7 @@ describe('notification center', () => {
     // The message runs on from the title rather than claiming a line of its
     // own, and the pair is cut at two lines.
     expect(page).toContain('<AppText numberOfLines={2} style={styles.message}>');
-    expect(page).toContain("{`  ${item.body}`}");
+    expect(page).toContain('{`  ${item.body}`}');
     // Three quarters, so the turn happens clear of the timestamp.
     expect(page).toContain("width: '75%'");
     expect(page).toContain('minHeight: 68');
