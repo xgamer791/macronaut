@@ -27,8 +27,11 @@ export default function NotificationsScreen() {
     if (!item.read) markRead.mutate(item.id);
     if (item.kind === 'chat_message' && item.chatId) {
       router.push({ pathname: '/chat/[id]', params: { id: item.chatId } });
-    } else {
+    } else if (item.actor.handle) {
       router.push(`/u/${item.actor.handle}`);
+    } else {
+      // No profile page to open yet; the contacts list carries the Accept.
+      router.push('/new-chat');
     }
   }
 

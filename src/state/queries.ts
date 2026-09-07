@@ -228,8 +228,10 @@ export function useSetProfileFollow() {
   const invalidate = useInvalidateProfile();
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (input: { handle: string; follow: boolean }) =>
-      profile.setFollow(input.handle, input.follow),
+    mutationFn: (input: { handle?: string; userId?: string; follow: boolean }) =>
+      input.userId
+        ? profile.requestFriend(input.userId, input.follow)
+        : profile.setFollow(input.handle ?? '', input.follow),
     onSuccess: () => {
       invalidate();
       qc.invalidateQueries({ queryKey: ['chat-people'] });

@@ -54,7 +54,7 @@ describe('notifications', () => {
     await alice.repos.profile.setFollow('bob_lifts', true);
     await bob.repos.profile.setFollow('alice_runner', true);
 
-    const chat = await alice.repos.chats.open('bob_lifts');
+    const chat = await alice.repos.chats.open(bob.userId);
     await alice.repos.chats.send(chat.id, 'Training at six?');
 
     expect(await alice.repos.notifications.list()).toEqual({ items: [], unreadCount: 0 });
@@ -84,7 +84,7 @@ describe('notifications', () => {
     await bob.repos.profile.setFollow('alice_runner', true);
     await alice.repos.profile.setFollow('bob_lifts', true);
 
-    const chat = await bob.repos.chats.open('alice_runner');
+    const chat = await bob.repos.chats.open(alice.userId);
     await bob.repos.chats.send(chat.id, 'First');
     await bob.repos.chats.send(chat.id, 'Second');
     const feed = await alice.repos.notifications.list();

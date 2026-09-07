@@ -2,7 +2,6 @@ import { ConvexError, v } from 'convex/values';
 import type { Doc, Id } from './_generated/dataModel';
 import { mutation, query, type MutationCtx, type QueryCtx } from './_generated/server';
 import { nowIso, requireUserId } from './lib/auth';
-import { normalizeHandle } from './lib/handles';
 import { addChatNotification, markChatNotificationsRead } from './notifications';
 
 const MESSAGE_LIMIT = 200;
@@ -24,14 +23,6 @@ function peerId(chat: Doc<'directChats'>, userId: Id<'users'>): Id<'users'> {
 
 function readAt(chat: Doc<'directChats'>, userId: Id<'users'>): string | undefined {
   return chat.userOneId === userId ? chat.userOneReadAt : chat.userTwoReadAt;
-}
-
-async function avatarUrl(
-  ctx: QueryCtx | MutationCtx,
-  profile: Doc<'profiles'>,
-): Promise<string | undefined> {
-  if (!profile.avatarId) return undefined;
-  return (await ctx.storage.getUrl(profile.avatarId)) ?? undefined;
 }
 
 type FriendshipState = 'none' | 'outgoing' | 'incoming' | 'friends';
@@ -59,18 +50,76 @@ async function friendshipState(
   return 'none';
 }
 
-async function personView(ctx: QueryCtx | MutationCtx, viewerId: Id<'users'>, userId: Id<'users'>) {
-  const profile = await ctx.db
+async function profileFor(ctx: QueryCtx | MutationCtx, userId: Id<'users'>) {
+  return ctx.db
     .query('profiles')
     .withIndex('by_user', (q) => q.eq('userId', userId))
     .first();
-  if (!profile) return null;
+}
+
+/**
+ * Who somebody is, read from the account itself.
+ *
+ * The `users` table is the list of accounts; a `profiles` row is an extra the
+ * account acquires the first time its owner edits their page. So the account
+ * is the source of truth for whether a person exists and what they are
+ * called, and the profile only adds the handle, a chosen display name and a
+ * picture when there is one. Nobody is invisible for never having edited a
+ * profile.
+ */
+async function identity(
+  ctx: QueryCtx | MutationCtx,
+  viewerId: Id<'users'>,
+  user: Doc<'users'>,
+  profile: Doc<'profiles'> | null,
+) {
+  const handle = profile?.handle ?? null;
+  const displayName =
+    profile?.displayName?.trim() ||
+    user.name?.trim() ||
+    (handle ? `@${handle}` : 'Macronaut member');
+  const avatarUrl =
+    (profile?.avatarId ? await ctx.storage.getUrl(profile.avatarId) : null) ??
+    user.image?.trim() ??
+    undefined;
   return {
-    handle: profile.handle,
-    displayName: profile.displayName?.trim() || `@${profile.handle}`,
-    avatarUrl: await avatarUrl(ctx, profile),
-    friendship: await friendshipState(ctx, viewerId, userId),
+    id: user._id as string,
+    handle,
+    displayName,
+    avatarUrl: avatarUrl || undefined,
+    friendship: await friendshipState(ctx, viewerId, user._id),
   };
+}
+
+async function personView(ctx: QueryCtx | MutationCtx, viewerId: Id<'users'>, userId: Id<'users'>) {
+  const user = await ctx.db.get(userId);
+  if (!user) return null;
+  return identity(ctx, viewerId, user, await profileFor(ctx, userId));
+}
+
+/**
+ * Whether a search term reaches an account: any part of the name it signed
+ * up with, or of the handle or display name on its profile when it has one.
+ * Never the email — that is a way to confirm addresses, not to find friends.
+ */
+function matchesSearch(
+  user: Doc<'users'>,
+  profile: Doc<'profiles'> | null,
+  wanted: string,
+): boolean {
+  return (
+    (user.name ?? '').toLowerCase().includes(wanted) ||
+    (profile?.handleLower.includes(wanted) ?? false) ||
+    (profile?.displayName ?? '').toLowerCase().includes(wanted)
+  );
+}
+
+/** Two accounts with the same address are the same person: a second sign-up
+ * with another provider, or a re-registration. You never search for yourself. */
+function samePerson(a: Doc<'users'>, b: Doc<'users'>): boolean {
+  if (a._id === b._id) return true;
+  const email = (a.email ?? '').trim().toLowerCase();
+  return email !== '' && email === (b.email ?? '').trim().toLowerCase();
 }
 
 async function unreadCount(
@@ -138,37 +187,28 @@ export const list = query({
 });
 
 /**
- * Who a search may surface: anyone, by any part of their handle or their
- * display name. You have to be able to find someone by their first name to
- * send them a friend request, so `isPublic` deliberately has no say here — it
- * governs who may read a profile *page*, which is a different question.
- *
- * What a search hands back is only the identity card `people` returns:
- * handle, name, picture. The page behind it stays exactly as private as its
- * owner left it, and messaging still waits on a mutual friendship.
+ * Contacts are friend requests, friends, and existing chat peers. Typing
+ * searches the accounts in the Macronaut database instead — every one of
+ * them, whether or not it has a profile row, and whether or not that profile
+ * page is public. `isPublic` governs who may read a page; it has no say in
+ * who may be found, because you have to be able to find someone by name to
+ * send them a friend request at all. What comes back is only the identity
+ * card: name, handle when there is one, picture, and where you stand with
+ * them. Messaging still waits on a mutual friendship.
  */
-function matchesSearch(profile: Doc<'profiles'>, wanted: string): boolean {
-  return (
-    profile.handleLower.includes(wanted) ||
-    (profile.displayName ?? '').toLowerCase().includes(wanted)
-  );
-}
-
-/** Contacts are friend requests, friends, and existing chat peers. Typing
- * searches profile rows in the Macronaut database instead. */
 export const people = query({
   args: { search: v.optional(v.string()) },
   handler: async (ctx, { search }) => {
     const userId = await requireUserId(ctx);
+    const viewer = await ctx.db.get(userId);
+    if (!viewer) throw new ConvexError('Not signed in');
     // People type the @ shown beside a handle. It is decoration, never part
     // of the stored handle, so strip it before matching.
     const wanted = (search?.trim().toLowerCase() ?? '').replace(/^@+/, '');
-    let profiles: Doc<'profiles'>[];
 
+    let users: Doc<'users'>[];
     if (wanted) {
-      profiles = (await ctx.db.query('profiles').collect()).filter(
-        (profile) => profile.userId !== userId && matchesSearch(profile, wanted),
-      );
+      users = (await ctx.db.query('users').collect()).filter((user) => !samePerson(viewer, user));
     } else {
       const [following, followers, chats] = await Promise.all([
         ctx.db
@@ -186,49 +226,33 @@ export const people = query({
         ...followers.map((row) => row.userId),
         ...chats.map((chat) => peerId(chat, userId)),
       ]);
-      const rows = await Promise.all(
-        [...ids].map((id) =>
-          ctx.db
-            .query('profiles')
-            .withIndex('by_user', (q) => q.eq('userId', id))
-            .first(),
-        ),
-      );
-      // These are people you already follow, who follow you, or who you have
-      // a conversation with — a private page never hides them from you.
-      profiles = rows.filter((profile): profile is Doc<'profiles'> => profile !== null);
+      const rows = await Promise.all([...ids].map((id) => ctx.db.get(id)));
+      users = rows.filter((user): user is Doc<'users'> => user !== null);
     }
 
-    profiles.sort((a, b) => (a.displayName ?? a.handle).localeCompare(b.displayName ?? b.handle));
-    return Promise.all(
-      profiles.slice(0, PEOPLE_LIMIT).map(async (profile) => ({
-        handle: profile.handle,
-        displayName: profile.displayName?.trim() || `@${profile.handle}`,
-        avatarUrl: await avatarUrl(ctx, profile),
-        friendship: await friendshipState(ctx, userId, profile.userId),
-      })),
-    );
+    const people = [];
+    for (const user of users) {
+      const profile = await profileFor(ctx, user._id);
+      if (wanted && !matchesSearch(user, profile, wanted)) continue;
+      people.push(await identity(ctx, userId, user, profile));
+    }
+    people.sort((a, b) => a.displayName.localeCompare(b.displayName));
+    return people.slice(0, PEOPLE_LIMIT);
   },
 });
 
 export const open = mutation({
-  args: { handle: v.string() },
-  handler: async (ctx, { handle }) => {
+  args: { userId: v.id('users') },
+  handler: async (ctx, { userId: otherId }) => {
     const userId = await requireUserId(ctx);
-    const wanted = normalizeHandle(handle);
-    const profile = wanted
-      ? await ctx.db
-          .query('profiles')
-          .withIndex('by_handle', (q) => q.eq('handleLower', wanted))
-          .first()
-      : null;
-    if (!profile || profile.userId === userId) {
+    const other = await ctx.db.get(otherId);
+    if (!other || other._id === userId) {
       throw new ConvexError('Person not available');
     }
-    if ((await friendshipState(ctx, userId, profile.userId)) !== 'friends') {
+    if ((await friendshipState(ctx, userId, other._id)) !== 'friends') {
       throw new ConvexError('You must be friends before starting a chat');
     }
-    const key = pairKey(userId, profile.userId);
+    const key = pairKey(userId, other._id);
     const existing = await ctx.db
       .query('directChats')
       .withIndex('by_pair', (q) => q.eq('pairKey', key))
@@ -237,9 +261,7 @@ export const open = mutation({
 
     const ts = nowIso();
     const [userOneId, userTwoId] =
-      (userId as string) < (profile.userId as string)
-        ? [userId, profile.userId]
-        : [profile.userId, userId];
+      (userId as string) < (other._id as string) ? [userId, other._id] : [other._id, userId];
     const doc = {
       userOneId,
       userTwoId,

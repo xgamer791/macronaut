@@ -97,12 +97,20 @@ describe('chat routes', () => {
       path.join(appDir, '..', '..', 'convex', 'profiles.ts'),
       'utf8',
     );
-    // Searching matches a name or a handle for everyone. `isPublic` decides
-    // who may read a profile page, never who may be found or befriended.
+    // Searching reads the accounts table itself — every account, whether or
+    // not it has a profile row — and matches a name or a handle. `isPublic`
+    // decides who may read a profile page, never who may be found.
+    expect(backend).toContain("ctx.db.query('users').collect()");
     expect(backend).toContain('function matchesSearch');
+    expect(backend).toContain("(user.name ?? '').toLowerCase().includes(wanted)");
     expect(backend).not.toContain('profile.isPublic &&');
-    expect(backend).not.toContain('!profile.isPublic || profile.userId === userId');
     expect(profiles).not.toContain('row.userId === userId || !row.isPublic');
+    // Your own account, under any sign-up, is never a search result.
+    expect(backend).toContain('function samePerson');
+    // Friend and chat actions address the account id, so a person with no
+    // handle yet can still be befriended and messaged.
+    expect(backend).toContain("args: { userId: v.id('users') }");
+    expect(profiles).toContain("userId: v.optional(v.id('users'))");
   });
 
   it('claims a profile row for every signed-in account, so search can see it', () => {

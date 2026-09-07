@@ -64,9 +64,12 @@ export interface ProfileRepo {
   addPost(body: string, imageId?: string): Promise<ProfilePost>;
   updatePost(id: string, body: string): Promise<ProfilePost>;
   removePost(id: string): Promise<void>;
-  /** Follow or unfollow a public profile. Returns that profile as it looks
-   * afterwards, so the counts on the page update from the same round trip. */
+  /** Follow or unfollow the profile at a handle. Returns that profile as it
+   * looks afterwards, so the counts on the page update from the same round trip. */
   setFollow(handle: string, follow: boolean): Promise<ProfileView>;
+  /** The same friend request, addressed to an account by id — how a people
+   * search result is befriended, since it may have no handle yet. */
+  requestFriend(userId: string, follow: boolean): Promise<ProfileView>;
 }
 
 const postId = (id: string) => id as Id<'profilePosts'>;
@@ -111,5 +114,7 @@ export function createProfileRepo(convex: ConvexCaller): ProfileRepo {
       await convex.mutation(api.profiles.removePost, { id: postId(id) });
     },
     setFollow: (handle, follow) => convex.mutation(api.profiles.setFollow, { handle, follow }),
+    requestFriend: (userId, follow) =>
+      convex.mutation(api.profiles.setFollow, { userId: userId as Id<'users'>, follow }),
   };
 }

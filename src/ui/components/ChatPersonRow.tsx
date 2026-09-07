@@ -60,9 +60,11 @@ export function ChatPersonRow({
           <AppText weight="600" numberOfLines={1}>
             {person.displayName}
           </AppText>
-          <AppText variant="caption" tone="muted" numberOfLines={1}>
-            @{person.handle}
-          </AppText>
+          {person.handle ? (
+            <AppText variant="caption" tone="muted" numberOfLines={1}>
+              @{person.handle}
+            </AppText>
+          ) : null}
         </View>
       </Pressable>
       <Button

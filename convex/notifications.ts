@@ -5,25 +5,31 @@ import { nowIso, requireUserId } from './lib/auth';
 
 const NOTIFICATION_LIMIT = 100;
 
-async function avatarUrl(ctx: QueryCtx, profile: Doc<'profiles'>): Promise<string | undefined> {
-  if (!profile.avatarId) return undefined;
-  return (await ctx.storage.getUrl(profile.avatarId)) ?? undefined;
-}
-
+/** The person behind an event, read from their account: an actor who has
+ * never edited their profile still has a name, and their request still
+ * shows. The profile only adds the handle and a chosen picture. */
 async function notificationView(ctx: QueryCtx, event: Doc<'notifications'>) {
+  const actor = await ctx.db.get(event.actorId);
+  if (!actor) return null;
   const profile = await ctx.db
     .query('profiles')
     .withIndex('by_user', (q) => q.eq('userId', event.actorId))
     .first();
-  if (!profile) return null;
-  const displayName = profile.displayName?.trim() || `@${profile.handle}`;
+  const handle = profile?.handle ?? null;
+  const displayName =
+    profile?.displayName?.trim() || actor.name?.trim() || (handle ? `@${handle}` : 'Someone');
+  const avatarUrl =
+    (profile?.avatarId ? await ctx.storage.getUrl(profile.avatarId) : null) ??
+    actor.image?.trim() ??
+    undefined;
   return {
     id: event._id as string,
     kind: event.kind,
     actor: {
-      handle: profile.handle,
+      id: actor._id as string,
+      handle,
       displayName,
-      avatarUrl: await avatarUrl(ctx, profile),
+      avatarUrl: avatarUrl || undefined,
     },
     title: event.kind === 'friend_request' ? 'New friend request' : `Message from ${displayName}`,
     body:

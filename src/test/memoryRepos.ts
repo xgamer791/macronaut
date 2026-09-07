@@ -660,6 +660,9 @@ export function createMemoryProfileRepo(): ProfileRepo {
       if (handle.toLowerCase() !== profile.handle || !profile.isPublic) {
         throw new Error('Profile not available');
       }
+      return repo.requestFriend(profile.id ?? '', follow);
+    },
+    async requestFriend(_userId, follow) {
       profile = {
         ...profile,
         isFollowing: follow,
@@ -829,13 +832,13 @@ export function createMemoryChatRepo(): ChatRepo {
     async people() {
       return [];
     },
-    async open(handle) {
-      const existing = chats.find((chat) => chat.peer.handle === handle);
+    async open(userId) {
+      const existing = chats.find((chat) => chat.peer.id === userId);
       if (existing) return clone(existing);
       const ts = nowIso();
       const chat: ChatSummary = {
         id: newId(),
-        peer: { handle, displayName: `@${handle}`, friendship: 'friends' },
+        peer: { id: userId, handle: null, displayName: 'Macronaut member', friendship: 'friends' },
         lastMessage: null,
         unreadCount: 0,
         createdAt: ts,
