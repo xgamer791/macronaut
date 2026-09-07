@@ -4,7 +4,14 @@ import React, { useMemo, useState } from 'react';
 import { ActivityIndicator, Platform, Pressable, StyleSheet, TextInput, View } from 'react-native';
 import type { ChatSummary } from '@/repositories/chatRepo';
 import { useChats } from '@/state/queries';
-import { AppText, ChatAvatar, EmptyState, Screen, ScreenHeader } from '@/ui/components';
+import {
+  AppText,
+  ChatAvatar,
+  ChatPeopleList,
+  EmptyState,
+  Screen,
+  ScreenHeader,
+} from '@/ui/components';
 import { useTheme } from '@/ui/theme/ThemeProvider';
 import { radius, spacing, touchTarget, type } from '@/ui/theme/tokens';
 
@@ -53,11 +60,13 @@ function ChatList() {
         <View style={[styles.search, { backgroundColor: colors.surfaceRaised }]}>
           <Ionicons name="search" size={20} color={colors.textMuted} />
           <TextInput
-            accessibilityLabel="Search chats"
+            accessibilityLabel="Search chats and people on Macronaut"
             value={search}
             onChangeText={setSearch}
-            placeholder="Search"
+            placeholder="Search chats and people on Macronaut"
             placeholderTextColor={colors.textMuted}
+            autoCapitalize="none"
+            autoCorrect={false}
             returnKeyType="search"
             style={[styles.searchInput, { color: colors.textPrimary }]}
           />
@@ -73,27 +82,49 @@ function ChatList() {
         <View style={styles.loading}>
           <ActivityIndicator color={colors.accent} />
         </View>
-      ) : list.length === 0 ? (
-        <EmptyState
-          title={wanted ? 'No matching chats' : 'No chats yet'}
-          body={
-            wanted
-              ? 'Try another name or message.'
-              : 'Start a conversation with a contact or find someone on Macronaut.'
-          }
-          actionTitle={wanted ? undefined : 'Start a chat'}
-          onAction={wanted ? undefined : () => router.push('/new-chat')}
-        />
       ) : (
-        <View>
-          {list.map((chat) => (
-            <ChatRow
-              key={chat.id}
-              chat={chat}
-              onPress={() => router.push({ pathname: '/chat/[id]', params: { id: chat.id } })}
+        <>
+          {list.length ? (
+            <View>
+              {wanted ? (
+                <AppText variant="caption" weight="700" tone="secondary" style={styles.label}>
+                  CHATS
+                </AppText>
+              ) : null}
+              {list.map((chat) => (
+                <ChatRow
+                  key={chat.id}
+                  chat={chat}
+                  onPress={() => router.push({ pathname: '/chat/[id]', params: { id: chat.id } })}
+                />
+              ))}
+            </View>
+          ) : null}
+
+          {/* Typing looks past your own conversations and into the database. */}
+          <ChatPeopleList
+            search={search}
+            enabled={Boolean(wanted)}
+            label="PEOPLE ON MACRONAUT"
+            empty={
+              list.length ? undefined : (
+                <EmptyState
+                  title="No people found"
+                  body="Search the whole @handle to find someone whose profile page is private."
+                />
+              )
+            }
+          />
+
+          {!wanted && list.length === 0 ? (
+            <EmptyState
+              title="No chats yet"
+              body="Start a conversation with a contact or find someone on Macronaut."
+              actionTitle="Start a chat"
+              onAction={() => router.push('/new-chat')}
             />
-          ))}
-        </View>
+          ) : null}
+        </>
       )}
     </Screen>
   );
@@ -198,6 +229,11 @@ const styles = StyleSheet.create({
   loading: {
     paddingVertical: spacing.xxl * 2,
     alignItems: 'center',
+  },
+  label: {
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.sm,
+    letterSpacing: 0.5,
   },
   chatRow: {
     minHeight: 76,

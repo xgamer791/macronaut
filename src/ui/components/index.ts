@@ -1,6 +1,7 @@
 export { AppText } from './AppText';
 export { ChatAvatar } from './ChatAvatar';
 export { ChatPersonRow } from './ChatPersonRow';
+export { ChatPeopleList } from './ChatPeopleList';
 export { ActivityLogList } from './ActivityLogList';
 export { Button } from './Button';
 export { Card } from './Card';
