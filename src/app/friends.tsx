@@ -8,19 +8,19 @@ import {
   Pressable,
   RefreshControl,
   StyleSheet,
-  View,
   useWindowDimensions,
+  View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { FriendsFeedPost } from '@/repositories/profileRepo';
 import { useFriendsFeed } from '@/state/queries';
-import { AppText, EmptyState, ErrorState, Screen, ScreenHeader } from '@/ui/components';
+import { AppText, Button, ErrorState, GlassHeaderBar, Screen, ScreenHeader } from '@/ui/components';
 import { SlideScreen } from '@/ui/motion/SlideScreen';
 import { useTheme } from '@/ui/theme/ThemeProvider';
 import { radius, spacing, touchTarget } from '@/ui/theme/tokens';
 import { relativeTime } from '@/utils/relativeTime';
 
-const MAX_FEED_WIDTH = 720;
+const MAX_FEED_WIDTH = 680;
 
 /** Latest posts from mutual friends, fetched ten at a time. */
 export default function FriendsRoute() {
@@ -37,46 +37,50 @@ function FriendsScreen() {
   const insets = useSafeAreaInsets();
   const feed = useFriendsFeed();
   const posts = feed.data?.pages.flatMap((page) => page.page) ?? [];
+  const findFriends = () => router.push('/new-chat');
 
   return (
-    <Screen padded={false} scroll={false}>
-      <View style={styles.header}>
-        <ScreenHeader
-          title="Friends"
-          right={
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Find friends"
-              accessibilityHint="Search for people on Macronaut"
-              onPress={() => router.push('/new-chat')}
-              hitSlop={8}
-              style={({ pressed }) => [
-                styles.findFriends,
-                {
-                  backgroundColor: colors.surfaceRaised,
-                  borderColor: colors.border,
-                  opacity: pressed ? 0.7 : 1,
-                },
-              ]}
-            >
-              <Ionicons name="person-add-outline" size={22} color={colors.accent} />
-            </Pressable>
-          }
-        />
-      </View>
+    <Screen
+      padded={false}
+      scroll={false}
+      safeTop={false}
+      collapseHeader={false}
+      stickyHeader={
+        <GlassHeaderBar inset={spacing.lg}>
+          <ScreenHeader
+            title="Friends"
+            right={
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Find friends"
+                accessibilityHint="Search for people on Macronaut"
+                onPress={findFriends}
+                hitSlop={8}
+                style={({ pressed }) => [styles.findFriends, pressed && styles.pressed]}
+              >
+                <Ionicons name="person-add-outline" size={24} color={colors.accent} />
+              </Pressable>
+            }
+          />
+        </GlassHeaderBar>
+      }
+    >
       <FlatList
         data={posts}
         keyExtractor={(post) => post.id}
         renderItem={({ item }) => (
-          <FriendsFeedCard
+          <FriendsFeedPostView
             post={item}
             onOpenProfile={
               item.author.canOpenProfile ? () => router.push(`/u/${item.author.handle}`) : undefined
             }
           />
         )}
-        ItemSeparatorComponent={() => <View style={{ height: spacing.md }} />}
-        contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + spacing.lg }]}
+        contentContainerStyle={[
+          styles.content,
+          { paddingBottom: insets.bottom + spacing.lg },
+          posts.length === 0 && styles.emptyContent,
+        ]}
         style={styles.list}
         showsVerticalScrollIndicator={false}
         onEndReachedThreshold={0.45}
@@ -100,17 +104,7 @@ function FriendsScreen() {
               onRetry={() => void feed.refetch()}
             />
           ) : (
-            <View style={styles.emptyWrap}>
-              <View style={[styles.emptyIcon, { backgroundColor: colors.surfaceRaised }]}>
-                <Ionicons name="people" size={30} color={colors.accent} />
-              </View>
-              <EmptyState
-                title="Your friends feed starts here"
-                body="Add friends to see their latest Macronaut posts in this feed."
-                actionTitle="Find friends"
-                onAction={() => router.push('/new-chat')}
-              />
-            </View>
+            <FeedEmpty onFindFriends={findFriends} />
           )
         }
         ListFooterComponent={
@@ -123,11 +117,9 @@ function FriendsScreen() {
             </View>
           ) : posts.length > 0 && !feed.hasNextPage ? (
             <View style={styles.footer}>
-              <View style={[styles.endLine, { backgroundColor: colors.border }]} />
               <AppText variant="caption" tone="muted">
-                You’re all caught up
+                No more posts
               </AppText>
-              <View style={[styles.endLine, { backgroundColor: colors.border }]} />
             </View>
           ) : null
         }
@@ -136,7 +128,7 @@ function FriendsScreen() {
   );
 }
 
-function FriendsFeedCard({
+function FriendsFeedPostView({
   post,
   onOpenProfile,
 }: {
@@ -145,21 +137,12 @@ function FriendsFeedCard({
 }) {
   const { colors } = useTheme();
   const { width } = useWindowDimensions();
-  const imageHeight = Math.round(
-    Math.min(Math.max((Math.min(width, MAX_FEED_WIDTH) - spacing.lg * 2) * 0.68, 220), 470),
-  );
+  const imageHeight = Math.min(Math.round(Math.min(width, MAX_FEED_WIDTH) * 0.72), 480);
   const name = post.author.displayName?.trim() || `@${post.author.handle}`;
+  const timestamp = `${relativeTime(post.createdAt)}${post.updatedAt !== post.createdAt ? ' edited' : ''}`;
 
   return (
-    <View
-      style={[
-        styles.card,
-        {
-          backgroundColor: colors.surface,
-          borderColor: colors.border,
-        },
-      ]}
-    >
+    <View style={[styles.post, { borderBottomColor: colors.border }]}>
       <Pressable
         accessibilityRole={onOpenProfile ? 'button' : undefined}
         accessibilityLabel={onOpenProfile ? `Open ${name}'s profile` : undefined}
@@ -167,7 +150,7 @@ function FriendsFeedCard({
         onPress={onOpenProfile}
         style={({ pressed }) => [styles.authorRow, pressed && styles.pressed]}
       >
-        <View style={[styles.avatarRing, { borderColor: colors.accent }]}>
+        <View style={[styles.avatarFrame, { backgroundColor: colors.surfaceRaised }]}>
           {post.author.avatarUrl ? (
             <Image
               source={{ uri: post.author.avatarUrl }}
@@ -177,30 +160,33 @@ function FriendsFeedCard({
               accessibilityIgnoresInvertColors
             />
           ) : (
-            <View style={[styles.avatarFallback, { backgroundColor: colors.surfaceRaised }]}>
-              <AppText variant="caption" tone="accent" weight="700">
-                {initials(name)}
-              </AppText>
-            </View>
+            <AppText variant="caption" tone="accent" weight="700">
+              {initials(name)}
+            </AppText>
           )}
         </View>
 
         <View style={styles.authorCopy}>
-          <AppText variant="body" weight="700" numberOfLines={1}>
+          <AppText weight="700" numberOfLines={1}>
             {name}
           </AppText>
           <AppText variant="caption" tone="muted" numberOfLines={1}>
-            @{post.author.handle} · {relativeTime(post.createdAt)}
-            {post.updatedAt !== post.createdAt ? ' · edited' : ''}
+            @{post.author.handle}
           </AppText>
         </View>
-        {onOpenProfile ? (
-          <Ionicons name="chevron-forward" size={17} color={colors.textMuted} />
-        ) : null}
+
+        <View style={styles.postMeta}>
+          <AppText variant="micro" tone="muted" numberOfLines={1}>
+            {timestamp}
+          </AppText>
+          {onOpenProfile ? (
+            <Ionicons name="arrow-forward" size={16} color={colors.textMuted} />
+          ) : null}
+        </View>
       </Pressable>
 
       {post.body ? (
-        <AppText variant="body" style={styles.body}>
+        <AppText style={[styles.postBody, !post.imageUrl && styles.textOnlyBody]}>
           {post.body}
         </AppText>
       ) : null}
@@ -211,27 +197,28 @@ function FriendsFeedCard({
           style={[styles.postImage, { height: imageHeight, backgroundColor: colors.track }]}
           contentFit="cover"
           transition={220}
+          accessibilityLabel={`${name}'s post image`}
           accessibilityIgnoresInvertColors
         />
       ) : null}
+    </View>
+  );
+}
 
-      {onOpenProfile ? (
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={`View ${name}'s profile`}
-          onPress={onOpenProfile}
-          style={({ pressed }) => [
-            styles.profileAction,
-            { borderTopColor: colors.border },
-            pressed && styles.pressed,
-          ]}
-        >
-          <Ionicons name="person-outline" size={18} color={colors.accent} />
-          <AppText variant="caption" tone="accent" weight="700">
-            View profile
-          </AppText>
-        </Pressable>
-      ) : null}
+function FeedEmpty({ onFindFriends }: { onFindFriends: () => void }) {
+  const { colors } = useTheme();
+  return (
+    <View style={styles.emptyWrap}>
+      <Ionicons name="people-outline" size={38} color={colors.accent} />
+      <View style={styles.emptyCopy}>
+        <AppText variant="heading" weight="700" align="center">
+          No friend posts yet
+        </AppText>
+        <AppText variant="caption" tone="secondary" align="center">
+          Find people on Macronaut to start your feed.
+        </AppText>
+      </View>
+      <Button compact title="Find friends" onPress={onFindFriends} />
     </View>
   );
 }
@@ -239,15 +226,9 @@ function FriendsFeedCard({
 function FeedSkeleton() {
   const { colors } = useTheme();
   return (
-    <View style={styles.skeletonList} accessibilityLabel="Loading friends feed">
-      {[0, 1, 2].map((item) => (
-        <View
-          key={item}
-          style={[
-            styles.skeletonCard,
-            { backgroundColor: colors.surface, borderColor: colors.border },
-          ]}
-        >
+    <View accessibilityLabel="Loading friends feed">
+      {[0, 1].map((item) => (
+        <View key={item} style={[styles.skeletonPost, { borderBottomColor: colors.border }]}>
           <View style={styles.skeletonHead}>
             <View style={[styles.skeletonAvatar, { backgroundColor: colors.surfaceRaised }]} />
             <View style={styles.skeletonCopy}>
@@ -255,7 +236,17 @@ function FeedSkeleton() {
               <View style={[styles.skeletonMeta, { backgroundColor: colors.surfaceRaised }]} />
             </View>
           </View>
-          <View style={[styles.skeletonBody, { backgroundColor: colors.surfaceRaised }]} />
+          <View style={styles.skeletonText}>
+            <View style={[styles.skeletonLine, { backgroundColor: colors.surfaceRaised }]} />
+            <View
+              style={[
+                styles.skeletonLine,
+                styles.skeletonLineShort,
+                { backgroundColor: colors.surfaceRaised },
+              ]}
+            />
+          </View>
+          <View style={[styles.skeletonMedia, { backgroundColor: colors.surfaceRaised }]} />
         </View>
       ))}
     </View>
@@ -273,9 +264,6 @@ function initials(name: string): string {
 }
 
 const styles = StyleSheet.create({
-  header: {
-    paddingHorizontal: spacing.lg,
-  },
   list: {
     flex: 1,
   },
@@ -283,128 +271,129 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: MAX_FEED_WIDTH,
     alignSelf: 'center',
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.md,
+  },
+  emptyContent: {
+    flexGrow: 1,
   },
   findFriends: {
     width: touchTarget,
     height: touchTarget,
-    borderRadius: touchTarget / 2,
-    borderWidth: StyleSheet.hairlineWidth,
-    alignItems: 'center',
+    alignItems: 'flex-end',
     justifyContent: 'center',
   },
-  card: {
-    borderWidth: StyleSheet.hairlineWidth,
-    borderRadius: radius.lg,
-    overflow: 'hidden',
+  post: {
+    borderBottomWidth: StyleSheet.hairlineWidth,
   },
   authorRow: {
-    minHeight: 72,
+    minHeight: 68,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
   },
-  avatarRing: {
-    width: 46,
-    height: 46,
-    borderRadius: 23,
-    borderWidth: 2,
-    padding: 2,
+  avatarFrame: {
+    width: 42,
+    height: 42,
+    borderRadius: radius.md,
+    overflow: 'hidden',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   avatar: {
     width: '100%',
     height: '100%',
-    borderRadius: 20,
-  },
-  avatarFallback: {
-    flex: 1,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   authorCopy: {
     flex: 1,
+    minWidth: 0,
+    gap: 1,
   },
-  body: {
+  postMeta: {
+    maxWidth: 116,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    gap: spacing.xs,
+  },
+  postBody: {
     paddingHorizontal: spacing.lg,
     paddingBottom: spacing.lg,
+    fontSize: 16,
+    lineHeight: 23,
+  },
+  textOnlyBody: {
+    paddingBottom: spacing.xl,
   },
   postImage: {
     width: '100%',
-  },
-  profileAction: {
-    minHeight: touchTarget,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.sm,
   },
   pressed: {
     opacity: 0.65,
   },
   emptyWrap: {
-    paddingTop: spacing.xxl * 2,
-    alignItems: 'center',
-  },
-  emptyIcon: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
+    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: -spacing.sm,
+    gap: spacing.lg,
+    paddingHorizontal: spacing.xl,
+    paddingBottom: spacing.xxl,
+  },
+  emptyCopy: {
+    maxWidth: 300,
+    gap: spacing.xs,
   },
   footer: {
     minHeight: 76,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: spacing.md,
+    gap: spacing.sm,
   },
-  endLine: {
-    width: 36,
-    height: StyleSheet.hairlineWidth,
-  },
-  skeletonList: {
-    gap: spacing.md,
-  },
-  skeletonCard: {
-    minHeight: 190,
-    borderRadius: radius.lg,
-    borderWidth: StyleSheet.hairlineWidth,
-    padding: spacing.lg,
-    gap: spacing.lg,
+  skeletonPost: {
+    borderBottomWidth: StyleSheet.hairlineWidth,
   },
   skeletonHead: {
+    minHeight: 68,
+    paddingHorizontal: spacing.lg,
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
   },
   skeletonAvatar: {
-    width: 46,
-    height: 46,
-    borderRadius: 23,
+    width: 42,
+    height: 42,
+    borderRadius: radius.md,
   },
   skeletonCopy: {
     flex: 1,
     gap: spacing.sm,
   },
   skeletonName: {
-    height: 14,
-    width: '48%',
+    height: 13,
+    width: '42%',
     borderRadius: radius.full,
   },
   skeletonMeta: {
-    height: 10,
-    width: '70%',
+    height: 9,
+    width: '28%',
     borderRadius: radius.full,
   },
-  skeletonBody: {
-    height: 86,
-    borderRadius: radius.md,
+  skeletonText: {
+    gap: spacing.sm,
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.lg,
+  },
+  skeletonLine: {
+    height: 11,
+    width: '82%',
+    borderRadius: radius.full,
+  },
+  skeletonLineShort: {
+    width: '54%',
+  },
+  skeletonMedia: {
+    width: '100%',
+    height: 300,
   },
 });
