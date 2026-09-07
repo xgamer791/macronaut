@@ -31,7 +31,7 @@ export function Screen({
   ];
   const contentPad = {
     padding: padded ? spacing.lg : 0,
-    paddingBottom: (padded ? spacing.lg : 0) + (tabBarSpace ? 96 : insets.bottom),
+    paddingBottom: (padded ? spacing.lg : 0) + (tabBarSpace ? 72 : insets.bottom),
     gap: padded ? spacing.lg : 0,
   };
 

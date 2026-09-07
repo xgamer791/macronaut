@@ -31,7 +31,7 @@ Built with React Native + Expo so the same codebase ships to iOS.
 | Layer | Choice |
 |---|---|
 | App | Expo SDK 57 (managed), React Native 0.86, TypeScript strict |
-| Navigation | expo-router (file-based), custom tab bar with center Add button |
+| Navigation | expo-router (file-based), custom tab bar; add food from the Today header |
 | Data fetching | TanStack Query |
 | Ephemeral state | Zustand |
 | Backend | Convex — functions in `convex/`, every table scoped to the signed-in account on the server; the app reaches it through one repository layer |
