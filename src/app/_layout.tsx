@@ -13,6 +13,7 @@ import { convexConfigStatus } from '@/services/convex/client';
 import { AppProvider, useRepos } from '@/state/AppProvider';
 import { AuthProvider, useAuth } from '@/state/AuthProvider';
 import { keys, useSetting } from '@/state/queries';
+import { SLIDE_OVER_OPTIONS } from '@/ui/motion/SlideScreen';
 import { AppearanceMode, ThemeProvider } from '@/ui/theme/ThemeProvider';
 
 SplashScreen.preventAutoHideAsync();
@@ -71,7 +72,7 @@ function ThemedApp() {
         <Stack.Screen name="onboarding" />
         <Stack.Screen name="add" options={{ presentation: 'modal' }} />
         <Stack.Screen name="manual-entry" options={{ presentation: 'modal' }} />
-        <Stack.Screen name="goals" />
+        <Stack.Screen name="goals" options={SLIDE_OVER_OPTIONS} />
         <Stack.Screen name="activity" options={{ presentation: 'modal' }} />
         <Stack.Screen name="scan" options={{ presentation: 'modal' }} />
         <Stack.Screen name="ai-scan" options={{ presentation: 'modal' }} />
@@ -79,21 +80,21 @@ function ThemedApp() {
         <Stack.Screen name="log-collection" options={{ presentation: 'modal' }} />
         <Stack.Screen name="meal-editor" options={{ presentation: 'modal' }} />
         <Stack.Screen name="recipe-editor" options={{ presentation: 'modal' }} />
-        <Stack.Screen name="meal/[id]" />
-        <Stack.Screen name="profile" />
-        <Stack.Screen name="photos" />
-        <Stack.Screen name="groups" />
-        <Stack.Screen name="chats" />
+        <Stack.Screen name="meal/[id]" options={SLIDE_OVER_OPTIONS} />
+        <Stack.Screen name="profile" options={SLIDE_OVER_OPTIONS} />
+        <Stack.Screen name="photos" options={SLIDE_OVER_OPTIONS} />
+        <Stack.Screen name="groups" options={SLIDE_OVER_OPTIONS} />
+        <Stack.Screen name="chats" options={SLIDE_OVER_OPTIONS} />
         <Stack.Screen name="new-chat" options={{ presentation: 'modal' }} />
-        <Stack.Screen name="chat/[id]" />
-        <Stack.Screen name="notifications" />
+        <Stack.Screen name="chat/[id]" options={SLIDE_OVER_OPTIONS} />
+        <Stack.Screen name="notifications" options={SLIDE_OVER_OPTIONS} />
         {/* Reachable signed-out: the create-account legal gate links to both,
             and a shared public profile link is opened by people with no
             account at all. */}
-        <Stack.Screen name="privacy" />
-        <Stack.Screen name="terms" />
-        <Stack.Screen name="apple-health" />
-        <Stack.Screen name="u/[handle]" />
+        <Stack.Screen name="privacy" options={SLIDE_OVER_OPTIONS} />
+        <Stack.Screen name="terms" options={SLIDE_OVER_OPTIONS} />
+        <Stack.Screen name="apple-health" options={SLIDE_OVER_OPTIONS} />
+        <Stack.Screen name="u/[handle]" options={SLIDE_OVER_OPTIONS} />
       </Stack>
     </ThemeProvider>
   );

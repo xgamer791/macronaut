@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import * as Linking from 'expo-linking';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
 import React, { useMemo, useState } from 'react';
 import {
   Alert,
@@ -18,8 +18,8 @@ import { getCuratedMeal, type CuratedMeal } from '@/data/curatedMeals';
 import { useRepos } from '@/state/AppProvider';
 import { useAddDiaryEntry, useMealCategories } from '@/state/queries';
 import { useUiStore } from '@/state/uiStore';
-import { goBackOrHome } from '@/utils/navigation';
 import { AppText, Button, ErrorState, Sheet } from '@/ui/components';
+import { SlideScreen, useSlideBack } from '@/ui/motion/SlideScreen';
 import { DifficultyBar } from '@/ui/components/DifficultyBar';
 import { useTheme } from '@/ui/theme/ThemeProvider';
 import { fonts, radius, spacing } from '@/ui/theme/tokens';
@@ -53,9 +53,17 @@ async function copyText(text: string): Promise<boolean> {
  * Meal detail — Plan-style recipe view with Ingredients / Directions tabs
  * and a bottom Log action into the diary.
  */
-export default function MealDetailScreen() {
+export default function MealDetailRoute() {
+  return (
+    <SlideScreen from="left">
+      <MealDetailScreen />
+    </SlideScreen>
+  );
+}
+
+function MealDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const router = useRouter();
+  const onBack = useSlideBack();
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
@@ -81,7 +89,7 @@ export default function MealDetailScreen() {
           title="Meal not found"
           message="This curated meal is unavailable."
           retryTitle="Back"
-          onRetry={() => goBackOrHome(router)}
+          onRetry={onBack}
         />
       </View>
     );
@@ -138,7 +146,7 @@ export default function MealDetailScreen() {
       });
       void diary.entriesForDate(date);
       setLogOpen(false);
-      goBackOrHome(router);
+      onBack();
     } finally {
       setLogging(false);
     }
@@ -162,7 +170,7 @@ export default function MealDetailScreen() {
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="Back"
-            onPress={() => goBackOrHome(router)}
+            onPress={onBack}
             style={[
               styles.backBtn,
               {

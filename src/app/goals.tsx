@@ -1,5 +1,4 @@
 import { useQueryClient } from '@tanstack/react-query';
-import { useRouter } from 'expo-router';
 import React, { useMemo, useState } from 'react';
 import { Pressable, View } from 'react-native';
 import { GoalConfig, GoalMode, WeeklyGoalMode } from '@/domain/goals';
@@ -7,7 +6,7 @@ import { NutrientTargets } from '@/domain/types';
 import { useRepos } from '@/state/AppProvider';
 import { keys, useGoalConfigs } from '@/state/queries';
 import { todayKey } from '@/utils/date';
-import { goBackOrHome } from '@/utils/navigation';
+import { SlideScreen, useSlideBack } from '@/ui/motion/SlideScreen';
 import {
   AppText,
   Button,
@@ -23,8 +22,16 @@ import { spacing } from '@/ui/theme/tokens';
 
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
-export default function GoalsScreen() {
-  const router = useRouter();
+export default function GoalsRoute() {
+  return (
+    <SlideScreen from="left">
+      <GoalsScreen />
+    </SlideScreen>
+  );
+}
+
+function GoalsScreen() {
+  const onBack = useSlideBack();
   const { goals } = useRepos();
   const qc = useQueryClient();
   const configs = useGoalConfigs();
@@ -70,7 +77,7 @@ export default function GoalsScreen() {
       const { id: _id, ...rest } = working;
       await goals.saveConfig({ ...rest, effectiveFrom: todayKey() });
       qc.invalidateQueries({ queryKey: keys.goals });
-      goBackOrHome(router);
+      onBack();
     } finally {
       setSaving(false);
     }

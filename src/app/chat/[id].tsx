@@ -23,16 +23,21 @@ import {
 import { AppText, Button, ChatAvatar, EmptyState } from '@/ui/components';
 import { useTheme } from '@/ui/theme/ThemeProvider';
 import { radius, spacing, touchTarget, type } from '@/ui/theme/tokens';
-import { goBackOrHome } from '@/utils/navigation';
+import { SlideScreen, useSlideBack } from '@/ui/motion/SlideScreen';
 
 export default function ChatScreen() {
-  return <Conversation />;
+  return (
+    <SlideScreen from="left">
+      <Conversation />
+    </SlideScreen>
+  );
 }
 
 function Conversation() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const chatId = Array.isArray(id) ? (id[0] ?? '') : (id ?? '');
   const router = useRouter();
+  const onBack = useSlideBack();
   const insets = useSafeAreaInsets();
   const { colors } = useTheme();
   const { signedIn } = useAuth();
@@ -110,7 +115,7 @@ function Conversation() {
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Back"
-          onPress={() => goBackOrHome(router)}
+          onPress={onBack}
           hitSlop={8}
           style={styles.back}
         >

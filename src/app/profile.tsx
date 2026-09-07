@@ -40,7 +40,7 @@ import {
   useUpdateProfile,
   useUpdateProfilePost,
 } from '@/state/queries';
-import { goBackOrHome } from '@/utils/navigation';
+import { SlideScreen, useSlideBack } from '@/ui/motion/SlideScreen';
 import { ThemeProvider, useTheme } from '@/ui/theme/ThemeProvider';
 import { radius, spacing, touchTarget } from '@/ui/theme/tokens';
 import type { PickedImage } from '@/services/media/pickedImage';
@@ -65,13 +65,16 @@ export function profileUrl(handle: string): string {
 export default function ProfileScreen() {
   return (
     <ThemeProvider initialMode="dark">
-      <OwnProfile />
+      <SlideScreen from="right">
+        <OwnProfile />
+      </SlideScreen>
     </ThemeProvider>
   );
 }
 
 function OwnProfile() {
   const router = useRouter();
+  const onBack = useSlideBack();
   const { colors } = useTheme();
   const profile = useMyProfile();
   const photos = useMyPhotos();
@@ -157,7 +160,7 @@ function OwnProfile() {
       scroll
       stickyHeader={
         <GlassHeaderBar inset={spacing.md}>
-          <ProfileHeaderChrome onBack={() => goBackOrHome(router)} />
+          <ProfileHeaderChrome onBack={onBack} />
         </GlassHeaderBar>
       }
     >
@@ -165,7 +168,7 @@ function OwnProfile() {
         <>
           <ProfileHeader
             profile={data}
-            onBack={() => goBackOrHome(router)}
+            onBack={onBack}
             showChrome={false}
             onPickAvatar={() => void replaceImage('avatar')}
             onPickBanner={() => void replaceImage('banner')}
