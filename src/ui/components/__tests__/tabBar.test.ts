@@ -23,7 +23,10 @@ describe('tab bar', () => {
     expect(tabBar).toContain("label: 'Friends'");
     expect(tabBar).toContain('icon: Users');
     expect(tabBar).toContain("label: 'Groups'");
-    expect(tabBar).toContain('people-circle-outline');
+    expect(tabBar).toContain('icon: House');
+    expect(tabBar).toContain('icon: UserGroup');
+    expect(tabBar).not.toContain('home-outline');
+    expect(tabBar).not.toContain('people-circle-outline');
     expect(tabBar).not.toContain("href: '/notifications'");
     expect(tabBar).toContain('Open your profile');
     expect(tabBar).toContain('size={ICON}');

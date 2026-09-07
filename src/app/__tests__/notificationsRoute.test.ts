@@ -12,7 +12,7 @@ describe('notification center', () => {
     expect(tabBar).not.toContain('useNotifications');
     expect(tabBar).not.toContain("href: '/notifications'");
     expect(tabBar).toContain("href: '/groups'");
-    expect(tabBar).toContain('people-circle-outline');
+    expect(tabBar).toContain('icon: UserGroup');
     expect(tabBar).toContain('router.push(item.href)');
     const header = fs.readFileSync(path.join(srcDir, 'ui', 'components', 'AppHeader.tsx'), 'utf8');
     expect(header).toContain('<HeaderNotifyButton iconColor={icon} />');

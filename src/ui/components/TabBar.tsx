@@ -3,7 +3,7 @@ import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
 import { usePathname, useRouter, type Href } from 'expo-router';
 import type { BottomTabBarProps } from 'expo-router/js-tabs';
-import { MessagesSquare, Users, type LucideIcon } from 'lucide-react-native';
+import { House, MessagesSquare, UserGroup, Users, type LucideIcon } from 'lucide-react-native';
 import React, { useMemo } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -22,8 +22,8 @@ type TabItem =
       kind: 'tab';
       name: string;
       label: string;
-      icon: IconName;
-      iconActive: IconName;
+      icon: TabGlyphName;
+      iconActive: TabGlyphName;
       comingSoon?: boolean;
     }
   | {
@@ -38,7 +38,7 @@ type TabItem =
 /** Today, chats, friends, groups, then the account picture. Meals,
  * Progress and Settings stay registered as hidden tabs so existing links work. */
 const ITEMS: TabItem[] = [
-  { kind: 'tab', name: 'index', label: 'Today', icon: 'home-outline', iconActive: 'home' },
+  { kind: 'tab', name: 'index', label: 'Today', icon: House, iconActive: House },
   {
     kind: 'link',
     href: '/chats',
@@ -57,8 +57,8 @@ const ITEMS: TabItem[] = [
     kind: 'link',
     href: '/groups',
     label: 'Groups',
-    icon: 'people-circle-outline',
-    iconActive: 'people-circle',
+    icon: UserGroup,
+    iconActive: UserGroup,
   },
   { kind: 'profile' },
 ];
@@ -155,9 +155,8 @@ function TabBarItems({
           !item.comingSoon;
 
         const icon = (
-          <Ionicons
+          <TabGlyph
             name={focused ? item.iconActive : item.icon}
-            size={ICON}
             color={focused ? colors.accent : colors.textMuted}
           />
         );
@@ -177,9 +176,8 @@ function TabBarItems({
                 }}
                 style={styles.tab}
               >
-                <Ionicons
+                <TabGlyph
                   name={active ? item.iconActive : item.icon}
-                  size={ICON}
                   color={active ? colors.accent : colors.textMuted}
                 />
               </Pressable>
