@@ -211,8 +211,6 @@ function OwnProfile() {
           ) : null}
 
           <View style={styles.body}>
-            <VisibilityCard profile={data} onToggle={() => void togglePublic()} />
-
             <SectionHeader
               title="Posts"
               right={
@@ -296,34 +294,6 @@ function OwnProfile() {
         }}
       />
     </Screen>
-  );
-}
-
-/** Spells out what the public toggle actually does, and shows the link it
- * produces once the profile is public. */
-function VisibilityCard({ profile, onToggle }: { profile: ProfileView; onToggle: () => void }) {
-  return (
-    <Card style={{ gap: spacing.sm }}>
-      <AppText variant="body" weight="600">
-        {profile.isPublic ? 'Your profile is public' : 'Your profile is private'}
-      </AppText>
-      <AppText variant="caption" tone="secondary">
-        {profile.isPublic
-          ? 'Anyone with your link can see your picture, bio and posts. Your diary, goals and weight stay private either way.'
-          : 'Only you can see this page. Make it public to share your link with training partners.'}
-      </AppText>
-      {profile.isPublic ? (
-        <AppText variant="caption" tone="accent" weight="600" selectable>
-          {profileUrl(profile.handle)}
-        </AppText>
-      ) : null}
-      <Button
-        title={profile.isPublic ? 'Make private' : 'Make public'}
-        variant="secondary"
-        compact
-        onPress={onToggle}
-      />
-    </Card>
   );
 }
 

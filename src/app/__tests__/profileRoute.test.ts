@@ -87,6 +87,14 @@ describe('profile routes', () => {
     expect(read(path.join('u', '[handle].tsx'))).not.toContain('settings-outline');
   });
 
+  it('does not show the public-profile explainer card', () => {
+    const own = read('profile.tsx');
+    expect(own).not.toContain('VisibilityCard');
+    expect(own).not.toContain('Your profile is public');
+    expect(own).not.toContain('Make private');
+    expect(own).toContain('label={data.isPublic ? \'Public\' : \'Private\'}');
+  });
+
   it('opens Photos and Groups from the profile action row', () => {
     const own = read('profile.tsx');
     expect(own).toContain("router.push('/photos')");
