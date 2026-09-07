@@ -449,7 +449,10 @@ const styles = StyleSheet.create({
   },
   heroBottom: {
     paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.md + 15,
+    // The hero's own inset is the whole gap down to the macros — the body adds
+    // none on top — so the modules sit one section apart from them, like every
+    // other pair of sections on the page.
+    paddingBottom: spacing.lg,
     zIndex: 3,
     gap: spacing.md,
   },
@@ -461,7 +464,6 @@ const styles = StyleSheet.create({
   },
   body: {
     paddingHorizontal: spacing.lg,
-    paddingTop: spacing.lg,
     gap: spacing.lg,
   },
   macroRow: {

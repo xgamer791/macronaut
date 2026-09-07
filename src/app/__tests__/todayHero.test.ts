@@ -11,6 +11,17 @@ describe('today hero', () => {
     expect(src).not.toMatch(/source=\{HERO_IMAGE\}\s*\n\s*style=\{StyleSheet\.absoluteFill\}/);
   });
 
+  it('sits the modules one section gap above the macros', () => {
+    const heroBottom = /heroBottom: \{([^}]*)\}/.exec(src)?.[1] ?? '';
+    const body = /body: \{([^}]*)\}/.exec(src)?.[1] ?? '';
+    // The hero carries the whole junction and the body adds nothing on top, so
+    // it comes to one `spacing.lg` — the same gap the body puts between
+    // every other pair of sections.
+    expect(heroBottom).toContain('paddingBottom: spacing.lg');
+    expect(body).not.toContain('paddingTop');
+    expect(body).toContain('gap: spacing.lg');
+  });
+
   it('keeps the same crop at every hero height', () => {
     const rows = Number(/const HERO_ROWS = (\d+);/.exec(src)?.[1]);
     const ceiling = Number(/const HERO_CEILING_ROWS = (\d+);/.exec(src)?.[1]);
