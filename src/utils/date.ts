@@ -154,3 +154,61 @@ export function monthCalendarDays(monthKey: DayKey, weekStart: WeekStart): (DayK
   }
   return cells;
 }
+
+/** Three-letter weekday row for a week-start preference (7 labels). */
+export function weekdayShortLabels(weekStart: WeekStart): string[] {
+  return weekStart === 'sunday'
+    ? [...WEEKDAY_LABELS]
+    : [...WEEKDAY_LABELS.slice(1), WEEKDAY_LABELS[0]];
+}
+
+/** Full month names, January first. */
+export const monthNames: readonly string[] = FULL_MONTH_LABELS;
+
+/** Full month name of the month containing `key`. */
+export function monthLabel(key: DayKey): string {
+  return FULL_MONTH_LABELS[parseDayKey(key).getMonth()];
+}
+
+/** Calendar year of `key`. */
+export function yearOf(key: DayKey): number {
+  return parseDayKey(key).getFullYear();
+}
+
+/** Calendar month of `key`, 0 = January. */
+export function monthOf(key: DayKey): number {
+  return parseDayKey(key).getMonth();
+}
+
+/** First of month `month` (0–11), keeping the year of `key`. */
+export function withMonth(key: DayKey, month: number): DayKey {
+  return toDayKey(new Date(yearOf(key), month, 1));
+}
+
+/** First of the same month in `year`. */
+export function withYear(key: DayKey, year: number): DayKey {
+  return toDayKey(new Date(year, monthOf(key), 1));
+}
+
+export interface MonthGridDay {
+  key: DayKey;
+  /** False for the days that spill in from the neighbouring months. */
+  inMonth: boolean;
+}
+
+/**
+ * 6×7 month grid aligned to `weekStart`. Unlike {@link monthCalendarDays} the
+ * leading and trailing cells carry the neighbouring months' real days rather
+ * than blanks, so the grid reads as one continuous run of dates.
+ */
+export function monthGridDays(monthKey: DayKey, weekStart: WeekStart): MonthGridDay[] {
+  const start = monthStartOf(monthKey);
+  const firstWeekday = weekdayOf(start);
+  const offset = weekStart === 'sunday' ? firstWeekday : (firstWeekday + 6) % 7;
+  const first = addDays(start, -offset);
+  const month = monthOf(start);
+  return Array.from({ length: 42 }, (_, i) => {
+    const key = addDays(first, i);
+    return { key, inMonth: monthOf(key) === month };
+  });
+}

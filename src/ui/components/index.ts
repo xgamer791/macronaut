@@ -28,7 +28,7 @@ export { StatTile } from './StatTile';
 export { TextField } from './TextField';
 export { TargetEditor } from './TargetEditor';
 export { DatePickSheet } from './DatePickSheet';
-export { MonthCalendarPopup } from './MonthCalendarPopup';
+export { CalendarPanel } from './CalendarPanel';
 export { DashboardHeader } from './DashboardHeader';
 export { AppHeader, HeaderAvatarButton, HeaderChatsButton, HeaderNotifyButton } from './AppHeader';
 export { CircleButton, GhostButton, ProfileHeader, ProfileHeaderChrome } from './ProfileHeader';

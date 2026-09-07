@@ -86,13 +86,14 @@ export function useDayNotes(date: DayKey) {
   });
 }
 
-export function useDayNotesRange(from: DayKey, to: DayKey) {
+/** Pass `enabled` to hold the fetch back while the screen asking is closed. */
+export function useDayNotesRange(from: DayKey, to: DayKey, enabled?: boolean) {
   const { signedIn } = useAuth();
   const { dayNotes } = useRepos();
   return useQuery({
     queryKey: keys.dayNotesRange(from, to),
     queryFn: () => dayNotes.datesWithNotes(from, to),
-    enabled: signedIn,
+    enabled: signedIn && (enabled ?? true),
   });
 }
 
@@ -619,13 +620,14 @@ export function useDiaryEntries(date: DayKey) {
   });
 }
 
-export function useDiaryRange(from: DayKey, to: DayKey) {
+/** Pass `enabled` to hold the fetch back while the screen asking is closed. */
+export function useDiaryRange(from: DayKey, to: DayKey, enabled?: boolean) {
   const { signedIn } = useAuth();
   const { diary } = useRepos();
   return useQuery({
     queryKey: keys.diaryRange(from, to),
     queryFn: () => diary.entriesForRange(from, to),
-    enabled: signedIn,
+    enabled: signedIn && (enabled ?? true),
   });
 }
 

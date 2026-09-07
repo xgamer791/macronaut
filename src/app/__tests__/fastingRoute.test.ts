@@ -43,7 +43,7 @@ describe('home tools and fasting route', () => {
     expect(page).toContain("{ label: '2 days', minutes: 2 * 24 * 60 }");
     expect(page).toContain("{ label: '3 days', minutes: 3 * 24 * 60 }");
     expect(page).toContain('collapseHeader={false}');
-    expect(page).toContain('MonthCalendarPopup');
+    expect(page).toContain('CalendarPanel');
     expect(page).toContain('TimePickerSheet');
     expect(page).toContain('colors.accent');
     expect(page).not.toContain('initialMode="light"');

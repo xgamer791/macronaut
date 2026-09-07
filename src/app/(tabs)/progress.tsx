@@ -15,7 +15,7 @@ import {
 } from '@/state/queries';
 import { ActivityEntry, DiaryEntry } from '@/repositories/types';
 import { addDays, DayKey, rangeDays, shortWeekdayLabel, todayKey, weekDays } from '@/utils/date';
-import { AppText, Card, EmptyState, LineChart, MonthCalendarPopup, Screen } from '@/ui/components';
+import { AppText, Card, CalendarPanel, EmptyState, LineChart, Screen } from '@/ui/components';
 import { useTheme } from '@/ui/theme/ThemeProvider';
 import { radius, spacing, touchTarget } from '@/ui/theme/tokens';
 
@@ -325,10 +325,10 @@ function ProgressBody() {
         </>
       )}
 
-      <MonthCalendarPopup
+      <CalendarPanel
         visible={calendarOpen}
         selected={today}
-        top={72}
+        title="Progress"
         onClose={() => setCalendarOpen(false)}
         onSelect={(d) => {
           setCalendarOpen(false);

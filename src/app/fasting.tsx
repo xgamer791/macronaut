@@ -3,7 +3,6 @@ import * as Haptics from 'expo-haptics';
 import { Redirect } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, AppState, Pressable, StyleSheet, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '@/state/AuthProvider';
 import {
   useFastingState,
@@ -19,7 +18,7 @@ import {
   Card,
   GlassHeaderBar,
   LiquidGlassCard,
-  MonthCalendarPopup,
+  CalendarPanel,
   ProgressRing,
   Screen,
   ScreenHeader,
@@ -71,7 +70,6 @@ export default function FastingRoute() {
 
 function FastingScreen() {
   const { colors } = useTheme();
-  const insets = useSafeAreaInsets();
   const fasting = useFastingState();
   const startFast = useStartFast();
   const stopFast = useStopFast();
@@ -482,10 +480,10 @@ function FastingScreen() {
         </AppText>
       </View>
 
-      <MonthCalendarPopup
+      <CalendarPanel
         visible={dateTarget !== null}
         selected={toDayKey(dateTarget ? draft[dateTarget] : draft.start)}
-        top={insets.top + 64}
+        title={dateTarget === 'end' ? 'End date' : 'Start date'}
         onClose={() => setDateTarget(null)}
         onSelect={(day) => pickDate(dateTarget ?? 'start', day)}
       />

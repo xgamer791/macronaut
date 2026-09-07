@@ -16,7 +16,6 @@ import Animated, {
   useSharedValue,
   withSpring,
 } from 'react-native-reanimated';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useDayNotes, useDayNotesRange, useWeekProgress, useWeekStart } from '@/state/queries';
 import {
   DayKey,
@@ -30,13 +29,12 @@ import { spacing, touchTarget } from '@/ui/theme/tokens';
 import { AppText } from './AppText';
 import { DayInfoPopup } from './DayInfoPopup';
 import { DayNotesPopup } from './DayNotesPopup';
-import { MonthCalendarPopup } from './MonthCalendarPopup';
+import { CalendarPanel } from './CalendarPanel';
 
 const BUBBLE_SIZE = 36;
 const BUBBLE_SLOT = 48;
 const SPRING = { damping: 20, stiffness: 280, mass: 0.8 };
 /** Small gap between the Today title and the floating month calendar. */
-const CALENDAR_GAP = 8;
 
 export interface DashboardHeaderProps {
   date: DayKey;
@@ -47,17 +45,14 @@ export interface DashboardHeaderProps {
 
 /**
  * Compact dashboard header: notes + activity actions, expandable day title,
- * floating liquid-glass month calendar, and weekly day-bubble strip.
+ * full-screen month calendar, and weekly day-bubble strip.
  */
 export function DashboardHeader({ date, onDateChange, right }: DashboardHeaderProps) {
   const { colors } = useTheme();
   const router = useRouter();
-  const insets = useSafeAreaInsets();
   const weekStart = useWeekStart();
   const week = useWeekProgress(date);
-  const titleRef = useRef<View>(null);
   const [calendarOpen, setCalendarOpen] = useState(false);
-  const [calendarTop, setCalendarTop] = useState(insets.top + touchTarget + CALENDAR_GAP);
   const [notesOpen, setNotesOpen] = useState(false);
   const [dayInfoOpen, setDayInfoOpen] = useState(false);
 
@@ -84,19 +79,8 @@ export function DashboardHeader({ date, onDateChange, right }: DashboardHeaderPr
 
   const openCalendar = useCallback(() => {
     void Haptics.selectionAsync();
-    const finishOpen = (top: number) => {
-      setCalendarTop(top);
-      setCalendarOpen(true);
-    };
-    const node = titleRef.current;
-    if (node && typeof node.measureInWindow === 'function') {
-      node.measureInWindow((_x, y, _w, h) => {
-        finishOpen(Math.max(insets.top + spacing.sm, y + h + CALENDAR_GAP));
-      });
-      return;
-    }
-    finishOpen(insets.top + touchTarget + spacing.lg + CALENDAR_GAP);
-  }, [insets.top]);
+    setCalendarOpen(true);
+  }, []);
 
   const toggleCalendar = useCallback(() => {
     if (calendarOpen) {
@@ -129,7 +113,7 @@ export function DashboardHeader({ date, onDateChange, right }: DashboardHeaderPr
 
   return (
     <View style={styles.root}>
-      <View ref={titleRef} style={styles.titleRow} collapsable={false}>
+      <View style={styles.titleRow}>
         <Pressable
           accessibilityRole="button"
           accessibilityLabel={`${title}. ${calendarOpen ? 'Close' : 'Open'} calendar`}
@@ -203,10 +187,9 @@ export function DashboardHeader({ date, onDateChange, right }: DashboardHeaderPr
         onSelect={selectDay}
       />
 
-      <MonthCalendarPopup
+      <CalendarPanel
         visible={calendarOpen}
         selected={date}
-        top={calendarTop}
         onClose={closeCalendar}
         onSelect={selectDay}
       />

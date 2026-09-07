@@ -11,7 +11,7 @@ describe('training schedule route', () => {
     expect(schedule).toContain('title="Training Schedule"');
     expect(schedule).toContain('collapseHeader={false}');
     expect(schedule).toContain('accessibilityLabel="Open full calendar"');
-    expect(schedule).toContain('<MonthCalendarPopup');
+    expect(schedule).toContain('<CalendarPanel');
     expect(schedule).toContain('const ADD_ICON_SIZE = 27');
     expect(schedule).toContain('width: ADD_ICON_SIZE');
     expect(schedule).toContain('height: ADD_ICON_SIZE');

@@ -46,8 +46,9 @@ describe('sticky chrome headers', () => {
     expect(today).not.toContain('heroHeight + insets.top');
   });
 
-  it('drops the calendar clear of the bar', () => {
-    expect(trainingSchedule).toContain('top={insets.top + 62}');
+  it('gives the schedule the full-screen calendar rather than one tucked under the bar', () => {
+    expect(trainingSchedule).toContain('<CalendarPanel');
+    expect(trainingSchedule).not.toContain('top={insets.top');
   });
 
   it('lifts the chrome off both profile banners exactly once', () => {

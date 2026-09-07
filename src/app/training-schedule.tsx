@@ -14,7 +14,6 @@ import {
   useWindowDimensions,
   View,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { ScheduledWorkout, TrainingScheduleDay } from '@/repositories/trainingScheduleRepo';
 import { useAuth } from '@/state/AuthProvider';
 import {
@@ -41,7 +40,7 @@ import {
   Button,
   ErrorState,
   GlassHeaderBar,
-  MonthCalendarPopup,
+  CalendarPanel,
   Screen,
   ScreenHeader,
   TextField,
@@ -75,7 +74,6 @@ export default function TrainingScheduleRoute() {
 
 function TrainingScheduleScreen() {
   const { colors } = useTheme();
-  const insets = useSafeAreaInsets();
   const weekStart = useWeekStart();
   const [anchor, setAnchor] = useState<DayKey>(() => todayKey());
   const [calendarOpen, setCalendarOpen] = useState(false);
@@ -526,10 +524,10 @@ function TrainingScheduleScreen() {
         ) : null}
       </View>
 
-      <MonthCalendarPopup
+      <CalendarPanel
         visible={calendarOpen}
         selected={anchor}
-        top={insets.top + 62}
+        title="Training Schedule"
         onClose={() => setCalendarOpen(false)}
         onSelect={(date) => {
           setAnchor(date);

@@ -147,6 +147,11 @@ input[data-darkfield]:-webkit-autofill:focus, input[data-darkfield]:-webkit-auto
   will-change: transform;
   transition: transform 294ms cubic-bezier(0.22, 1, 0.36, 1);
 }
+/* Calendar panel: the same right-hand slide, on the same curve. */
+[data-calendarpanel] [data-calendarsheet] {
+  will-change: transform;
+  transition: transform 294ms cubic-bezier(0.22, 1, 0.36, 1);
+}
 @media (prefers-reduced-motion: reduce) {
   [data-slidescreen],
   [data-slidepush] {
@@ -156,7 +161,8 @@ input[data-darkfield]:-webkit-autofill:focus, input[data-darkfield]:-webkit-auto
     transition: none;
   }
   [data-headermenu] [data-menuscrim],
-  [data-headermenu] [data-menudrawer] {
+  [data-headermenu] [data-menudrawer],
+  [data-calendarpanel] [data-calendarsheet] {
     transition: none;
   }
 }`,
