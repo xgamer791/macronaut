@@ -16,16 +16,12 @@ import type { ChatMessage } from '@/repositories/chatRepo';
 import { useAuth } from '@/state/AuthProvider';
 import { useChatThread, useMarkChatRead, useSendChatMessage } from '@/state/queries';
 import { AppText, ChatAvatar, EmptyState } from '@/ui/components';
-import { ThemeProvider, useTheme } from '@/ui/theme/ThemeProvider';
+import { useTheme } from '@/ui/theme/ThemeProvider';
 import { radius, spacing, touchTarget, type } from '@/ui/theme/tokens';
 import { goBackOrHome } from '@/utils/navigation';
 
 export default function ChatScreen() {
-  return (
-    <ThemeProvider initialMode="light">
-      <Conversation />
-    </ThemeProvider>
-  );
+  return <Conversation />;
 }
 
 function Conversation() {
@@ -335,6 +331,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingTop: 11,
     paddingBottom: 10,
+    ...Platform.select({
+      web: { outlineStyle: 'none', outlineWidth: 0 } as object,
+      default: {},
+    }),
   },
   send: {
     width: touchTarget,
