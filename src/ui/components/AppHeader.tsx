@@ -26,25 +26,18 @@ const PLUS = 30;
 export interface AppHeaderProps {
   /** Calendar icon on the right cluster. */
   onCalendarPress?: () => void;
-  /** Show the notification badge on the bell. */
-  notifyDot?: boolean;
 }
 
 /**
- * Garmin-style chrome: avatar + bell on the left, add / calendar / watch on the right.
+ * Garmin-style chrome: add / calendar / watch on the right. Profile, chats
+ * and notifications live in the tab bar, not here.
  * White icons — sits over the Today hero or any dark surface.
  */
-export function AppHeader({ onCalendarPress, notifyDot }: AppHeaderProps) {
+export function AppHeader({ onCalendarPress }: AppHeaderProps) {
   const router = useRouter();
 
   return (
     <View style={styles.row}>
-      <View style={styles.cluster}>
-        <HeaderAvatarButton />
-        <HeaderNotifyButton notifyDot={notifyDot} />
-        <HeaderChatsButton />
-      </View>
-
       <View style={styles.cluster}>
         <HeaderHit
           accessibilityLabel="Add food"
@@ -315,7 +308,7 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    justifyContent: 'flex-end',
     height: touchTarget,
     marginTop: 3,
   },

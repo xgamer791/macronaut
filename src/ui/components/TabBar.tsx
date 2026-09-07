@@ -1,39 +1,79 @@
 import { Ionicons } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
+import { Image } from 'expo-image';
+import { useRouter, type Href } from 'expo-router';
 import type { BottomTabBarProps } from 'expo-router/js-tabs';
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { displayNameFromUser } from '@/services/auth/displayName';
+import { useAuth } from '@/state/AuthProvider';
+import { useNotifications, useSetting } from '@/state/queries';
 import { useTheme } from '@/ui/theme/ThemeProvider';
-import { spacing } from '@/ui/theme/tokens';
+import { palette, spacing } from '@/ui/theme/tokens';
+import { AppText } from './AppText';
 
 type IconName = keyof typeof Ionicons.glyphMap;
 
-type TabMeta = {
-  label: string;
-  icon: IconName;
-  iconActive: IconName;
-  /** Shown in the bar but not navigable while the screen is still being built. */
-  comingSoon?: boolean;
-};
+type TabItem =
+  | {
+      kind: 'tab';
+      name: string;
+      label: string;
+      icon: IconName;
+      iconActive: IconName;
+      comingSoon?: boolean;
+    }
+  | {
+      kind: 'link';
+      href: Href;
+      label: string;
+      icon: IconName;
+      iconActive: IconName;
+      notify?: boolean;
+    }
+  | { kind: 'profile' };
 
-const TAB_META: Record<string, TabMeta> = {
-  index: { label: 'Today', icon: 'home-outline', iconActive: 'home' },
-  meals: { label: 'Meals', icon: 'restaurant-outline', iconActive: 'restaurant' },
-  progress: {
+/** Today, chats, groups, notifications, then the account picture. Meals and
+ * Settings stay registered as hidden tabs so existing links still work. */
+const ITEMS: TabItem[] = [
+  { kind: 'tab', name: 'index', label: 'Today', icon: 'home-outline', iconActive: 'home' },
+  {
+    kind: 'link',
+    href: '/chats',
+    label: 'Chats',
+    icon: 'chatbubbles-outline',
+    iconActive: 'chatbubbles',
+  },
+  {
+    kind: 'tab',
+    name: 'progress',
     label: 'Groups',
     icon: 'people-outline',
     iconActive: 'people',
     comingSoon: true,
   },
-  settings: { label: 'Settings', icon: 'settings-outline', iconActive: 'settings' },
-};
+  {
+    kind: 'link',
+    href: '/notifications',
+    label: 'Notifications',
+    icon: 'notifications-outline',
+    iconActive: 'notifications',
+    notify: true,
+  },
+  { kind: 'profile' },
+];
+
+const ICON = 24;
+const AVATAR = 26;
 
 /** Bottom tab bar. Icons only — labels stay on the accessibility name. */
 export function TabBar({ state, navigation }: BottomTabBarProps) {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
-
-  const routes = state.routes.filter((r) => TAB_META[r.name]);
+  const router = useRouter();
+  const notifications = useNotifications();
+  const unread = (notifications.data?.unreadCount ?? 0) > 0;
 
   return (
     <View
@@ -46,25 +86,58 @@ export function TabBar({ state, navigation }: BottomTabBarProps) {
         },
       ]}
     >
-      {routes.map((route) => {
-        const meta = TAB_META[route.name];
-        const routeIndex = state.routes.findIndex((r) => r.key === route.key);
-        const focused = state.index === routeIndex && !meta.comingSoon;
+      {ITEMS.map((item) => {
+        if (item.kind === 'profile') {
+          return <ProfileTab key="profile" />;
+        }
+
+        if (item.kind === 'link') {
+          const active = item.notify && unread;
+          return (
+            <Pressable
+              key={item.label}
+              accessibilityRole="tab"
+              accessibilityLabel={
+                item.notify && unread
+                  ? `${notifications.data?.unreadCount || 'New'} unread notifications`
+                  : item.label
+              }
+              onPress={() => {
+                void Haptics.selectionAsync();
+                router.push(item.href);
+              }}
+              style={styles.tab}
+            >
+              <View>
+                <Ionicons
+                  name={active ? item.iconActive : item.icon}
+                  size={ICON}
+                  color={active ? colors.accent : colors.textMuted}
+                />
+                {active ? <View style={styles.dot} /> : null}
+              </View>
+            </Pressable>
+          );
+        }
+
+        const route = state.routes.find((r) => r.name === item.name);
+        const routeIndex = route ? state.routes.findIndex((r) => r.key === route.key) : -1;
+        const focused = routeIndex >= 0 && state.index === routeIndex && !item.comingSoon;
 
         const icon = (
           <Ionicons
-            name={focused ? meta.iconActive : meta.icon}
-            size={24}
+            name={focused ? item.iconActive : item.icon}
+            size={ICON}
             color={focused ? colors.accent : colors.textMuted}
           />
         );
 
-        if (meta.comingSoon) {
+        if (item.comingSoon || !route) {
           return (
             <View
-              key={route.key}
+              key={item.name}
               accessibilityRole="tab"
-              accessibilityLabel={`${meta.label}, coming soon`}
+              accessibilityLabel={`${item.label}, coming soon`}
               accessibilityState={{ selected: false, disabled: true }}
               style={styles.tab}
             >
@@ -77,7 +150,7 @@ export function TabBar({ state, navigation }: BottomTabBarProps) {
           <Pressable
             key={route.key}
             accessibilityRole="tab"
-            accessibilityLabel={meta.label}
+            accessibilityLabel={item.label}
             accessibilityState={{ selected: focused }}
             onPress={() => {
               const event = navigation.emit({
@@ -86,7 +159,7 @@ export function TabBar({ state, navigation }: BottomTabBarProps) {
                 canPreventDefault: true,
               });
               if (!focused && !event.defaultPrevented) {
-                navigation.navigate(route.name);
+                navigation.navigate(item.name);
               }
             }}
             style={styles.tab}
@@ -97,6 +170,62 @@ export function TabBar({ state, navigation }: BottomTabBarProps) {
       })}
     </View>
   );
+}
+
+function ProfileTab() {
+  const router = useRouter();
+  const { colors } = useTheme();
+  const { user } = useAuth();
+  const savedName = useSetting<string>('displayName', '');
+  const displayName = savedName.data || displayNameFromUser(user);
+  const initials = useMemo(
+    () => initialsFrom(displayName, user?.email),
+    [displayName, user?.email],
+  );
+  const avatarUri = user?.image?.trim() || undefined;
+
+  return (
+    <Pressable
+      accessibilityRole="tab"
+      accessibilityLabel="Open your profile"
+      onPress={() => {
+        void Haptics.selectionAsync();
+        router.push('/profile');
+      }}
+      style={styles.tab}
+    >
+      {avatarUri ? (
+        <Image
+          source={{ uri: avatarUri }}
+          style={styles.avatar}
+          contentFit="cover"
+          accessibilityIgnoresInvertColors
+        />
+      ) : (
+        <View style={[styles.avatarFallback, { backgroundColor: colors.surfaceRaised }]}>
+          {initials ? (
+            <AppText style={styles.initials}>{initials}</AppText>
+          ) : (
+            <Ionicons name="person" size={16} color={colors.textMuted} />
+          )}
+        </View>
+      )}
+    </Pressable>
+  );
+}
+
+function initialsFrom(name?: string | null, email?: string): string {
+  const trimmed = (name ?? '').trim();
+  if (trimmed) {
+    const parts = trimmed.split(/\s+/).filter(Boolean);
+    if (parts.length >= 2) {
+      return `${parts[0]!.charAt(0)}${parts[1]!.charAt(0)}`.toUpperCase();
+    }
+    return trimmed.slice(0, 2).toUpperCase();
+  }
+  const local = email?.split('@')[0];
+  if (local) return local.charAt(0).toUpperCase();
+  return '';
 }
 
 const styles = StyleSheet.create({
@@ -111,5 +240,32 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: spacing.sm,
+  },
+  avatar: {
+    width: AVATAR,
+    height: AVATAR,
+    borderRadius: AVATAR / 2,
+    backgroundColor: 'rgba(255,255,255,0.12)',
+  },
+  avatarFallback: {
+    width: AVATAR,
+    height: AVATAR,
+    borderRadius: AVATAR / 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  initials: {
+    fontSize: 11,
+    lineHeight: 13,
+    fontWeight: '700',
+  },
+  dot: {
+    position: 'absolute',
+    top: -1,
+    right: -1,
+    width: 7,
+    height: 7,
+    borderRadius: 3.5,
+    backgroundColor: palette.accentDark,
   },
 });

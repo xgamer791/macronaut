@@ -4,11 +4,25 @@ import path from 'node:path';
 const tabBar = fs.readFileSync(path.join(__dirname, '..', 'TabBar.tsx'), 'utf8');
 
 describe('tab bar', () => {
-  it('shows icons only — labels stay on the accessibility name', () => {
-    expect(tabBar).toContain('accessibilityLabel={meta.label}');
-    expect(tabBar).toContain('accessibilityLabel={`${meta.label}, coming soon`}');
-    expect(tabBar).not.toContain('AppText');
-    expect(tabBar).not.toContain('{meta.label}');
-    expect(tabBar).toContain('size={24}');
+  it('is Today, chats, groups, notifications, then the profile picture', () => {
+    const items = tabBar.slice(tabBar.indexOf('const ITEMS'));
+    const today = items.indexOf("name: 'index'");
+    const chats = items.indexOf("href: '/chats'");
+    const groups = items.indexOf("name: 'progress'");
+    const notify = items.indexOf("href: '/notifications'");
+    const profile = items.indexOf("kind: 'profile'");
+    expect(today).toBeGreaterThan(-1);
+    expect(today).toBeLessThan(chats);
+    expect(chats).toBeLessThan(groups);
+    expect(groups).toBeLessThan(notify);
+    expect(notify).toBeLessThan(profile);
+    expect(tabBar).toContain('router.push(item.href)');
+    expect(tabBar).toContain("router.push('/profile')");
+    expect(tabBar).toContain('chatbubbles-outline');
+    expect(tabBar).toContain('Open your profile');
+    expect(tabBar).toContain('size={ICON}');
+    expect(tabBar).toContain('const ICON = 24');
+    expect(tabBar).not.toContain('restaurant');
+    expect(tabBar).not.toContain('settings-outline');
   });
 });

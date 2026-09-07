@@ -178,6 +178,14 @@ function OwnProfile() {
             contentContainerStyle={styles.actions}
           >
             <Action
+              icon="settings-outline"
+              label="Settings"
+              onPress={() => {
+                void Haptics.selectionAsync();
+                router.push('/settings');
+              }}
+            />
+            <Action
               icon="pencil"
               label="Edit profile"
               onPress={() => {
