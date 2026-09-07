@@ -5,6 +5,7 @@ import { useRouter, type Href } from 'expo-router';
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   Animated,
+  Easing,
   Modal,
   Pressable,
   StyleSheet,
@@ -15,7 +16,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { displayNameFromUser } from '@/services/auth/displayName';
 import { useAuth } from '@/state/AuthProvider';
 import { useNotifications, useSetting } from '@/state/queries';
-import { SLIDE_DURATION_MS, SLIDE_EASING } from '@/ui/motion/SlideScreen';
+import { SLIDE_DURATION_MS } from '@/ui/motion/SlideScreen';
 import { useTheme } from '@/ui/theme/ThemeProvider';
 import { palette, spacing, touchTarget } from '@/ui/theme/tokens';
 import { AppText } from './AppText';
@@ -115,7 +116,7 @@ function HeaderMenu({ visible, onClose }: { visible: boolean; onClose: () => voi
     Animated.timing(progress, {
       toValue: visible ? 1 : 0,
       duration: DRAWER_MS,
-      easing: SLIDE_EASING,
+      easing: Easing.bezier(0.22, 1, 0.36, 1),
       useNativeDriver: true,
     }).start(({ finished }) => {
       if (finished && !visible) setMounted(false);
