@@ -39,9 +39,6 @@ import { useTheme } from '@/ui/theme/ThemeProvider';
 import { radius, spacing } from '@/ui/theme/tokens';
 
 const HERO_IMAGE = require('../../../assets/images/today/hero-gym.jpg');
-/** Rows in the hero photo, and the empty ceiling it opens on above the runner. */
-const HERO_ROWS = 640;
-const HERO_CEILING_ROWS = 40;
 
 const MACRO_IMAGES: Record<'protein' | 'carbs' | 'fat', ImageSource> = {
   protein: require('../../../assets/images/progress/macro-protein.png'),
@@ -181,11 +178,6 @@ function TodayBody() {
 
   // Hero is tall enough that the athlete stays visible above the goals card.
   const heroHeight = Math.round(Math.min(Math.max(windowHeight * 0.42, width * 0.95), 420));
-  // The header is opaque, so the photo's empty ceiling reads as a gap beneath it
-  // rather than as picture. Drawing the image this much taller than the hero and
-  // pulling it up by the same amount crops the ceiling away, so the runner starts
-  // at the header. Solved from the hero height so the framing holds at any size.
-  const heroLift = Math.round((heroHeight * HERO_CEILING_ROWS) / (HERO_ROWS - HERO_CEILING_ROWS));
   const macros = [
     {
       key: 'protein' as const,
@@ -223,7 +215,7 @@ function TodayBody() {
       <View style={[styles.hero, { height: heroHeight }]}>
         <Image
           source={HERO_IMAGE}
-          style={[styles.heroImage, { top: -heroLift, height: heroHeight + heroLift }]}
+          style={StyleSheet.absoluteFill}
           contentFit="cover"
           contentPosition="top"
         />
@@ -420,11 +412,6 @@ const styles = StyleSheet.create({
     width: '100%',
     overflow: 'hidden',
     justifyContent: 'flex-end',
-  },
-  heroImage: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
   },
   heroBottom: {
     paddingHorizontal: spacing.lg,
