@@ -1,7 +1,19 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Redirect } from 'expo-router';
-import React, { useMemo, useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import {
+  AccessibilityInfo,
+  ActivityIndicator,
+  Animated,
+  Easing,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  useWindowDimensions,
+  View,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { ScheduledWorkout, TrainingScheduleDay } from '@/repositories/trainingScheduleRepo';
 import { useAuth } from '@/state/AuthProvider';
@@ -28,10 +40,8 @@ import {
   MonthCalendarPopup,
   Screen,
   ScreenHeader,
-  Sheet,
   TextField,
 } from '@/ui/components';
-import { SlideScreen, useSlideBack } from '@/ui/motion/SlideScreen';
 import { useTheme } from '@/ui/theme/ThemeProvider';
 import { radius, spacing, touchTarget } from '@/ui/theme/tokens';
 
@@ -52,17 +62,12 @@ export default function TrainingScheduleRoute() {
   const { loading, signedIn } = useAuth();
   if (loading) return null;
   if (!signedIn) return <Redirect href="/welcome" />;
-  return (
-    <SlideScreen from="right">
-      <TrainingScheduleScreen />
-    </SlideScreen>
-  );
+  return <TrainingScheduleScreen />;
 }
 
 function TrainingScheduleScreen() {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
-  const onBack = useSlideBack();
   const weekStart = useWeekStart();
   const [anchor, setAnchor] = useState<DayKey>(() => todayKey());
   const [calendarOpen, setCalendarOpen] = useState(false);
@@ -77,6 +82,7 @@ function TrainingScheduleScreen() {
   );
 
   const [editingDate, setEditingDate] = useState<DayKey | null>(null);
+  const [editorOpen, setEditorOpen] = useState(false);
   const [draftLabel, setDraftLabel] = useState('');
   const [draftNotes, setDraftNotes] = useState('');
   const [draftWorkouts, setDraftWorkouts] = useState<DraftWorkout[]>([]);
@@ -84,18 +90,24 @@ function TrainingScheduleScreen() {
 
   function editDay(date: DayKey) {
     const plan = plans.get(date);
+    setAnchor(date);
     setEditingDate(date);
-    setDraftLabel(plan?.label ?? '');
+    setDraftLabel(plan?.label ?? trainingTitle(date));
     setDraftNotes(plan?.notes ?? '');
     setDraftWorkouts((plan?.workouts ?? []).map(toDraftWorkout));
     setFormError(null);
+    setEditorOpen(true);
   }
 
   function closeEditor() {
     if (saveDay.isPending || removeDay.isPending) return;
-    setEditingDate(null);
+    setEditorOpen(false);
     setFormError(null);
   }
+
+  const finishClosingEditor = useCallback(() => {
+    setEditingDate(null);
+  }, []);
 
   function updateWorkout(id: string, patch: Partial<DraftWorkout>) {
     setDraftWorkouts((current) =>
@@ -107,7 +119,7 @@ function TrainingScheduleScreen() {
     if (!editingDate) return;
     const label = draftLabel.trim();
     if (!label) {
-      setFormError('Give this day a label, including rest or recovery days.');
+      setFormError('Enter a training name.');
       return;
     }
 
@@ -140,7 +152,7 @@ function TrainingScheduleScreen() {
         notes: draftNotes.trim() || undefined,
         workouts,
       });
-      setEditingDate(null);
+      setEditorOpen(false);
     } catch (error) {
       setFormError(error instanceof Error ? error.message : 'Could not save this training day.');
     }
@@ -151,7 +163,7 @@ function TrainingScheduleScreen() {
     setFormError(null);
     try {
       await removeDay.mutateAsync(editingDate);
-      setEditingDate(null);
+      setEditorOpen(false);
     } catch (error) {
       setFormError(error instanceof Error ? error.message : 'Could not clear this training day.');
     }
@@ -162,13 +174,13 @@ function TrainingScheduleScreen() {
 
   return (
     <Screen
+      scroll={false}
       padded={false}
       safeTop={false}
       stickyHeader={
         <GlassHeaderBar inset={spacing.lg}>
           <ScreenHeader
             title="Training Schedule"
-            onBack={onBack}
             right={
               <Pressable
                 accessibilityRole="button"
@@ -184,72 +196,269 @@ function TrainingScheduleScreen() {
         </GlassHeaderBar>
       }
     >
-      <View style={[styles.weekNavigator, { borderBottomColor: colors.border }]}>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Previous week"
-          onPress={() => setAnchor(addDays(start, -7))}
-          style={styles.weekArrow}
+      <View style={styles.workspace}>
+        <ScrollView
+          style={styles.scheduleScroll}
+          contentContainerStyle={styles.scheduleContent}
+          showsVerticalScrollIndicator={false}
         >
-          <Ionicons name="chevron-back" size={23} color={colors.accent} />
-        </Pressable>
-        <View style={styles.weekCopy}>
-          <AppText variant="micro" tone="accent" weight="700" style={styles.eyebrow}>
-            7 DAY SCHEDULE
-          </AppText>
-          <AppText variant="heading" weight="700" align="center">
-            {weekTitle(days[0], days[6])}
-          </AppText>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Return to this week"
-            onPress={() => setAnchor(todayKey())}
-            hitSlop={6}
-          >
-            <AppText variant="micro" tone="muted" align="center">
-              {weekRange(days[0], days[6])} · Today
-            </AppText>
-          </Pressable>
-        </View>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Next week"
-          onPress={() => setAnchor(addDays(start, 7))}
-          style={styles.weekArrow}
-        >
-          <Ionicons name="chevron-forward" size={23} color={colors.accent} />
-        </Pressable>
-      </View>
+          <View style={[styles.weekNavigator, { borderBottomColor: colors.border }]}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Previous week"
+              onPress={() => setAnchor(addDays(start, -7))}
+              style={styles.weekArrow}
+            >
+              <Ionicons name="chevron-back" size={23} color={colors.accent} />
+            </Pressable>
+            <View style={styles.weekCopy}>
+              <AppText variant="heading" weight="700" align="center">
+                {weekTitle(days[0], days[6])}
+              </AppText>
+              <AppText variant="caption" tone="muted" align="center">
+                {weekRange(days[0], days[6])}
+              </AppText>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Return to this week"
+                onPress={() => setAnchor(todayKey())}
+                hitSlop={6}
+                style={styles.todayAction}
+              >
+                <AppText variant="caption" tone="accent" weight="600">
+                  Today
+                </AppText>
+              </Pressable>
+            </View>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Next week"
+              onPress={() => setAnchor(addDays(start, 7))}
+              style={styles.weekArrow}
+            >
+              <Ionicons name="chevron-forward" size={23} color={colors.accent} />
+            </Pressable>
+          </View>
 
-      {schedule.isLoading ? (
-        <View style={styles.loading}>
-          <ActivityIndicator color={colors.accent} />
-        </View>
-      ) : schedule.isError ? (
-        <ErrorState
-          message="Your training schedule could not be loaded."
-          onRetry={() => void schedule.refetch()}
-        />
-      ) : (
-        <View style={styles.dayList}>
-          {days.map((date) => (
-            <ScheduleDayRow
-              key={date}
-              date={date}
-              selected={date === anchor}
-              plan={plans.get(date)}
-              onPress={() => editDay(date)}
+          {schedule.isLoading ? (
+            <View style={styles.loading}>
+              <ActivityIndicator color={colors.accent} />
+            </View>
+          ) : schedule.isError ? (
+            <ErrorState
+              message="Your training schedule could not be loaded."
+              onRetry={() => void schedule.refetch()}
             />
-          ))}
-        </View>
-      )}
+          ) : (
+            <View style={styles.dayList}>
+              {days.map((date) => (
+                <ScheduleDayRow
+                  key={date}
+                  date={date}
+                  selected={date === anchor}
+                  plan={plans.get(date)}
+                  onPress={() => editDay(date)}
+                />
+              ))}
+            </View>
+          )}
+        </ScrollView>
 
-      <View style={styles.footerCopy}>
-        <Ionicons name="sparkles-outline" size={16} color={colors.accent} />
-        <AppText variant="caption" tone="muted" style={{ flex: 1 }}>
-          Build the week in your own language. Every label is free-form, and sets or rounds are
-          optional.
-        </AppText>
+        {editingDate ? (
+          <RightEditorPanel
+            visible={editorOpen}
+            date={editingDate}
+            onClose={closeEditor}
+            onHidden={finishClosingEditor}
+            footer={
+              <View style={styles.editorActions}>
+                {existingPlan ? (
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={`Clear ${longWeekday(editingDate)} training`}
+                    disabled={busy}
+                    onPress={() => void clearDay()}
+                    style={({ pressed }) => [
+                      styles.clearAction,
+                      { opacity: busy ? 0.4 : pressed ? 0.7 : 1 },
+                    ]}
+                  >
+                    <AppText variant="caption" tone="danger" weight="600">
+                      Clear {longWeekday(editingDate)}
+                    </AppText>
+                  </Pressable>
+                ) : null}
+                <Button
+                  title={`Save ${longWeekday(editingDate)}`}
+                  loading={saveDay.isPending}
+                  disabled={removeDay.isPending}
+                  onPress={() => void save()}
+                  style={{ flex: 1 }}
+                />
+              </View>
+            }
+          >
+            <View style={styles.formSection}>
+              <AppText variant="heading" weight="700">
+                Training details
+              </AppText>
+              <TextField
+                label="Training name"
+                required
+                value={draftLabel}
+                onChangeText={setDraftLabel}
+                placeholder="Strength, recovery, long run…"
+                maxLength={64}
+                style={[styles.editorField, { backgroundColor: colors.surfaceRaised }]}
+              />
+              <TextField
+                label="Notes"
+                value={draftNotes}
+                onChangeText={setDraftNotes}
+                placeholder="Location, focus, or coaching notes"
+                multiline
+                maxLength={600}
+                style={[
+                  styles.editorField,
+                  styles.notesInput,
+                  { backgroundColor: colors.surfaceRaised },
+                ]}
+              />
+            </View>
+
+            <View style={styles.formSection}>
+              <View style={styles.workoutHeading}>
+                <View style={{ flex: 1, gap: 2 }}>
+                  <AppText variant="heading" weight="700">
+                    Workouts
+                  </AppText>
+                  <AppText variant="caption" tone="muted">
+                    Add exercises, sessions, sets, or rounds.
+                  </AppText>
+                </View>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Add workout"
+                  accessibilityState={{ disabled: draftWorkouts.length >= 24 }}
+                  disabled={draftWorkouts.length >= 24}
+                  onPress={() =>
+                    setDraftWorkouts((current) => [
+                      ...current,
+                      { id: newDraftId(), label: '', macroLabel: '', sets: '' },
+                    ])
+                  }
+                  style={({ pressed }) => [
+                    styles.addWorkout,
+                    { opacity: draftWorkouts.length >= 24 ? 0.4 : pressed ? 0.7 : 1 },
+                  ]}
+                >
+                  <Ionicons name="add" size={19} color={colors.accent} />
+                  <AppText variant="caption" tone="accent" weight="600">
+                    Add workout
+                  </AppText>
+                </Pressable>
+              </View>
+
+              {draftWorkouts.map((workout, index) => (
+                <View
+                  key={workout.id}
+                  style={[
+                    styles.workoutEditor,
+                    index > 0 && {
+                      borderTopWidth: StyleSheet.hairlineWidth,
+                      borderTopColor: colors.border,
+                      marginTop: spacing.sm,
+                      paddingTop: spacing.xl,
+                    },
+                  ]}
+                >
+                  <View style={styles.workoutEditorHeader}>
+                    <AppText weight="700" style={{ flex: 1 }}>
+                      Workout {index + 1}
+                    </AppText>
+                    <Pressable
+                      accessibilityRole="button"
+                      accessibilityLabel={`Remove workout ${index + 1}`}
+                      onPress={() =>
+                        setDraftWorkouts((current) =>
+                          current.filter((candidate) => candidate.id !== workout.id),
+                        )
+                      }
+                      hitSlop={8}
+                      style={({ pressed }) => [
+                        styles.removeWorkout,
+                        { backgroundColor: colors.surfaceRaised, opacity: pressed ? 0.7 : 1 },
+                      ]}
+                    >
+                      <Ionicons name="trash-outline" size={17} color={colors.danger} />
+                    </Pressable>
+                  </View>
+                  <TextField
+                    label="Workout name"
+                    required
+                    value={workout.label}
+                    onChangeText={(label) => updateWorkout(workout.id, { label })}
+                    placeholder="Exercise, drill, movement, or session"
+                    maxLength={80}
+                    style={[styles.editorField, { backgroundColor: colors.surfaceRaised }]}
+                  />
+                  <View style={styles.detailFields}>
+                    <View style={{ flex: 1 }}>
+                      <TextField
+                        label="Macro label"
+                        value={workout.macroLabel}
+                        onChangeText={(macroLabel) => updateWorkout(workout.id, { macroLabel })}
+                        placeholder="Power, Zone 2, technique…"
+                        maxLength={48}
+                        style={[styles.editorField, { backgroundColor: colors.surfaceRaised }]}
+                      />
+                    </View>
+                    <View style={styles.setsField}>
+                      <TextField
+                        label="Sets / rounds"
+                        value={workout.sets}
+                        onChangeText={(sets) => updateWorkout(workout.id, { sets })}
+                        placeholder="—"
+                        keyboardType="number-pad"
+                        inputMode="numeric"
+                        maxLength={3}
+                        style={[styles.editorField, { backgroundColor: colors.surfaceRaised }]}
+                      />
+                    </View>
+                  </View>
+                </View>
+              ))}
+
+              {!draftWorkouts.length ? (
+                <View style={styles.noWorkouts}>
+                  <View style={[styles.emptyIcon, { backgroundColor: `${colors.accent}14` }]}>
+                    <Ionicons name="barbell-outline" size={20} color={colors.accent} />
+                  </View>
+                  <View style={{ flex: 1, gap: 2 }}>
+                    <AppText weight="600">No workouts added</AppText>
+                    <AppText variant="caption" tone="muted">
+                      Add a workout, or save this as a rest day.
+                    </AppText>
+                  </View>
+                </View>
+              ) : null}
+            </View>
+
+            {formError ? (
+              <View style={[styles.formError, { backgroundColor: `${colors.danger}12` }]}>
+                <Ionicons name="alert-circle-outline" size={18} color={colors.danger} />
+                <AppText
+                  variant="caption"
+                  tone="danger"
+                  accessibilityLiveRegion="polite"
+                  style={{ flex: 1 }}
+                >
+                  {formError}
+                </AppText>
+              </View>
+            ) : null}
+          </RightEditorPanel>
+        ) : null}
       </View>
 
       <MonthCalendarPopup
@@ -262,163 +471,121 @@ function TrainingScheduleScreen() {
           setCalendarOpen(false);
         }}
       />
-
-      <Sheet
-        visible={editingDate !== null}
-        onClose={closeEditor}
-        title={editingDate ? editorTitle(editingDate) : undefined}
-      >
-        <View style={[styles.editorIntro, { backgroundColor: colors.surfaceRaised }]}>
-          <View style={[styles.editorIcon, { backgroundColor: `${colors.accent}1A` }]}>
-            <Ionicons name="create-outline" size={20} color={colors.accent} />
-          </View>
-          <View style={{ flex: 1, gap: 2 }}>
-            <AppText weight="700">Shape this day your way</AppText>
-            <AppText variant="caption" tone="muted">
-              Use any sport, session, drill, lift, route, or recovery label.
-            </AppText>
-          </View>
-        </View>
-
-        <TextField
-          label="Day label"
-          required
-          value={draftLabel}
-          onChangeText={setDraftLabel}
-          placeholder="Rest day, race prep, speed + mobility…"
-          maxLength={64}
-        />
-        <TextField
-          label="Day notes"
-          value={draftNotes}
-          onChangeText={setDraftNotes}
-          placeholder="Optional intent, location, or coaching notes"
-          multiline
-          maxLength={600}
-          style={styles.notesInput}
-        />
-
-        <View style={styles.workoutHeading}>
-          <View style={{ flex: 1 }}>
-            <AppText variant="caption" weight="700">
-              SPECIFIC WORKOUTS
-            </AppText>
-            <AppText variant="micro" tone="muted">
-              Add free-form macro labels and optional sets or rounds.
-            </AppText>
-          </View>
-          <Button
-            title="Add workout"
-            compact
-            variant="secondary"
-            disabled={draftWorkouts.length >= 24}
-            onPress={() =>
-              setDraftWorkouts((current) => [
-                ...current,
-                { id: newDraftId(), label: '', macroLabel: '', sets: '' },
-              ])
-            }
-          />
-        </View>
-
-        {draftWorkouts.map((workout, index) => (
-          <View
-            key={workout.id}
-            style={[
-              styles.workoutEditor,
-              { backgroundColor: colors.surfaceRaised, borderColor: colors.border },
-            ]}
-          >
-            <View style={styles.workoutEditorHeader}>
-              <View style={[styles.workoutNumber, { backgroundColor: `${colors.accent}1A` }]}>
-                <AppText variant="micro" tone="accent" weight="700">
-                  {String(index + 1).padStart(2, '0')}
-                </AppText>
-              </View>
-              <AppText weight="700" style={{ flex: 1 }}>
-                Workout {index + 1}
-              </AppText>
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel={`Remove workout ${index + 1}`}
-                onPress={() =>
-                  setDraftWorkouts((current) =>
-                    current.filter((candidate) => candidate.id !== workout.id),
-                  )
-                }
-                hitSlop={8}
-                style={styles.removeWorkout}
-              >
-                <Ionicons name="trash-outline" size={18} color={colors.danger} />
-              </Pressable>
-            </View>
-            <TextField
-              label="Workout label"
-              required
-              value={workout.label}
-              onChangeText={(label) => updateWorkout(workout.id, { label })}
-              placeholder="Workout, drill, movement, session…"
-              maxLength={80}
-            />
-            <View style={styles.detailFields}>
-              <View style={{ flex: 1 }}>
-                <TextField
-                  label="Macro label"
-                  value={workout.macroLabel}
-                  onChangeText={(macroLabel) => updateWorkout(workout.id, { macroLabel })}
-                  placeholder="Power, Zone 2, technique…"
-                  maxLength={48}
-                />
-              </View>
-              <View style={styles.setsField}>
-                <TextField
-                  label="Sets / rounds"
-                  value={workout.sets}
-                  onChangeText={(sets) => updateWorkout(workout.id, { sets })}
-                  placeholder="—"
-                  keyboardType="number-pad"
-                  inputMode="numeric"
-                  maxLength={3}
-                />
-              </View>
-            </View>
-          </View>
-        ))}
-
-        {!draftWorkouts.length ? (
-          <View style={[styles.noWorkouts, { borderColor: colors.border }]}>
-            <AppText variant="caption" tone="muted" align="center">
-              No specific workouts yet. A day label can stand on its own for rest, travel, or
-              recovery.
-            </AppText>
-          </View>
-        ) : null}
-
-        {formError ? (
-          <AppText variant="caption" tone="danger" accessibilityLiveRegion="polite">
-            {formError}
-          </AppText>
-        ) : null}
-
-        <View style={styles.editorActions}>
-          {existingPlan ? (
-            <Button
-              title="Clear day"
-              variant="ghost"
-              disabled={busy}
-              onPress={() => void clearDay()}
-            />
-          ) : null}
-          <Button
-            title="Save day"
-            loading={saveDay.isPending}
-            disabled={removeDay.isPending}
-            onPress={() => void save()}
-            style={{ flex: 1 }}
-          />
-        </View>
-      </Sheet>
     </Screen>
+  );
+}
+
+function RightEditorPanel({
+  visible,
+  date,
+  onClose,
+  onHidden,
+  footer,
+  children,
+}: {
+  visible: boolean;
+  date: DayKey;
+  onClose: () => void;
+  onHidden: () => void;
+  footer: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  const { colors } = useTheme();
+  const { width } = useWindowDimensions();
+  const fullWidth = width < 760;
+  const panelWidth = fullWidth ? width : Math.min(520, Math.round(width * 0.56));
+  const [translateX] = useState(() => new Animated.Value(panelWidth));
+
+  useEffect(() => {
+    let active = true;
+    let animation: Animated.CompositeAnimation | undefined;
+
+    void AccessibilityInfo.isReduceMotionEnabled().then((reduceMotion) => {
+      if (!active) return;
+      const target = visible ? 0 : panelWidth;
+      if (visible) translateX.setValue(panelWidth);
+
+      if (reduceMotion) {
+        translateX.setValue(target);
+        if (!visible) onHidden();
+        return;
+      }
+
+      animation = Animated.timing(translateX, {
+        toValue: target,
+        duration: visible ? 220 : 180,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      });
+      animation.start(({ finished }) => {
+        if (finished && !visible) onHidden();
+      });
+    });
+
+    return () => {
+      active = false;
+      animation?.stop();
+    };
+  }, [onHidden, panelWidth, translateX, visible]);
+
+  return (
+    <Animated.View
+      accessibilityViewIsModal={fullWidth}
+      style={[
+        styles.editorPanel,
+        {
+          width: panelWidth,
+          backgroundColor: colors.background,
+          borderLeftColor: colors.border,
+          borderLeftWidth: fullWidth ? 0 : StyleSheet.hairlineWidth,
+          transform: [{ translateX }],
+        },
+      ]}
+    >
+      <View style={[styles.editorHeader, { borderBottomColor: colors.border }]}>
+        <View style={styles.editorTitle}>
+          <AppText variant="heading" weight="700" numberOfLines={1}>
+            {trainingTitle(date)}
+          </AppText>
+          <AppText variant="caption" tone="muted" numberOfLines={1}>
+            {editorDate(date)}
+          </AppText>
+        </View>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={`Close ${longWeekday(date)} training editor`}
+          onPress={onClose}
+          hitSlop={6}
+          style={({ pressed }) => [
+            styles.closeEditor,
+            { backgroundColor: colors.surfaceRaised, opacity: pressed ? 0.7 : 1 },
+          ]}
+        >
+          <Ionicons name="close" size={23} color={colors.textPrimary} />
+        </Pressable>
+      </View>
+
+      <KeyboardAvoidingView
+        style={styles.editorBody}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
+        <ScrollView
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.editorContent}
+        >
+          {children}
+        </ScrollView>
+        <View
+          style={[
+            styles.editorFooter,
+            { backgroundColor: colors.chrome, borderTopColor: colors.border },
+          ]}
+        >
+          {footer}
+        </View>
+      </KeyboardAvoidingView>
+    </Animated.View>
   );
 }
 
@@ -436,11 +603,18 @@ function ScheduleDayRow({
   const { colors } = useTheme();
   const isToday = date === todayKey();
   const totalSets = plan?.workouts.reduce((total, workout) => total + (workout.sets ?? 0), 0) ?? 0;
+  const title = trainingTitle(date);
+  const workoutSummary = plan?.workouts.length
+    ? `${plan.workouts.length} ${plan.workouts.length === 1 ? 'workout' : 'workouts'}${totalSets ? ` · ${totalSets} sets / rounds` : ''}`
+    : null;
   const summary = plan
-    ? plan.workouts.length
-      ? `${plan.workouts.length} ${plan.workouts.length === 1 ? 'workout' : 'workouts'}${totalSets ? ` · ${totalSets} sets / rounds` : ''}`
-      : plan.notes || 'Recovery, rest, or open training day'
-    : 'Add a day label and specific workouts';
+    ? [
+        plan.label !== title ? plan.label : null,
+        workoutSummary ?? plan.notes ?? 'No workouts added',
+      ]
+        .filter(Boolean)
+        .join(' · ')
+    : 'No training added';
 
   return (
     <Pressable
@@ -456,9 +630,9 @@ function ScheduleDayRow({
       <View
         style={[
           styles.dateTile,
-          { backgroundColor: colors.surfaceRaised, borderColor: colors.border },
-          isToday && { backgroundColor: colors.accent, borderColor: colors.accent },
-          selected && !isToday && { borderColor: colors.accent },
+          { backgroundColor: colors.surfaceRaised },
+          selected && !isToday && { backgroundColor: `${colors.accent}18` },
+          isToday && { backgroundColor: colors.accent },
         ]}
       >
         <AppText
@@ -478,27 +652,12 @@ function ScheduleDayRow({
       </View>
 
       <View style={styles.dayCopy}>
-        <AppText weight={plan ? '700' : '500'} tone={plan ? 'primary' : 'secondary'}>
-          {plan?.label ?? 'Plan this day'}
+        <AppText weight="700" tone="primary">
+          {title}
         </AppText>
         <AppText variant="caption" tone="muted" numberOfLines={1}>
           {summary}
         </AppText>
-        {plan?.workouts.length ? (
-          <View style={styles.previewLabels}>
-            {plan.workouts.slice(0, 3).map((workout) => (
-              <View
-                key={workout.id}
-                style={[styles.previewPill, { backgroundColor: `${colors.accent}14` }]}
-              >
-                <AppText variant="micro" tone="accent" numberOfLines={1}>
-                  {workout.label}
-                  {workout.macroLabel ? ` · ${workout.macroLabel}` : ''}
-                </AppText>
-              </View>
-            ))}
-          </View>
-        ) : null}
       </View>
 
       {plan ? (
@@ -557,12 +716,20 @@ function fullDate(date: DayKey): string {
   });
 }
 
-function editorTitle(date: DayKey): string {
-  return `Plan ${parseDayKey(date).toLocaleDateString(undefined, {
-    weekday: 'long',
-    month: 'short',
+function longWeekday(date: DayKey): string {
+  return parseDayKey(date).toLocaleDateString(undefined, { weekday: 'long' });
+}
+
+function trainingTitle(date: DayKey): string {
+  return `${longWeekday(date)} Training`;
+}
+
+function editorDate(date: DayKey): string {
+  return parseDayKey(date).toLocaleDateString(undefined, {
+    month: 'long',
     day: 'numeric',
-  })}`;
+    year: 'numeric',
+  });
 }
 
 const styles = StyleSheet.create({
@@ -572,8 +739,19 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
     justifyContent: 'center',
   },
+  workspace: {
+    flex: 1,
+    position: 'relative',
+    overflow: 'hidden',
+  },
+  scheduleScroll: {
+    flex: 1,
+  },
+  scheduleContent: {
+    paddingBottom: spacing.xxl,
+  },
   weekNavigator: {
-    minHeight: 112,
+    minHeight: 120,
     borderBottomWidth: StyleSheet.hairlineWidth,
     flexDirection: 'row',
     alignItems: 'center',
@@ -591,8 +769,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 3,
   },
-  eyebrow: {
-    letterSpacing: 1.2,
+  todayAction: {
+    minHeight: 28,
+    justifyContent: 'center',
+    paddingHorizontal: spacing.md,
   },
   loading: {
     minHeight: 360,
@@ -603,7 +783,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
   },
   dayRow: {
-    minHeight: 96,
+    minHeight: 86,
     borderBottomWidth: StyleSheet.hairlineWidth,
     flexDirection: 'row',
     alignItems: 'center',
@@ -612,10 +792,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xs,
   },
   dateTile: {
-    width: 56,
-    height: 60,
+    width: 52,
+    height: 56,
     borderRadius: radius.md,
-    borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
     gap: 1,
@@ -631,71 +810,85 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  previewLabels: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.xs,
-    paddingTop: spacing.xs,
+  editorPanel: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 20,
   },
-  previewPill: {
-    maxWidth: '100%',
-    borderRadius: radius.full,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 3,
-  },
-  footerCopy: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: spacing.sm,
-    paddingHorizontal: spacing.xl,
-    paddingVertical: spacing.xl,
-  },
-  editorIntro: {
-    borderRadius: radius.md,
+  editorHeader: {
+    minHeight: 78,
+    borderBottomWidth: StyleSheet.hairlineWidth,
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
-    padding: spacing.md,
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.md,
   },
-  editorIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+  editorTitle: {
+    flex: 1,
+    minWidth: 0,
+    gap: 2,
+  },
+  closeEditor: {
+    width: touchTarget,
+    height: touchTarget,
+    borderRadius: touchTarget / 2,
     alignItems: 'center',
     justifyContent: 'center',
   },
+  editorBody: {
+    flex: 1,
+  },
+  editorContent: {
+    gap: spacing.xxl,
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.xl,
+    paddingBottom: spacing.xxl,
+  },
+  editorFooter: {
+    borderTopWidth: StyleSheet.hairlineWidth,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+  },
+  formSection: {
+    gap: spacing.lg,
+  },
+  editorField: {
+    borderWidth: 0,
+    borderRadius: radius.md,
+  },
   notesInput: {
-    minHeight: 84,
+    minHeight: 96,
     textAlignVertical: 'top',
   },
   workoutHeading: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
-    paddingTop: spacing.sm,
+  },
+  addWorkout: {
+    minHeight: touchTarget,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.xs,
+    paddingHorizontal: spacing.sm,
   },
   workoutEditor: {
-    borderWidth: 1,
-    borderRadius: radius.lg,
-    padding: spacing.md,
-    gap: spacing.md,
+    gap: spacing.lg,
   },
   workoutEditorHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
   },
-  workoutNumber: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   removeWorkout: {
     width: 36,
     height: 36,
-    alignItems: 'flex-end',
+    borderRadius: 18,
+    alignItems: 'center',
     justifyContent: 'center',
   },
   detailFields: {
@@ -707,14 +900,35 @@ const styles = StyleSheet.create({
     width: 116,
   },
   noWorkouts: {
-    borderWidth: 1,
-    borderStyle: 'dashed',
+    minHeight: 76,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    paddingVertical: spacing.md,
+  },
+  emptyIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  formError: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.sm,
     borderRadius: radius.md,
-    padding: spacing.lg,
+    padding: spacing.md,
   },
   editorActions: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
+  },
+  clearAction: {
+    minHeight: touchTarget,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: spacing.md,
   },
 });
