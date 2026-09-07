@@ -114,13 +114,13 @@ input[data-darkfield]:-webkit-autofill:focus, input[data-darkfield]:-webkit-auto
  * enter from the right; everything else from the left. */
 [data-slidescreen] {
   will-change: transform;
-  transition: transform 420ms cubic-bezier(0.22, 1, 0.36, 1);
+  transition: transform 294ms cubic-bezier(0.22, 1, 0.36, 1);
 }
-/* Today / profile chrome: one slab, same 420ms curve as stack / friends feed. */
+/* Today / profile chrome: one slab, same 294ms curve as stack / friends feed. */
 [data-headerhide] {
   will-change: transform, margin-bottom;
-  transition: transform 420ms cubic-bezier(0.22, 1, 0.36, 1),
-    margin-bottom 420ms cubic-bezier(0.22, 1, 0.36, 1);
+  transition: transform 294ms cubic-bezier(0.22, 1, 0.36, 1),
+    margin-bottom 294ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 [data-headerhide="out"] {
   transform: translateY(-100%);

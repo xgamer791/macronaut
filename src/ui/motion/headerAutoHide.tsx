@@ -16,7 +16,7 @@ import Animated, {
 import { SLIDE_DURATION_MS, SLIDE_EASING } from './SlideScreen';
 import { headerHideForScroll } from './headerAutoHideLogic';
 
-/** Same 420ms curve as friends-feed / stack slides. */
+/** Same curve as friends-feed / stack slides. */
 export const HEADER_HIDE_DURATION_MS = SLIDE_DURATION_MS;
 export { HEADER_HIDE_DELTA, HEADER_HIDE_TOP, headerHideForScroll } from './headerAutoHideLogic';
 

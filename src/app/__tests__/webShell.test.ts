@@ -61,16 +61,16 @@ describe('web html shell', () => {
 
   it('slides stack pages with a CSS transform so web actually animates', () => {
     expect(html).toContain('[data-slidescreen]');
-    expect(html).toContain('transform 420ms cubic-bezier(0.22, 1, 0.36, 1)');
+    expect(html).toContain('transform 294ms cubic-bezier(0.22, 1, 0.36, 1)');
     expect(html).toContain('prefers-reduced-motion: reduce');
   });
 
-  it('slides the sticky header as one slab on the same 420ms curve', () => {
+  it('slides the sticky header as one slab on the same 294ms curve', () => {
     expect(html).toContain('[data-headerhide]');
     expect(html).toContain('[data-headerhide="out"]');
     expect(html).toContain('translateY(-100%)');
     expect(html).toContain(
-      'transform 420ms cubic-bezier(0.22, 1, 0.36, 1),\n    margin-bottom 420ms cubic-bezier(0.22, 1, 0.36, 1)',
+      'transform 294ms cubic-bezier(0.22, 1, 0.36, 1),\n    margin-bottom 294ms cubic-bezier(0.22, 1, 0.36, 1)',
     );
     expect(html).not.toContain('[data-headerhide="out"] > *');
     expect(html).not.toContain('height 840ms');

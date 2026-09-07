@@ -13,7 +13,7 @@ describe('Today header hamburger', () => {
     expect(header.indexOf('Add food')).toBeLessThan(header.indexOf('Open calendar'));
   });
 
-  it('opens and closes on the same 420ms friends-feed curve', () => {
+  it('opens and closes on the same friends-feed curve', () => {
     expect(header).toContain('SLIDE_DURATION_MS');
     expect(header).toContain('const DRAWER_MS = SLIDE_DURATION_MS');
     expect(header).toContain('Easing.bezier(0.22, 1, 0.36, 1)');

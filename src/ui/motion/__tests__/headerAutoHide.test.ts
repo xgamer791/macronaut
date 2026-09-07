@@ -28,7 +28,7 @@ describe('headerHideForScroll', () => {
 });
 
 describe('header auto-hide wiring', () => {
-  it('keeps the 420ms bezier for header hide', () => {
+  it('keeps the same bezier as the stack-page slide for header hide', () => {
     const hide = read('ui', 'motion', 'headerAutoHide.tsx');
     expect(hide).toContain("from './SlideScreen'");
     expect(hide).toContain("from './headerAutoHideLogic'");
