@@ -29,6 +29,7 @@ import {
 } from '@/data/heroMetrics';
 import {
   ActivityLogList,
+  AppHeader,
   AppText,
   BarEntranceProvider,
   Button,
@@ -42,7 +43,7 @@ import {
 } from '@/ui/components';
 import type { HeroMetricValues } from '@/ui/components/HeroMetricModule';
 import { useTheme } from '@/ui/theme/ThemeProvider';
-import { fonts, radius, spacing, touchTarget } from '@/ui/theme/tokens';
+import { fonts, radius, spacing } from '@/ui/theme/tokens';
 
 const HERO_IMAGE = require('../../../assets/images/today/hero-gym.jpg');
 
@@ -226,21 +227,14 @@ function TodayBody() {
           contentPosition="top"
         />
         <LinearGradient
-          colors={['rgba(8,12,16,0.35)', 'rgba(8,12,16,0.12)', 'rgba(14,17,20,0.88)']}
-          locations={[0, 0.55, 1]}
+          colors={['rgba(8,12,16,0.62)', 'rgba(8,12,16,0.18)', 'rgba(14,17,20,0.88)']}
+          locations={[0, 0.5, 1]}
           style={StyleSheet.absoluteFill}
         />
 
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Open calendar"
-          onPress={() => setCalendarOpen(true)}
-          hitSlop={8}
-          style={[styles.bellBtn, { top: insets.top + spacing.sm }]}
-        >
-          <Ionicons name="notifications-outline" size={22} color="#FFFFFF" />
-          <View style={[styles.bellDot, { backgroundColor: colors.accent }]} />
-        </Pressable>
+        <View style={[styles.headerWrap, { paddingTop: insets.top + 2 }]}>
+          <AppHeader onBellPress={() => setCalendarOpen(true)} />
+        </View>
 
         {/* Greeting + dual metric modules (Daily Goals removed). */}
         <View style={styles.heroBottom}>
@@ -501,22 +495,13 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     justifyContent: 'flex-end',
   },
-  bellBtn: {
+  headerWrap: {
     position: 'absolute',
-    right: spacing.md,
-    width: touchTarget,
-    height: touchTarget,
-    alignItems: 'center',
-    justifyContent: 'center',
+    top: 0,
+    left: 0,
+    right: 0,
     zIndex: 4,
-  },
-  bellDot: {
-    position: 'absolute',
-    top: 10,
-    right: 10,
-    width: 8,
-    height: 8,
-    borderRadius: 4,
+    paddingHorizontal: spacing.sm,
   },
   heroBottom: {
     paddingHorizontal: spacing.lg,

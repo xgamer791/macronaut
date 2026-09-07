@@ -25,6 +25,7 @@ export { TargetEditor } from './TargetEditor';
 export { DatePickSheet } from './DatePickSheet';
 export { MonthCalendarPopup } from './MonthCalendarPopup';
 export { DashboardHeader } from './DashboardHeader';
+export { AppHeader } from './AppHeader';
 export { FoodImage } from './FoodImage';
 export { BarChart } from './BarChart';
 export { LineChart } from './LineChart';
