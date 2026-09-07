@@ -31,7 +31,7 @@ export function useSlideBack() {
   }, [dismiss, router]);
 }
 
-const EASE = Easing.bezier(0.22, 1, 0.36, 1);
+export const SLIDE_EASING = Easing.bezier(0.22, 1, 0.36, 1);
 export const SLIDE_DURATION_MS = 840;
 
 export const SLIDE_OVER_OPTIONS = {
@@ -122,7 +122,7 @@ function SlideScreenNative({ from, children }: { from: Side; children: React.Rea
   useLayoutEffect(() => {
     progress.value = withTiming(1, {
       duration: SLIDE_DURATION_MS,
-      easing: EASE,
+      easing: SLIDE_EASING,
       reduceMotion: ReduceMotion.System,
     });
   }, [progress]);
@@ -136,7 +136,7 @@ function SlideScreenNative({ from, children }: { from: Side; children: React.Rea
     leaving.current = true;
     progress.value = withTiming(
       0,
-      { duration: SLIDE_DURATION_MS, easing: EASE, reduceMotion: ReduceMotion.System },
+      { duration: SLIDE_DURATION_MS, easing: SLIDE_EASING, reduceMotion: ReduceMotion.System },
       (finished) => {
         if (finished) runOnJS(finish)();
       },

@@ -28,9 +28,10 @@ describe('sticky chrome headers', () => {
 
   it('keeps the bar above the scroll layer rather than inside the page', () => {
     expect(screen).toContain('stickyHeader');
-    expect(screen).toMatch(/\{stickyHeader\}\s*\n\s*<ScrollView/);
+    expect(screen).toContain('AutoHideHeader');
+    expect(screen).toContain('useHeaderScrollHide');
+    expect(screen).toMatch(/<ScrollView \{\.\.\.scrollProps\}>/);
     expect(screen).not.toContain('HeaderGlassProvider');
-    expect(screen).not.toContain('Animated.ScrollView');
   });
 
   it('hands Today its header instead of drawing one inside the hero', () => {
