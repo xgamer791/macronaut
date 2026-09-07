@@ -17,6 +17,7 @@ import {
 import { DayNote, DayNotesRepo } from '@/repositories/dayNotesRepo';
 import { DiaryRepo, NewDiaryEntry } from '@/repositories/diaryRepo';
 import { FoodRepo, NewCustomFood } from '@/repositories/foodRepo';
+import { FastingRepo, FastingState } from '@/repositories/fastingRepo';
 import { GoalRepo } from '@/repositories/goalRepo';
 import { FrequentFood, HistoryRepo, RecentFood } from '@/repositories/historyRepo';
 import { AppNotification, NotificationRepo } from '@/repositories/notificationRepo';
@@ -894,6 +895,46 @@ export function createMemoryNotificationRepo(): NotificationRepo {
   };
 }
 
+export function createMemoryFastingRepo(): FastingRepo {
+  let current: FastingState = {
+    activeStartAt: null,
+    activeEndAt: null,
+    customSlots: [],
+    updatedAt: null,
+  };
+  return {
+    async state() {
+      return clone(current);
+    },
+    async start(startAt, endAt) {
+      if (endAt <= startAt) throw new Error('The fast must end after it starts');
+      current = { ...current, activeStartAt: startAt, activeEndAt: endAt, updatedAt: nowIso() };
+    },
+    async stop() {
+      current = { ...current, activeStartAt: null, activeEndAt: null, updatedAt: nowIso() };
+    },
+    async saveSlot(label, durationMinutes) {
+      if (current.customSlots.length >= 10) {
+        throw new Error('You can save up to 10 custom fasting times');
+      }
+      const slot = { id: newId(), label: label.trim(), durationMinutes };
+      current = {
+        ...current,
+        customSlots: [...current.customSlots, slot],
+        updatedAt: nowIso(),
+      };
+      return clone(slot);
+    },
+    async removeSlot(id) {
+      current = {
+        ...current,
+        customSlots: current.customSlots.filter((slot) => slot.id !== id),
+        updatedAt: nowIso(),
+      };
+    },
+  };
+}
+
 /** Deletion is a server concern (convex/account.ts, covered by
  * tests/convex/isolation.test.ts); the fakes hold their state privately, so
  * this is a no-op rather than a half-implementation. */
@@ -925,5 +966,6 @@ export function createMemoryRepos(): Repos {
     groups: createMemoryGroupRepo(),
     chats: createMemoryChatRepo(),
     notifications: createMemoryNotificationRepo(),
+    fasting: createMemoryFastingRepo(),
   };
 }

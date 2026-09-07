@@ -19,6 +19,8 @@ export interface ScreenProps {
    * starts below it. Scrolls away on the way down and back in on the way up.
    */
   stickyHeader?: React.ReactNode;
+  /** Fixed content rendered above the scroll layer (for example a FAB). */
+  floatingOverlay?: React.ReactNode;
 }
 
 export function Screen({
@@ -29,6 +31,7 @@ export function Screen({
   tabBarSpace = false,
   safeTop = true,
   stickyHeader,
+  floatingOverlay,
 }: ScreenProps) {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
@@ -49,12 +52,18 @@ export function Screen({
 
   if (!scroll) {
     if (!stickyHeader) {
-      return <View style={[base, contentPad, style]}>{children}</View>;
+      return (
+        <View style={base}>
+          <View style={[styles.fill, contentPad, style]}>{children}</View>
+          {floatingOverlay}
+        </View>
+      );
     }
     return (
       <View style={base}>
         {header}
         <View style={[styles.fill, contentPad, style]}>{children}</View>
+        {floatingOverlay}
       </View>
     );
   }
@@ -71,6 +80,7 @@ export function Screen({
     <View style={base}>
       {header}
       <ScrollView {...scrollProps}>{children}</ScrollView>
+      {floatingOverlay}
     </View>
   );
 }

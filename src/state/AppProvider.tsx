@@ -12,6 +12,7 @@ import { ConvexCaller } from '@/repositories/convexCall';
 import { createDayNotesRepo, DayNotesRepo } from '@/repositories/dayNotesRepo';
 import { createDiaryRepo, DiaryRepo } from '@/repositories/diaryRepo';
 import { createFoodRepo, FoodRepo } from '@/repositories/foodRepo';
+import { createFastingRepo, FastingRepo } from '@/repositories/fastingRepo';
 import { createGoalRepo, GoalRepo } from '@/repositories/goalRepo';
 import { createGroupRepo, GroupRepo } from '@/repositories/groupRepo';
 import { createHistoryRepo, HistoryRepo } from '@/repositories/historyRepo';
@@ -37,6 +38,7 @@ export interface Repos {
   account: AccountRepo;
   chats: ChatRepo;
   notifications: NotificationRepo;
+  fasting: FastingRepo;
 }
 
 const ReposContext = createContext<Repos | null>(null);
@@ -61,6 +63,7 @@ export function createRepos(convex: ConvexCaller): Repos {
     account: createAccountRepo(convex),
     chats: createChatRepo(convex),
     notifications: createNotificationRepo(convex),
+    fasting: createFastingRepo(convex),
   };
 }
 

@@ -41,6 +41,7 @@ import {
   SectionHeader,
   Sheet,
   TextField,
+  ToolLauncher,
 } from '@/ui/components';
 import type { HeroMetricValues } from '@/ui/components/HeroMetricModule';
 import { useTheme } from '@/ui/theme/ThemeProvider';
@@ -225,6 +226,7 @@ function TodayBody() {
           <AppHeader onCalendarPress={() => setCalendarOpen(true)} />
         </GlassHeaderBar>
       }
+      floatingOverlay={<ToolLauncher />}
     >
       {/* —— Hero —— */}
       <View style={[styles.hero, { height: heroHeight }]}>
