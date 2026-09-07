@@ -35,6 +35,7 @@ import {
 import { AppText, Button, ChatAvatar, ChatVideo, EmptyState } from '@/ui/components';
 import { useTheme } from '@/ui/theme/ThemeProvider';
 import { radius, spacing, touchTarget, type } from '@/ui/theme/tokens';
+import { useComposerKeyboardGap } from '@/ui/motion/composerKeyboardGap';
 import { SlideScreen, useSlideBack } from '@/ui/motion/SlideScreen';
 
 /** Avatar beside a message group. Small enough to read as a signature on the
@@ -243,6 +244,7 @@ export function ConversationView({
   const insets = useSafeAreaInsets();
   const { colors } = useTheme();
   const scroll = useRef<ScrollView>(null);
+  const composer = useComposerKeyboardGap(Math.max(insets.bottom, spacing.sm));
   const [menuProgress] = useState(() => new Animated.Value(0));
   const [attachmentMenuOpen, setAttachmentMenuOpen] = useState(false);
   const [listening, setListening] = useState(false);
@@ -421,11 +423,13 @@ export function ConversationView({
 
       {data.peer.friendship === 'friends' ? (
         <View
+          ref={composer.wrapRef}
           style={[
             styles.composerWrap,
             {
               backgroundColor: colors.background,
-              paddingBottom: Math.max(insets.bottom, spacing.sm),
+              paddingBottom: composer.paddingBottom,
+              transform: [{ translateY: composer.shift }],
             },
           ]}
         >
@@ -517,6 +521,8 @@ export function ConversationView({
                 placeholderTextColor={colors.textMuted}
                 maxLength={2000}
                 returnKeyType="send"
+                onFocus={composer.onFocus}
+                onBlur={composer.onBlur}
                 onSubmitEditing={() => {
                   if (canSend) submitMessage();
                 }}
