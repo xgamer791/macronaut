@@ -10,11 +10,43 @@ export interface FitnessGroup {
   location?: string;
   description?: string;
   isPublic: boolean;
+  /** 'gym' marks a gym's one shared group: no owner, joined by claiming the gym. */
+  kind?: 'gym';
+  gymId?: string;
   memberCount: number;
   isOwner: boolean;
   isMember: boolean;
   createdAt: string;
   updatedAt: string;
+}
+
+/** Someone in a group, as its members see them. Only public profiles are
+ * listed; the counts include everyone. */
+export interface GroupMember {
+  id: string;
+  handle: string | null;
+  displayName: string;
+  avatarUrl?: string;
+  friendship: 'none' | 'outgoing' | 'incoming' | 'friends';
+  primarySport?: string;
+  isYou: boolean;
+  status: 'member' | 'suspended';
+  /** Votes to remove them this week. Never who cast them. */
+  votes: number;
+  myVote: boolean;
+  canVote: boolean;
+}
+
+export interface GroupMembers {
+  total: number;
+  listed: number;
+  members: GroupMember[];
+}
+
+export interface VoteResult {
+  votes: number;
+  status: 'member' | 'suspended' | 'banned';
+  myVote: boolean;
 }
 
 export interface GroupDiscovery {
@@ -45,6 +77,9 @@ export interface GroupRepo {
   join(id: string): Promise<FitnessGroup>;
   leave(id: string): Promise<void>;
   remove(id: string): Promise<void>;
+  members(id: string): Promise<GroupMembers>;
+  voteRemove(id: string, targetUserId: string): Promise<VoteResult>;
+  retractVote(id: string, targetUserId: string): Promise<VoteResult>;
 }
 
 const groupId = (id: string) => id as Id<'fitnessGroups'>;
@@ -63,5 +98,16 @@ export function createGroupRepo(convex: ConvexCaller): GroupRepo {
     async remove(id) {
       await convex.mutation(api.groups.remove, { id: groupId(id) });
     },
+    members: (id) => convex.query(api.groups.members, { id: groupId(id) }),
+    voteRemove: (id, targetUserId) =>
+      convex.mutation(api.groups.voteRemove, {
+        id: groupId(id),
+        targetUserId: targetUserId as Id<'users'>,
+      }),
+    retractVote: (id, targetUserId) =>
+      convex.mutation(api.groups.retractVote, {
+        id: groupId(id),
+        targetUserId: targetUserId as Id<'users'>,
+      }),
   };
 }

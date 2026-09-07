@@ -1,18 +1,30 @@
 import { ConvexError, v } from 'convex/values';
 import type { Doc, Id } from './_generated/dataModel';
 import { mutation, query, type MutationCtx, type QueryCtx } from './_generated/server';
+import { identity, profileFor } from './chats';
 import { nowIso, requireUserId } from './lib/auth';
 import { firstFreeHandle, handleSeed } from './lib/handles';
+import { deleteVotesAgainst, restrictionFor, unseat } from './lib/gymMembership';
+import {
+  GYM_VOTE_RULES,
+  distinctActiveVoters,
+  isRestricted,
+  isVoteActive,
+  outcomeFor,
+  untilIso,
+} from './lib/gymVotes';
 import { readableProfile } from './lib/profileAccess';
 
 const LIMITS = { name: 60, sport: 40, location: 60, description: 280 } as const;
+/** Rows a member list returns. Every seat is still counted. */
+const MEMBERS_LIMIT = 100;
 
 function capped(value: string | undefined, max: number): string | undefined {
   const trimmed = (value ?? '').trim();
   return trimmed ? trimmed.slice(0, max) : undefined;
 }
 
-async function memberCount(ctx: QueryCtx | MutationCtx, groupId: Id<'fitnessGroups'>) {
+export async function memberCount(ctx: QueryCtx | MutationCtx, groupId: Id<'fitnessGroups'>) {
   return (
     await ctx.db
       .query('groupMembers')
@@ -21,7 +33,7 @@ async function memberCount(ctx: QueryCtx | MutationCtx, groupId: Id<'fitnessGrou
   ).length;
 }
 
-async function membership(
+export async function membership(
   ctx: QueryCtx | MutationCtx,
   userId: Id<'users'> | null,
   groupId: Id<'fitnessGroups'>,
@@ -33,7 +45,10 @@ async function membership(
     .first();
 }
 
-async function groupView(
+/** The wire shape of a group. A gym group (`kind: 'gym'`) has no owner, so
+ * `isOwner` is false for everyone in it — including whoever's claim created
+ * the row, which is never exposed. */
+export async function groupView(
   ctx: QueryCtx | MutationCtx,
   doc: Doc<'fitnessGroups'>,
   viewerId: Id<'users'> | null,
@@ -47,8 +62,10 @@ async function groupView(
     location: doc.location,
     description: doc.description,
     isPublic: doc.isPublic,
+    kind: doc.kind,
+    gymId: doc.gymId as string | undefined,
     memberCount: await memberCount(ctx, doc._id),
-    isOwner: mine?.role === 'owner',
+    isOwner: doc.kind !== 'gym' && mine?.role === 'owner',
     isMember: mine !== null,
     createdAt: doc.createdAt,
     updatedAt: doc.updatedAt,
@@ -118,7 +135,8 @@ function proximity(groupLocation?: string, viewerLocation?: string) {
 
 /** Public groups the viewer has not joined. The order is intentionally useful:
  * same-city groups first, then broader location matches, then matching sports,
- * active communities and recent arrivals. */
+ * active communities and recent arrivals. Gym groups are left out — they are
+ * reached by setting a home gym, and there is one per gym in the world. */
 export const discover = query({
   args: {},
   handler: async (ctx) => {
@@ -139,7 +157,7 @@ export const discover = query({
     const viewerLocation = profile?.location || user?.country;
     const viewerSport = profile?.primarySport;
     const visible = allGroups.filter(
-      (group) => group.isPublic && !memberOf.has(group._id as string),
+      (group) => group.isPublic && group.kind !== 'gym' && !memberOf.has(group._id as string),
     );
     const groups = await Promise.all(visible.map((group) => groupView(ctx, group, userId)));
     groups.sort((a, b) => {
@@ -219,6 +237,9 @@ export const update = mutation({
   handler: async (ctx, args) => {
     const userId = await requireUserId(ctx);
     const group = await ctx.db.get(args.id);
+    if (group?.kind === 'gym') {
+      throw new ConvexError('Gym groups have no owner and cannot be edited');
+    }
     if (!group || group.userId !== userId)
       throw new ConvexError('Only the owner can edit this group');
     const name = capped(args.name, LIMITS.name);
@@ -243,6 +264,9 @@ export const join = mutation({
     const userId = await requireUserId(ctx);
     const group = await ctx.db.get(id);
     if (!group || !group.isPublic) throw new ConvexError('Group not available');
+    if (group.kind === 'gym') {
+      throw new ConvexError('Set this gym as your home gym to join its group');
+    }
     const existing = await membership(ctx, userId, id);
     if (!existing) {
       await ctx.db.insert('groupMembers', {
@@ -262,6 +286,11 @@ export const leave = mutation({
     const userId = await requireUserId(ctx);
     const mine = await membership(ctx, userId, id);
     if (!mine) return null;
+    const group = await ctx.db.get(id);
+    if (group?.kind === 'gym') {
+      await unseat(ctx, userId, id);
+      return null;
+    }
     if (mine.role === 'owner') {
       throw new ConvexError('The owner cannot leave — delete the group instead.');
     }
@@ -275,6 +304,7 @@ export const remove = mutation({
   handler: async (ctx, { id }) => {
     const userId = await requireUserId(ctx);
     const group = await ctx.db.get(id);
+    if (group?.kind === 'gym') throw new ConvexError('Gym groups cannot be deleted');
     if (!group || group.userId !== userId) return null;
     const seats = await ctx.db
       .query('groupMembers')
@@ -283,5 +313,214 @@ export const remove = mutation({
     for (const seat of seats) await ctx.db.delete(seat._id);
     await ctx.db.delete(id);
     return null;
+  },
+});
+
+/**
+ * Who is in a group, for its members. Only people whose profile is public are
+ * listed; everyone is counted. In a gym group a suspended member stays listed
+ * (marked) so the remaining votes can still reach the ban tier. Nothing here
+ * says who voted, who joined first, or who created the row.
+ */
+export const members = query({
+  args: { id: v.id('fitnessGroups') },
+  handler: async (ctx, { id }) => {
+    const userId = await requireUserId(ctx);
+    const group = await ctx.db.get(id);
+    if (!group || !(await membership(ctx, userId, id))) {
+      throw new ConvexError('Group not available');
+    }
+    const now = Date.now();
+    const isGym = group.kind === 'gym';
+    const seats = await ctx.db
+      .query('groupMembers')
+      .withIndex('by_group', (q) => q.eq('groupId', id))
+      .collect();
+    const seated = new Set(seats.map((seat) => seat.userId as string));
+    const suspended = isGym
+      ? (
+          await ctx.db
+            .query('groupBans')
+            .withIndex('by_group', (q) => q.eq('groupId', id))
+            .collect()
+        ).filter(
+          (row) =>
+            row.kind === 'suspension' && isRestricted(row, now) && !seated.has(row.userId as string),
+        )
+      : [];
+    const votes = isGym
+      ? await ctx.db
+          .query('groupVotes')
+          .withIndex('by_group_target', (q) => q.eq('groupId', id))
+          .collect()
+      : [];
+    const votesFor = new Map<string, Doc<'groupVotes'>[]>();
+    for (const vote of votes) {
+      const key = vote.targetUserId as string;
+      votesFor.set(key, [...(votesFor.get(key) ?? []), vote]);
+    }
+
+    const candidates = [
+      ...seats.map((seat) => ({ userId: seat.userId, status: 'member' as const })),
+      ...suspended.map((row) => ({ userId: row.userId, status: 'suspended' as const })),
+    ];
+    const rows = [];
+    for (const candidate of candidates) {
+      const isYou = candidate.userId === userId;
+      const [user, profile] = await Promise.all([
+        ctx.db.get(candidate.userId),
+        profileFor(ctx, candidate.userId),
+      ]);
+      if (!user || !profile || !(profile.isPublic || isYou)) continue;
+      const against = votesFor.get(candidate.userId as string) ?? [];
+      const others = candidate.status === 'member' ? seats.length - 1 : seats.length;
+      rows.push({
+        ...(await identity(ctx, userId, user, profile)),
+        primarySport: profile.primarySport,
+        isYou,
+        status: candidate.status,
+        votes: distinctActiveVoters(against, now),
+        myVote: against.some((vote) => vote.voterUserId === userId && isVoteActive(vote, now)),
+        canVote: isGym && !isYou && others >= GYM_VOTE_RULES.MIN_OTHER_MEMBERS,
+      });
+    }
+    rows.sort((a, b) => {
+      if (a.isYou !== b.isYou) return a.isYou ? -1 : 1;
+      return a.displayName.localeCompare(b.displayName);
+    });
+    return { total: seats.length, listed: rows.length, members: rows.slice(0, MEMBERS_LIMIT) };
+  },
+});
+
+async function voteTarget(
+  ctx: MutationCtx,
+  userId: Id<'users'>,
+  id: Id<'fitnessGroups'>,
+  targetUserId: Id<'users'>,
+) {
+  const group = await ctx.db.get(id);
+  if (!group || group.kind !== 'gym') throw new ConvexError('Only gym groups vote on members');
+  if (!(await membership(ctx, userId, id))) throw new ConvexError('Group not available');
+  if (targetUserId === userId) throw new ConvexError('You cannot vote against yourself');
+  const now = Date.now();
+  const seats = await ctx.db
+    .query('groupMembers')
+    .withIndex('by_group', (q) => q.eq('groupId', id))
+    .collect();
+  const targetSeat = seats.find((seat) => seat.userId === targetUserId) ?? null;
+  const restriction = await restrictionFor(ctx, targetUserId, id);
+  const currentlySuspended =
+    restriction !== null && restriction.kind === 'suspension' && isRestricted(restriction, now);
+  if (!targetSeat && !currentlySuspended) throw new ConvexError('That person is not in this group');
+  return { group, now, seats, targetSeat, restriction, currentlySuspended };
+}
+
+async function activeVotesAgainst(
+  ctx: MutationCtx,
+  id: Id<'fitnessGroups'>,
+  targetUserId: Id<'users'>,
+  now: number,
+) {
+  const all = await ctx.db
+    .query('groupVotes')
+    .withIndex('by_group_target', (q) => q.eq('groupId', id).eq('targetUserId', targetUserId))
+    .collect();
+  // Votes expire lazily, on the next write against the same person.
+  const active: Doc<'groupVotes'>[] = [];
+  for (const vote of all) {
+    if (isVoteActive(vote, now)) active.push(vote);
+    else await ctx.db.delete(vote._id);
+  }
+  return active;
+}
+
+/**
+ * Vote to remove a member of a gym group. One vote per member per target;
+ * three within a week suspend, five ban (see lib/gymVotes.ts). Votes are
+ * anonymous — the response carries a count and the caller's own state, never
+ * who else voted.
+ */
+export const voteRemove = mutation({
+  args: { id: v.id('fitnessGroups'), targetUserId: v.id('users') },
+  handler: async (ctx, { id, targetUserId }) => {
+    const userId = await requireUserId(ctx);
+    const { group, now, seats, targetSeat, restriction, currentlySuspended } = await voteTarget(
+      ctx,
+      userId,
+      id,
+      targetUserId,
+    );
+    const others = seats.filter((seat) => seat.userId !== targetUserId).length;
+    if (others < GYM_VOTE_RULES.MIN_OTHER_MEMBERS) {
+      throw new ConvexError(
+        `A gym group needs at least ${GYM_VOTE_RULES.MIN_OTHER_MEMBERS} other members before it can vote`,
+      );
+    }
+    const active = await activeVotesAgainst(ctx, id, targetUserId, now);
+    if (!active.some((vote) => vote.voterUserId === userId)) {
+      const createdAt = nowIso();
+      const voteId = await ctx.db.insert('groupVotes', {
+        groupId: id,
+        targetUserId,
+        voterUserId: userId,
+        createdAt,
+      });
+      active.push({
+        _id: voteId,
+        _creationTime: now,
+        groupId: id,
+        targetUserId,
+        voterUserId: userId,
+        createdAt,
+      });
+    }
+    const distinct = distinctActiveVoters(active, now);
+    const outcome = outcomeFor(distinct, currentlySuspended);
+
+    if (outcome === 'suspend' || outcome === 'ban') {
+      if (targetSeat) await ctx.db.delete(targetSeat._id);
+      if (restriction) await ctx.db.delete(restriction._id);
+      await ctx.db.insert('groupBans', {
+        groupId: id,
+        userId: targetUserId,
+        kind: outcome === 'ban' ? 'ban' : 'suspension',
+        until: untilIso(
+          now,
+          outcome === 'ban' ? GYM_VOTE_RULES.BAN_DAYS : GYM_VOTE_RULES.SUSPENSION_DAYS,
+        ),
+        createdAt: nowIso(),
+      });
+    }
+    if (outcome === 'ban') {
+      const profile = await profileFor(ctx, targetUserId);
+      if (profile?.homeGymId && profile.homeGymId === group.gymId) {
+        await ctx.db.patch(profile._id, { homeGymId: undefined, updatedAt: nowIso() });
+      }
+      await deleteVotesAgainst(ctx, targetUserId, id);
+      return { votes: 0, status: 'banned' as const, myVote: false };
+    }
+    return {
+      votes: distinct,
+      status: outcome === 'suspend' || currentlySuspended ? ('suspended' as const) : ('member' as const),
+      myVote: true,
+    };
+  },
+});
+
+/** Take a vote back. Lowers the count toward the ban tier; a suspension
+ * already written runs to its date. */
+export const retractVote = mutation({
+  args: { id: v.id('fitnessGroups'), targetUserId: v.id('users') },
+  handler: async (ctx, { id, targetUserId }) => {
+    const userId = await requireUserId(ctx);
+    const { now, currentlySuspended } = await voteTarget(ctx, userId, id, targetUserId);
+    const active = await activeVotesAgainst(ctx, id, targetUserId, now);
+    for (const vote of active) if (vote.voterUserId === userId) await ctx.db.delete(vote._id);
+    const remaining = active.filter((vote) => vote.voterUserId !== userId);
+    return {
+      votes: distinctActiveVoters(remaining, now),
+      status: currentlySuspended ? ('suspended' as const) : ('member' as const),
+      myVote: false,
+    };
   },
 });

@@ -13,6 +13,8 @@ export interface ProfileView {
   bio?: string;
   location?: string;
   primarySport?: string;
+  /** Set through the gyms repo, never through `update`. */
+  homeGym?: { id: string; name: string; address: string };
   avatarUrl?: string;
   bannerUrl?: string;
   isPublic: boolean;

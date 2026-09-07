@@ -192,10 +192,14 @@ async function purgeUserData(ctx: MutationCtx, userId: Id<'users'>, budget: numb
         .withIndex('by_user', (q) => q.eq('userId', userId))
         .take(remaining),
     async () => {
-      const owned = await ctx.db
-        .query('fitnessGroups')
-        .withIndex('by_user', (q) => q.eq('userId', userId))
-        .take(remaining);
+      // A gym group outlives whichever account's claim happened to create
+      // it; only this account's seat goes, in the groupMembers step below.
+      const owned = (
+        await ctx.db
+          .query('fitnessGroups')
+          .withIndex('by_user', (q) => q.eq('userId', userId))
+          .take(remaining)
+      ).filter((group) => group.kind !== 'gym');
       const rows: PurgeRow[] = [];
       for (const group of owned) {
         const seats = await ctx.db
@@ -211,6 +215,26 @@ async function purgeUserData(ctx: MutationCtx, userId: Id<'users'>, budget: numb
       ctx.db
         .query('groupMembers')
         .withIndex('by_user', (q) => q.eq('userId', userId))
+        .take(remaining),
+    () =>
+      ctx.db
+        .query('groupVotes')
+        .withIndex('by_voter', (q) => q.eq('voterUserId', userId))
+        .take(remaining),
+    () =>
+      ctx.db
+        .query('groupVotes')
+        .withIndex('by_target', (q) => q.eq('targetUserId', userId))
+        .take(remaining),
+    () =>
+      ctx.db
+        .query('groupBans')
+        .withIndex('by_user_group', (q) => q.eq('userId', userId))
+        .take(remaining),
+    () =>
+      ctx.db
+        .query('placesUsage')
+        .withIndex('by_user_day', (q) => q.eq('userId', userId))
         .take(remaining),
     () =>
       ctx.db

@@ -15,6 +15,7 @@ import { createFoodRepo, FoodRepo } from '@/repositories/foodRepo';
 import { createFastingRepo, FastingRepo } from '@/repositories/fastingRepo';
 import { createGoalRepo, GoalRepo } from '@/repositories/goalRepo';
 import { createGroupRepo, GroupRepo } from '@/repositories/groupRepo';
+import { createGymRepo, GymRepo } from '@/repositories/gymRepo';
 import { createHistoryRepo, HistoryRepo } from '@/repositories/historyRepo';
 import { createNotificationRepo, NotificationRepo } from '@/repositories/notificationRepo';
 import { createPhotoRepo, PhotoRepo } from '@/repositories/photoRepo';
@@ -39,6 +40,7 @@ export interface Repos {
   profile: ProfileRepo;
   photos: PhotoRepo;
   groups: GroupRepo;
+  gyms: GymRepo;
   account: AccountRepo;
   chats: ChatRepo;
   notifications: NotificationRepo;
@@ -65,6 +67,7 @@ export function createRepos(convex: ConvexCaller): Repos {
     profile: createProfileRepo(convex),
     photos: createPhotoRepo(convex),
     groups: createGroupRepo(convex),
+    gyms: createGymRepo(convex),
     account: createAccountRepo(convex),
     chats: createChatRepo(convex),
     notifications: createNotificationRepo(convex),

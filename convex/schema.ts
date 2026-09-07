@@ -334,7 +334,10 @@ export default defineSchema({
     .index('by_user', ['userId'])
     .index('by_photo_created', ['photoId', 'createdAt']),
 
-  /** Fitness groups a profile can belong to. `userId` is the owner. */
+  /** Fitness groups a profile can belong to. `userId` is the owner — except
+   * on a gym group (`kind: 'gym'`), which has no owner: there it only records
+   * which account's claim created the row, carries no privilege, is never
+   * shown, and may outlive that account. `by_gym` finds a gym's one group. */
   fitnessGroups: defineTable({
     userId: v.id('users'),
     createdAt: v.string(),
@@ -342,7 +345,8 @@ export default defineSchema({
     ...fitnessGroupFields,
   })
     .index('by_user', ['userId'])
-    .index('by_handle', ['handleLower']),
+    .index('by_handle', ['handleLower'])
+    .index('by_gym', ['gymId']),
 
   /** Membership in a fitness group. `userId` is the member. */
   groupMembers: defineTable({
@@ -354,6 +358,53 @@ export default defineSchema({
     .index('by_user', ['userId'])
     .index('by_group', ['groupId'])
     .index('by_user_group', ['userId', 'groupId']),
+
+  /** A real-world gym, keyed by the place provider's id, so two people who
+   * pick the same search result share one row — and therefore one group.
+   * Written only by `places.searchGyms`. Not user-scoped: the row is shared by
+   * everyone who trains there and carries nothing personal. */
+  gyms: defineTable({
+    provider: v.literal('google'),
+    placeId: v.string(),
+    name: v.string(),
+    address: v.string(),
+    lat: v.number(),
+    lng: v.number(),
+    createdAt: v.string(),
+    updatedAt: v.string(),
+  }).index('by_place', ['provider', 'placeId']),
+
+  /** One member's vote to remove another from a gym group. Anonymous to the
+   * target: no function returns `voterUserId`. Lapses after a week. */
+  groupVotes: defineTable({
+    groupId: v.id('fitnessGroups'),
+    targetUserId: v.id('users'),
+    voterUserId: v.id('users'),
+    createdAt: v.string(),
+  })
+    .index('by_group_target', ['groupId', 'targetUserId'])
+    .index('by_voter', ['voterUserId'])
+    .index('by_target', ['targetUserId']),
+
+  /** The outcome of a vote: a suspension or a ban from one gym group, in
+   * force until `until`. Lapsed rows are dropped on the next join attempt. */
+  groupBans: defineTable({
+    groupId: v.id('fitnessGroups'),
+    userId: v.id('users'),
+    kind: v.union(v.literal('suspension'), v.literal('ban')),
+    until: v.string(),
+    createdAt: v.string(),
+  })
+    .index('by_user_group', ['userId', 'groupId'])
+    .index('by_group', ['groupId']),
+
+  /** Gym searches per account per day, so a scripted client cannot run up
+   * the places bill. */
+  placesUsage: defineTable({
+    userId: v.id('users'),
+    day: v.string(),
+    count: v.number(),
+  }).index('by_user_day', ['userId', 'day']),
 
   /** Frozen set of accounts that may use AI food scan until Pro. Written once
    * by `foodScan.ensureRoster`; later sign-ups are not added. Not user-scoped. */

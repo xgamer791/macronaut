@@ -190,6 +190,10 @@ export const profileFields = {
   ...profileEditableFields,
   avatarId: v.optional(v.id('_storage')),
   bannerId: v.optional(v.id('_storage')),
+  /** The gym this person calls home. Set only through `gyms.claim` / `clear`
+   * (never `profiles.update`), so a profile can only ever point at a row the
+   * gym search wrote. */
+  homeGymId: v.optional(v.id('gyms')),
   /** When false the profile page stays owner-only. Mutual friends may still
    * receive its posts through the separately authorized friends feed. */
   isPublic: v.boolean(),
@@ -215,4 +219,9 @@ export const fitnessGroupFields = {
   location: v.optional(v.string()),
   description: v.optional(v.string()),
   isPublic: v.boolean(),
+  /** Present only on a gym's one shared group. Such a group has no owner:
+   * every seat is a plain member, nobody can edit or delete it, and its
+   * `userId` merely records which claim inserted the row. */
+  kind: v.optional(v.literal('gym')),
+  gymId: v.optional(v.id('gyms')),
 };

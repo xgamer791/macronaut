@@ -28,6 +28,7 @@ import { GoalRepo } from '@/repositories/goalRepo';
 import { FrequentFood, HistoryRepo, RecentFood } from '@/repositories/historyRepo';
 import { AppNotification, NotificationRepo } from '@/repositories/notificationRepo';
 import { FitnessGroup, GroupRepo } from '@/repositories/groupRepo';
+import { GymCandidate, GymRepo, MyGym } from '@/repositories/gymRepo';
 import { ProfilePhoto, PhotoComment, PhotoRepo, PhotoThread } from '@/repositories/photoRepo';
 import {
   ConnectionPerson,
@@ -888,6 +889,92 @@ export function createMemoryGroupRepo(): GroupRepo {
       const i = groups.findIndex((g) => g.id === id);
       if (i >= 0) groups.splice(i, 1);
     },
+    async members() {
+      return { total: 0, listed: 0, members: [] };
+    },
+    async voteRemove() {
+      return { votes: 1, status: 'member' as const, myVote: true };
+    },
+    async retractVote() {
+      return { votes: 0, status: 'member' as const, myVote: false };
+    },
+  };
+}
+
+/** Two gyms near Venice Beach and a claim that takes; enough for the picker
+ * and the profile to be exercised without a places key. */
+export function createMemoryGymRepo(): GymRepo {
+  const catalogue: GymCandidate[] = [
+    {
+      id: 'gym-golds-venice',
+      name: "Gold's Gym Venice",
+      address: '360 Hampton Dr, Venice, CA 90291, USA',
+      lat: 33.9946,
+      lng: -118.4747,
+      distanceM: 800,
+      memberCount: 3,
+    },
+    {
+      id: 'gym-planet-venice',
+      name: 'Planet Fitness',
+      address: '1234 Lincoln Blvd, Venice, CA 90291, USA',
+      lat: 33.99,
+      lng: -118.46,
+      distanceM: 2400,
+      memberCount: 0,
+    },
+  ];
+  let current: MyGym | null = null;
+  const groupFor = (gym: GymCandidate): FitnessGroup => {
+    const ts = nowIso();
+    return {
+      id: `group-${gym.id}`,
+      name: gym.name,
+      handle: gym.name.toLowerCase().replace(/[^a-z0-9]+/g, '_'),
+      sport: 'Gym',
+      location: 'Venice, CA',
+      description: `Everyone on Macronaut whose home gym is ${gym.name}.`,
+      isPublic: true,
+      kind: 'gym',
+      gymId: gym.id,
+      memberCount: gym.memberCount + 1,
+      isOwner: false,
+      isMember: true,
+      createdAt: ts,
+      updatedAt: ts,
+    };
+  };
+  return {
+    async available() {
+      return true;
+    },
+    async geocode(address) {
+      return { lat: 33.99, lng: -118.47, label: address };
+    },
+    async searchGyms({ query }) {
+      const wanted = query.trim().toLowerCase();
+      return catalogue.filter((gym) => gym.name.toLowerCase().includes(wanted)).map(clone);
+    },
+    async mine() {
+      return current ? clone(current) : null;
+    },
+    async claim({ gymId, joinGroup }) {
+      const gym = catalogue.find((candidate) => candidate.id === gymId);
+      if (!gym) throw new Error('Gym not available');
+      const { distanceM: _d, memberCount: _m, ...summary } = gym;
+      current = { gym: summary, group: joinGroup ? groupFor(gym) : null, restriction: null };
+      return clone(current);
+    },
+    async joinGroup() {
+      if (!current) throw new Error('Set a home gym first');
+      const gym = catalogue.find((candidate) => candidate.id === current?.gym.id);
+      if (!gym) throw new Error('Gym not available');
+      current.group = groupFor(gym);
+      return clone(current.group);
+    },
+    async clear() {
+      current = null;
+    },
   };
 }
 
@@ -1134,6 +1221,7 @@ export function createMemoryRepos(): Repos {
     profile: createMemoryProfileRepo(),
     photos: createMemoryPhotoRepo(),
     groups: createMemoryGroupRepo(),
+    gyms: createMemoryGymRepo(),
     chats: createMemoryChatRepo(),
     notifications: createMemoryNotificationRepo(),
     fasting: createMemoryFastingRepo(),

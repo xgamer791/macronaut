@@ -5,6 +5,7 @@ import { mutation, query, type MutationCtx, type QueryCtx } from './_generated/s
 import { identity, matchesSearch, profileFor } from './chats';
 import { nowIso, requireOwned, requireUserId } from './lib/auth';
 import { firstFreeHandle, handleSeed, isValidHandle, normalizeHandle } from './lib/handles';
+import { homeGymFor } from './lib/gymMembership';
 import { readableProfile } from './lib/profileAccess';
 import { profileEditableFields } from './lib/validators';
 import {
@@ -107,6 +108,7 @@ async function profileView(
     bio: doc.bio,
     location: doc.location,
     primarySport: doc.primarySport,
+    homeGym: await homeGymFor(ctx, doc.homeGymId),
     avatarUrl: await storageUrl(ctx, doc.avatarId),
     bannerUrl: await storageUrl(ctx, doc.bannerId),
     isPublic: doc.isPublic,
@@ -130,7 +132,7 @@ async function postView(ctx: QueryCtx | MutationCtx, doc: Doc<'profilePosts'>) {
   };
 }
 
-async function rowForUser(ctx: QueryCtx | MutationCtx, userId: Id<'users'>) {
+export async function rowForUser(ctx: QueryCtx | MutationCtx, userId: Id<'users'>) {
   return ctx.db
     .query('profiles')
     .withIndex('by_user', (q) => q.eq('userId', userId))
@@ -160,7 +162,10 @@ async function handleTaken(
 
 /** The row for this user, created on first write. Every mutation goes through
  * here so there is no separate "create your profile" step to get wrong. */
-async function loadOrCreate(ctx: MutationCtx, userId: Id<'users'>): Promise<Doc<'profiles'>> {
+export async function loadOrCreate(
+  ctx: MutationCtx,
+  userId: Id<'users'>,
+): Promise<Doc<'profiles'>> {
   const existing = await rowForUser(ctx, userId);
   if (existing) return existing;
   const user = await ctx.db.get(userId);
@@ -222,6 +227,7 @@ export const me = query({
       bio: undefined as string | undefined,
       location: undefined as string | undefined,
       primarySport: undefined as string | undefined,
+      homeGym: undefined as { id: string; name: string; address: string } | undefined,
       avatarUrl: user?.image ?? undefined,
       bannerUrl: undefined as string | undefined,
       isPublic: false,
@@ -645,6 +651,7 @@ export const setFollow = mutation({
           bio: undefined,
           location: undefined,
           primarySport: undefined,
+          homeGym: undefined,
           bannerUrl: undefined,
         };
   },
