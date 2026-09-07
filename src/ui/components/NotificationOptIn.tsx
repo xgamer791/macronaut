@@ -5,7 +5,7 @@ import { StyleSheet, Switch, View } from 'react-native';
 import { useRepos } from '@/state/AppProvider';
 import { keys, useSetting } from '@/state/queries';
 import { useTheme } from '@/ui/theme/ThemeProvider';
-import { radius, spacing } from '@/ui/theme/tokens';
+import { spacing } from '@/ui/theme/tokens';
 import { PUSH_WANTED_SETTING, isPushNotificationsLive } from '@/utils/pushNotificationStatus';
 import { AppText } from './AppText';
 
@@ -37,16 +37,11 @@ export function NotificationOptIn() {
 
   return (
     <View style={[styles.row, { borderBottomColor: colors.border }]}>
-      <View
-        style={[
-          styles.icon,
-          { backgroundColor: on ? colors.accent : colors.surfaceRaised },
-        ]}
-      >
+      <View style={styles.icon}>
         <Ionicons
           name={on ? 'notifications' : 'notifications-off-outline'}
-          size={19}
-          color={on ? colors.onAccent : colors.textMuted}
+          size={22}
+          color={on ? colors.accent : colors.textMuted}
         />
       </View>
 
@@ -85,7 +80,6 @@ const styles = StyleSheet.create({
   icon: {
     width: 38,
     height: 38,
-    borderRadius: radius.full,
     alignItems: 'center',
     justifyContent: 'center',
   },
