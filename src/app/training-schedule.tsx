@@ -44,6 +44,9 @@ interface DraftWorkout {
 
 let draftSequence = 0;
 const newDraftId = () => `workout-${Date.now()}-${(draftSequence += 1)}`;
+/** Painted size of the empty-day add control — the circle itself, not an
+ * Ionicons glyph box (those sit smaller than their `size`). */
+const ADD_ICON_SIZE = 30;
 
 export default function TrainingScheduleRoute() {
   const { loading, signedIn } = useAuth();
@@ -498,11 +501,22 @@ function ScheduleDayRow({
         ) : null}
       </View>
 
-      <Ionicons
-        name={plan ? 'chevron-forward' : 'add-circle-outline'}
-        size={plan ? 20 : 30}
-        color={plan ? colors.textMuted : colors.accent}
-      />
+      {plan ? (
+        <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
+      ) : (
+        <View
+          style={[
+            styles.addIcon,
+            {
+              width: ADD_ICON_SIZE,
+              height: ADD_ICON_SIZE,
+              borderColor: colors.accent,
+            },
+          ]}
+        >
+          <Ionicons name="add" size={20} color={colors.accent} />
+        </View>
+      )}
     </Pressable>
   );
 }
@@ -610,6 +624,12 @@ const styles = StyleSheet.create({
     flex: 1,
     minWidth: 0,
     gap: 2,
+  },
+  addIcon: {
+    borderRadius: radius.full,
+    borderWidth: 1.5,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   previewLabels: {
     flexDirection: 'row',
