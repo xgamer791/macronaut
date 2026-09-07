@@ -43,6 +43,7 @@ export const keys = {
   publicProfile: (handle: string) => ['public-profile', handle] as const,
   photos: ['photos'] as const,
   publicPhotos: (handle: string) => ['public-photos', handle] as const,
+  photoThread: (id: string) => ['photo-thread', id] as const,
   groups: ['groups'] as const,
   publicGroups: (handle: string) => ['public-groups', handle] as const,
 };
@@ -233,6 +234,7 @@ function useInvalidatePhotos() {
   return () => {
     qc.invalidateQueries({ queryKey: keys.photos });
     qc.invalidateQueries({ queryKey: ['public-photos'] });
+    qc.invalidateQueries({ queryKey: ['photo-thread'] });
   };
 }
 
@@ -296,6 +298,42 @@ export function useDeletePhoto() {
   const invalidate = useInvalidatePhotos();
   return useMutation({
     mutationFn: (id: string) => photos.remove(id),
+    onSuccess: invalidate,
+  });
+}
+
+export function usePhotoThread(id: string) {
+  const { photos } = useRepos();
+  return useQuery({
+    queryKey: keys.photoThread(id),
+    queryFn: () => photos.thread(id),
+    enabled: id.length > 0,
+  });
+}
+
+export function useSetPhotoLike() {
+  const { photos } = useRepos();
+  const invalidate = useInvalidatePhotos();
+  return useMutation({
+    mutationFn: (input: { id: string; liked: boolean }) => photos.setLike(input.id, input.liked),
+    onSuccess: invalidate,
+  });
+}
+
+export function useAddPhotoComment() {
+  const { photos } = useRepos();
+  const invalidate = useInvalidatePhotos();
+  return useMutation({
+    mutationFn: (input: { id: string; body: string }) => photos.addComment(input.id, input.body),
+    onSuccess: invalidate,
+  });
+}
+
+export function useRemovePhotoComment() {
+  const { photos } = useRepos();
+  const invalidate = useInvalidatePhotos();
+  return useMutation({
+    mutationFn: (input: { photoId: string; id: string }) => photos.removeComment(input.id),
     onSuccess: invalidate,
   });
 }

@@ -213,6 +213,26 @@ export default defineSchema({
     ...profilePhotoFields,
   }).index('by_user_created', ['userId', 'createdAt']),
 
+  /** One account liking a wall photo. `userId` is the person who liked it. */
+  photoLikes: defineTable({
+    userId: v.id('users'),
+    photoId: v.id('profilePhotos'),
+    createdAt: v.string(),
+  })
+    .index('by_user', ['userId'])
+    .index('by_photo', ['photoId'])
+    .index('by_user_photo', ['userId', 'photoId']),
+
+  /** A comment on a wall photo. `userId` is the author. */
+  photoComments: defineTable({
+    userId: v.id('users'),
+    photoId: v.id('profilePhotos'),
+    body: v.string(),
+    createdAt: v.string(),
+  })
+    .index('by_user', ['userId'])
+    .index('by_photo_created', ['photoId', 'createdAt']),
+
   /** Fitness groups a profile can belong to. `userId` is the owner. */
   fitnessGroups: defineTable({
     userId: v.id('users'),

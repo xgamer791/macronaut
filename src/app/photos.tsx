@@ -4,29 +4,29 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
   ActivityIndicator,
+  Platform,
   Pressable,
+  Share,
   StyleSheet,
   useWindowDimensions,
   View,
 } from 'react-native';
-import {
-  AppText,
-  Button,
-  EmptyState,
-  ListRow,
-  Screen,
-  ScreenHeader,
-  Sheet,
-} from '@/ui/components';
-import type { ProfilePhoto } from '@/repositories/photoRepo';
+import { AppText, EmptyState, PhotoViewer, Screen, ScreenHeader } from '@/ui/components';
 import { pickImages } from '@/services/media/pickImage';
+import { useAuth } from '@/state/AuthProvider';
 import {
+  useAddPhotoComment,
   useAddPhotos,
   useDeletePhoto,
   useMyPhotos,
+  useMyProfile,
+  usePhotoThread,
   usePublicPhotos,
+  useRemovePhotoComment,
+  useSetPhotoLike,
   useSetPhotoPublic,
 } from '@/state/queries';
+import { photoShareUrl } from '@/utils/publicLinks';
 import { ThemeProvider, useTheme } from '@/ui/theme/ThemeProvider';
 import { spacing } from '@/ui/theme/tokens';
 
@@ -43,19 +43,25 @@ export default function PhotosScreen() {
 }
 
 function PhotoWall() {
-  const { handle } = useLocalSearchParams<{ handle?: string }>();
+  const { handle, photo: deepPhoto } = useLocalSearchParams<{ handle?: string; photo?: string }>();
   const router = useRouter();
   const { colors } = useTheme();
   const { width } = useWindowDimensions();
+  const { signedIn } = useAuth();
+  const me = useMyProfile();
   const own = useMyPhotos();
   const other = usePublicPhotos(handle ?? '');
   const addPhotos = useAddPhotos();
   const setPublic = useSetPhotoPublic();
   const deletePhoto = useDeletePhoto();
+  const setLike = useSetPhotoLike();
+  const addComment = useAddPhotoComment();
+  const removeComment = useRemovePhotoComment();
 
-  const [open, setOpen] = useState<ProfilePhoto | null>(null);
+  const [openId, setOpenId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
+  const [shared, setShared] = useState(false);
 
   const isOwn = !handle;
   const wall = handle ? other.data : { isOwner: true, photos: own.data ?? [] };
@@ -63,6 +69,11 @@ function PhotoWall() {
   const photos = wall?.photos ?? [];
   const canEdit = isOwn || wall?.isOwner === true;
   const cell = Math.floor((width - spacing.lg * 2 - spacing.xs * 2) / 3);
+  const deepId = Array.isArray(deepPhoto) ? deepPhoto[0] : deepPhoto;
+  const activeId = openId === '' ? undefined : (openId ?? deepId);
+  const open = photos.find((row) => row.id === activeId) ?? null;
+  const thread = usePhotoThread(open?.id ?? '');
+  const shareHandle = handle || thread.data?.ownerHandle || me.data?.handle || '';
 
   async function add() {
     setError(null);
@@ -71,11 +82,33 @@ function PhotoWall() {
       if (!picked?.length) return;
       setAdding(true);
       // Upload in tap order. Do not open a preview — select is the whole action.
-      await addPhotos.mutateAsync({ files: picked.map((photo) => photo.blob), isPublic: true });
+      await addPhotos.mutateAsync({ files: picked.map((row) => row.blob), isPublic: true });
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not add those photos.');
     } finally {
       setAdding(false);
+    }
+  }
+
+  async function sharePhoto() {
+    if (!open) return;
+    const url = photoShareUrl(shareHandle || undefined, open.id);
+    try {
+      if (Platform.OS !== 'web') {
+        await Share.share({ message: url, url });
+        return;
+      }
+      const nav = typeof navigator === 'undefined' ? undefined : navigator;
+      if (nav?.share) {
+        await nav.share({ url });
+        return;
+      }
+      if (!nav?.clipboard) throw new Error('no clipboard');
+      await nav.clipboard.writeText(url);
+      setShared(true);
+      setTimeout(() => setShared(false), 2000);
+    } catch {
+      setError(`Could not share automatically. The link is ${url}`);
     }
   }
 
@@ -123,6 +156,11 @@ function PhotoWall() {
           {error}
         </AppText>
       ) : null}
+      {shared ? (
+        <AppText variant="caption" style={{ paddingHorizontal: spacing.lg }}>
+          Link copied.
+        </AppText>
+      ) : null}
 
       {loading ? (
         <View style={styles.loading}>
@@ -141,23 +179,23 @@ function PhotoWall() {
         />
       ) : (
         <View style={styles.grid}>
-          {photos.map((photo) => (
+          {photos.map((row) => (
             <Pressable
-              key={photo.id}
+              key={row.id}
               accessibilityRole="button"
-              accessibilityLabel={photo.caption || 'Photo'}
-              onPress={() => setOpen(photo)}
+              accessibilityLabel={row.caption || 'Photo'}
+              onPress={() => setOpenId(row.id)}
               style={[styles.cell, { width: cell, height: cell, backgroundColor: colors.track }]}
             >
-              {photo.imageUrl ? (
+              {row.imageUrl ? (
                 <Image
-                  source={{ uri: photo.imageUrl }}
+                  source={{ uri: row.imageUrl }}
                   style={StyleSheet.absoluteFill}
                   contentFit="cover"
                   accessibilityIgnoresInvertColors
                 />
               ) : null}
-              {canEdit && !photo.isPublic ? (
+              {canEdit && !row.isPublic ? (
                 <View style={styles.lock}>
                   <Ionicons name="lock-closed" size={12} color="#FFFFFF" />
                 </View>
@@ -167,37 +205,36 @@ function PhotoWall() {
         </View>
       )}
 
-      <Sheet visible={open !== null} onClose={() => setOpen(null)} title={open?.caption || 'Photo'}>
-        {open?.imageUrl ? (
-          <Image
-            source={{ uri: open.imageUrl }}
-            style={{ width: '100%', aspectRatio: 1, backgroundColor: colors.track }}
-            contentFit="cover"
-            accessibilityIgnoresInvertColors
-          />
-        ) : null}
-        {canEdit && open ? (
-          <>
-            <ListRow
-              title={open.isPublic ? 'Visible on your public wall' : 'Only you can see this'}
-              subtitle={open.isPublic ? 'Make private' : 'Make public'}
-              onPress={() => {
-                const next = !open.isPublic;
-                void setPublic.mutateAsync({ id: open.id, isPublic: next });
-                setOpen({ ...open, isPublic: next });
-              }}
-            />
-            <Button
-              title="Delete photo"
-              variant="danger"
-              onPress={() => {
-                void deletePhoto.mutateAsync(open.id);
-                setOpen(null);
-              }}
-            />
-          </>
-        ) : null}
-      </Sheet>
+      <PhotoViewer
+        photo={open}
+        thread={thread.data}
+        canEdit={canEdit}
+        signedIn={signedIn}
+        onClose={() => setOpenId('')}
+        onLike={(liked) => {
+          if (!open) return;
+          void setLike.mutateAsync({ id: open.id, liked });
+        }}
+        onComment={async (body) => {
+          if (!open) return;
+          await addComment.mutateAsync({ id: open.id, body });
+        }}
+        onDeleteComment={(id) => {
+          if (!open) return;
+          void removeComment.mutateAsync({ photoId: open.id, id });
+        }}
+        onShare={() => void sharePhoto()}
+        onTogglePublic={() => {
+          if (!open) return;
+          void setPublic.mutateAsync({ id: open.id, isPublic: !open.isPublic });
+        }}
+        onDelete={() => {
+          if (!open) return;
+          void deletePhoto.mutateAsync(open.id);
+          setOpenId('');
+        }}
+        onNeedSignIn={() => setError('Sign in to like and comment on photos.')}
+      />
     </Screen>
   );
 }

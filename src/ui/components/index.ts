@@ -19,6 +19,7 @@ export { ScreenHeader } from './ScreenHeader';
 export { SectionHeader } from './SectionHeader';
 export { SegmentedControl } from './SegmentedControl';
 export { Sheet } from './Sheet';
+export { PhotoViewer } from './PhotoViewer';
 export { StatTile } from './StatTile';
 export { TextField } from './TextField';
 export { TargetEditor } from './TargetEditor';

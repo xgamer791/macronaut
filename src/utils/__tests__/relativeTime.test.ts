@@ -1,4 +1,4 @@
-import { relativeTime } from '../relativeTime';
+import { relativeTime, shortDate } from '../relativeTime';
 
 const now = new Date('2026-09-07T12:00:00.000Z');
 const ago = (ms: number) => new Date(now.getTime() - ms).toISOString();
@@ -28,5 +28,12 @@ describe('relativeTime', () => {
 
   it('is empty for a timestamp it cannot read', () => {
     expect(relativeTime('not a date', now)).toBe('');
+  });
+});
+
+describe('shortDate', () => {
+  it('prints the calendar day used on a photo overlay', () => {
+    expect(shortDate('2026-06-02T15:00:00.000Z')).toMatch(/Jun\s+2/);
+    expect(shortDate('not a date')).toBe('');
   });
 });
