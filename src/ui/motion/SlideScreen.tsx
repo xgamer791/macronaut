@@ -134,6 +134,8 @@ function SlideScreenNative({ from, children }: { from: Side; children: React.Rea
   const leave = useCallback(() => {
     if (leaving.current) return;
     leaving.current = true;
+    // Reanimated shared values are mutated on purpose to drive the slide-out.
+    // eslint-disable-next-line react-hooks/immutability -- SharedValue setter
     progress.value = withTiming(
       0,
       { duration: SLIDE_DURATION_MS, easing: SLIDE_EASING, reduceMotion: ReduceMotion.System },
