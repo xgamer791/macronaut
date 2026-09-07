@@ -28,7 +28,7 @@ const GLYPH_INSET = (touchTarget - GLYPH) / 2;
 /** The watch is a photo, not a line glyph, so it needs a slightly wider
  * circle to stay legible at the same optical weight. */
 const WATCH_CIRCLE = 28;
-const PLUS = 38;
+const PLUS = 32;
 
 export interface AppHeaderProps {
   /** Bell action. Defaults to opening the calendar when provided by Today. */
