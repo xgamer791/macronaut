@@ -3,6 +3,11 @@
 
 export const APPLE_HEALTH_STATUS_UPDATED = '3 September 2026';
 
+/** HealthKit is not live yet, so the header Watch LED stays disconnected. */
+export function isAppleWatchConnected(): boolean {
+  return false;
+}
+
 export const APPLE_HEALTH_DONE = [
   'Wrote the plan (docs/apple-health.md) and the Apple-side checklist (docs/ios-setup.md).',
   'Added eas.json and the HealthKit config plugin. A local prebuild already produces the HealthKit entitlement and the two usage strings in Info.plist.',

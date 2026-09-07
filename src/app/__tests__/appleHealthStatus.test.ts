@@ -4,6 +4,7 @@ import {
   APPLE_HEALTH_DONE,
   APPLE_HEALTH_STATUS_UPDATED,
   APPLE_HEALTH_TODO,
+  isAppleWatchConnected,
 } from '@/utils/appleHealthStatus';
 
 const appDir = path.join(__dirname, '..');
@@ -19,6 +20,17 @@ describe('Apple Health pause note', () => {
   it('is linked from Settings', () => {
     expect(read(path.join('(tabs)', 'settings.tsx'))).toContain("router.push('/apple-health')");
     expect(read(path.join('(tabs)', 'settings.tsx'))).toContain('Apple Health and Watch');
+  });
+
+  it('header watch opens Apple Health and pulses while disconnected', () => {
+    const header = fs.readFileSync(
+      path.join(__dirname, '..', '..', 'ui', 'components', 'AppHeader.tsx'),
+      'utf8',
+    );
+    expect(header).toContain("router.push('/apple-health')");
+    expect(header).toContain('isAppleWatchConnected');
+    expect(header).toContain('useBreathing');
+    expect(isAppleWatchConnected()).toBe(false);
   });
 
   it('renders the shared done and remaining lists', () => {
