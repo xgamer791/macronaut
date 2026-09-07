@@ -51,7 +51,7 @@ export function ChatPeopleList({
     setOpening(person.id);
     setError(null);
     try {
-      const chat = await openChat.mutateAsync(person.id);
+      const chat = await openChat.mutateAsync({ userId: person.id });
       const to = { pathname: '/chat/[id]' as const, params: { id: chat.id } };
       if (navigate === 'replace') router.replace(to);
       else router.push(to);
