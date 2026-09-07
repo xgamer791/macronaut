@@ -15,6 +15,21 @@ export const IMAGE_MAX_EDGE = { avatar: 512, banner: 1600, post: 1600 } as const
 
 export type ImageSlot = keyof typeof IMAGE_MAX_EDGE;
 
+/** Cap for one gallery pick. The wall itself holds more; this keeps a single
+ * upload batch from stalling the picker. */
+export const GALLERY_SELECTION_LIMIT = 20;
+
+/** Native library options for the photo wall. Multi-select with numbered
+ * badges so a tap only toggles — it does not open a crop or preview — and
+ * the returned assets stay in tap order. */
+export const GALLERY_PICKER_OPTIONS = {
+  allowsEditing: false,
+  allowsMultipleSelection: true,
+  orderedSelection: true,
+  selectionLimit: GALLERY_SELECTION_LIMIT,
+  quality: 0.85,
+};
+
 /** Refuse anything absurd. The web picker downscales first, so hitting this
  * means the file was not really a photo. */
 export const IMAGE_MAX_BYTES = 12 * 1024 * 1024;

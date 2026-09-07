@@ -76,6 +76,46 @@ export const add = mutation({
   },
 });
 
+/** Insert a picker batch. `imageIds` is tap order; the first selected photo
+ * is stamped newest so it leads the newest-first wall. */
+export const addMany = mutation({
+  args: { imageIds: v.array(v.id('_storage')), isPublic: v.optional(v.boolean()) },
+  handler: async (ctx, { imageIds, isPublic }) => {
+    const userId = await requireUserId(ctx);
+    if (imageIds.length === 0) return [];
+
+    const existing = await ctx.db
+      .query('profilePhotos')
+      .withIndex('by_user_created', (q) => q.eq('userId', userId))
+      .order('desc')
+      .take(PHOTO_LIMIT);
+    const remaining = PHOTO_LIMIT - existing.length;
+    if (remaining <= 0) throw new ConvexError('Your photo wall is full.');
+
+    const ids = imageIds.slice(0, remaining);
+    const latestMs = existing[0] ? Date.parse(existing[0].createdAt) : 0;
+    const base = Math.max(Date.now(), Number.isFinite(latestMs) ? latestMs + 1 : 0);
+    const visible = isPublic ?? true;
+
+    const views = [];
+    for (let i = 0; i < ids.length; i++) {
+      const imageId = ids[i];
+      if (!imageId) continue;
+      const ts = new Date(base + (ids.length - 1 - i)).toISOString();
+      const doc = {
+        userId,
+        imageId,
+        isPublic: visible,
+        createdAt: ts,
+        updatedAt: ts,
+      };
+      const id = await ctx.db.insert('profilePhotos', doc);
+      views.push(await photoView(ctx, { _id: id, _creationTime: Date.now(), ...doc }));
+    }
+    return views;
+  },
+});
+
 export const setPublic = mutation({
   args: { id: v.id('profilePhotos'), isPublic: v.boolean() },
   handler: async (ctx, { id, isPublic }) => {

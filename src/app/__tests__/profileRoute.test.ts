@@ -71,4 +71,18 @@ describe('profile routes', () => {
     expect(layout).toContain('name="photos"');
     expect(layout).toContain('name="groups"');
   });
+
+  it('adds wall photos from a select-only picker in tap order', () => {
+    const wall = read('photos.tsx');
+    expect(wall).toContain('pickImages');
+    expect(wall).toContain('useAddPhotos');
+    expect(wall).not.toContain("pickImage('post')");
+    expect(wall).not.toContain('setOpen(picked');
+    const native = fs.readFileSync(path.join(srcDir, 'services', 'media', 'pickImage.ts'), 'utf8');
+    expect(native).toContain('GALLERY_PICKER_OPTIONS');
+    expect(native).toContain('pickImages');
+    const web = fs.readFileSync(path.join(srcDir, 'services', 'media', 'pickImage.web.ts'), 'utf8');
+    expect(web).toContain('input.multiple = multiple');
+    expect(web).toContain('Array.from(input.files');
+  });
 });

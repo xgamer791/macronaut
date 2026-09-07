@@ -31,6 +31,22 @@ describe('photo wall', () => {
     expect(files).toHaveLength(1);
   });
 
+  it('adds a picker batch in the order the photos were selected', async () => {
+    const t = backend();
+    const owner = await signIn(t, 'owner@example.com');
+    const older = await owner.repos.photos.add(await storedImage(t, 'older'), 'Older', true);
+
+    const first = await storedImage(t, 'first');
+    const second = await storedImage(t, 'second');
+    const third = await storedImage(t, 'third');
+    const added = await owner.repos.photos.addMany([first, second, third], true);
+
+    const mine = await owner.repos.photos.mine();
+    expect(mine.map((p) => p.id)).toEqual([...added.map((p) => p.id), older.id]);
+    expect(added[0]!.createdAt > added[1]!.createdAt).toBe(true);
+    expect(added[1]!.createdAt > added[2]!.createdAt).toBe(true);
+  });
+
   it('does not show a private profile wall, and refuses unsigned writes', async () => {
     const t = backend();
     const owner = await signIn(t, 'owner@example.com');

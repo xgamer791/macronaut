@@ -10,38 +10,57 @@ import { assertImageSize, IMAGE_MAX_EDGE, ImageSlot, PickedImage, scaleToFit } f
  * arrives as a few hundred kilobytes instead of several megabytes.
  */
 export async function pickImage(slot: ImageSlot): Promise<PickedImage | null> {
-  const file = await chooseFile();
+  const files = await chooseFiles(false);
+  const file = files[0];
   if (!file) return null;
-  const blob = await downscale(file, IMAGE_MAX_EDGE[slot]);
+  return readFile(file, IMAGE_MAX_EDGE[slot]);
+}
+
+/** Photo-wall picker. `multiple` keeps the browser dialog on select-only;
+ * files are read in the order the dialog reports, which matches tap order
+ * on the platforms that expose it. */
+export async function pickImages(): Promise<PickedImage[] | null> {
+  const files = await chooseFiles(true);
+  if (files.length === 0) return null;
+  const picked: PickedImage[] = [];
+  for (const file of files) {
+    picked.push(await readFile(file, IMAGE_MAX_EDGE.post));
+  }
+  return picked;
+}
+
+async function readFile(file: File, maxEdge: number): Promise<PickedImage> {
+  const blob = await downscale(file, maxEdge);
   assertImageSize(blob.size);
   return { blob, previewUri: URL.createObjectURL(blob) };
 }
 
-function chooseFile(): Promise<File | null> {
+function chooseFiles(multiple: boolean): Promise<File[]> {
   return new Promise((resolve) => {
     if (typeof document === 'undefined') {
-      resolve(null);
+      resolve([]);
       return;
     }
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = 'image/*';
+    input.multiple = multiple;
     input.style.display = 'none';
     // Firefox needs the input in the document for `click()` to open a dialog.
     document.body.appendChild(input);
 
     let settled = false;
-    const finish = (file: File | null) => {
+    const finish = (files: File[]) => {
       if (settled) return;
       settled = true;
       input.remove();
-      resolve(file);
+      resolve(files);
     };
-    input.addEventListener('change', () => finish(input.files?.[0] ?? null));
+    input.addEventListener('change', () => finish(Array.from(input.files ?? [])));
     // Chrome and Safari fire `cancel` when the dialog is dismissed; browsers
     // that do not simply leave the promise pending until the next pick, which
     // is why nothing is awaited on a cancel path.
-    input.addEventListener('cancel', () => finish(null));
+    input.addEventListener('cancel', () => finish([]));
     input.click();
   });
 }
