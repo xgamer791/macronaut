@@ -1,14 +1,15 @@
 import { api } from '../../convex/_generated/api';
 import type { Id } from '../../convex/_generated/dataModel';
-import type { ChatIdentity } from './chatRepo';
+import type { ChatPerson } from './chatRepo';
 import type { ConvexCaller } from './convexCall';
 
-export type NotificationKind = 'friend_request' | 'chat_message';
+export type NotificationKind = 'friend_request' | 'friend_accepted' | 'chat_message';
 
 export interface AppNotification {
   id: string;
   kind: NotificationKind;
-  actor: ChatIdentity;
+  /** Carries the friendship state, so a request is answered where it lands. */
+  actor: ChatPerson;
   title: string;
   body: string;
   chatId?: string;

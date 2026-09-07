@@ -71,16 +71,25 @@ if(prev && prev!==BUILD){{
   location.replace(u.toString());
   return;
 }}
-fetch({json.dumps(base + "/version.json")} + '?_=' + Date.now(), {{cache:'no-store'}})
-  .then(function(r){{return r.json();}})
-  .then(function(v){{
-    if(v && v.build && v.build!==BUILD){{
-      localStorage.setItem(KEY, v.build);
-      var u=new URL(location.href);
-      u.searchParams.set('_build', v.build);
-      location.replace(u.toString());
-    }}
-  }}).catch(function(){{}});
+function check(){{
+  fetch({json.dumps(base + "/version.json")} + '?_=' + Date.now(), {{cache:'no-store'}})
+    .then(function(r){{return r.json();}})
+    .then(function(v){{
+      if(v && v.build && v.build!==BUILD){{
+        localStorage.setItem(KEY, v.build);
+        var u=new URL(location.href);
+        u.searchParams.set('_build', v.build);
+        location.replace(u.toString());
+      }}
+    }}).catch(function(){{}});
+}}
+check();
+// A tab left open keeps its old bundle for as long as it stays open, and an
+// old bundle talking to a freshly deployed backend is the worst kind of
+// broken: it half works. Re-check whenever the tab comes back to the front.
+document.addEventListener('visibilitychange', function(){{
+  if(document.visibilityState==='visible') check();
+}});
 }})();</script>"""
     return (
         MARKER_START

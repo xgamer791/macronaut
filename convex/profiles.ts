@@ -5,7 +5,11 @@ import { mutation, query, type MutationCtx, type QueryCtx } from './_generated/s
 import { nowIso, requireOwned, requireUserId } from './lib/auth';
 import { firstFreeHandle, handleSeed, isValidHandle, normalizeHandle } from './lib/handles';
 import { profileEditableFields } from './lib/validators';
-import { addFriendRequestNotification, removeFriendRequestNotification } from './notifications';
+import {
+  addFriendAcceptedNotification,
+  addFriendRequestNotification,
+  removeFriendRequestNotification,
+} from './notifications';
 
 /** Caps on the free text a profile carries. Enforced here because the server
  * is the only place that has to hold: a public profile is readable by people
@@ -447,8 +451,10 @@ export const setFollow = mutation({
       });
       if (incoming) {
         // Following someone who already follows you accepts their request.
-        // Clear that request instead of sending a misleading request back.
+        // Clear that request instead of sending a misleading request back,
+        // and tell them, or the friendship is only news to one of you.
         await removeFriendRequestNotification(ctx, userId, row.userId);
+        await addFriendAcceptedNotification(ctx, row.userId, userId);
       } else {
         await addFriendRequestNotification(ctx, row.userId, userId);
       }

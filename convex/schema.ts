@@ -233,7 +233,11 @@ export default defineSchema({
   notifications: defineTable({
     recipientId: v.id('users'),
     actorId: v.id('users'),
-    kind: v.union(v.literal('friend_request'), v.literal('chat_message')),
+    kind: v.union(
+      v.literal('friend_request'),
+      v.literal('friend_accepted'),
+      v.literal('chat_message'),
+    ),
     chatId: v.optional(v.id('directChats')),
     body: v.optional(v.string()),
     readAt: v.optional(v.string()),

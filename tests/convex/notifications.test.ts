@@ -39,8 +39,64 @@ describe('notifications', () => {
 
     await bob.repos.profile.setFollow('alice_runner', true);
     await alice.repos.profile.setFollow('bob_lifts', true);
+    // Accepting clears the request from the accepter's bell...
     expect(await alice.repos.notifications.list()).toEqual({ items: [], unreadCount: 0 });
-    expect(await bob.repos.notifications.list()).toEqual({ items: [], unreadCount: 0 });
+    // ...and tells the person who asked, who would otherwise never learn that
+    // the friendship exists or that they can now send a message.
+    expect(await bob.repos.notifications.list()).toMatchObject({
+      unreadCount: 1,
+      items: [
+        {
+          kind: 'friend_accepted',
+          actor: { handle: 'alice_runner', friendship: 'friends' },
+          title: 'Friend request accepted',
+          read: false,
+        },
+      ],
+    });
+  });
+
+  /** The whole loop, on two accounts that have never edited a profile — the
+   * state every real account starts in. Each step is answered from the bell,
+   * because a private profile page cannot be opened to answer it. */
+  it('carries a friend request from search to an accepted, messageable friendship', async () => {
+    const t = backend();
+    const holly = await signIn(t, 'holly@example.com', 'Holly Ky');
+    const chris = await signIn(t, 'chris@example.com', 'Christopher Garcia');
+
+    const [found] = await chris.repos.chats.people('holly');
+    expect(found).toMatchObject({ displayName: 'Holly Ky', friendship: 'none' });
+
+    // Chris asks. Holly's bell carries the request and its Accept.
+    await chris.repos.profile.requestFriend(found!.id, true);
+    expect(await holly.repos.notifications.list()).toMatchObject({
+      unreadCount: 1,
+      items: [
+        {
+          kind: 'friend_request',
+          actor: { id: chris.userId, displayName: 'Christopher Garcia', friendship: 'incoming' },
+        },
+      ],
+    });
+    // Nothing is messageable yet, in either direction.
+    await expect(chris.repos.chats.open(holly.userId)).rejects.toThrow(/friends/i);
+    await expect(holly.repos.chats.open(chris.userId)).rejects.toThrow(/friends/i);
+
+    // Holly accepts from the notification itself, by account id.
+    const request = (await holly.repos.notifications.list()).items[0]!;
+    await holly.repos.profile.requestFriend(request.actor.id, true);
+
+    expect(await holly.repos.notifications.list()).toEqual({ items: [], unreadCount: 0 });
+    expect(await chris.repos.notifications.list()).toMatchObject({
+      unreadCount: 1,
+      items: [{ kind: 'friend_accepted', actor: { id: holly.userId, friendship: 'friends' } }],
+    });
+
+    const chat = await chris.repos.chats.open(holly.userId);
+    await chris.repos.chats.send(chat.id, 'Hey!');
+    expect(await holly.repos.chats.list()).toMatchObject([
+      { peer: { id: chris.userId, friendship: 'friends' }, unreadCount: 1 },
+    ]);
   });
 
   it('fires private chat-message events and clears them when the chat is read', async () => {
@@ -57,7 +113,10 @@ describe('notifications', () => {
     const chat = await alice.repos.chats.open(bob.userId);
     await alice.repos.chats.send(chat.id, 'Training at six?');
 
-    expect(await alice.repos.notifications.list()).toEqual({ items: [], unreadCount: 0 });
+    // Alice hears that Bob accepted, and never hears her own message back.
+    expect((await alice.repos.notifications.list()).items).toEqual([
+      expect.objectContaining({ kind: 'friend_accepted' }),
+    ]);
     const feed = await bob.repos.notifications.list();
     expect(feed.items[0]).toMatchObject({
       kind: 'chat_message',

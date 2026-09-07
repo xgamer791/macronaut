@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import React from 'react';
+import React, { useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 import type { AppNotification } from '@/repositories/notificationRepo';
 import { useAuth } from '@/state/AuthProvider';
@@ -8,8 +8,17 @@ import {
   useMarkAllNotificationsRead,
   useMarkNotificationRead,
   useNotifications,
+  useSetProfileFollow,
 } from '@/state/queries';
-import { AppText, ChatAvatar, EmptyState, ErrorState, Screen, ScreenHeader } from '@/ui/components';
+import {
+  AppText,
+  Button,
+  ChatAvatar,
+  EmptyState,
+  ErrorState,
+  Screen,
+  ScreenHeader,
+} from '@/ui/components';
 import { useTheme } from '@/ui/theme/ThemeProvider';
 import { radius, spacing, touchTarget } from '@/ui/theme/tokens';
 
@@ -20,6 +29,9 @@ export default function NotificationsScreen() {
   const feed = useNotifications();
   const markRead = useMarkNotificationRead();
   const markAllRead = useMarkAllNotificationsRead();
+  const setFriend = useSetProfileFollow();
+  const [accepting, setAccepting] = useState<string | null>(null);
+  const [acceptError, setAcceptError] = useState<string | null>(null);
   const unread = feed.data?.items.filter((item) => !item.read) ?? [];
   const earlier = feed.data?.items.filter((item) => item.read) ?? [];
 
@@ -29,9 +41,21 @@ export default function NotificationsScreen() {
       router.push({ pathname: '/chat/[id]', params: { id: item.chatId } });
     } else if (item.actor.handle) {
       router.push(`/u/${item.actor.handle}`);
-    } else {
-      // No profile page to open yet; the contacts list carries the Accept.
-      router.push('/new-chat');
+    }
+    // A friend request needs no page to open: its Accept is on the row, which
+    // is the only thing that works when their profile page is private.
+  }
+
+  async function accept(item: AppNotification) {
+    if (!item.read) markRead.mutate(item.id);
+    setAcceptError(null);
+    setAccepting(item.actor.id);
+    try {
+      await setFriend.mutateAsync({ userId: item.actor.id, follow: true });
+    } catch (e) {
+      setAcceptError(e instanceof Error ? e.message : 'Could not accept that request.');
+    } finally {
+      setAccepting(null);
     }
   }
 
@@ -106,8 +130,25 @@ export default function NotificationsScreen() {
                 : 'All caught up'}
             </AppText>
           </View>
-          <NotificationSection label="NEW" items={unread} onOpen={open} />
-          <NotificationSection label="EARLIER" items={earlier} onOpen={open} />
+          {acceptError ? (
+            <AppText variant="caption" tone="danger" style={styles.acceptError}>
+              {acceptError}
+            </AppText>
+          ) : null}
+          <NotificationSection
+            label="NEW"
+            items={unread}
+            onOpen={open}
+            onAccept={accept}
+            accepting={accepting}
+          />
+          <NotificationSection
+            label="EARLIER"
+            items={earlier}
+            onOpen={open}
+            onAccept={accept}
+            accepting={accepting}
+          />
         </>
       )}
     </Screen>
@@ -118,10 +159,14 @@ function NotificationSection({
   label,
   items,
   onOpen,
+  onAccept,
+  accepting,
 }: {
   label: string;
   items: AppNotification[];
   onOpen: (item: AppNotification) => void;
+  onAccept: (item: AppNotification) => void;
+  accepting: string | null;
 }) {
   if (!items.length) return null;
   return (
@@ -130,15 +175,34 @@ function NotificationSection({
         {label}
       </AppText>
       {items.map((item) => (
-        <NotificationRow key={item.id} item={item} onPress={() => onOpen(item)} />
+        <NotificationRow
+          key={item.id}
+          item={item}
+          onPress={() => onOpen(item)}
+          onAccept={() => onAccept(item)}
+          busy={accepting === item.actor.id}
+        />
       ))}
     </View>
   );
 }
 
-function NotificationRow({ item, onPress }: { item: AppNotification; onPress: () => void }) {
+function NotificationRow({
+  item,
+  onPress,
+  onAccept,
+  busy,
+}: {
+  item: AppNotification;
+  onPress: () => void;
+  onAccept: () => void;
+  busy: boolean;
+}) {
   const { colors } = useTheme();
   const isMessage = item.kind === 'chat_message';
+  // Their page may be private, so the request is answered here or nowhere.
+  const canAccept = item.kind === 'friend_request' && item.actor.friendship === 'incoming';
+  const accepted = !isMessage && item.actor.friendship === 'friends';
 
   return (
     <Pressable
@@ -155,7 +219,7 @@ function NotificationRow({ item, onPress }: { item: AppNotification; onPress: ()
         <ChatAvatar person={item.actor} size={50} />
         <View style={[styles.kindBadge, { backgroundColor: colors.accent }]}>
           <Ionicons
-            name={isMessage ? 'chatbubble' : 'person-add'}
+            name={isMessage ? 'chatbubble' : accepted ? 'checkmark' : 'person-add'}
             size={12}
             color={colors.onAccent}
           />
@@ -173,9 +237,13 @@ function NotificationRow({ item, onPress }: { item: AppNotification; onPress: ()
         <AppText variant="caption" tone={item.read ? 'muted' : 'secondary'} numberOfLines={2}>
           {item.body}
         </AppText>
-        <AppText variant="micro" tone="accent" weight="700" style={styles.action}>
-          {isMessage ? 'OPEN CHAT' : 'VIEW PROFILE'}
-        </AppText>
+        {canAccept ? (
+          <Button compact title="Accept" loading={busy} onPress={onAccept} style={styles.accept} />
+        ) : (
+          <AppText variant="micro" tone="accent" weight="700" style={styles.action}>
+            {isMessage ? 'OPEN CHAT' : accepted ? 'FRIENDS' : 'VIEW PROFILE'}
+          </AppText>
+        )}
       </View>
       {!item.read ? <View style={[styles.unreadDot, { backgroundColor: colors.accent }]} /> : null}
     </Pressable>
@@ -285,6 +353,15 @@ const styles = StyleSheet.create({
   action: {
     marginTop: 2,
     letterSpacing: 0.4,
+  },
+  accept: {
+    marginTop: spacing.sm,
+    alignSelf: 'flex-start',
+    minWidth: 104,
+  },
+  acceptError: {
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.sm,
   },
   unreadDot: {
     position: 'absolute',
