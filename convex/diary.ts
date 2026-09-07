@@ -3,6 +3,7 @@ import type { Doc, Id } from './_generated/dataModel';
 import { mutation, query, type MutationCtx } from './_generated/server';
 import { nowIso, publicDoc, requireOwned, requireUserId } from './lib/auth';
 import { diaryEntryFields, nutritionValidator, sourceTypeValidator } from './lib/validators';
+import { maybeAddCalorieGoalNotification } from './notifications';
 
 const toEntry = (doc: Doc<'diaryEntries'>) => publicDoc(doc);
 
@@ -73,7 +74,9 @@ export const add = mutation({
   args: diaryEntryFields,
   handler: async (ctx, entry) => {
     const userId = await requireUserId(ctx);
-    return insertEntry(ctx, userId, entry);
+    const added = await insertEntry(ctx, userId, entry);
+    await maybeAddCalorieGoalNotification(ctx, userId, entry.date);
+    return added;
   },
 });
 
@@ -85,6 +88,7 @@ export const update = mutation({
     const merged = { ...existing, ...patch, updatedAt: nowIso() };
     const { _id, _creationTime: _t, ...fields } = merged;
     await ctx.db.replace(_id, fields);
+    await maybeAddCalorieGoalNotification(ctx, userId, merged.date);
     return toEntry(merged);
   },
 });
@@ -116,7 +120,9 @@ export const duplicate = mutation({
   handler: async (ctx, { id }) => {
     const userId = await requireUserId(ctx);
     const existing = await requireOwned(ctx, 'diaryEntries', id, userId);
-    return insertEntry(ctx, userId, copyable(existing));
+    const duplicate = await insertEntry(ctx, userId, copyable(existing));
+    await maybeAddCalorieGoalNotification(ctx, userId, existing.date);
+    return duplicate;
   },
 });
 
@@ -127,6 +133,7 @@ export const move = mutation({
     const existing = await requireOwned(ctx, 'diaryEntries', id, userId);
     const merged = { ...existing, meal, date: date ?? existing.date, updatedAt: nowIso() };
     await ctx.db.patch(id, { meal: merged.meal, date: merged.date, updatedAt: merged.updatedAt });
+    await maybeAddCalorieGoalNotification(ctx, userId, merged.date);
     return toEntry(merged);
   },
 });
@@ -139,6 +146,7 @@ export const moveMany = mutation({
       const existing = await requireOwned(ctx, 'diaryEntries', id, userId);
       await ctx.db.patch(id, { meal, date: date ?? existing.date, updatedAt: nowIso() });
     }
+    if (date) await maybeAddCalorieGoalNotification(ctx, userId, date);
     return null;
   },
 });
@@ -150,6 +158,7 @@ export const copyMeal = mutation({
     const userId = await requireUserId(ctx);
     const rows = (await entriesFor(ctx, userId, fromDate)).filter((r) => r.meal === meal);
     for (const row of rows) await insertEntry(ctx, userId, { ...copyable(row), date: toDate });
+    await maybeAddCalorieGoalNotification(ctx, userId, toDate);
     return rows.length;
   },
 });
@@ -161,6 +170,7 @@ export const copyDay = mutation({
     const userId = await requireUserId(ctx);
     const rows = await entriesFor(ctx, userId, fromDate);
     for (const row of rows) await insertEntry(ctx, userId, { ...copyable(row), date: toDate });
+    await maybeAddCalorieGoalNotification(ctx, userId, toDate);
     return rows.length;
   },
 });

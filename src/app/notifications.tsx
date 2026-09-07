@@ -11,6 +11,7 @@ import {
   useNotifications,
   useSetProfileFollow,
 } from '@/state/queries';
+import { useUiStore } from '@/state/uiStore';
 import {
   AppText,
   Button,
@@ -41,6 +42,7 @@ function NotificationsScreen() {
   const markRead = useMarkNotificationRead();
   const markAllRead = useMarkAllNotificationsRead();
   const setFriend = useSetProfileFollow();
+  const setSelectedDate = useUiStore((state) => state.setSelectedDate);
   const [accepting, setAccepting] = useState<string | null>(null);
   const [acceptError, setAcceptError] = useState<string | null>(null);
   const unread = feed.data?.items.filter((item) => !item.read) ?? [];
@@ -48,7 +50,10 @@ function NotificationsScreen() {
 
   function open(item: AppNotification) {
     if (!item.read) markRead.mutate(item.id);
-    if (item.kind === 'chat_message' && item.chatId) {
+    if (item.kind === 'calorie_goal') {
+      if (item.goalDate) setSelectedDate(item.goalDate);
+      router.push('/calendar');
+    } else if (item.kind === 'chat_message' && item.chatId) {
       router.push({ pathname: '/chat/[id]', params: { id: item.chatId } });
     } else if (item.actor.handle) {
       router.push(`/u/${item.actor.handle}`);
@@ -78,7 +83,7 @@ function NotificationsScreen() {
         </View>
         <EmptyState
           title="Sign in to see notifications"
-          body="Friend requests and new messages will appear here."
+          body="Friend requests, new messages, and goal milestones will appear here."
           actionTitle="Sign in"
           onAction={() => router.replace('/login')}
         />
@@ -130,7 +135,7 @@ function NotificationsScreen() {
           </View>
           <EmptyState
             title="You're all caught up"
-            body="Friend requests and chat messages will show up here."
+            body="Friend requests, chat messages, and goal milestones will show up here."
           />
         </View>
       ) : (
@@ -205,9 +210,12 @@ function NotificationRow({
 }) {
   const { colors } = useTheme();
   const isMessage = item.kind === 'chat_message';
+  const isGoal = item.kind === 'calorie_goal';
   // Their page may be private, so the request is answered here or nowhere.
   const canAccept = item.kind === 'friend_request' && item.actor.friendship === 'incoming';
-  const accepted = !isMessage && item.actor.friendship === 'friends';
+  const accepted =
+    (item.kind === 'friend_request' || item.kind === 'friend_accepted') &&
+    item.actor.friendship === 'friends';
 
   return (
     <Pressable
@@ -221,18 +229,26 @@ function NotificationRow({
       ]}
     >
       <View style={styles.avatarWrap}>
-        <ChatAvatar person={item.actor} size={42} />
-        <View style={styles.kindBadge}>
-          {isMessage ? (
-            <MessageSquare size={14} strokeWidth={2} color={colors.accent} />
-          ) : (
-            <Ionicons
-              name={accepted ? 'checkmark' : 'person-add'}
-              size={14}
-              color={colors.accent}
-            />
-          )}
-        </View>
+        {isGoal ? (
+          <View style={[styles.goalIcon, { backgroundColor: `${colors.accent}1A` }]}>
+            <Ionicons name="trophy-outline" size={23} color={colors.accent} />
+          </View>
+        ) : (
+          <>
+            <ChatAvatar person={item.actor} size={42} />
+            <View style={styles.kindBadge}>
+              {isMessage ? (
+                <MessageSquare size={14} strokeWidth={2} color={colors.accent} />
+              ) : (
+                <Ionicons
+                  name={accepted ? 'checkmark' : 'person-add'}
+                  size={14}
+                  color={colors.accent}
+                />
+              )}
+            </View>
+          </>
+        )}
       </View>
       <View style={[styles.copy, { borderBottomColor: colors.border }]}>
         <View style={styles.topline}>
@@ -255,7 +271,7 @@ function NotificationRow({
           <Button compact title="Accept" loading={busy} onPress={onAccept} style={styles.accept} />
         ) : (
           <AppText variant="micro" tone="accent" weight="700" style={styles.action}>
-            {isMessage ? 'OPEN CHAT' : accepted ? 'FRIENDS' : 'VIEW PROFILE'}
+            {isGoal ? 'VIEW DAY' : isMessage ? 'OPEN CHAT' : accepted ? 'FRIENDS' : 'VIEW PROFILE'}
           </AppText>
         )}
       </View>
@@ -321,6 +337,13 @@ const styles = StyleSheet.create({
     width: 42,
     height: 42,
     position: 'relative',
+  },
+  goalIcon: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   kindBadge: {
     position: 'absolute',

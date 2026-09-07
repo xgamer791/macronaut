@@ -58,10 +58,12 @@ describe('calendar panel', () => {
     expect(html).toContain('transition: transform 294ms cubic-bezier(0.22, 1, 0.36, 1);');
   });
 
-  it('draws days as outlined circles, the weekday row under the grid', () => {
-    expect(panel).toContain('borderRadius: circle / 2');
-    expect(panel).toContain('borderColor: ring');
-    expect(panel).toContain('backgroundColor: isSelected ? colors.accent');
+  it('draws days as calorie progress rings, with the weekday row under the grid', () => {
+    expect(panel).toContain("import Svg, { Circle as SvgCircle } from 'react-native-svg';");
+    expect(panel).toContain('<CalorieDayRing');
+    expect(panel).toContain('strokeDashoffset={circumference * (1 - clamped)}');
+    expect(panel).toContain('color={colors.accent}');
+    expect(panel).not.toContain('backgroundColor: isSelected ? colors.accent');
     expect(panel).toContain('styles.todayDot');
     // Grid first, weekday labels after it — the reverse of a stock calendar.
     expect(panel.indexOf('styles.grid')).toBeLessThan(panel.indexOf('styles.weekdayRow'));
@@ -74,15 +76,15 @@ describe('calendar panel', () => {
     expect(panel).toContain('label={monthLabel(month)}');
     expect(panel).toContain('label={String(yearOf(month))}');
     expect(panel).toContain('function Dropdown(');
-    expect(panel).toContain('Tracked');
-    expect(panel).toContain('Untracked');
+    expect(panel).toContain('Goal progress');
+    expect(panel).toContain('Goal reached');
   });
 
   it('paints from theme tokens rather than fixed colors', () => {
     expect(panel).toContain('const { colors } = useTheme();');
     expect(panel).toContain('backgroundColor: colors.background');
     expect(panel).toContain('backgroundColor: colors.surfaceRaised');
-    expect(panel).toContain('colors.borderStrong');
+    expect(panel).toContain('colors.track');
     expect(panel).not.toMatch(/#[0-9a-fA-F]{6}'/);
   });
 });

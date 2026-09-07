@@ -69,6 +69,7 @@ export function useInvalidateDiary() {
     qc.invalidateQueries({ queryKey: ['diary-range'] });
     qc.invalidateQueries({ queryKey: keys.recents });
     qc.invalidateQueries({ queryKey: ['frequents'] });
+    qc.invalidateQueries({ queryKey: keys.notifications });
   };
 }
 
@@ -747,23 +748,23 @@ export function useActivityRange(from: DayKey, to: DayKey) {
   });
 }
 
-export function useGoalConfigs() {
+export function useGoalConfigs(enabled?: boolean) {
   const { signedIn } = useAuth();
   const { goals } = useRepos();
   return useQuery({
     queryKey: keys.goals,
     queryFn: () => goals.listConfigs(),
-    enabled: signedIn,
+    enabled: signedIn && (enabled ?? true),
   });
 }
 
-export function useDayTypeMarks() {
+export function useDayTypeMarks(enabled?: boolean) {
   const { signedIn } = useAuth();
   const { goals } = useRepos();
   return useQuery({
     queryKey: keys.marks,
     queryFn: () => goals.allMarks(),
-    enabled: signedIn,
+    enabled: signedIn && (enabled ?? true),
   });
 }
 
