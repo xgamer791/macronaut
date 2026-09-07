@@ -9,10 +9,23 @@ import { AppText } from './AppText';
 
 type IconName = keyof typeof Ionicons.glyphMap;
 
-const TAB_META: Record<string, { label: string; icon: IconName; iconActive: IconName }> = {
+type TabMeta = {
+  label: string;
+  icon: IconName;
+  iconActive: IconName;
+  /** Shown in the bar but not navigable while the screen is still being built. */
+  comingSoon?: boolean;
+};
+
+const TAB_META: Record<string, TabMeta> = {
   index: { label: 'Today', icon: 'home-outline', iconActive: 'home' },
   meals: { label: 'Meals', icon: 'restaurant-outline', iconActive: 'restaurant' },
-  progress: { label: 'Progress', icon: 'bar-chart-outline', iconActive: 'bar-chart' },
+  progress: {
+    label: 'Groups',
+    icon: 'people-outline',
+    iconActive: 'people',
+    comingSoon: true,
+  },
   settings: { label: 'Settings', icon: 'settings-outline', iconActive: 'settings' },
 };
 
@@ -37,7 +50,39 @@ export function TabBar({ state, navigation }: BottomTabBarProps) {
       {routes.map((route) => {
         const meta = TAB_META[route.name];
         const routeIndex = state.routes.findIndex((r) => r.key === route.key);
-        const focused = state.index === routeIndex;
+        const focused = state.index === routeIndex && !meta.comingSoon;
+
+        const content = (
+          <>
+            <Ionicons
+              name={focused ? meta.iconActive : meta.icon}
+              size={22}
+              color={focused ? colors.accent : colors.textMuted}
+            />
+            <AppText
+              variant="micro"
+              tone={focused ? 'accent' : 'muted'}
+              weight={focused ? '600' : '400'}
+            >
+              {meta.label}
+            </AppText>
+          </>
+        );
+
+        if (meta.comingSoon) {
+          return (
+            <View
+              key={route.key}
+              accessibilityRole="tab"
+              accessibilityLabel={`${meta.label}, coming soon`}
+              accessibilityState={{ selected: false, disabled: true }}
+              style={styles.tab}
+            >
+              {content}
+            </View>
+          );
+        }
+
         return (
           <Pressable
             key={route.key}
@@ -56,18 +101,7 @@ export function TabBar({ state, navigation }: BottomTabBarProps) {
             }}
             style={styles.tab}
           >
-            <Ionicons
-              name={focused ? meta.iconActive : meta.icon}
-              size={22}
-              color={focused ? colors.accent : colors.textMuted}
-            />
-            <AppText
-              variant="micro"
-              tone={focused ? 'accent' : 'muted'}
-              weight={focused ? '600' : '400'}
-            >
-              {meta.label}
-            </AppText>
+            {content}
           </Pressable>
         );
       })}
