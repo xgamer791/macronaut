@@ -2,18 +2,11 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
-import React, { useMemo, useState } from 'react';
+import React, { useMemo } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
-import Animated, {
-  Easing,
-  useAnimatedStyle,
-  useSharedValue,
-  withTiming,
-} from 'react-native-reanimated';
-import { useQueryClient } from '@tanstack/react-query';
 import { displayNameFromUser } from '@/services/auth/displayName';
 import { useAuth } from '@/state/AuthProvider';
-import { keys, useSetting } from '@/state/queries';
+import { useSetting } from '@/state/queries';
 import { spacing, touchTarget } from '@/ui/theme/tokens';
 import { AppText } from './AppText';
 
@@ -31,47 +24,24 @@ const WATCH_CIRCLE = 28;
 const PLUS = 30;
 
 export interface AppHeaderProps {
-  /** Bell action. Defaults to opening the calendar when provided by Today. */
-  onBellPress?: () => void;
+  /** Calendar icon on the right cluster. */
+  onCalendarPress?: () => void;
   /** Show the notification badge on the bell. */
   notifyDot?: boolean;
 }
 
 /**
- * Garmin-style chrome: avatar + bell on the left, add / sync / watch on the right.
+ * Garmin-style chrome: avatar + bell on the left, add / calendar / watch on the right.
  * White icons — sits over the Today hero or any dark surface.
  */
-export function AppHeader({ onBellPress, notifyDot = true }: AppHeaderProps) {
+export function AppHeader({ onCalendarPress, notifyDot = true }: AppHeaderProps) {
   const router = useRouter();
-  const qc = useQueryClient();
   const { user } = useAuth();
   const savedName = useSetting<string>('displayName', '');
-  const [syncing, setSyncing] = useState(false);
-  const spin = useSharedValue(0);
 
   const displayName = savedName.data || displayNameFromUser(user);
   const initials = useMemo(() => initialsFrom(displayName, user?.email), [displayName, user?.email]);
   const avatarUri = user?.image?.trim() || undefined;
-
-  const syncStyle = useAnimatedStyle(() => ({
-    transform: [{ rotate: `${spin.value * 360}deg` }],
-  }));
-
-  async function onSync() {
-    if (syncing) return;
-    setSyncing(true);
-    void Haptics.selectionAsync();
-    spin.value = withTiming(spin.value + 1, { duration: 650, easing: Easing.linear });
-    await Promise.all([
-      qc.invalidateQueries({ queryKey: ['diary'] }),
-      qc.invalidateQueries({ queryKey: ['diary-range'] }),
-      qc.invalidateQueries({ queryKey: ['activity'] }),
-      qc.invalidateQueries({ queryKey: ['activity-range'] }),
-      qc.invalidateQueries({ queryKey: ['day-notes'] }),
-      qc.invalidateQueries({ queryKey: keys.goals }),
-    ]);
-    setSyncing(false);
-  }
 
   return (
     <View style={styles.row}>
@@ -108,7 +78,6 @@ export function AppHeader({ onBellPress, notifyDot = true }: AppHeaderProps) {
           accessibilityLabel="Notifications"
           onPress={() => {
             void Haptics.selectionAsync();
-            onBellPress?.();
           }}
           dot={notifyDot}
         >
@@ -129,15 +98,13 @@ export function AppHeader({ onBellPress, notifyDot = true }: AppHeaderProps) {
         </HeaderHit>
 
         <HeaderHit
-          accessibilityLabel="Sync data"
-          disabled={syncing}
+          accessibilityLabel="Open calendar"
           onPress={() => {
-            void onSync();
+            void Haptics.selectionAsync();
+            onCalendarPress?.();
           }}
         >
-          <Animated.View style={syncStyle}>
-            <Ionicons name="sync" size={GLYPH} color={ICON} />
-          </Animated.View>
+          <Ionicons name="calendar-outline" size={GLYPH} color={ICON} />
         </HeaderHit>
 
         <HeaderHit

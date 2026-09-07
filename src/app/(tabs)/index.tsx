@@ -233,7 +233,7 @@ function TodayBody() {
         />
 
         <View style={[styles.headerWrap, { paddingTop: insets.top + 2 }]}>
-          <AppHeader onBellPress={() => setCalendarOpen(true)} />
+          <AppHeader onCalendarPress={() => setCalendarOpen(true)} />
         </View>
 
         {/* Greeting + dual metric modules (Daily Goals removed). */}
