@@ -6,6 +6,8 @@ const header = fs.readFileSync(path.join(__dirname, '..', 'AppHeader.tsx'), 'utf
 describe('Today header hamburger', () => {
   it('puts a menu control on the left and keeps add and calendar on the right', () => {
     expect(header).toContain("name=\"menu-outline\"");
+    expect(header).toContain('const MENU = 26');
+    expect(header).toContain('size={MENU}');
     expect(header).toContain('Open menu');
     expect(header).toContain('Close menu');
     expect(header).toContain("justifyContent: 'space-between'");
