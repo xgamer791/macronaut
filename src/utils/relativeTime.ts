@@ -22,3 +22,11 @@ export function relativeTime(iso: string, now: Date = new Date()): string {
     ...(sameYear ? {} : { year: 'numeric' }),
   });
 }
+
+/** "Jun 2" — the date on a photo overlay. Always the calendar day, not a
+ * relative phrase, so a shared screenshot stays readable later. */
+export function shortDate(iso: string): string {
+  const then = new Date(iso);
+  if (Number.isNaN(then.getTime())) return '';
+  return then.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+}

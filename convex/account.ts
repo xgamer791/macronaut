@@ -116,13 +116,29 @@ async function purgeUserData(ctx: MutationCtx, userId: Id<'users'>, budget: numb
     () => ctx.db.query('profileFollows').withIndex('by_user', (q) => q.eq('userId', userId)).take(remaining),
     () =>
       ctx.db.query('profileFollows').withIndex('by_followee', (q) => q.eq('followeeId', userId)).take(remaining),
-    async () =>
-      (
-        await ctx.db
-          .query('profilePhotos')
-          .withIndex('by_user_created', (q) => q.eq('userId', userId))
-          .take(remaining)
-      ).map((row) => ({ _id: row._id, files: [row.imageId] })),
+    async () => {
+      const owned = await ctx.db
+        .query('profilePhotos')
+        .withIndex('by_user_created', (q) => q.eq('userId', userId))
+        .take(remaining);
+      const rows: PurgeRow[] = [];
+      for (const photo of owned) {
+        const likes = await ctx.db
+          .query('photoLikes')
+          .withIndex('by_photo', (q) => q.eq('photoId', photo._id))
+          .collect();
+        const comments = await ctx.db
+          .query('photoComments')
+          .withIndex('by_photo_created', (q) => q.eq('photoId', photo._id))
+          .collect();
+        for (const like of likes) rows.push({ _id: like._id });
+        for (const comment of comments) rows.push({ _id: comment._id });
+        rows.push({ _id: photo._id, files: [photo.imageId] });
+      }
+      return rows;
+    },
+    () => ctx.db.query('photoLikes').withIndex('by_user', (q) => q.eq('userId', userId)).take(remaining),
+    () => ctx.db.query('photoComments').withIndex('by_user', (q) => q.eq('userId', userId)).take(remaining),
     async () => {
       const owned = await ctx.db
         .query('fitnessGroups')

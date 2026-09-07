@@ -19,7 +19,7 @@ import { FoodRepo, NewCustomFood } from '@/repositories/foodRepo';
 import { GoalRepo } from '@/repositories/goalRepo';
 import { FrequentFood, HistoryRepo, RecentFood } from '@/repositories/historyRepo';
 import { FitnessGroup, GroupRepo } from '@/repositories/groupRepo';
-import { ProfilePhoto, PhotoRepo } from '@/repositories/photoRepo';
+import { ProfilePhoto, PhotoComment, PhotoRepo, PhotoThread } from '@/repositories/photoRepo';
 import { ProfilePost, ProfileRepo, ProfileView } from '@/repositories/profileRepo';
 import { AppearanceMode, OnboardingProfile, SettingsRepo } from '@/repositories/settingsRepo';
 import {
@@ -653,12 +653,31 @@ export function createMemoryProfileRepo(): ProfileRepo {
 
 export function createMemoryPhotoRepo(): PhotoRepo {
   const photos: ProfilePhoto[] = [];
+  const likes = new Map<string, Set<string>>();
+  const comments: PhotoComment[] = [];
+
+  function threadFor(photo: ProfilePhoto): PhotoThread {
+    const liked = likes.get(photo.id) ?? new Set();
+    return {
+      photo: clone(photo),
+      ownerName: 'You',
+      ownerHandle: 'you',
+      likeCount: liked.size,
+      likedByMe: liked.has('me'),
+      comments: comments.filter((row) => row.id.startsWith(photo.id)).map(clone),
+    };
+  }
+
   return {
     async mine() {
       return photos.map(clone);
     },
     async forHandle() {
       return { isOwner: true, photos: photos.filter((p) => p.isPublic).map(clone) };
+    },
+    async thread(id) {
+      const photo = photos.find((p) => p.id === id);
+      return photo ? threadFor(photo) : null;
     },
     async upload() {
       return newId();
@@ -691,9 +710,40 @@ export function createMemoryPhotoRepo(): PhotoRepo {
       photo.updatedAt = nowIso();
       return clone(photo);
     },
+    async setLike(id, liked) {
+      const photo = photos.find((p) => p.id === id);
+      if (!photo) throw new Error('Photo not found');
+      const set = likes.get(id) ?? new Set<string>();
+      if (liked) set.add('me');
+      else set.delete('me');
+      likes.set(id, set);
+      return threadFor(photo);
+    },
+    async addComment(id, body) {
+      const photo = photos.find((p) => p.id === id);
+      if (!photo) throw new Error('Photo not found');
+      const comment: PhotoComment = {
+        id: `${id}-${newId()}`,
+        body: body.trim(),
+        createdAt: nowIso(),
+        authorName: 'You',
+        authorHandle: 'you',
+        isMine: true,
+      };
+      comments.push(comment);
+      return clone(comment);
+    },
+    async removeComment(id) {
+      const i = comments.findIndex((row) => row.id === id);
+      if (i >= 0) comments.splice(i, 1);
+    },
     async remove(id) {
       const i = photos.findIndex((p) => p.id === id);
       if (i >= 0) photos.splice(i, 1);
+      likes.delete(id);
+      for (let i = comments.length - 1; i >= 0; i--) {
+        if (comments[i]!.id.startsWith(id)) comments.splice(i, 1);
+      }
     },
   };
 }

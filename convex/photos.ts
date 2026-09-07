@@ -1,11 +1,15 @@
+import { getAuthUserId } from '@convex-dev/auth/server';
 import { ConvexError, v } from 'convex/values';
-import type { Doc } from './_generated/dataModel';
+import type { Doc, Id } from './_generated/dataModel';
 import { mutation, query, type MutationCtx, type QueryCtx } from './_generated/server';
 import { nowIso, requireOwned, requireUserId } from './lib/auth';
 import { readableProfile } from './lib/profileAccess';
 
 const CAPTION_MAX = 140;
 const PHOTO_LIMIT = 200;
+const COMMENT_MAX = 280;
+const COMMENT_LIMIT = 80;
+const LIKE_SCAN = 500;
 
 function capped(value: string | undefined): string | undefined {
   const trimmed = (value ?? '').trim();
@@ -133,9 +137,158 @@ export const remove = mutation({
     const userId = await requireUserId(ctx);
     const doc = await ctx.db.get(id);
     if (doc && doc.userId === userId) {
-      await ctx.storage.delete(doc.imageId);
-      await ctx.db.delete(id);
+      await deletePhotoGraph(ctx, doc);
     }
     return null;
   },
 });
+
+/** Public photo thread — likes, comments, and the author name. A private
+ * photo, a private profile, and a missing id are the same `null`. */
+export const thread = query({
+  args: { id: v.id('profilePhotos') },
+  handler: async (ctx, { id }) => {
+    const found = await visiblePhoto(ctx, id);
+    if (!found) return null;
+    return photoThread(ctx, found.doc, found.viewerId);
+  },
+});
+
+export const setLike = mutation({
+  args: { id: v.id('profilePhotos'), liked: v.boolean() },
+  handler: async (ctx, { id, liked }) => {
+    const userId = await requireUserId(ctx);
+    const found = await visiblePhoto(ctx, id);
+    if (!found) throw new ConvexError('Photo not available');
+    const existing = await ctx.db
+      .query('photoLikes')
+      .withIndex('by_user_photo', (q) => q.eq('userId', userId).eq('photoId', id))
+      .first();
+    if (liked && !existing) {
+      await ctx.db.insert('photoLikes', { userId, photoId: id, createdAt: nowIso() });
+    }
+    if (!liked && existing) await ctx.db.delete(existing._id);
+    return photoThread(ctx, found.doc, userId);
+  },
+});
+
+export const addComment = mutation({
+  args: { id: v.id('profilePhotos'), body: v.string() },
+  handler: async (ctx, { id, body }) => {
+    const userId = await requireUserId(ctx);
+    const found = await visiblePhoto(ctx, id);
+    if (!found) throw new ConvexError('Photo not available');
+    const text = body.trim().slice(0, COMMENT_MAX);
+    if (!text) throw new ConvexError('Write a comment first.');
+    const createdAt = nowIso();
+    const commentId = await ctx.db.insert('photoComments', {
+      userId,
+      photoId: id,
+      body: text,
+      createdAt,
+    });
+    const author = await profileForUser(ctx, userId);
+    return {
+      id: commentId as string,
+      body: text,
+      createdAt,
+      authorName: authorName(author),
+      authorHandle: author?.handle,
+      isMine: true,
+    };
+  },
+});
+
+export const removeComment = mutation({
+  args: { id: v.id('photoComments') },
+  handler: async (ctx, { id }) => {
+    const userId = await requireUserId(ctx);
+    const comment = await ctx.db.get(id);
+    if (!comment) return null;
+    const photo = await ctx.db.get(comment.photoId);
+    const canDelete = comment.userId === userId || photo?.userId === userId;
+    if (canDelete) await ctx.db.delete(id);
+    return null;
+  },
+});
+
+async function visiblePhoto(
+  ctx: QueryCtx | MutationCtx,
+  id: Id<'profilePhotos'>,
+): Promise<{ doc: Doc<'profilePhotos'>; viewerId: Id<'users'> | null; isOwner: boolean } | null> {
+  const doc = await ctx.db.get(id);
+  if (!doc) return null;
+  const viewerId = await getAuthUserId(ctx);
+  const isOwner = viewerId === doc.userId;
+  if (isOwner) return { doc, viewerId, isOwner };
+  if (!doc.isPublic) return null;
+  const profile = await profileForUser(ctx, doc.userId);
+  if (!profile?.isPublic) return null;
+  return { doc, viewerId, isOwner: false };
+}
+
+async function deletePhotoGraph(ctx: MutationCtx, doc: Doc<'profilePhotos'>) {
+  const likes = await ctx.db
+    .query('photoLikes')
+    .withIndex('by_photo', (q) => q.eq('photoId', doc._id))
+    .collect();
+  const comments = await ctx.db
+    .query('photoComments')
+    .withIndex('by_photo_created', (q) => q.eq('photoId', doc._id))
+    .collect();
+  for (const like of likes) await ctx.db.delete(like._id);
+  for (const comment of comments) await ctx.db.delete(comment._id);
+  await ctx.storage.delete(doc.imageId);
+  await ctx.db.delete(doc._id);
+}
+
+async function photoThread(
+  ctx: QueryCtx | MutationCtx,
+  doc: Doc<'profilePhotos'>,
+  viewerId: Id<'users'> | null,
+) {
+  const owner = await profileForUser(ctx, doc.userId);
+  const likes = await ctx.db
+    .query('photoLikes')
+    .withIndex('by_photo', (q) => q.eq('photoId', doc._id))
+    .take(LIKE_SCAN);
+  const commentRows = await ctx.db
+    .query('photoComments')
+    .withIndex('by_photo_created', (q) => q.eq('photoId', doc._id))
+    .order('asc')
+    .take(COMMENT_LIMIT);
+  const comments = [];
+  for (const row of commentRows) {
+    const author = await profileForUser(ctx, row.userId);
+    comments.push({
+      id: row._id as string,
+      body: row.body,
+      createdAt: row.createdAt,
+      authorName: authorName(author),
+      authorHandle: author?.handle,
+      isMine: viewerId === row.userId,
+    });
+  }
+  return {
+    photo: await photoView(ctx, doc),
+    ownerName: authorName(owner),
+    ownerHandle: owner?.handle ?? '',
+    likeCount: likes.length,
+    likedByMe: viewerId ? likes.some((like) => like.userId === viewerId) : false,
+    comments,
+  };
+}
+
+async function profileForUser(ctx: QueryCtx | MutationCtx, userId: Id<'users'>) {
+  return ctx.db
+    .query('profiles')
+    .withIndex('by_user', (q) => q.eq('userId', userId))
+    .first();
+}
+
+function authorName(profile: Doc<'profiles'> | null): string {
+  const named = profile?.displayName?.trim();
+  if (named) return named;
+  if (profile?.handle) return profile.handle;
+  return 'Member';
+}

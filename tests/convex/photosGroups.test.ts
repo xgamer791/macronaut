@@ -31,6 +31,46 @@ describe('photo wall', () => {
     expect(files).toHaveLength(1);
   });
 
+  it('lets a signed-in viewer like and comment, in the order they wrote', async () => {
+    const t = backend();
+    const owner = await signIn(t, 'owner@example.com');
+    const stranger = await signIn(t, 'stranger@example.com');
+    await owner.repos.profile.update({ handle: 'owner_one', displayName: 'Holly Ky', isPublic: true });
+    await stranger.repos.profile.update({ handle: 'guest_one', displayName: 'Alex', isPublic: true });
+    const photo = await owner.repos.photos.add(await storedImage(t), 'Sunrise', true);
+
+    const liked = await stranger.repos.photos.setLike(photo.id, true);
+    expect(liked.likeCount).toBe(1);
+    expect(liked.likedByMe).toBe(true);
+    expect(liked.ownerName).toBe('Holly Ky');
+
+    const first = await stranger.repos.photos.addComment(photo.id, '  Nice light  ');
+    await stranger.repos.photos.addComment(photo.id, 'Again tomorrow?');
+    const thread = await stranger.repos.photos.thread(photo.id);
+    expect(thread?.comments.map((c) => c.body)).toEqual(['Nice light', 'Again tomorrow?']);
+    expect(thread?.comments[0]?.authorName).toBe('Alex');
+    expect(first.body).toBe('Nice light');
+
+    await stranger.repos.photos.setLike(photo.id, false);
+    expect((await stranger.repos.photos.thread(photo.id))?.likeCount).toBe(0);
+
+    await owner.repos.photos.remove(photo.id);
+    expect(await t.run(async (ctx) => ctx.db.query('photoLikes').collect())).toEqual([]);
+    expect(await t.run(async (ctx) => ctx.db.query('photoComments').collect())).toEqual([]);
+  });
+
+  it('hides a private photo thread the same way a missing photo is hidden', async () => {
+    const t = backend();
+    const owner = await signIn(t, 'owner@example.com');
+    const stranger = await signIn(t, 'stranger@example.com');
+    await owner.repos.profile.update({ handle: 'owner_one', isPublic: true });
+    const hidden = await owner.repos.photos.add(await storedImage(t), 'Hidden', false);
+
+    expect(await stranger.repos.photos.thread(hidden.id)).toBeNull();
+    await expect(stranger.repos.photos.setLike(hidden.id, true)).rejects.toThrow(/not available/i);
+    expect(await t.query(api.photos.thread, { id: hidden.id as never })).toBeNull();
+  });
+
   it('adds a picker batch in the order the photos were selected', async () => {
     const t = backend();
     const owner = await signIn(t, 'owner@example.com');

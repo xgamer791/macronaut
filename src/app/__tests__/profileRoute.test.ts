@@ -72,6 +72,23 @@ describe('profile routes', () => {
     expect(layout).toContain('name="groups"');
   });
 
+  it('opens a full-screen viewer with like, comment and share', () => {
+    const wall = read('photos.tsx');
+    expect(wall).toContain('PhotoViewer');
+    expect(wall).toContain('useSetPhotoLike');
+    expect(wall).toContain('useAddPhotoComment');
+    expect(wall).toContain('photoShareUrl');
+    expect(wall).not.toContain('<Sheet');
+    const viewer = fs.readFileSync(path.join(srcDir, 'ui', 'components', 'PhotoViewer.tsx'), 'utf8');
+    expect(viewer).toContain('contentFit="contain"');
+    expect(viewer).toContain("justifyContent: 'center'");
+    expect(viewer).toContain('Like photo');
+    expect(viewer).toContain('Comment on photo');
+    expect(viewer).toContain('Share photo');
+    expect(viewer).toContain("animationType=\"slide\"");
+    expect(viewer).toContain("backgroundColor: '#000000'");
+  });
+
   it('adds wall photos from a select-only picker in tap order', () => {
     const wall = read('photos.tsx');
     expect(wall).toContain('pickImages');
