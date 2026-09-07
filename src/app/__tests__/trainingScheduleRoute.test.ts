@@ -11,6 +11,8 @@ describe('training schedule route', () => {
     expect(schedule).toContain('title="Training Schedule"');
     expect(schedule).toContain('accessibilityLabel="Open full calendar"');
     expect(schedule).toContain('<MonthCalendarPopup');
+    expect(schedule).toContain("name={plan ? 'chevron-forward' : 'add-circle-outline'}");
+    expect(schedule).toContain('size={plan ? 20 : 30}');
   });
 
   it('offers free-form day, workout, macro-label, and sets fields', () => {

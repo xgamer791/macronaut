@@ -500,7 +500,7 @@ function ScheduleDayRow({
 
       <Ionicons
         name={plan ? 'chevron-forward' : 'add-circle-outline'}
-        size={20}
+        size={plan ? 20 : 30}
         color={plan ? colors.textMuted : colors.accent}
       />
     </Pressable>
