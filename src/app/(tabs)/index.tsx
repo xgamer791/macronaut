@@ -33,6 +33,7 @@ import {
   AppText,
   BarEntranceProvider,
   Button,
+  GlassHeaderBar,
   HeroMetricModule,
   ListRow,
   MonthCalendarPopup,
@@ -217,7 +218,16 @@ function TodayBody() {
   ];
 
   return (
-    <Screen tabBarSpace padded={false} safeTop={false}>
+    <Screen
+      tabBarSpace
+      padded={false}
+      safeTop={false}
+      stickyHeader={
+        <GlassHeaderBar>
+          <AppHeader onCalendarPress={() => setCalendarOpen(true)} />
+        </GlassHeaderBar>
+      }
+    >
       {/* —— Hero —— */}
       <View style={[styles.hero, { height: heroHeight + insets.top }]}>
         <Image
@@ -231,10 +241,6 @@ function TodayBody() {
           locations={[0, 0.5, 1]}
           style={StyleSheet.absoluteFill}
         />
-
-        <View style={[styles.headerWrap, { paddingTop: insets.top + 2 }]}>
-          <AppHeader onCalendarPress={() => setCalendarOpen(true)} />
-        </View>
 
         {/* Greeting + dual metric modules (Daily Goals removed). */}
         <View style={styles.heroBottom}>
@@ -472,7 +478,7 @@ function TodayBody() {
       <MonthCalendarPopup
         visible={calendarOpen}
         selected={date}
-        top={insets.top + 56}
+        top={insets.top + 64}
         onClose={() => setCalendarOpen(false)}
         onSelect={(d) => {
           setCalendarOpen(false);
@@ -494,14 +500,6 @@ const styles = StyleSheet.create({
     width: '100%',
     overflow: 'hidden',
     justifyContent: 'flex-end',
-  },
-  headerWrap: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    zIndex: 4,
-    paddingHorizontal: spacing.sm,
   },
   heroBottom: {
     paddingHorizontal: spacing.lg,

@@ -7,7 +7,9 @@ import {
   AppText,
   Button,
   EmptyState,
+  GlassHeaderBar,
   ProfileHeader,
+  ProfileHeaderChrome,
   ProfilePostList,
   Screen,
   SectionHeader,
@@ -68,8 +70,21 @@ function PublicProfile() {
   }
 
   return (
-    <Screen padded={false} safeTop={false} scroll>
-      <ProfileHeader profile={found.profile} onBack={() => goBackOrHome(router)} />
+    <Screen
+      padded={false}
+      safeTop={false}
+      scroll
+      stickyHeader={
+        <GlassHeaderBar inset={spacing.md}>
+          <ProfileHeaderChrome onBack={() => goBackOrHome(router)} />
+        </GlassHeaderBar>
+      }
+    >
+      <ProfileHeader
+        profile={found.profile}
+        onBack={() => goBackOrHome(router)}
+        showChrome={false}
+      />
       <View style={styles.actions}>
         <PublicAction
           icon="images-outline"
