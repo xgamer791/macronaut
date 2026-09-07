@@ -6,7 +6,7 @@ import {
   isValidHandle,
   normalizeHandle,
 } from '../../convex/lib/handles';
-import { backend, signIn, type Backend } from './helpers';
+import { backend, signIn, tick, type Backend } from './helpers';
 
 /** Put a file in storage without going through an upload URL: convex-test has
  * no HTTP endpoint to POST to, and what the mutations care about is the id. */
@@ -192,6 +192,71 @@ describe('profile posts', () => {
     const { repos } = await signIn(backend());
     const post = await repos.profile.addPost('x'.repeat(4000));
     expect(post.body).toHaveLength(1000);
+  });
+});
+
+describe('friends feed', () => {
+  it('returns mutual friends only, newest first, in pages of ten', async () => {
+    const t = backend();
+    const viewer = await signIn(t, 'viewer@example.com', 'Viewer');
+    const friend = await signIn(t, 'friend@example.com', 'Fast Friend');
+    const pending = await signIn(t, 'pending@example.com', 'Pending Person');
+    const stranger = await signIn(t, 'stranger@example.com', 'Stranger');
+
+    await viewer.repos.profile.update({ handle: 'viewer', isPublic: true });
+    await friend.repos.profile.update({
+      handle: 'fast_friend',
+      displayName: 'Fast Friend',
+      isPublic: true,
+    });
+    await pending.repos.profile.update({ handle: 'pending', isPublic: true });
+    await stranger.repos.profile.update({ handle: 'stranger', isPublic: true });
+
+    await viewer.repos.profile.setFollow('fast_friend', true);
+    await friend.repos.profile.setFollow('viewer', true);
+    // A private page stays closed, but a verified friend can still receive
+    // the posts explicitly shared through their friends feed.
+    await friend.repos.profile.update({ isPublic: false });
+    // A one-way request is not a friendship and must not enter the feed.
+    await viewer.repos.profile.setFollow('pending', true);
+
+    await viewer.repos.profile.addPost('My own post');
+    await pending.repos.profile.addPost('Pending request post');
+    await stranger.repos.profile.addPost('Stranger post');
+    for (let index = 1; index <= 12; index += 1) {
+      await tick();
+      await friend.repos.profile.addPost(`Friend post ${index}`);
+    }
+
+    const first = await viewer.repos.profile.friendsFeed(null);
+    expect(first.page).toHaveLength(10);
+    expect(first.isDone).toBe(false);
+    expect(first.page[0]).toMatchObject({
+      body: 'Friend post 12',
+      author: {
+        handle: 'fast_friend',
+        displayName: 'Fast Friend',
+        canOpenProfile: false,
+      },
+    });
+    expect(first.page.every((post) => post.author.id === (friend.userId as string))).toBe(true);
+
+    const second = await viewer.repos.profile.friendsFeed(first.continueCursor);
+    expect(second.page.map((post) => post.body)).toEqual(['Friend post 2', 'Friend post 1']);
+    expect(second.isDone).toBe(true);
+  });
+
+  it('is empty without mutual friends and refuses signed-out reads', async () => {
+    const t = backend();
+    const viewer = await signIn(t, 'viewer@example.com');
+    expect(await viewer.repos.profile.friendsFeed(null)).toEqual({
+      page: [],
+      isDone: true,
+      continueCursor: '',
+    });
+    await expect(t.query(api.profiles.friendsFeed, { cursor: null })).rejects.toThrow(
+      /not signed in/i,
+    );
   });
 });
 

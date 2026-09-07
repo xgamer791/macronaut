@@ -609,6 +609,9 @@ export function createMemoryProfileRepo(): ProfileRepo {
     async myPosts() {
       return posts.map(clone);
     },
+    async friendsFeed() {
+      return { page: [], isDone: true, continueCursor: '' };
+    },
     async byHandle(handle) {
       if (handle.toLowerCase() !== profile.handle) return null;
       if (!profile.isPublic) return null;

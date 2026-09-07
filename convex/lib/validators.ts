@@ -180,7 +180,8 @@ export const profileFields = {
   ...profileEditableFields,
   avatarId: v.optional(v.id('_storage')),
   bannerId: v.optional(v.id('_storage')),
-  /** When false the profile and its posts are only readable by their owner. */
+  /** When false the profile page stays owner-only. Mutual friends may still
+   * receive its posts through the separately authorized friends feed. */
   isPublic: v.boolean(),
 };
 
