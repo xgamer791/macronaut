@@ -28,6 +28,7 @@ const GLYPH_INSET = (touchTarget - GLYPH) / 2;
 /** The watch is a photo, not a line glyph, so it needs a slightly wider
  * circle to stay legible at the same optical weight. */
 const WATCH_CIRCLE = 28;
+const PLUS = 38;
 
 export interface AppHeaderProps {
   /** Bell action. Defaults to opening the calendar when provided by Today. */
@@ -122,8 +123,9 @@ export function AppHeader({ onBellPress, notifyDot = true }: AppHeaderProps) {
             void Haptics.selectionAsync();
             router.push('/add');
           }}
+          slot={PLUS}
         >
-          <Ionicons name="add" size={GLYPH} color={ICON} />
+          <Ionicons name="add" size={PLUS} color={ICON} />
         </HeaderHit>
 
         <HeaderHit
