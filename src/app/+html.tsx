@@ -116,6 +116,12 @@ input[data-darkfield]:-webkit-autofill:focus, input[data-darkfield]:-webkit-auto
   will-change: transform;
   transition: transform 294ms cubic-bezier(0.22, 1, 0.36, 1);
 }
+/* The page underneath travels with the panel, on the one curve, so the two
+ * read as a single strip being pulled across rather than a cover and a page. */
+[data-slidepush] {
+  will-change: transform;
+  transition: transform 294ms cubic-bezier(0.22, 1, 0.36, 1);
+}
 /* Today / profile chrome: one slab, same 294ms curve as stack / friends feed. */
 [data-headerhide] {
   will-change: transform, margin-bottom;
@@ -137,7 +143,8 @@ input[data-darkfield]:-webkit-autofill:focus, input[data-darkfield]:-webkit-auto
   transition: transform 294ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 @media (prefers-reduced-motion: reduce) {
-  [data-slidescreen] {
+  [data-slidescreen],
+  [data-slidepush] {
     transition: none;
   }
   [data-headerhide] {
