@@ -10,6 +10,7 @@ import { AppText } from '@/ui/components';
 import { WelcomeBackground } from '@/ui/WelcomeBackground';
 import { WelcomeCta } from '@/ui/WelcomeCta';
 import { fonts, palette, radius, type } from '@/ui/theme/tokens';
+import { SlidePushLayer } from '@/ui/motion/SlidePush';
 
 const TRACK_W = 51;
 const TRACK_H = 31;
@@ -88,66 +89,70 @@ export default function SignupLegalScreen() {
     else router.replace('/welcome');
   };
 
+  // The only slide-out host outside the tab shell: the legal links open
+  // Privacy and Terms over this page while signed out.
   return (
-    <View style={styles.root}>
-      <StatusBar style="light" />
-      <WelcomeBackground />
-      <View pointerEvents="none" style={styles.veil}>
-        <View style={styles.veilFilm} />
-      </View>
+    <SlidePushLayer>
+      <View style={styles.root}>
+        <StatusBar style="light" />
+        <WelcomeBackground />
+        <View pointerEvents="none" style={styles.veil}>
+          <View style={styles.veilFilm} />
+        </View>
 
-      <View style={[styles.frame, { paddingTop: insets.top + 4 }]}>
-        <View style={styles.top}>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Back"
-            hitSlop={8}
-            onPress={goBack}
-            style={styles.backHit}
-          >
-            <Ionicons name="chevron-back" size={28} color="#FFFFFF" />
-          </Pressable>
+        <View style={[styles.frame, { paddingTop: insets.top + 4 }]}>
+          <View style={styles.top}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Back"
+              hitSlop={8}
+              onPress={goBack}
+              style={styles.backHit}
+            >
+              <Ionicons name="chevron-back" size={28} color="#FFFFFF" />
+            </Pressable>
 
-          <AppText accessibilityRole="header" style={styles.title}>
-            {'Terms of Service\nand Privacy Policy'}
-          </AppText>
-          <AppText style={styles.subtitle}>Please review the following to continue:</AppText>
+            <AppText accessibilityRole="header" style={styles.title}>
+              {'Terms of Service\nand Privacy Policy'}
+            </AppText>
+            <AppText style={styles.subtitle}>Please review the following to continue:</AppText>
 
-          <View style={styles.cards}>
-            <View style={styles.card}>
-              <View style={styles.cardCopy}>
-                <AppText style={styles.cardText}>I have read and agree to the </AppText>
-                <LegalLink href="/terms">Terms of Service</LegalLink>
-                <AppText style={styles.cardText}> and </AppText>
-                <LegalLink href="/privacy">Privacy Policy</LegalLink>
-                <AppText style={styles.cardText}>.</AppText>
+            <View style={styles.cards}>
+              <View style={styles.card}>
+                <View style={styles.cardCopy}>
+                  <AppText style={styles.cardText}>I have read and agree to the </AppText>
+                  <LegalLink href="/terms">Terms of Service</LegalLink>
+                  <AppText style={styles.cardText}> and </AppText>
+                  <LegalLink href="/privacy">Privacy Policy</LegalLink>
+                  <AppText style={styles.cardText}>.</AppText>
+                </View>
+                <LegalToggle
+                  value={agreed}
+                  onValueChange={setAgreed}
+                  accessibilityLabel="Agree to the Terms of Service and Privacy Policy"
+                />
               </View>
-              <LegalToggle
-                value={agreed}
-                onValueChange={setAgreed}
-                accessibilityLabel="Agree to the Terms of Service and Privacy Policy"
-              />
-            </View>
 
-            <View style={styles.card}>
-              <AppText style={[styles.cardText, styles.cardFill]}>
-                Receive exclusive health education, tips, and special offers to get the most out of
-                your Macronaut experience.
-              </AppText>
-              <LegalToggle
-                value={offers}
-                onValueChange={setOffers}
-                accessibilityLabel="Receive health education, tips, and special offers"
-              />
+              <View style={styles.card}>
+                <AppText style={[styles.cardText, styles.cardFill]}>
+                  Receive exclusive health education, tips, and special offers to get the most out
+                  of your Macronaut experience.
+                </AppText>
+                <LegalToggle
+                  value={offers}
+                  onValueChange={setOffers}
+                  accessibilityLabel="Receive health education, tips, and special offers"
+                />
+              </View>
             </View>
           </View>
-        </View>
 
-        <View style={[styles.dock, { paddingBottom: Math.max(insets.bottom, 12) + 8 }]}>
-          <WelcomeCta label="Save and continue" disabled={!agreed} href="/signup-account" />
+          <View style={[styles.dock, { paddingBottom: Math.max(insets.bottom, 12) + 8 }]}>
+            <WelcomeCta label="Save and continue" disabled={!agreed} href="/signup-account" />
+          </View>
         </View>
       </View>
-    </View>
+    </SlidePushLayer>
   );
 }
 
