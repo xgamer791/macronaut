@@ -33,14 +33,14 @@ describe('sticky glass headers', () => {
   it('uses the 2025–26 liquid-glass recipe on the sticky header', () => {
     expect(bar).toContain("className: 'glass'");
     expect(bar).toContain("data-headerglass");
-    expect(bar).toContain('GLASS_RADIUS = 24');
+    expect(bar).toContain('borderRadius: 0');
     expect(bar).not.toContain('GlassView');
     expect(bar).not.toContain('blur(28px)');
     const html = read('app', '+html.tsx');
     expect(html).toContain('.glass');
     expect(html).toContain('[data-headerglass]');
     expect(html).toContain('blur(39px) saturate(135%)');
-    expect(html).toContain('border-radius: 24px');
+    expect(html).toContain('border-radius: 0');
     expect(html).toContain('rgba(0, 0, 0, 0.630)');
     expect(html).toContain('opacity: 0.00');
     expect(html).toContain('inset 0 -1px 0 rgba(255, 255, 255, 0.050)');
