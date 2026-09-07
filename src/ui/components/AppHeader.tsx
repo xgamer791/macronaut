@@ -114,15 +114,12 @@ function HeaderMenu({ visible, onClose }: { visible: boolean; onClose: () => voi
 
   if (visible !== prevVisible) {
     setPrevVisible(visible);
+    setWebOpen(false);
     if (visible) setMounted(true);
   }
 
   useLayoutEffect(() => {
-    if (Platform.OS !== 'web' || !mounted) return;
-    if (!visible) {
-      setWebOpen(false);
-      return;
-    }
+    if (Platform.OS !== 'web' || !mounted || !visible) return;
     let second = 0;
     const first = requestAnimationFrame(() => {
       second = requestAnimationFrame(() => setWebOpen(true));
@@ -135,8 +132,6 @@ function HeaderMenu({ visible, onClose }: { visible: boolean; onClose: () => voi
 
   useEffect(() => {
     if (visible) {
-      // Reanimated shared values are mutated on purpose to drive the drawer.
-      // eslint-disable-next-line react-hooks/immutability -- SharedValue setter
       progress.value = withTiming(1, {
         duration: SLIDE_DURATION_MS,
         easing: SLIDE_EASING,
@@ -144,7 +139,6 @@ function HeaderMenu({ visible, onClose }: { visible: boolean; onClose: () => voi
       return;
     }
     if (!mounted) return;
-    // eslint-disable-next-line react-hooks/immutability -- SharedValue setter
     progress.value = withTiming(0, {
       duration: SLIDE_DURATION_MS,
       easing: SLIDE_EASING,
