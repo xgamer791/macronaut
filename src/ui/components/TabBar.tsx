@@ -66,6 +66,12 @@ const ITEMS: TabItem[] = [
 const ICON = 27;
 /** Same circular picture the Today header used to show. */
 const AVATAR = 32;
+/**
+ * The picture fills the whole circle, so a fallback drawn at half its width
+ * reads far lighter than the glyphs beside it. Sized to sit in the same range
+ * of ink as the four tab glyphs instead.
+ */
+const AVATAR_GLYPH = 18;
 
 function TabGlyph({ name, color }: { name: TabGlyphName; color: string }) {
   if (typeof name === 'string') {
@@ -258,7 +264,7 @@ function ProfileTab() {
           {initials ? (
             <AppText style={styles.initials}>{initials}</AppText>
           ) : (
-            <Ionicons name="person" size={16} color={colors.textMuted} />
+            <Ionicons name="person" size={AVATAR_GLYPH} color={colors.textMuted} />
           )}
         </View>
       )}
@@ -307,8 +313,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   initials: {
-    fontSize: 11,
-    lineHeight: 13,
+    fontSize: 12,
+    lineHeight: 14,
     fontWeight: '700',
   },
 });

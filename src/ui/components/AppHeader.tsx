@@ -268,7 +268,7 @@ export function HeaderAvatarButton() {
           {initials ? (
             <AppText style={styles.initials}>{initials}</AppText>
           ) : (
-            <Ionicons name="person" size={16} color={ICON} />
+            <Ionicons name="person" size={AVATAR_GLYPH} color={ICON} />
           )}
         </View>
       )}
@@ -382,6 +382,9 @@ function initialsFrom(name?: string | null, email?: string): string {
 }
 
 const AVATAR = 32;
+/** Matches the tab bar's fallback, so the same account reads the same weight
+ * in the header and the footer. */
+const AVATAR_GLYPH = 18;
 
 const styles = StyleSheet.create({
   row: {
