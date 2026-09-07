@@ -9,10 +9,11 @@ database any more.
 Sign-in is [Convex Auth](https://labs.convex.dev/auth). The app offers one
 method:
 
-| Provider | How it works | Deployment variables |
-|---|---|---|
+| Provider           | How it works                                                                                                                                                                                                                                                                                                                                                                                                                   | Deployment variables                                           |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------- |
 | Email and password | `convex/PasswordAccount.ts`. Create Account sends the address, the password, the name, the date of birth and the country in one call; Convex Auth hashes the password with Scrypt and stores only the hash on the account row. Signing in sends the address and the password. Forgot password emails a reset link to the live site (`SITE_URL/forgot-password`) and then accepts the token from that link plus a new password. | `AUTH_RESEND_KEY`, `AUTH_EMAIL_FROM`, `SITE_URL` (reset email) |
-| AI food scan | A Convex action calls xAI with a shared key. The client never sees it. Until Pro exists, accounts that already existed when the roster froze (plus Holly Ky and the two preview emails) can invoke the action. Later sign-ups cannot. | `XAI_API_KEY` |
+| AI food scan       | A Convex action calls xAI with a shared key. The client never sees it. Until Pro exists, accounts that already existed when the roster froze (plus Holly Ky and the two preview emails) can invoke the action. Later sign-ups cannot.                                                                                                                                                                                          | `XAI_API_KEY`                                                  |
+| Home gym search    | Convex actions (`convex/places.ts`) call Google Places (New) and the Geocoding API with a shared key to find gyms within seven miles of a point. The client only ever sees a gym's id, name, address, coordinates and distance. Capped per account per day.                                                                                                                                                                    | `GOOGLE_PLACES_API_KEY`                                        |
 
 No third-party sign-in is offered, so Sign in with Apple is not required: the
 App Store asks for it only in apps that offer another third-party sign-in.
@@ -48,10 +49,10 @@ bundle, the repository, or CI.
 
 ## Deployments
 
-| Deployment | Used for | Where its URL goes |
-|---|---|---|
-| dev (per developer) | `npx convex dev` on your machine | `.env.local`, written by the CLI (gitignored) |
-| prod | The live site | Injected by `npx convex deploy` in the deploy workflow |
+| Deployment          | Used for                         | Where its URL goes                                     |
+| ------------------- | -------------------------------- | ------------------------------------------------------ |
+| dev (per developer) | `npx convex dev` on your machine | `.env.local`, written by the CLI (gitignored)          |
+| prod                | The live site                    | Injected by `npx convex deploy` in the deploy workflow |
 
 The Convex dashboard for the project lists both under the `macronaut` project.
 
@@ -119,13 +120,13 @@ then two variables per deployment. The
 [Convex Auth Apple guide](https://labs.convex.dev/auth/config/oauth/apple) walks
 through the portal screens; the Macronaut-specific values are:
 
-| Thing | Value |
-|---|---|
-| App ID (explicit bundle ID) | `com.mangomarketeers.macronaut`, with **Sign in with Apple** checked |
-| Services ID | `com.mangomarketeers.macronaut.web`, with `com.mangomarketeers.macronaut` as its **primary App ID** |
-| Domain | `brainy-cobra-467.convex.site` (prod), `zany-hornet-105.convex.site` (dev) |
-| Return URL | `https://brainy-cobra-467.convex.site/api/auth/callback/apple` (prod)<br>`https://zany-hornet-105.convex.site/api/auth/callback/apple` (dev) |
-| Key | A **Sign in with Apple** key whose primary App ID is `com.mangomarketeers.macronaut`; downloads once as `AuthKey_XXXXXXXXXX.p8` |
+| Thing                       | Value                                                                                                                                        |
+| --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| App ID (explicit bundle ID) | `com.mangomarketeers.macronaut`, with **Sign in with Apple** checked                                                                         |
+| Services ID                 | `com.mangomarketeers.macronaut.web`, with `com.mangomarketeers.macronaut` as its **primary App ID**                                          |
+| Domain                      | `brainy-cobra-467.convex.site` (prod), `zany-hornet-105.convex.site` (dev)                                                                   |
+| Return URL                  | `https://brainy-cobra-467.convex.site/api/auth/callback/apple` (prod)<br>`https://zany-hornet-105.convex.site/api/auth/callback/apple` (dev) |
+| Key                         | A **Sign in with Apple** key whose primary App ID is `com.mangomarketeers.macronaut`; downloads once as `AuthKey_XXXXXXXXXX.p8`              |
 
 `com.macronaut.app` was already taken in Apple's registry, which is why the App
 ID is under the Mango Marketeers prefix. `app.config.ts` uses the same string as
@@ -199,7 +200,27 @@ dashboard. Rotate it there; do not store it in a database table, user
 settings, or `EXPO_PUBLIC_*`. Without this variable, allow-listed accounts
 see “AI food scan is not configured”.
 
-### 8. Verify
+### 8. Home gym search (`GOOGLE_PLACES_API_KEY`)
+
+The home-gym picker (onboarding's last step, Settings → Home gym) finds real
+gyms through Google. On the Google Cloud project already used for OAuth:
+
+1. Enable **Places API (New)** and **Geocoding API**.
+2. Create an API key restricted **by API** to those two. Do not restrict it by
+   HTTP referrer or IP — it is called from Convex, not a browser.
+3. Set it on the deployment:
+
+```sh
+npx convex env set GOOGLE_PLACES_API_KEY AIza…          # dev
+npx convex env set GOOGLE_PLACES_API_KEY AIza… --prod   # prod
+```
+
+The deploy workflow sets the prod value from the `GOOGLE_PLACES_API_KEY`
+repository secret. Until the key exists the feature ships dark: `places.available`
+reports it, the picker shows "Gym search isn't set up yet", and the onboarding
+step is still skippable. Each account gets 50 searches a day.
+
+### 9. Verify
 
 ```bash
 npm run web
