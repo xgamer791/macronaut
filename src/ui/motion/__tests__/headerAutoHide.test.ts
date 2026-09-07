@@ -63,24 +63,15 @@ describe('header auto-hide wiring', () => {
   it('reserves the header band with padding that never changes on scroll', () => {
     const screen = read('ui', 'components', 'Screen.tsx');
     expect(screen).toContain('onHeight={setHeaderHeight}');
-    expect(screen).toContain(
-      'hideOnScroll && !overlay ? { paddingTop: headerHeight } : null',
-    );
+    expect(screen).toContain('hideOnScroll ? { paddingTop: headerHeight } : null');
     expect(screen).toContain('contentContainerStyle: [contentPad, style, headerPad]');
     expect(screen).not.toContain('collapsed={hide.collapsed}');
   });
 
   it('only lifts the slab out of flow once its height is known', () => {
     const screen = read('ui', 'components', 'Screen.tsx');
-    expect(screen).toContain('floating={overlay || headerHeight > 0}');
-    expect(screen).toContain('if (hideOnScroll && (overlay || headerHeight > 0))');
-  });
-
-  it('lets Today skip the reserved band so the hero tucks under the slab', () => {
-    const screen = read('ui', 'components', 'Screen.tsx');
-    expect(screen).toContain('overlayHeader');
-    expect(screen).toContain('overlay = Boolean(hideOnScroll && overlayHeader)');
-    expect(read('app', '(tabs)', 'index.tsx')).toContain('overlayHeader');
+    expect(screen).toContain('floating={headerHeight > 0}');
+    expect(screen).toContain('if (hideOnScroll && headerHeight > 0)');
   });
 
   it('drives Today and both profile headers from Screen scroll', () => {

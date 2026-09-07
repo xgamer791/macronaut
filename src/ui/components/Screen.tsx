@@ -20,11 +20,6 @@ export interface ScreenProps {
    * false.
    */
   stickyHeader?: React.ReactNode;
-  /**
-   * Paint the page under a collapsing sticky header. Today uses this so the
-   * gym hero meets the hairline instead of sitting on a reserved band.
-   */
-  overlayHeader?: boolean;
   /** When false, `stickyHeader` stays put instead of hiding on scroll. */
   collapseHeader?: boolean;
   /** Fixed content rendered above the scroll layer (for example a FAB). */
@@ -39,14 +34,12 @@ export function Screen({
   tabBarSpace = false,
   safeTop = true,
   stickyHeader,
-  overlayHeader = false,
   collapseHeader = true,
   floatingOverlay,
 }: ScreenProps) {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const hideOnScroll = Boolean(scroll && stickyHeader && collapseHeader);
-  const overlay = Boolean(hideOnScroll && overlayHeader);
   const hide = useHeaderScrollHide(hideOnScroll);
   // A collapsing header floats over the page, so the space it would have
   // taken is reserved here and never changes. Anything that resized the
@@ -66,7 +59,7 @@ export function Screen({
     hideOnScroll ? (
       <AutoHideHeader
         hidden={hide.hidden}
-        floating={overlay || headerHeight > 0}
+        floating={headerHeight > 0}
         onHeight={setHeaderHeight}
       >
         {stickyHeader}
@@ -95,8 +88,7 @@ export function Screen({
   }
 
   // Last, so the reserved band always matches the slab covering it.
-  // Overlay pages skip the band: the first child tucks under the slab.
-  const headerPad = hideOnScroll && !overlay ? { paddingTop: headerHeight } : null;
+  const headerPad = hideOnScroll ? { paddingTop: headerHeight } : null;
 
   const scrollProps = {
     contentContainerStyle: [contentPad, style, headerPad],
@@ -109,7 +101,7 @@ export function Screen({
 
   // Once floating, the slab paints over the scroll layer, so it is mounted
   // after it. Before that it is still in flow and has to come first.
-  if (hideOnScroll && (overlay || headerHeight > 0)) {
+  if (hideOnScroll && headerHeight > 0) {
     return (
       <View style={base}>
         <ScrollView {...scrollProps}>{children}</ScrollView>
