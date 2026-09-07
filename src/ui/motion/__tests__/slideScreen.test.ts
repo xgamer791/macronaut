@@ -22,7 +22,7 @@ describe('directional slide navigation', () => {
   });
 
   it('slides chats and the rest in from the left', () => {
-    for (const file of ['chats.tsx', 'groups.tsx', 'photos.tsx', 'goals.tsx']) {
+    for (const file of ['chats.tsx', 'friends.tsx', 'groups.tsx', 'photos.tsx', 'goals.tsx']) {
       expect(read(appDir, file)).toContain('<SlideScreen from="left">');
     }
     expect(read(appDir, 'chat', '[id].tsx')).toContain('<SlideScreen from="left">');
@@ -38,6 +38,7 @@ describe('directional slide navigation', () => {
     expect(layout).toContain('name="notifications" options={SLIDE_OVER_OPTIONS}');
     expect(layout).toContain('name="profile" options={SLIDE_OVER_OPTIONS}');
     expect(layout).toContain('name="chats" options={SLIDE_OVER_OPTIONS}');
+    expect(layout).toContain('name="friends" options={SLIDE_OVER_OPTIONS}');
     expect(layout).toContain('name="u/[handle]" options={SLIDE_OVER_OPTIONS}');
 
     const header = read(srcDir, 'ui', 'components', 'ScreenHeader.tsx');

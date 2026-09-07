@@ -14,7 +14,8 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { FriendsFeedPost } from '@/repositories/profileRepo';
 import { useFriendsFeed } from '@/state/queries';
-import { AppText, EmptyState, ErrorState, GlassHeaderBar } from '@/ui/components';
+import { AppText, EmptyState, ErrorState, Screen, ScreenHeader } from '@/ui/components';
+import { SlideScreen } from '@/ui/motion/SlideScreen';
 import { useTheme } from '@/ui/theme/ThemeProvider';
 import { radius, spacing, touchTarget } from '@/ui/theme/tokens';
 import { relativeTime } from '@/utils/relativeTime';
@@ -22,7 +23,15 @@ import { relativeTime } from '@/utils/relativeTime';
 const MAX_FEED_WIDTH = 720;
 
 /** Latest posts from mutual friends, fetched ten at a time. */
-export default function FriendsScreen() {
+export default function FriendsRoute() {
+  return (
+    <SlideScreen from="left">
+      <FriendsScreen />
+    </SlideScreen>
+  );
+}
+
+function FriendsScreen() {
   const router = useRouter();
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
@@ -30,7 +39,31 @@ export default function FriendsScreen() {
   const posts = feed.data?.pages.flatMap((page) => page.page) ?? [];
 
   return (
-    <View style={[styles.screen, { backgroundColor: colors.background }]}>
+    <Screen padded={false} scroll={false}>
+      <View style={styles.header}>
+        <ScreenHeader
+          title="Friends"
+          right={
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Find friends"
+              accessibilityHint="Search for people on Macronaut"
+              onPress={() => router.push('/new-chat')}
+              hitSlop={8}
+              style={({ pressed }) => [
+                styles.findFriends,
+                {
+                  backgroundColor: colors.surfaceRaised,
+                  borderColor: colors.border,
+                  opacity: pressed ? 0.7 : 1,
+                },
+              ]}
+            >
+              <Ionicons name="person-add-outline" size={22} color={colors.accent} />
+            </Pressable>
+          }
+        />
+      </View>
       <FlatList
         data={posts}
         keyExtractor={(post) => post.id}
@@ -43,10 +76,8 @@ export default function FriendsScreen() {
           />
         )}
         ItemSeparatorComponent={() => <View style={{ height: spacing.md }} />}
-        contentContainerStyle={[
-          styles.content,
-          { paddingTop: insets.top + 72, paddingBottom: insets.bottom + 88 },
-        ]}
+        contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + spacing.lg }]}
+        style={styles.list}
         showsVerticalScrollIndicator={false}
         onEndReachedThreshold={0.45}
         onEndReached={() => {
@@ -58,7 +89,6 @@ export default function FriendsScreen() {
             onRefresh={() => void feed.refetch()}
             tintColor={colors.accent}
             colors={[colors.accent]}
-            progressViewOffset={insets.top + 64}
           />
         }
         ListEmptyComponent={
@@ -102,36 +132,7 @@ export default function FriendsScreen() {
           ) : null
         }
       />
-
-      <GlassHeaderBar inset={spacing.lg}>
-        <View style={styles.header}>
-          <View style={styles.headerCopy}>
-            <AppText variant="micro" tone="accent" weight="700" style={styles.eyebrow}>
-              YOUR CIRCLE
-            </AppText>
-            <AppText variant="title" display weight="600">
-              Friends
-            </AppText>
-          </View>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Find friends"
-            accessibilityHint="Search for people on Macronaut"
-            onPress={() => router.push('/new-chat')}
-            style={({ pressed }) => [
-              styles.findFriends,
-              {
-                backgroundColor: colors.surfaceRaised,
-                borderColor: colors.border,
-                opacity: pressed ? 0.7 : 1,
-              },
-            ]}
-          >
-            <Ionicons name="person-add-outline" size={22} color={colors.accent} />
-          </Pressable>
-        </View>
-      </GlassHeaderBar>
-    </View>
+    </Screen>
   );
 }
 
@@ -272,7 +273,10 @@ function initials(name: string): string {
 }
 
 const styles = StyleSheet.create({
-  screen: {
+  header: {
+    paddingHorizontal: spacing.lg,
+  },
+  list: {
     flex: 1,
   },
   content: {
@@ -280,18 +284,7 @@ const styles = StyleSheet.create({
     maxWidth: MAX_FEED_WIDTH,
     alignSelf: 'center',
     paddingHorizontal: spacing.lg,
-  },
-  header: {
-    minHeight: 58,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  headerCopy: {
-    gap: 1,
-  },
-  eyebrow: {
-    letterSpacing: 1.25,
+    paddingTop: spacing.md,
   },
   findFriends: {
     width: touchTarget,

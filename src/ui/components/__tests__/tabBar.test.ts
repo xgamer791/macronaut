@@ -8,7 +8,7 @@ describe('tab bar', () => {
     const items = tabBar.slice(tabBar.indexOf('const ITEMS'));
     const today = items.indexOf("name: 'index'");
     const chats = items.indexOf("href: '/chats'");
-    const friends = items.indexOf("name: 'friends'");
+    const friends = items.indexOf("href: '/friends'");
     const notify = items.indexOf("href: '/notifications'");
     const profile = items.indexOf("kind: 'profile'");
     expect(today).toBeGreaterThan(-1);
