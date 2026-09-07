@@ -19,7 +19,7 @@ type IconName = keyof typeof Ionicons.glyphMap;
 export interface ProfileHeaderProps {
   profile: ProfileView;
   onBack: () => void;
-  /** Trailing control over the banner — the gear on your own page. */
+  /** Trailing control on the identity row — the small gear on your own page. */
   right?: React.ReactNode;
   /** Owner-only: tapping the picture or the banner replaces it. */
   onPickAvatar?: () => void;
@@ -94,52 +94,54 @@ export function ProfileHeader({
         ) : null}
       </Pressable>
 
-      {/* Back and the trailing control float over the banner, clear of the
-          notch, exactly like the meal detail hero. */}
+      {/* Back sits on the banner with no plate — a white chevron, and a
+          dark offset copy so it still reads on a light photo. */}
       <View style={[styles.chrome, { top: insets.top + spacing.sm }]} pointerEvents="box-none">
-        <CircleButton icon="chevron-back" label="Back" onPress={onBack} />
-        {right}
+        <GhostButton icon="chevron-back" label="Back" onPress={onBack} size={28} contrast />
       </View>
 
       <View style={[styles.identity, { marginTop: -AVATAR_DROP }]}>
-        <Pressable
-          accessibilityRole={onPickAvatar ? 'button' : undefined}
-          accessibilityLabel={onPickAvatar ? 'Change your profile picture' : `${name}'s picture`}
-          disabled={!onPickAvatar}
-          onPress={onPickAvatar}
-          style={styles.avatarHit}
-        >
-          <View
-            style={[
-              styles.avatar,
-              { backgroundColor: colors.surfaceRaised, borderColor: colors.background },
-            ]}
+        <View style={styles.identityTop}>
+          <Pressable
+            accessibilityRole={onPickAvatar ? 'button' : undefined}
+            accessibilityLabel={onPickAvatar ? 'Change your profile picture' : `${name}'s picture`}
+            disabled={!onPickAvatar}
+            onPress={onPickAvatar}
+            style={styles.avatarHit}
           >
-            {profile.avatarUrl ? (
-              <Image
-                source={{ uri: profile.avatarUrl }}
-                style={styles.avatarImg}
-                contentFit="cover"
-                transition={200}
-                accessibilityIgnoresInvertColors
-              />
-            ) : (
-              <AppText variant="title" weight="700" display tone="secondary">
-                {initialsFrom(name)}
-              </AppText>
-            )}
-            {uploading === 'avatar' ? (
-              <View style={[StyleSheet.absoluteFill, styles.uploadScrim]}>
-                <ActivityIndicator color="#FFFFFF" />
+            <View
+              style={[
+                styles.avatar,
+                { backgroundColor: colors.surfaceRaised, borderColor: colors.background },
+              ]}
+            >
+              {profile.avatarUrl ? (
+                <Image
+                  source={{ uri: profile.avatarUrl }}
+                  style={styles.avatarImg}
+                  contentFit="cover"
+                  transition={200}
+                  accessibilityIgnoresInvertColors
+                />
+              ) : (
+                <AppText variant="title" weight="700" display tone="secondary">
+                  {initialsFrom(name)}
+                </AppText>
+              )}
+              {uploading === 'avatar' ? (
+                <View style={[StyleSheet.absoluteFill, styles.uploadScrim]}>
+                  <ActivityIndicator color="#FFFFFF" />
+                </View>
+              ) : null}
+            </View>
+            {onPickAvatar ? (
+              <View style={[styles.cameraBadge, { backgroundColor: colors.accent }]}>
+                <Ionicons name="camera" size={14} color={colors.onAccent} />
               </View>
             ) : null}
-          </View>
-          {onPickAvatar ? (
-            <View style={[styles.cameraBadge, { backgroundColor: colors.accent }]}>
-              <Ionicons name="camera" size={14} color={colors.onAccent} />
-            </View>
-          ) : null}
-        </Pressable>
+          </Pressable>
+          {right}
+        </View>
 
         <AppText variant="hero" weight="700" display numberOfLines={2} style={styles.name}>
           {name}
@@ -159,15 +161,22 @@ export function ProfileHeader({
   );
 }
 
-/** White circular control for use over the banner photo. */
-export function CircleButton({
+/** Icon-only control with no circular plate. `contrast` stamps a dark
+ * offset behind a white glyph so a banner photo cannot swallow it. */
+export function GhostButton({
   icon,
   label,
   onPress,
+  size = 22,
+  color = '#FFFFFF',
+  contrast = false,
 }: {
   icon: IconName;
   label: string;
   onPress: () => void;
+  size?: number;
+  color?: string;
+  contrast?: boolean;
 }) {
   return (
     <Pressable
@@ -175,12 +184,18 @@ export function CircleButton({
       accessibilityLabel={label}
       onPress={onPress}
       hitSlop={6}
-      style={({ pressed }) => [styles.circle, pressed && { opacity: 0.75 }]}
+      style={({ pressed }) => [styles.iconHit, pressed && { opacity: 0.75 }]}
     >
-      <Ionicons name={icon} size={22} color="#14181D" />
+      {contrast ? (
+        <Ionicons name={icon} size={size} color="rgba(0,0,0,0.7)" style={styles.iconOffset} />
+      ) : null}
+      <Ionicons name={icon} size={size} color={color} />
     </Pressable>
   );
 }
+
+/** @deprecated Same as GhostButton — kept so older imports keep compiling. */
+export const CircleButton = GhostButton;
 
 function initialsFrom(name: string): string {
   const parts = name.replace(/^@/, '').trim().split(/\s+/).filter(Boolean);
@@ -195,15 +210,17 @@ const styles = StyleSheet.create({
     right: spacing.md,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    justifyContent: 'flex-start',
   },
-  circle: {
+  iconHit: {
     width: touchTarget,
     height: touchTarget,
-    borderRadius: touchTarget / 2,
-    backgroundColor: 'rgba(255,255,255,0.92)',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  iconOffset: {
+    position: 'absolute',
+    transform: [{ translateX: 1 }, { translateY: 1 }],
   },
   bannerHint: {
     position: 'absolute',
@@ -224,6 +241,11 @@ const styles = StyleSheet.create({
   identity: {
     paddingHorizontal: spacing.lg,
     gap: spacing.sm,
+  },
+  identityTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
   avatarHit: {
     width: AVATAR,

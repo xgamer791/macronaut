@@ -16,7 +16,7 @@ import {
   AppText,
   Button,
   Card,
-  CircleButton,
+  GhostButton,
   ErrorState,
   ListRow,
   ProfileHeader,
@@ -154,9 +154,11 @@ function OwnProfile() {
             profile={data}
             onBack={() => goBackOrHome(router)}
             right={
-              <CircleButton
-                icon="settings-sharp"
+              <GhostButton
+                icon="settings-outline"
                 label="Open settings"
+                size={20}
+                color="#F2F4F7"
                 onPress={() => router.push('/settings')}
               />
             }

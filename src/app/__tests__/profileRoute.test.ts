@@ -57,6 +57,22 @@ describe('profile routes', () => {
     expect(read(path.join('u', '[handle].tsx'))).toContain('Follow');
   });
 
+  it('keeps a small settings gear on the identity row, not a white plate on the banner', () => {
+    const header = fs.readFileSync(
+      path.join(srcDir, 'ui', 'components', 'ProfileHeader.tsx'),
+      'utf8',
+    );
+    expect(header).toContain('identityTop');
+    expect(header).toContain('GhostButton');
+    expect(header).toContain('contrast');
+    expect(header).not.toContain("backgroundColor: 'rgba(255,255,255,0.92)'");
+    expect(header.indexOf('identityTop')).toBeLessThan(header.lastIndexOf('{right}'));
+    expect(read('profile.tsx')).toContain('settings-outline');
+    expect(read('profile.tsx')).toContain('Open settings');
+    expect(read(path.join('u', '[handle].tsx'))).not.toContain('Open settings');
+    expect(read(path.join('u', '[handle].tsx'))).not.toContain('settings-outline');
+  });
+
   it('opens Photos and Groups from the profile action row', () => {
     const own = read('profile.tsx');
     expect(own).toContain("router.push('/photos')");
