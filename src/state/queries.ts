@@ -46,6 +46,9 @@ export const keys = {
   photoThread: (id: string) => ['photo-thread', id] as const,
   groups: ['groups'] as const,
   publicGroups: (handle: string) => ['public-groups', handle] as const,
+  chats: ['chats'] as const,
+  chatPeople: (search: string) => ['chat-people', search] as const,
+  chatThread: (id: string) => ['chat-thread', id] as const,
 };
 
 export function useInvalidateDiary() {
@@ -288,7 +291,8 @@ export function useSetPhotoPublic() {
   const { photos } = useRepos();
   const invalidate = useInvalidatePhotos();
   return useMutation({
-    mutationFn: (input: { id: string; isPublic: boolean }) => photos.setPublic(input.id, input.isPublic),
+    mutationFn: (input: { id: string; isPublic: boolean }) =>
+      photos.setPublic(input.id, input.isPublic),
     onSuccess: invalidate,
   });
 }
@@ -369,8 +373,12 @@ export function useCreateGroup() {
   const { groups } = useRepos();
   const invalidate = useInvalidateGroups();
   return useMutation({
-    mutationFn: (input: { name: string; sport?: string; description?: string; isPublic?: boolean }) =>
-      groups.create(input),
+    mutationFn: (input: {
+      name: string;
+      sport?: string;
+      description?: string;
+      isPublic?: boolean;
+    }) => groups.create(input),
     onSuccess: invalidate,
   });
 }
@@ -399,6 +407,73 @@ export function useDeleteGroup() {
   return useMutation({
     mutationFn: (id: string) => groups.remove(id),
     onSuccess: invalidate,
+  });
+}
+
+function useInvalidateChats() {
+  const qc = useQueryClient();
+  return (id?: string) => {
+    qc.invalidateQueries({ queryKey: keys.chats });
+    if (id) qc.invalidateQueries({ queryKey: keys.chatThread(id) });
+  };
+}
+
+export function useChats() {
+  const { signedIn } = useAuth();
+  const { chats } = useRepos();
+  return useQuery({
+    queryKey: keys.chats,
+    queryFn: () => chats.list(),
+    enabled: signedIn,
+    refetchInterval: 10_000,
+  });
+}
+
+export function useChatPeople(search: string) {
+  const { signedIn } = useAuth();
+  const { chats } = useRepos();
+  return useQuery({
+    queryKey: keys.chatPeople(search.trim().toLowerCase()),
+    queryFn: () => chats.people(search),
+    enabled: signedIn,
+  });
+}
+
+export function useOpenChat() {
+  const { chats } = useRepos();
+  const invalidate = useInvalidateChats();
+  return useMutation({
+    mutationFn: (handle: string) => chats.open(handle),
+    onSuccess: () => invalidate(),
+  });
+}
+
+export function useChatThread(id: string) {
+  const { signedIn } = useAuth();
+  const { chats } = useRepos();
+  return useQuery({
+    queryKey: keys.chatThread(id),
+    queryFn: () => chats.thread(id),
+    enabled: signedIn && id.length > 0,
+    refetchInterval: 3_000,
+  });
+}
+
+export function useSendChatMessage() {
+  const { chats } = useRepos();
+  const invalidate = useInvalidateChats();
+  return useMutation({
+    mutationFn: (input: { id: string; body: string }) => chats.send(input.id, input.body),
+    onSuccess: (_message, input) => invalidate(input.id),
+  });
+}
+
+export function useMarkChatRead() {
+  const { chats } = useRepos();
+  const invalidate = useInvalidateChats();
+  return useMutation({
+    mutationFn: (id: string) => chats.markRead(id),
+    onSuccess: (_nothing, id) => invalidate(id),
   });
 }
 

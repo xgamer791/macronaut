@@ -204,6 +204,30 @@ export default defineSchema({
     .index('by_followee', ['followeeId'])
     .index('by_user_followee', ['userId', 'followeeId']),
 
+  /** One durable direct conversation for each pair of Macronaut accounts. */
+  directChats: defineTable({
+    userOneId: v.id('users'),
+    userTwoId: v.id('users'),
+    pairKey: v.string(),
+    userOneReadAt: v.optional(v.string()),
+    userTwoReadAt: v.optional(v.string()),
+    createdAt: v.string(),
+    updatedAt: v.string(),
+  })
+    .index('by_pair', ['pairKey'])
+    .index('by_user_one_updated', ['userOneId', 'updatedAt'])
+    .index('by_user_two_updated', ['userTwoId', 'updatedAt']),
+
+  /** Messages belong to a direct chat and survive logout with the account. */
+  chatMessages: defineTable({
+    chatId: v.id('directChats'),
+    senderId: v.id('users'),
+    body: v.string(),
+    createdAt: v.string(),
+  })
+    .index('by_chat_created', ['chatId', 'createdAt'])
+    .index('by_sender', ['senderId']),
+
   /** Photos on a profile wall. Public ones are visible on a public profile;
    * private ones stay on the owner's wall only. */
   profilePhotos: defineTable({

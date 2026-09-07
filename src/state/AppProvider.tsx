@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useMemo } from 'react';
 import { createAccountRepo, AccountRepo } from '@/repositories/accountRepo';
+import { createChatRepo, ChatRepo } from '@/repositories/chatRepo';
 import { createActivityRepo, ActivityRepo } from '@/repositories/activityRepo';
 import {
   createRecipeRepo,
@@ -33,6 +34,7 @@ export interface Repos {
   photos: PhotoRepo;
   groups: GroupRepo;
   account: AccountRepo;
+  chats: ChatRepo;
 }
 
 const ReposContext = createContext<Repos | null>(null);
@@ -55,6 +57,7 @@ export function createRepos(convex: ConvexCaller): Repos {
     photos: createPhotoRepo(convex),
     groups: createGroupRepo(convex),
     account: createAccountRepo(convex),
+    chats: createChatRepo(convex),
   };
 }
 

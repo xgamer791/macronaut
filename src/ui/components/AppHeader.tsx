@@ -42,6 +42,7 @@ export function AppHeader({ onCalendarPress, notifyDot = true }: AppHeaderProps)
       <View style={styles.cluster}>
         <HeaderAvatarButton />
         <HeaderNotifyButton notifyDot={notifyDot} />
+        <HeaderChatsButton />
       </View>
 
       <View style={styles.cluster}>
@@ -79,7 +80,10 @@ export function HeaderAvatarButton() {
   const { user } = useAuth();
   const savedName = useSetting<string>('displayName', '');
   const displayName = savedName.data || displayNameFromUser(user);
-  const initials = useMemo(() => initialsFrom(displayName, user?.email), [displayName, user?.email]);
+  const initials = useMemo(
+    () => initialsFrom(displayName, user?.email),
+    [displayName, user?.email],
+  );
   const avatarUri = user?.image?.trim() || undefined;
 
   return (
@@ -123,6 +127,24 @@ export function HeaderNotifyButton({ notifyDot = true }: { notifyDot?: boolean }
       dot={notifyDot}
     >
       <Ionicons name="notifications" size={GLYPH} color={ICON} />
+    </HeaderHit>
+  );
+}
+
+/** Direct messages. Signed-out visitors are sent through sign-in first. */
+export function HeaderChatsButton() {
+  const router = useRouter();
+  const { signedIn } = useAuth();
+
+  return (
+    <HeaderHit
+      accessibilityLabel="Open chats"
+      onPress={() => {
+        void Haptics.selectionAsync();
+        router.push(signedIn ? '/chats' : '/login');
+      }}
+    >
+      <Ionicons name="chatbubbles-outline" size={GLYPH + 1} color={ICON} />
     </HeaderHit>
   );
 }
@@ -181,7 +203,10 @@ function WatchButton() {
       style={styles.hit}
     >
       <View
-        style={[styles.glyphSlot, { top: inset, left: inset, width: WATCH_CIRCLE, height: WATCH_CIRCLE }]}
+        style={[
+          styles.glyphSlot,
+          { top: inset, left: inset, width: WATCH_CIRCLE, height: WATCH_CIRCLE },
+        ]}
         pointerEvents="none"
       >
         <View style={styles.watch}>
@@ -189,7 +214,9 @@ function WatchButton() {
         </View>
       </View>
       {connected ? (
-        <View style={[styles.dot, { top: dotOffset, right: dotOffset, backgroundColor: NOTIFY_DOT }]} />
+        <View
+          style={[styles.dot, { top: dotOffset, right: dotOffset, backgroundColor: NOTIFY_DOT }]}
+        />
       ) : (
         <Animated.View
           pointerEvents="none"
@@ -200,7 +227,9 @@ function WatchButton() {
               right: dotOffset,
               backgroundColor: WATCH_DOT,
               opacity: pulse.interpolate({ inputRange: [0, 1], outputRange: [0.55, 1] }),
-              transform: [{ scale: pulse.interpolate({ inputRange: [0, 1], outputRange: [0.92, 1.08] }) }],
+              transform: [
+                { scale: pulse.interpolate({ inputRange: [0, 1], outputRange: [0.92, 1.08] }) },
+              ],
             },
           ]}
         />
@@ -247,7 +276,9 @@ function HeaderHit({
         {children}
       </View>
       {dot ? (
-        <View style={[styles.dot, { top: dotOffset, right: dotOffset, backgroundColor: dotColor }]} />
+        <View
+          style={[styles.dot, { top: dotOffset, right: dotOffset, backgroundColor: dotColor }]}
+        />
       ) : null}
     </Pressable>
   );

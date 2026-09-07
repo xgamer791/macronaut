@@ -4,6 +4,7 @@
  * functions; these fakes only need the interface contract. */
 import { sumNutrition, scaleNutrition } from '@/domain/nutrition';
 import { AccountRepo } from '@/repositories/accountRepo';
+import { ChatMessage, ChatRepo, ChatSummary, ChatThread } from '@/repositories/chatRepo';
 import { DayType, DayTypeMarks, GoalConfig, configForDate } from '@/domain/goals';
 import { Nutrition, UnitSystem, WeekStart } from '@/domain/types';
 import { ActivityRepo, NewActivityEntry } from '@/repositories/activityRepo';
@@ -275,7 +276,13 @@ export function createMemoryDayNotesRepo(): DayNotesRepo {
 }
 
 export function createMemoryHistoryRepo(): HistoryRepo {
-  const logs: { foodKey: string; name: string; meal: string; imageUrl?: string; loggedAt: string }[] = [];
+  const logs: {
+    foodKey: string;
+    name: string;
+    meal: string;
+    imageUrl?: string;
+    loggedAt: string;
+  }[] = [];
   const searches = new Map<string, string>();
   return {
     async recordLog(foodKey, name, meal, imageUrl) {
@@ -317,7 +324,9 @@ export function createMemoryHistoryRepo(): HistoryRepo {
       return [...byKey.values()]
         .sort(
           (a, b) =>
-            (meal ? b.mealCount - a.mealCount : 0) || b.count - a.count || b.last.localeCompare(a.last),
+            (meal ? b.mealCount - a.mealCount : 0) ||
+            b.count - a.count ||
+            b.last.localeCompare(a.last),
         )
         .slice(0, limit)
         .map(({ foodKey, name, imageUrl, count }) => ({ foodKey, name, imageUrl, count }));
@@ -353,7 +362,13 @@ export function createMemoryFoodRepo(): FoodRepo {
     if (!food.name.trim()) throw new Error('Food name is required');
     if (food.nutrition.calories < 0) throw new Error('Calories cannot be negative');
     const now = nowIso();
-    const full = { ...clone(food), name: food.name.trim(), id: newId(), createdAt: now, updatedAt: now };
+    const full = {
+      ...clone(food),
+      name: food.name.trim(),
+      id: newId(),
+      createdAt: now,
+      updatedAt: now,
+    };
     custom.push({ ...full, deleted: false });
     return clone(full);
   };
@@ -643,7 +658,9 @@ export function createMemoryProfileRepo(): ProfileRepo {
       profile = {
         ...profile,
         isFollowing: follow,
-        followerCount: follow ? Math.max(1, profile.followerCount) : Math.max(0, profile.followerCount - 1),
+        followerCount: follow
+          ? Math.max(1, profile.followerCount)
+          : Math.max(0, profile.followerCount - 1),
       };
       return view();
     },
@@ -796,6 +813,60 @@ export function createMemoryGroupRepo(): GroupRepo {
   };
 }
 
+export function createMemoryChatRepo(): ChatRepo {
+  const chats: ChatSummary[] = [];
+  const messages = new Map<string, ChatMessage[]>();
+
+  return {
+    async list() {
+      return clone(chats);
+    },
+    async people() {
+      return [];
+    },
+    async open(handle) {
+      const existing = chats.find((chat) => chat.peer.handle === handle);
+      if (existing) return clone(existing);
+      const ts = nowIso();
+      const chat: ChatSummary = {
+        id: newId(),
+        peer: { handle, displayName: `@${handle}` },
+        lastMessage: null,
+        unreadCount: 0,
+        createdAt: ts,
+        updatedAt: ts,
+      };
+      chats.unshift(chat);
+      messages.set(chat.id, []);
+      return clone(chat);
+    },
+    async thread(id) {
+      const chat = chats.find((row) => row.id === id);
+      if (!chat) return null;
+      const thread: ChatThread = { ...clone(chat), messages: clone(messages.get(id) ?? []) };
+      return thread;
+    },
+    async send(id, body) {
+      const chat = chats.find((row) => row.id === id);
+      if (!chat) throw new Error('Chat not available');
+      const message: ChatMessage = {
+        id: newId(),
+        body: body.trim(),
+        createdAt: nowIso(),
+        isMine: true,
+      };
+      messages.get(id)?.push(message);
+      chat.lastMessage = message;
+      chat.updatedAt = message.createdAt;
+      return clone(message);
+    },
+    async markRead(id) {
+      const chat = chats.find((row) => row.id === id);
+      if (chat) chat.unreadCount = 0;
+    },
+  };
+}
+
 /** Deletion is a server concern (convex/account.ts, covered by
  * tests/convex/isolation.test.ts); the fakes hold their state privately, so
  * this is a no-op rather than a half-implementation. */
@@ -825,5 +896,6 @@ export function createMemoryRepos(): Repos {
     profile: createMemoryProfileRepo(),
     photos: createMemoryPhotoRepo(),
     groups: createMemoryGroupRepo(),
+    chats: createMemoryChatRepo(),
   };
 }

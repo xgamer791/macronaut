@@ -1,4 +1,5 @@
 export { AppText } from './AppText';
+export { ChatAvatar } from './ChatAvatar';
 export { ActivityLogList } from './ActivityLogList';
 export { Button } from './Button';
 export { Card } from './Card';
@@ -26,7 +27,7 @@ export { TargetEditor } from './TargetEditor';
 export { DatePickSheet } from './DatePickSheet';
 export { MonthCalendarPopup } from './MonthCalendarPopup';
 export { DashboardHeader } from './DashboardHeader';
-export { AppHeader, HeaderAvatarButton, HeaderNotifyButton } from './AppHeader';
+export { AppHeader, HeaderAvatarButton, HeaderChatsButton, HeaderNotifyButton } from './AppHeader';
 export { CircleButton, GhostButton, ProfileHeader } from './ProfileHeader';
 export { ProfilePostList } from './ProfilePostList';
 export { FoodImage } from './FoodImage';
