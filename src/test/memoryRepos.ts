@@ -18,6 +18,7 @@ import { DiaryRepo, NewDiaryEntry } from '@/repositories/diaryRepo';
 import { FoodRepo, NewCustomFood } from '@/repositories/foodRepo';
 import { GoalRepo } from '@/repositories/goalRepo';
 import { FrequentFood, HistoryRepo, RecentFood } from '@/repositories/historyRepo';
+import { ProfilePost, ProfileRepo, ProfileView } from '@/repositories/profileRepo';
 import { AppearanceMode, OnboardingProfile, SettingsRepo } from '@/repositories/settingsRepo';
 import {
   ActivityEntry,
@@ -558,6 +559,82 @@ export const createMemorySavedMealRepo = (): SavedMealRepo =>
 export const createMemoryRecipeRepo = (): RecipeRepo =>
   createMemoryCollectionRepo<Recipe>('ingredients');
 
+export function createMemoryProfileRepo(): ProfileRepo {
+  const posts: ProfilePost[] = [];
+  let saved = false;
+  let profile: ProfileView = {
+    id: null,
+    handle: 'athlete',
+    isPublic: false,
+    createdAt: nowIso(),
+    updatedAt: nowIso(),
+    postCount: 0,
+    isOwner: true,
+    saved: false,
+  };
+  const view = (): ProfileView => clone({ ...profile, postCount: posts.length, saved });
+  const touch = () => {
+    saved = true;
+    profile = { ...profile, id: profile.id ?? newId(), updatedAt: nowIso() };
+  };
+  const repo: ProfileRepo = {
+    async me() {
+      return view();
+    },
+    async myPosts() {
+      return posts.map(clone);
+    },
+    async byHandle(handle) {
+      if (handle.toLowerCase() !== profile.handle) return null;
+      if (!profile.isPublic) return null;
+      return { profile: view(), posts: posts.map(clone) };
+    },
+    async update(patch) {
+      touch();
+      profile = { ...profile, ...clone(patch) };
+      return view();
+    },
+    async uploadImage() {
+      return newId();
+    },
+    async setImage(kind, storageId) {
+      touch();
+      const url = storageId ? `memory://${storageId}` : undefined;
+      profile = kind === 'avatar' ? { ...profile, avatarUrl: url } : { ...profile, bannerUrl: url };
+      return view();
+    },
+    async addPost(body, imageId) {
+      const trimmed = body.trim();
+      if (!trimmed && !imageId) throw new Error('A post needs some words or a photo');
+      touch();
+      const ts = nowIso();
+      const post: ProfilePost = {
+        id: newId(),
+        body: trimmed,
+        imageUrl: imageId ? `memory://${imageId}` : undefined,
+        createdAt: ts,
+        updatedAt: ts,
+      };
+      posts.unshift(post);
+      return clone(post);
+    },
+    async updatePost(id, body) {
+      const post = posts.find((p) => p.id === id);
+      if (!post) throw new Error('Post not found');
+      const trimmed = body.trim();
+      if (!trimmed && !post.imageUrl) throw new Error('A post needs some words or a photo');
+      post.body = trimmed;
+      post.updatedAt = nowIso();
+      return clone(post);
+    },
+    async removePost(id) {
+      const i = posts.findIndex((p) => p.id === id);
+      if (i >= 0) posts.splice(i, 1);
+    },
+  };
+  return repo;
+}
+
 /** Deletion is a server concern (convex/account.ts, covered by
  * tests/convex/isolation.test.ts); the fakes hold their state privately, so
  * this is a no-op rather than a half-implementation. */
@@ -584,5 +661,6 @@ export function createMemoryRepos(): Repos {
     recipes: createMemoryRecipeRepo(),
     history: createMemoryHistoryRepo(),
     settings: createMemorySettingsRepo(),
+    profile: createMemoryProfileRepo(),
   };
 }

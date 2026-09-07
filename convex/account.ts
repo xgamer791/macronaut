@@ -91,10 +91,28 @@ export const passwordAccountExists = query({
 const PURGE_BUDGET = 400;
 
 /** Deletes up to `budget` of the user's rows across every data table.
- * Returns how many were deleted; fewer than `budget` means nothing is left. */
+ * Returns how many were deleted; fewer than `budget` means nothing is left.
+ *
+ * Rows that reference uploaded files name them in `files` so the file goes
+ * with the row — Convex storage outlives the document that pointed at it. */
 async function purgeUserData(ctx: MutationCtx, userId: Id<'users'>, budget: number) {
   let remaining = budget;
-  const steps: (() => Promise<{ _id: Id<any> }[]>)[] = [
+  type PurgeRow = { _id: Id<any>; files?: (Id<'_storage'> | undefined)[] };
+  const steps: (() => Promise<PurgeRow[]>)[] = [
+    async () =>
+      (
+        await ctx.db
+          .query('profilePosts')
+          .withIndex('by_user_created', (q) => q.eq('userId', userId))
+          .take(remaining)
+      ).map((row) => ({ _id: row._id, files: [row.imageId] })),
+    async () =>
+      (
+        await ctx.db
+          .query('profiles')
+          .withIndex('by_user', (q) => q.eq('userId', userId))
+          .take(remaining)
+      ).map((row) => ({ _id: row._id, files: [row.avatarId, row.bannerId] })),
     () => ctx.db.query('diaryEntries').withIndex('by_user_date', (q) => q.eq('userId', userId)).take(remaining),
     () => ctx.db.query('foodLogHistory').withIndex('by_user', (q) => q.eq('userId', userId)).take(remaining),
     () => ctx.db.query('cachedFoods').withIndex('by_user_provider', (q) => q.eq('userId', userId)).take(remaining),
@@ -113,7 +131,10 @@ async function purgeUserData(ctx: MutationCtx, userId: Id<'users'>, budget: numb
   for (const step of steps) {
     if (remaining <= 0) break;
     const rows = await step();
-    for (const row of rows) await ctx.db.delete(row._id);
+    for (const row of rows) {
+      for (const file of row.files ?? []) if (file) await ctx.storage.delete(file);
+      await ctx.db.delete(row._id);
+    }
     remaining -= rows.length;
   }
   return budget - remaining;

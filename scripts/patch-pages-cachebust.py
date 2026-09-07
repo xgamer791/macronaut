@@ -1,15 +1,24 @@
 #!/usr/bin/env python3
-"""Post-process Expo static export so GitHub Pages clients see new deploys ASAP.
+"""Post-process Expo static export for GitHub Pages.
 
-GitHub Pages serves HTML with Cache-Control: max-age=600. Meta no-cache tags
-do not override that, so phones can keep an old entry-*.js for up to 10 minutes
-after a deploy. This script:
+Two jobs.
+
+**Cache busting.** GitHub Pages serves HTML with Cache-Control: max-age=600.
+Meta no-cache tags do not override that, so phones can keep an old entry-*.js
+for up to 10 minutes after a deploy. This script:
 
 1. Writes dist/version.json with the git SHA
 2. Appends ?v=<sha> to bundled script/link URLs in HTML
 3. Injects a small head script that compares localStorage / version.json
    (fetched with cache: 'no-store') and, on mismatch, navigates to
    ?_build=<sha> — a fresh URL that bypasses the cached HTML.
+
+**Deep links into dynamic routes.** Expo writes a dynamic route out under its
+literal name — `u/[handle].html`, `meal/[id].html` — so a real URL like
+`/u/chris` matches no file and Pages, which has no rewrites, serves its 404.
+Copying index.html to 404.html fixes that: every route ships the same
+entry-*.js, and expo-router picks the route from window.location on boot, so
+the fallback hydrates the page the link actually asked for.
 """
 
 from __future__ import annotations
@@ -93,6 +102,17 @@ def main() -> None:
     base = "/macronaut"
     (dist / "version.json").write_text(json.dumps({"build": build}) + "\n", encoding="utf-8")
     inject = build_inject(build, base)
+
+    # Written before the patch loop so the fallback gets the same treatment as
+    # every other page. index.html is the shell to copy: its asset URLs are
+    # absolute under the base path, so they still resolve when Pages serves
+    # this file for a deeper URL like /u/chris.
+    index = dist / "index.html"
+    if not index.is_file():
+        print("dist/index.html missing — export did not produce a shell", file=sys.stderr)
+        sys.exit(1)
+    (dist / "404.html").write_text(index.read_text(encoding="utf-8"), encoding="utf-8")
+    print("wrote dist/404.html (SPA fallback for dynamic routes)")
 
     patched = 0
     for path in dist.rglob("*.html"):

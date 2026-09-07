@@ -26,6 +26,8 @@ export { DatePickSheet } from './DatePickSheet';
 export { MonthCalendarPopup } from './MonthCalendarPopup';
 export { DashboardHeader } from './DashboardHeader';
 export { AppHeader } from './AppHeader';
+export { CircleButton, ProfileHeader } from './ProfileHeader';
+export { ProfilePostList } from './ProfilePostList';
 export { FoodImage } from './FoodImage';
 export { BarChart } from './BarChart';
 export { LineChart } from './LineChart';

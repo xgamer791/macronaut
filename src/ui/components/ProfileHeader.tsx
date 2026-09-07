@@ -1,0 +1,307 @@
+import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
+import { LinearGradient } from 'expo-linear-gradient';
+import React from 'react';
+import { ActivityIndicator, Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import type { ProfileView } from '@/repositories/profileRepo';
+import { useTheme } from '@/ui/theme/ThemeProvider';
+import { radius, spacing, touchTarget } from '@/ui/theme/tokens';
+import { AppText } from './AppText';
+
+const AVATAR = 92;
+/** How far the avatar hangs below the banner, as in the reference layout. */
+const AVATAR_DROP = 44;
+
+type IconName = keyof typeof Ionicons.glyphMap;
+
+/** A few sports get their own glyph; everything else gets the barbell. */
+const SPORT_ICONS: { match: RegExp; icon: IconName }[] = [
+  { match: /run|jog|marathon/i, icon: 'walk-outline' },
+  { match: /cycl|bike|ride/i, icon: 'bicycle-outline' },
+  { match: /swim/i, icon: 'water-outline' },
+  { match: /walk|hike|trek/i, icon: 'footsteps-outline' },
+  { match: /yoga|pilates|mobility|stretch/i, icon: 'body-outline' },
+  { match: /lift|gym|strength|weight|crossfit/i, icon: 'barbell-outline' },
+];
+
+function sportIcon(sport?: string): IconName {
+  if (!sport) return 'barbell-outline';
+  return SPORT_ICONS.find((entry) => entry.match.test(sport))?.icon ?? 'barbell-outline';
+}
+
+export interface ProfileHeaderProps {
+  profile: ProfileView;
+  onBack: () => void;
+  /** Trailing control over the banner — the gear on your own page. */
+  right?: React.ReactNode;
+  /** Owner-only: tapping the picture or the banner replaces it. */
+  onPickAvatar?: () => void;
+  onPickBanner?: () => void;
+  /** Which image is mid-upload, so its tap target shows a spinner. */
+  uploading?: 'avatar' | 'banner' | null;
+}
+
+/**
+ * Banner, overlapping picture, name, metadata and bio — the top of a profile
+ * page. Shared by your own page and by a public one; the editing affordances
+ * only appear when the pick handlers are supplied.
+ *
+ * The chrome over the banner is fixed white rather than themed, because it
+ * sits on a photo the user chose.
+ */
+export function ProfileHeader({
+  profile,
+  onBack,
+  right,
+  onPickAvatar,
+  onPickBanner,
+  uploading,
+}: ProfileHeaderProps) {
+  const { colors } = useTheme();
+  const insets = useSafeAreaInsets();
+  const { width } = useWindowDimensions();
+  const bannerHeight = Math.round(width * 0.46);
+
+  const name = profile.displayName?.trim() || `@${profile.handle}`;
+  const editable = Boolean(onPickBanner);
+
+  return (
+    <View>
+      <Pressable
+        accessibilityRole={editable ? 'button' : undefined}
+        accessibilityLabel={editable ? 'Change your banner photo' : undefined}
+        disabled={!editable}
+        onPress={onPickBanner}
+        style={{ height: bannerHeight + insets.top }}
+      >
+        {profile.bannerUrl ? (
+          <Image
+            source={{ uri: profile.bannerUrl }}
+            style={StyleSheet.absoluteFill}
+            contentFit="cover"
+            transition={200}
+            accessibilityIgnoresInvertColors
+          />
+        ) : (
+          <View style={[StyleSheet.absoluteFill, { backgroundColor: colors.surfaceRaised }]} />
+        )}
+        <LinearGradient
+          colors={['rgba(6,9,12,0.55)', 'rgba(6,9,12,0.05)', 'rgba(6,9,12,0.55)']}
+          locations={[0, 0.45, 1]}
+          style={StyleSheet.absoluteFill}
+        />
+
+        {!profile.bannerUrl && editable ? (
+          <View style={styles.bannerHint} pointerEvents="none">
+            <Ionicons name="image-outline" size={20} color="#FFFFFF" />
+            <AppText variant="caption" weight="600" style={styles.onPhoto}>
+              Add a banner photo
+            </AppText>
+          </View>
+        ) : null}
+
+        {uploading === 'banner' ? (
+          <View style={[StyleSheet.absoluteFill, styles.uploadScrim]} pointerEvents="none">
+            <ActivityIndicator color="#FFFFFF" />
+          </View>
+        ) : null}
+      </Pressable>
+
+      {/* Back and the trailing control float over the banner, clear of the
+          notch, exactly like the meal detail hero. */}
+      <View style={[styles.chrome, { top: insets.top + spacing.sm }]} pointerEvents="box-none">
+        <CircleButton icon="chevron-back" label="Back" onPress={onBack} />
+        {right}
+      </View>
+
+      <View style={[styles.identity, { marginTop: -AVATAR_DROP }]}>
+        <Pressable
+          accessibilityRole={onPickAvatar ? 'button' : undefined}
+          accessibilityLabel={onPickAvatar ? 'Change your profile picture' : `${name}'s picture`}
+          disabled={!onPickAvatar}
+          onPress={onPickAvatar}
+          style={styles.avatarHit}
+        >
+          <View
+            style={[
+              styles.avatar,
+              { backgroundColor: colors.surfaceRaised, borderColor: colors.background },
+            ]}
+          >
+            {profile.avatarUrl ? (
+              <Image
+                source={{ uri: profile.avatarUrl }}
+                style={styles.avatarImg}
+                contentFit="cover"
+                transition={200}
+                accessibilityIgnoresInvertColors
+              />
+            ) : (
+              <AppText variant="title" weight="700" display tone="secondary">
+                {initialsFrom(name)}
+              </AppText>
+            )}
+            {uploading === 'avatar' ? (
+              <View style={[StyleSheet.absoluteFill, styles.uploadScrim]}>
+                <ActivityIndicator color="#FFFFFF" />
+              </View>
+            ) : null}
+          </View>
+          {onPickAvatar ? (
+            <View style={[styles.cameraBadge, { backgroundColor: colors.accent }]}>
+              <Ionicons name="camera" size={14} color={colors.onAccent} />
+            </View>
+          ) : null}
+        </Pressable>
+
+        <AppText variant="hero" weight="700" display numberOfLines={2} style={styles.name}>
+          {name}
+        </AppText>
+
+        <View style={styles.metaRow}>
+          <Meta icon={sportIcon(profile.primarySport)} text={profile.primarySport ?? 'Athlete'} />
+          <Meta
+            icon="chatbubble-ellipses-outline"
+            text={`${profile.postCount} ${profile.postCount === 1 ? 'post' : 'posts'}`}
+          />
+          <Meta
+            icon={profile.isPublic ? 'globe-outline' : 'lock-closed-outline'}
+            text={profile.isPublic ? 'Public' : 'Private'}
+          />
+          {profile.location ? <Meta icon="location-outline" text={profile.location} /> : null}
+        </View>
+
+        {profile.bio ? (
+          <AppText variant="body" tone="secondary" style={styles.bio}>
+            {profile.bio}
+          </AppText>
+        ) : null}
+      </View>
+    </View>
+  );
+}
+
+/** White circular control for use over the banner photo. */
+export function CircleButton({
+  icon,
+  label,
+  onPress,
+}: {
+  icon: IconName;
+  label: string;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      onPress={onPress}
+      hitSlop={6}
+      style={({ pressed }) => [styles.circle, pressed && { opacity: 0.75 }]}
+    >
+      <Ionicons name={icon} size={22} color="#14181D" />
+    </Pressable>
+  );
+}
+
+function Meta({ icon, text }: { icon: IconName; text: string }) {
+  const { colors } = useTheme();
+  return (
+    <View style={styles.meta}>
+      <Ionicons name={icon} size={14} color={colors.textMuted} />
+      <AppText variant="caption" tone="secondary" weight="600" numberOfLines={1}>
+        {text}
+      </AppText>
+    </View>
+  );
+}
+
+function initialsFrom(name: string): string {
+  const parts = name.replace(/^@/, '').trim().split(/\s+/).filter(Boolean);
+  if (parts.length >= 2) return `${parts[0]!.charAt(0)}${parts[1]!.charAt(0)}`.toUpperCase();
+  return (parts[0] ?? '?').slice(0, 2).toUpperCase();
+}
+
+const styles = StyleSheet.create({
+  chrome: {
+    position: 'absolute',
+    left: spacing.md,
+    right: spacing.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  circle: {
+    width: touchTarget,
+    height: touchTarget,
+    borderRadius: touchTarget / 2,
+    backgroundColor: 'rgba(255,255,255,0.92)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  bannerHint: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.xs,
+  },
+  onPhoto: { color: '#FFFFFF' },
+  uploadScrim: {
+    backgroundColor: 'rgba(6,9,12,0.55)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  identity: {
+    paddingHorizontal: spacing.lg,
+    gap: spacing.sm,
+  },
+  avatarHit: {
+    width: AVATAR,
+    height: AVATAR,
+  },
+  avatar: {
+    width: AVATAR,
+    height: AVATAR,
+    borderRadius: radius.lg,
+    borderWidth: 3,
+    overflow: 'hidden',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarImg: {
+    width: '100%',
+    height: '100%',
+  },
+  cameraBadge: {
+    position: 'absolute',
+    right: -4,
+    bottom: -4,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  name: {
+    marginTop: spacing.xs,
+  },
+  metaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: spacing.md,
+  },
+  meta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
+  bio: {
+    marginTop: 2,
+  },
+});

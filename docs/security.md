@@ -31,6 +31,30 @@ refuses the rows either way. `tests/convex/isolation.test.ts` fails if a
 function ever returns or modifies another account's row, or answers without a
 session.
 
+### The one read that crosses accounts
+
+Public profile pages are the single deliberate exception, and it is worth
+knowing exactly how far it goes. `profiles.byHandle` is the only function that
+does not begin with `requireUserId`, because a shared link has to open for
+someone with no account. It is written to give away as little as possible:
+
+- It resolves the handle through `by_handle`, then returns `null` unless the
+  row is `isPublic` or the caller owns it. A private profile and a handle
+  nobody has taken are the same answer, so turning the toggle off does not
+  confirm that the page exists.
+- It never returns the row. `profileView` / `postView` build a fixed shape
+  with no `userId` and no storage ids — only fields the owner chose to put on
+  a page they asked to publish.
+- It reaches nothing else. Only `profiles` and `profilePosts` are read; the
+  diary, goals, weight and activity have no public path at all, whatever the
+  toggle says.
+- Every write still starts with `requireUserId`, and posts are edited and
+  deleted through `requireOwned`.
+
+`tests/convex/profile.test.ts` covers both directions of the toggle, a
+stranger and an unauthenticated caller being refused, and the projected shape
+carrying neither `userId` nor storage ids.
+
 ### Secrets left the bundle
 
 The app is a static site and a mobile binary; anything compiled into it is
@@ -76,7 +100,9 @@ link does not reveal whether the address already has a password account.
 Both stores require it. Settings → Account → **Delete account** erases every
 row the account owns, then its sessions, refresh tokens, linked sign-in
 methods and verification codes, and finally the user record. It runs in
-bounded batches; the app repeats until the server reports done.
+bounded batches; the app repeats until the server reports done. Uploaded
+profile pictures, banners and post photos are deleted from Convex storage with
+the rows that referenced them, so nothing survives the row that pointed at it.
 
 ### Smaller items
 

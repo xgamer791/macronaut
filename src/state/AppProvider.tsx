@@ -13,6 +13,7 @@ import { createDiaryRepo, DiaryRepo } from '@/repositories/diaryRepo';
 import { createFoodRepo, FoodRepo } from '@/repositories/foodRepo';
 import { createGoalRepo, GoalRepo } from '@/repositories/goalRepo';
 import { createHistoryRepo, HistoryRepo } from '@/repositories/historyRepo';
+import { createProfileRepo, ProfileRepo } from '@/repositories/profileRepo';
 import { createSettingsRepo, SettingsRepo } from '@/repositories/settingsRepo';
 import { getConvexClient } from '@/services/convex/client';
 
@@ -26,6 +27,7 @@ export interface Repos {
   recipes: RecipeRepo;
   history: HistoryRepo;
   settings: SettingsRepo;
+  profile: ProfileRepo;
   account: AccountRepo;
 }
 
@@ -45,6 +47,7 @@ export function createRepos(convex: ConvexCaller): Repos {
     recipes: createRecipeRepo(convex),
     history: createHistoryRepo(convex),
     settings: createSettingsRepo(convex),
+    profile: createProfileRepo(convex),
     account: createAccountRepo(convex),
   };
 }

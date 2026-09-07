@@ -21,9 +21,10 @@ Built with React Native + Expo so the same codebase ships to iOS.
 - **Custom foods, saved meals, recipes** — full editors, favorites, duplicate/delete, live total + per-serving nutrition, log-in-one-action, save a meal straight from diary entries
 - **Goals** — Mifflin-St Jeor recommendations from optional onboarding (skippable), same-daily / per-weekday / training-rest modes, per-date day-type marks, custom weekly targets, effective-dated versions so editing goals never rewrites history, **no rollover** between days or weeks
 - **Progress** — tappable charts with goal line (7/30/90-day/custom ranges), per-metric averages and adherence, weekly averages, daily and weekly goal detail views with macro distribution
+- **Profile page** — banner and profile picture you upload yourself, name, handle, bio, sport and location, and posts with optional photos; private by default, and one toggle away from a shareable public page at `/u/<handle>`. Reached from the avatar in the Today header
 - **Groups** _(coming soon)_ — create and join fitness groups; the tab shows the destination but is not navigable yet
 - **Edit before logging** — adjust any database food's values for one entry or save as your own custom food; flag inaccurate data locally
-- **One account, every device** — diary, foods, meals, recipes, goals, activity, notes and settings are stored in your Convex account and served live to every signed-in device; built-in generic foods still need no network
+- **One account, every device** — diary, foods, meals, recipes, goals, activity, notes, your profile and its posts, and settings are stored in your Convex account and served live to every signed-in device; built-in generic foods still need no network
 - **Accounts** — Convex Auth sign-in with Apple, Google (OAuth code flow with PKCE) or a six-digit email code delivered by Resend; Apple uses its own sheet on iOS and the same OAuth round trip everywhere else; sessions in the device keychain; every row is scoped to its account on the server, so nobody can read anyone else's diary — see [docs/accounts.md](docs/accounts.md)
 - **Settings** — US/metric units, Sunday/Monday week start, light/dark/system appearance, custom meal categories, sign out, delete all data, delete account, privacy + attribution
 
