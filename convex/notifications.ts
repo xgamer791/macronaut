@@ -5,6 +5,20 @@ import { nowIso, requireUserId } from './lib/auth';
 
 const NOTIFICATION_LIMIT = 100;
 
+function weekdayOf(date: string): number {
+  return new Date(`${date}T12:00:00.000Z`).getUTCDay();
+}
+
+function goalDateLabel(date: string): string {
+  const [year, month, day] = date.split('-').map(Number);
+  if (!year || !month || !day) return date;
+  return new Date(Date.UTC(year, month - 1, day)).toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    timeZone: 'UTC',
+  });
+}
+
 /** Where the viewer stands with the actor, so a request carries its own
  * Accept and never has to be answered from somewhere else. */
 async function friendshipWith(
@@ -56,18 +70,23 @@ async function notificationView(ctx: QueryCtx, viewerId: Id<'users'>, event: Doc
       friendship: await friendshipWith(ctx, viewerId, actor._id),
     },
     title:
-      event.kind === 'friend_request'
-        ? 'New friend request'
-        : event.kind === 'friend_accepted'
-          ? 'Friend request accepted'
-          : `Message from ${displayName}`,
+      event.kind === 'calorie_goal'
+        ? 'Calorie goal complete'
+        : event.kind === 'friend_request'
+          ? 'New friend request'
+          : event.kind === 'friend_accepted'
+            ? 'Friend request accepted'
+            : `Message from ${displayName}`,
     body:
-      event.kind === 'friend_request'
-        ? `${displayName} wants to connect with you.`
-        : event.kind === 'friend_accepted'
-          ? `${displayName} accepted your friend request. You can message each other now.`
-          : (event.body ?? 'Sent you a message.'),
+      event.kind === 'calorie_goal'
+        ? `You closed your calorie ring${event.goalDate ? ` for ${goalDateLabel(event.goalDate)}` : ''}. Another awesome day!`
+        : event.kind === 'friend_request'
+          ? `${displayName} wants to connect with you.`
+          : event.kind === 'friend_accepted'
+            ? `${displayName} accepted your friend request. You can message each other now.`
+            : (event.body ?? 'Sent you a message.'),
     chatId: event.chatId ? (event.chatId as string) : undefined,
+    goalDate: event.goalDate,
     read: event.readAt !== undefined,
     createdAt: event.createdAt,
   };
@@ -92,6 +111,66 @@ export const list = query({
     };
   },
 });
+
+/** Add the durable dashboard notification the first time a day's food total
+ * closes its calorie ring. The unique index read makes concurrent food logs
+ * settle on one event after Convex retries the transaction. */
+export async function maybeAddCalorieGoalNotification(
+  ctx: MutationCtx,
+  userId: Id<'users'>,
+  date: string,
+) {
+  const configs = await ctx.db
+    .query('goalConfigs')
+    .withIndex('by_user_effective', (q) => q.eq('userId', userId))
+    .collect();
+  if (configs.length === 0) return;
+
+  let config = configs[0];
+  for (const candidate of configs) {
+    if (candidate.effectiveFrom <= date) config = candidate;
+    else break;
+  }
+
+  const weekday = weekdayOf(date);
+  let target = config.baseTarget;
+  if (config.mode === 'per-weekday') {
+    target = config.perWeekday?.[weekday] ?? config.baseTarget;
+  } else if (config.mode === 'training-rest') {
+    const mark = await ctx.db
+      .query('dayTypeMarks')
+      .withIndex('by_user_date', (q) => q.eq('userId', userId).eq('date', date))
+      .first();
+    const training = mark
+      ? mark.dayType === 'training'
+      : (config.trainingDays ?? []).includes(weekday);
+    target = (training ? config.training : config.rest) ?? config.baseTarget;
+  }
+  if (target.calories <= 0) return;
+
+  const entries = await ctx.db
+    .query('diaryEntries')
+    .withIndex('by_user_date', (q) => q.eq('userId', userId).eq('date', date))
+    .collect();
+  const consumed = entries.reduce((sum, entry) => sum + entry.nutrition.calories, 0);
+  if (consumed < target.calories) return;
+
+  const existing = await ctx.db
+    .query('notifications')
+    .withIndex('by_recipient_kind_date', (q) =>
+      q.eq('recipientId', userId).eq('kind', 'calorie_goal').eq('goalDate', date),
+    )
+    .first();
+  if (existing) return;
+
+  await ctx.db.insert('notifications', {
+    recipientId: userId,
+    actorId: userId,
+    kind: 'calorie_goal',
+    goalDate: date,
+    createdAt: nowIso(),
+  });
+}
 
 export const markRead = mutation({
   args: { id: v.id('notifications') },

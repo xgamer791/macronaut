@@ -3,7 +3,8 @@ import type { Id } from '../../convex/_generated/dataModel';
 import type { ChatPerson } from './chatRepo';
 import type { ConvexCaller } from './convexCall';
 
-export type NotificationKind = 'friend_request' | 'friend_accepted' | 'chat_message';
+export type NotificationKind =
+  'friend_request' | 'friend_accepted' | 'chat_message' | 'calorie_goal';
 
 export interface AppNotification {
   id: string;
@@ -13,6 +14,7 @@ export interface AppNotification {
   title: string;
   body: string;
   chatId?: string;
+  goalDate?: string;
   read: boolean;
   createdAt: string;
 }

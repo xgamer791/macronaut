@@ -3,6 +3,7 @@ import type { Doc } from './_generated/dataModel';
 import { mutation, query } from './_generated/server';
 import { nowIso, requireUserId } from './lib/auth';
 import { dayTypeValidator, goalConfigFields } from './lib/validators';
+import { maybeAddCalorieGoalNotification } from './notifications';
 
 function toConfig(doc: Doc<'goalConfigs'>) {
   const { _id, _creationTime: _t, userId: _u, createdAt: _c, ...rest } = doc;
@@ -36,6 +37,7 @@ export const saveConfig = mutation({
       .collect();
     for (const row of sameDay) await ctx.db.delete(row._id);
     const id = await ctx.db.insert('goalConfigs', { userId, createdAt: nowIso(), ...config });
+    await maybeAddCalorieGoalNotification(ctx, userId, config.effectiveFrom);
     return { id, ...config };
   },
 });
@@ -74,14 +76,13 @@ export const setMark = mutation({
       .collect();
     if (dayType === null) {
       for (const row of existing) await ctx.db.delete(row._id);
-      return null;
-    }
-    if (existing.length > 0) {
+    } else if (existing.length > 0) {
       await ctx.db.patch(existing[0]._id, { dayType });
       for (const dup of existing.slice(1)) await ctx.db.delete(dup._id);
     } else {
       await ctx.db.insert('dayTypeMarks', { userId, date, dayType });
     }
+    await maybeAddCalorieGoalNotification(ctx, userId, date);
     return null;
   },
 });

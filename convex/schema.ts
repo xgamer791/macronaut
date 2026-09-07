@@ -314,8 +314,11 @@ export default defineSchema({
       v.literal('friend_request'),
       v.literal('friend_accepted'),
       v.literal('chat_message'),
+      v.literal('calorie_goal'),
     ),
     chatId: v.optional(v.id('directChats')),
+    /** Calendar day whose calorie ring was first completed. */
+    goalDate: v.optional(v.string()),
     body: v.optional(v.string()),
     readAt: v.optional(v.string()),
     createdAt: v.string(),
@@ -323,6 +326,7 @@ export default defineSchema({
     .index('by_recipient_created', ['recipientId', 'createdAt'])
     .index('by_recipient_chat', ['recipientId', 'chatId'])
     .index('by_recipient_kind_actor', ['recipientId', 'kind', 'actorId'])
+    .index('by_recipient_kind_date', ['recipientId', 'kind', 'goalDate'])
     .index('by_actor', ['actorId']),
 
   /** Photos on a profile wall. Public ones are visible on a public profile;

@@ -77,6 +77,7 @@ function GoalsScreen() {
       const { id: _id, ...rest } = working;
       await goals.saveConfig({ ...rest, effectiveFrom: todayKey() });
       qc.invalidateQueries({ queryKey: keys.goals });
+      qc.invalidateQueries({ queryKey: keys.notifications });
       onBack();
     } finally {
       setSaving(false);

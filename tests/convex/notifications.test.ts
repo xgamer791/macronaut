@@ -2,6 +2,61 @@ import { describe, expect, it } from 'vitest';
 import { backend, signIn } from './helpers';
 
 describe('notifications', () => {
+  it('congratulates a calorie goal once when its ring closes', async () => {
+    const t = backend();
+    const person = await signIn(t, 'goal@example.com', 'Goal Getter');
+    await person.repos.goals.saveConfig({
+      effectiveFrom: '2026-01-01',
+      mode: 'same-daily',
+      baseTarget: { calories: 500 },
+      weeklyMode: 'sum-daily',
+    });
+
+    await person.repos.diary.add({
+      date: '2026-09-07',
+      meal: 'breakfast',
+      name: 'Breakfast',
+      sourceType: 'manual',
+      quantity: 1,
+      unit: 'meal',
+      nutrition: { calories: 300 },
+    });
+    expect(await person.repos.notifications.list()).toEqual({ items: [], unreadCount: 0 });
+
+    await person.repos.diary.add({
+      date: '2026-09-07',
+      meal: 'lunch',
+      name: 'Lunch',
+      sourceType: 'manual',
+      quantity: 1,
+      unit: 'meal',
+      nutrition: { calories: 200 },
+    });
+    expect(await person.repos.notifications.list()).toMatchObject({
+      unreadCount: 1,
+      items: [
+        {
+          kind: 'calorie_goal',
+          title: 'Calorie goal complete',
+          body: expect.stringContaining('Another awesome day!'),
+          goalDate: '2026-09-07',
+          read: false,
+        },
+      ],
+    });
+
+    await person.repos.diary.add({
+      date: '2026-09-07',
+      meal: 'snacks',
+      name: 'Snack',
+      sourceType: 'manual',
+      quantity: 1,
+      unit: 'meal',
+      nutrition: { calories: 50 },
+    });
+    expect((await person.repos.notifications.list()).items).toHaveLength(1);
+  });
+
   it('fires one friend-request event when a person follows and retracts it on unfollow', async () => {
     const t = backend();
     const alice = await signIn(t, 'alice@example.com');

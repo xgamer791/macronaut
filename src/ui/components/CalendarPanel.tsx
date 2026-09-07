@@ -12,7 +12,9 @@ import {
 } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useDayNotesRange, useDiaryRange, useWeekStart } from '@/state/queries';
+import Svg, { Circle as SvgCircle } from 'react-native-svg';
+import { configForDate, resolveTargetForDate } from '@/domain/goals';
+import { useDayTypeMarks, useDiaryRange, useGoalConfigs, useWeekStart } from '@/state/queries';
 import {
   DayKey,
   addDays,
@@ -65,9 +67,8 @@ export interface CalendarPanelProps {
 /**
  * The app's month calendar: a full-screen panel that slides in from the right
  * on the same curve as every other slide-over, pushing the page it covers
- * aside. Days are outlined circles — an accent ring marks a tracked day, a
- * filled circle the selected one — with the weekday row beneath the grid and
- * month / year pickers under that.
+ * aside. Each day is a calorie progress ring in the user's accent color, with
+ * the weekday row beneath the grid and month / year pickers under that.
  */
 export function CalendarPanel({
   visible,
@@ -137,17 +138,29 @@ export function CalendarPanel({
     transform: [{ translateX: (1 - progress.value) * panelWidth }],
   }));
 
-  // A day counts as tracked once anything is recorded against it — food
-  // logged, or a note written. Both are held back until the panel is on
-  // screen, so opening a page that merely renders it costs nothing.
+  // The month is fetched as one range. Goal versions and day-type marks are
+  // resolved locally, so drawing 31 rings never turns into 31 requests.
   const monthEnd = useMemo(() => addDays(addMonths(month, 1), -1), [month]);
-  const notes = useDayNotesRange(month, monthEnd, mounted);
   const diary = useDiaryRange(month, monthEnd, mounted);
-  const trackedDays = useMemo(() => {
-    const days = new Set<DayKey>(notes.data ?? []);
-    for (const entry of diary.data ?? []) days.add(entry.date);
-    return days;
-  }, [diary.data, notes.data]);
+  const configs = useGoalConfigs(mounted);
+  const marks = useDayTypeMarks(mounted);
+  const caloriesByDay = useMemo(() => {
+    const totals: Record<DayKey, number> = {};
+    for (const entry of diary.data ?? []) {
+      totals[entry.date] = (totals[entry.date] ?? 0) + entry.nutrition.calories;
+    }
+    return totals;
+  }, [diary.data]);
+  const calorieProgress = useMemo(() => {
+    const progressByDay: Record<DayKey, number> = {};
+    if (!configs.data || !marks.data) return progressByDay;
+    for (const [date, consumed] of Object.entries(caloriesByDay) as [DayKey, number][]) {
+      const config = configForDate(date, configs.data);
+      const goal = config ? resolveTargetForDate(date, config, marks.data).calories : 0;
+      progressByDay[date] = goal > 0 ? Math.min(Math.max(consumed / goal, 0), 1) : 0;
+    }
+    return progressByDay;
+  }, [caloriesByDay, configs.data, marks.data]);
   const cells = useMemo(() => monthGridDays(month, weekStart), [month, weekStart]);
   const labels = useMemo(() => weekdayShortLabels(weekStart), [weekStart]);
   const today = todayKey();
@@ -247,46 +260,34 @@ export function CalendarPanel({
                 {cells.map(({ key, inMonth }) => {
                   const isSelected = key === selected;
                   const isToday = key === today;
-                  const tracked = inMonth && trackedDays.has(key);
-                  const ring = isSelected
-                    ? colors.accent
-                    : tracked
-                      ? colors.accent
-                      : inMonth
-                        ? colors.borderStrong
-                        : 'transparent';
+                  const dayProgress = inMonth ? (calorieProgress[key] ?? 0) : 0;
+                  const percent = Math.round(dayProgress * 100);
                   const text = isSelected
-                    ? colors.onAccent
-                    : tracked
-                      ? colors.accent
-                      : inMonth
-                        ? colors.textPrimary
-                        : colors.textMuted;
+                    ? colors.accent
+                    : inMonth
+                      ? colors.textPrimary
+                      : colors.textMuted;
                   return (
                     <Pressable
                       key={key}
                       accessibilityRole="button"
-                      accessibilityLabel={`${formatDayKey(key)}${tracked ? ', tracked' : ''}`}
+                      accessibilityLabel={`${formatDayKey(key)}, ${percent}% of calorie goal`}
                       accessibilityState={{ selected: isSelected }}
                       onPress={() => pick(key)}
                       style={[styles.cell, { height: cellWidth }]}
                     >
-                      <View
-                        style={[
-                          styles.circle,
-                          {
-                            width: circle,
-                            height: circle,
-                            borderRadius: circle / 2,
-                            borderColor: ring,
-                            borderWidth: tracked || isSelected ? 1.5 : 1,
-                            backgroundColor: isSelected ? colors.accent : 'transparent',
-                          },
-                        ]}
-                      >
+                      <View style={[styles.circle, { width: circle, height: circle }]}>
+                        {inMonth ? (
+                          <CalorieDayRing
+                            size={circle}
+                            progress={dayProgress}
+                            trackColor={colors.track}
+                            color={colors.accent}
+                          />
+                        ) : null}
                         <AppText
                           variant="caption"
-                          weight={isSelected || tracked ? '600' : '400'}
+                          weight={isSelected || dayProgress >= 1 ? '600' : '400'}
                           style={{ color: text }}
                         >
                           {Number(key.slice(8))}
@@ -367,17 +368,25 @@ export function CalendarPanel({
 
             <View style={[styles.legend, { backgroundColor: colors.surface }]}>
               <View style={styles.legendItem}>
-                <View
-                  style={[styles.legendRing, { borderColor: colors.accent, borderWidth: 1.5 }]}
+                <CalorieDayRing
+                  size={18}
+                  progress={0.62}
+                  trackColor={colors.track}
+                  color={colors.accent}
                 />
                 <AppText variant="caption" tone="secondary">
-                  Tracked
+                  Goal progress
                 </AppText>
               </View>
               <View style={styles.legendItem}>
-                <View style={[styles.legendRing, { borderColor: colors.borderStrong }]} />
+                <CalorieDayRing
+                  size={18}
+                  progress={1}
+                  trackColor={colors.track}
+                  color={colors.accent}
+                />
                 <AppText variant="caption" tone="secondary">
-                  Untracked
+                  Goal reached
                 </AppText>
               </View>
             </View>
@@ -391,6 +400,51 @@ export function CalendarPanel({
         </Animated.View>
       </View>
     </CalendarHost>
+  );
+}
+
+/** A compact Apple Fitness-style ring. The round cap makes the open end easy
+ * to read even at calendar size; 100% removes the gap completely. */
+function CalorieDayRing({
+  size,
+  progress,
+  trackColor,
+  color,
+}: {
+  size: number;
+  progress: number;
+  trackColor: string;
+  color: string;
+}) {
+  const strokeWidth = Math.max(3, Math.round(size * 0.09));
+  const r = (size - strokeWidth) / 2;
+  const circumference = 2 * Math.PI * r;
+  const clamped = Math.min(Math.max(progress, 0), 1);
+  return (
+    <Svg width={size} height={size} style={styles.ringSvg} pointerEvents="none">
+      <SvgCircle
+        cx={size / 2}
+        cy={size / 2}
+        r={r}
+        stroke={trackColor}
+        strokeWidth={strokeWidth}
+        fill="none"
+      />
+      {clamped > 0 ? (
+        <SvgCircle
+          cx={size / 2}
+          cy={size / 2}
+          r={r}
+          stroke={color}
+          strokeWidth={strokeWidth}
+          fill="none"
+          strokeLinecap="round"
+          strokeDasharray={`${circumference} ${circumference}`}
+          strokeDashoffset={circumference * (1 - clamped)}
+          transform={`rotate(-90 ${size / 2} ${size / 2})`}
+        />
+      ) : null}
+    </Svg>
   );
 }
 
@@ -597,6 +651,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  ringSvg: {
+    position: 'absolute',
+  },
   todayDot: {
     position: 'absolute',
     bottom: 5,
@@ -699,11 +756,5 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
-  },
-  legendRing: {
-    width: 15,
-    height: 15,
-    borderRadius: 7.5,
-    borderWidth: 1,
   },
 });
