@@ -54,7 +54,7 @@ export function TabBar({ state, navigation }: BottomTabBarProps) {
         const icon = (
           <Ionicons
             name={focused ? meta.iconActive : meta.icon}
-            size={23}
+            size={24}
             color={focused ? colors.accent : colors.textMuted}
           />
         );
