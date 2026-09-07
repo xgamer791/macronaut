@@ -23,8 +23,7 @@ describe('profile routes', () => {
     );
     expect(header).toContain("router.push('/profile')");
     expect(header).toContain('Open your profile');
-    // The gear inside the profile page is how settings is reached from there.
-    expect(read('profile.tsx')).toContain("router.push('/settings')");
+    expect(read('profile.tsx')).not.toContain("router.push('/settings')");
   });
 
   it('is also linked from Settings', () => {
@@ -57,18 +56,9 @@ describe('profile routes', () => {
     expect(read(path.join('u', '[handle].tsx'))).toContain('Follow');
   });
 
-  it('keeps a small settings gear on the identity row, not a white plate on the banner', () => {
-    const header = fs.readFileSync(
-      path.join(srcDir, 'ui', 'components', 'ProfileHeader.tsx'),
-      'utf8',
-    );
-    expect(header).toContain('identityTop');
-    expect(header).toContain('GhostButton');
-    expect(header).toContain('contrast');
-    expect(header).not.toContain("backgroundColor: 'rgba(255,255,255,0.92)'");
-    expect(header.indexOf('identityTop')).toBeLessThan(header.lastIndexOf('{right}'));
-    expect(read('profile.tsx')).toContain('settings-outline');
-    expect(read('profile.tsx')).toContain('Open settings');
+  it('does not put a settings gear on either profile page', () => {
+    expect(read('profile.tsx')).not.toContain('Open settings');
+    expect(read('profile.tsx')).not.toContain('settings-outline');
     expect(read(path.join('u', '[handle].tsx'))).not.toContain('Open settings');
     expect(read(path.join('u', '[handle].tsx'))).not.toContain('settings-outline');
   });

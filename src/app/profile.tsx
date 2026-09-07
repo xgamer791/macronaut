@@ -16,7 +16,6 @@ import {
   AppText,
   Button,
   Card,
-  GhostButton,
   ErrorState,
   ListRow,
   ProfileHeader,
@@ -153,15 +152,6 @@ function OwnProfile() {
           <ProfileHeader
             profile={data}
             onBack={() => goBackOrHome(router)}
-            right={
-              <GhostButton
-                icon="settings-outline"
-                label="Open settings"
-                size={20}
-                color="#F2F4F7"
-                onPress={() => router.push('/settings')}
-              />
-            }
             onPickAvatar={() => void replaceImage('avatar')}
             onPickBanner={() => void replaceImage('banner')}
             uploading={uploading}
