@@ -171,6 +171,9 @@ function HeaderHit({
   slot?: number;
 }) {
   const inset = (touchTarget - slot) / 2;
+  // Sit the badge on the 45° point of the slot, which is the edge of a
+  // circular one rather than the empty corner outside it.
+  const dotOffset = inset + (slot / 2) * (1 - Math.SQRT1_2);
   return (
     <Pressable
       accessibilityRole="button"
@@ -186,7 +189,7 @@ function HeaderHit({
       >
         {children}
       </View>
-      {dot ? <View style={[styles.dot, { top: inset - 2, right: inset - 2 }]} /> : null}
+      {dot ? <View style={[styles.dot, { top: dotOffset, right: dotOffset }]} /> : null}
     </Pressable>
   );
 }
@@ -270,11 +273,11 @@ const styles = StyleSheet.create({
   },
   dot: {
     position: 'absolute',
-    top: 10,
-    right: 10,
-    width: 8,
-    height: 8,
-    borderRadius: 4,
+    width: 7,
+    height: 7,
+    borderRadius: 3.5,
+    marginTop: -3.5,
+    marginRight: -3.5,
     backgroundColor: DOT,
     zIndex: 1,
   },
