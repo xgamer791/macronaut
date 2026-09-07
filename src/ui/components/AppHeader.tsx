@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
 import { useRouter, type Href } from 'expo-router';
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   Animated,
   Easing,
@@ -105,26 +105,20 @@ function HeaderMenu({ visible, onClose }: { visible: boolean; onClose: () => voi
   const { width } = useWindowDimensions();
   const panelWidth = Math.min(Math.round(width * 0.86), 360);
   const [mounted, setMounted] = useState(visible);
-  const progress = useRef(new Animated.Value(0)).current;
+  const [progress] = useState(() => new Animated.Value(0));
+
+  if (visible && !mounted) {
+    setMounted(true);
+  }
 
   useEffect(() => {
-    if (visible) {
-      setMounted(true);
-      Animated.timing(progress, {
-        toValue: 1,
-        duration: DRAWER_MS,
-        easing: Easing.bezier(0.22, 1, 0.36, 1),
-        useNativeDriver: true,
-      }).start();
-      return;
-    }
     Animated.timing(progress, {
-      toValue: 0,
+      toValue: visible ? 1 : 0,
       duration: DRAWER_MS,
       easing: Easing.bezier(0.22, 1, 0.36, 1),
       useNativeDriver: true,
     }).start(({ finished }) => {
-      if (finished) setMounted(false);
+      if (finished && !visible) setMounted(false);
     });
   }, [progress, visible]);
 
