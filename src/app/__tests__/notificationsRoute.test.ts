@@ -6,13 +6,16 @@ const srcDir = path.join(appDir, '..');
 const readApp = (file: string) => fs.readFileSync(path.join(appDir, file), 'utf8');
 
 describe('notification center', () => {
-  it('registers the route and opens it from the live bell', () => {
+  it('registers the route and opens it from the tab bar bell', () => {
     expect(readApp('_layout.tsx')).toContain('name="notifications"');
+    const tabBar = fs.readFileSync(path.join(srcDir, 'ui', 'components', 'TabBar.tsx'), 'utf8');
+    expect(tabBar).toContain('useNotifications');
+    expect(tabBar).toContain("href: '/notifications'");
+    expect(tabBar).toContain('router.push(item.href)');
+    expect(tabBar).toContain('notifications-outline');
+    expect(tabBar).toContain('palette.accentDark');
     const header = fs.readFileSync(path.join(srcDir, 'ui', 'components', 'AppHeader.tsx'), 'utf8');
-    expect(header).toContain('useNotifications');
-    expect(header).toContain("router.push(signedIn ? '/notifications' : '/login')");
-    expect(header).toContain("active ? 'notifications' : 'notifications-outline'");
-    expect(header).toContain('palette.accentDark');
+    expect(header).not.toContain('<HeaderNotifyButton');
   });
 
   it('shows themed unread and earlier sections with useful destinations', () => {

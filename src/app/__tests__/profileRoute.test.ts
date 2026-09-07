@@ -16,11 +16,14 @@ describe('profile routes', () => {
     expect(layout).toContain('name="u/[handle]"');
   });
 
-  it('opens from the header avatar rather than settings', () => {
+  it('opens from the tab bar avatar, not the Today header', () => {
+    const tabBar = fs.readFileSync(path.join(srcDir, 'ui', 'components', 'TabBar.tsx'), 'utf8');
+    expect(tabBar).toContain("router.push('/profile')");
+    expect(tabBar).toContain('Open your profile');
     const header = fs.readFileSync(path.join(srcDir, 'ui', 'components', 'AppHeader.tsx'), 'utf8');
-    expect(header).toContain("router.push('/profile')");
-    expect(header).toContain('Open your profile');
-    expect(read('profile.tsx')).not.toContain("router.push('/settings')");
+    expect(header).not.toContain('<HeaderAvatarButton');
+    expect(header).toContain('export function HeaderAvatarButton');
+    expect(read('profile.tsx')).toContain("router.push('/settings')");
   });
 
   it('is also linked from Settings', () => {
@@ -77,9 +80,9 @@ describe('profile routes', () => {
     expect(today).toContain('export function HeaderNotifyButton');
   });
 
-  it('does not put a settings gear on either profile page', () => {
-    expect(read('profile.tsx')).not.toContain('Open settings');
-    expect(read('profile.tsx')).not.toContain('settings-outline');
+  it('opens settings from the own profile action row, not the public page', () => {
+    expect(read('profile.tsx')).toContain('label="Settings"');
+    expect(read('profile.tsx')).toContain('settings-outline');
     expect(read(path.join('u', '[handle].tsx'))).not.toContain('Open settings');
     expect(read(path.join('u', '[handle].tsx'))).not.toContain('settings-outline');
   });
