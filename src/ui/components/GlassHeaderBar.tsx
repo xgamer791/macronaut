@@ -1,18 +1,14 @@
-import { GlassView, isGlassEffectAPIAvailable } from 'expo-glass-effect';
 import { LinearGradient } from 'expo-linear-gradient';
 import React from 'react';
-import { Platform, StyleSheet, View, ViewStyle } from 'react-native';
+import { Platform, StyleSheet, View } from 'react-native';
 import Animated, { useAnimatedStyle } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useHeaderGlassProgress } from '@/ui/motion/headerGlass';
 import { spacing } from '@/ui/theme/tokens';
 
-/** Soft shadow the glass edge casts onto the content passing beneath it. */
-const EDGE_FADE = 10;
-
-/** The material stays dark on every theme: the glyphs it carries are fixed
- * white, because they also have to survive a photo behind them. */
-const TINT = 'rgba(8, 11, 16, 0.55)';
+/** react-native-web drops className; the web shell styles [data-headerglass]. */
+const HEADER_GLASS: object =
+  Platform.OS === 'web' ? { dataSet: { headerglass: 'true' } } : {};
 
 export interface GlassHeaderBarProps {
   children: React.ReactNode;
@@ -23,14 +19,9 @@ export interface GlassHeaderBarProps {
 /**
  * A full-bleed navigation bar pinned above a `Screen`'s scroll layer.
  *
- * The glass is poured by scrolling. At the top of a page the bar is pure
- * chrome over the hero photo, exactly as if it were painted on it; the
- * material fades in over the first few dozen points of scroll, so the icons
- * keep their contrast once ordinary content starts running underneath.
- *
- * iOS 26 renders Apple's own liquid glass, the web gets a real backdrop blur,
- * and everywhere else falls back to the layered tint the app's other glass
- * surfaces already use.
+ * The glass is poured by scrolling. At the top of a page the bar is clear
+ * chrome over the hero photo; the 2025–26 liquid-glass material fades in as
+ * ordinary content starts running underneath.
  */
 export function GlassHeaderBar({ children, inset = spacing.sm }: GlassHeaderBarProps) {
   const insets = useSafeAreaInsets();
@@ -42,14 +33,6 @@ export function GlassHeaderBar({ children, inset = spacing.sm }: GlassHeaderBarP
       <Animated.View pointerEvents="none" style={[styles.material, pour]}>
         <GlassMaterial />
       </Animated.View>
-
-      <Animated.View pointerEvents="none" style={[styles.edge, pour]}>
-        <LinearGradient
-          colors={['rgba(6, 9, 13, 0.34)', 'rgba(6, 9, 13, 0)']}
-          style={StyleSheet.absoluteFill}
-        />
-      </Animated.View>
-
       <View style={[styles.content, { paddingTop: insets.top + 2, paddingHorizontal: inset }]}>
         {children}
       </View>
@@ -57,55 +40,22 @@ export function GlassHeaderBar({ children, inset = spacing.sm }: GlassHeaderBarP
   );
 }
 
-/** The glass itself: refracting substrate, then the light that plays on it. */
+/** Web uses the exact CSS recipe. Native approximates the same slab. */
 function GlassMaterial() {
-  const sheen = (
-    <>
-      {/* Depth — light gathers along the top edge and drains to the bottom. */}
-      <LinearGradient
-        pointerEvents="none"
-        colors={['rgba(255,255,255,0.10)', 'rgba(255,255,255,0.02)', 'rgba(0,0,0,0.08)']}
-        locations={[0, 0.55, 1]}
-        style={StyleSheet.absoluteFill}
-      />
-      {/* A single specular sweep raking across the pane. */}
-      <LinearGradient
-        pointerEvents="none"
-        colors={['rgba(255,255,255,0.09)', 'rgba(255,255,255,0)']}
-        locations={[0, 0.62]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={StyleSheet.absoluteFill}
-      />
-      {/* The lit rim where the pane ends, brightest at its centre. */}
-      <LinearGradient
-        pointerEvents="none"
-        colors={['rgba(255,255,255,0)', 'rgba(255,255,255,0.32)', 'rgba(255,255,255,0)']}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 0 }}
-        style={styles.rim}
-      />
-    </>
-  );
-
-  if (Platform.OS === 'ios' && isGlassEffectAPIAvailable()) {
-    return (
-      <GlassView
-        glassEffectStyle="regular"
-        tintColor={TINT}
-        colorScheme="dark"
-        style={StyleSheet.absoluteFill}
-      >
-        {sheen}
-      </GlassView>
-    );
+  if (Platform.OS === 'web') {
+    return <View {...HEADER_GLASS} style={StyleSheet.absoluteFill} />;
   }
 
   return (
-    <View
-      style={[StyleSheet.absoluteFill, Platform.OS === 'web' ? styles.webGlass : styles.solidGlass]}
-    >
-      {sheen}
+    <View style={[StyleSheet.absoluteFill, styles.solidGlass]}>
+      <LinearGradient
+        pointerEvents="none"
+        colors={['rgba(10, 12, 20, 0.63)', 'rgba(10, 12, 20, 0.55)', 'rgba(10, 12, 20, 0.50)']}
+        locations={[0, 0.45, 1]}
+        style={StyleSheet.absoluteFill}
+      />
+      <View pointerEvents="none" style={styles.sheen} />
+      <View pointerEvents="none" style={styles.rim} />
     </View>
   );
 }
@@ -123,31 +73,23 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFill,
     overflow: 'hidden',
   },
-  edge: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: -EDGE_FADE,
-    height: EDGE_FADE,
-  },
   content: {
     paddingBottom: spacing.xs,
   },
-  rim: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
-    height: StyleSheet.hairlineWidth,
-  },
-  /** Real refraction: the page behind the bar is blurred and enriched. */
-  webGlass: {
-    backgroundColor: TINT,
-    backdropFilter: 'blur(28px) saturate(180%)',
-    WebkitBackdropFilter: 'blur(28px) saturate(180%)',
-  } as ViewStyle,
-  /** No blur available — carry the same look on an opaque pane instead. */
+  /** Browsers without backdrop-filter — same fallback as the CSS recipe. */
   solidGlass: {
-    backgroundColor: 'rgba(10, 13, 18, 0.88)',
+    backgroundColor: 'rgba(10, 12, 20, 1)',
+  },
+  sheen: {
+    ...StyleSheet.absoluteFill,
+    backgroundColor: 'rgba(255, 255, 255, 0.066)',
+    opacity: 0.55,
+  },
+  rim: {
+    ...StyleSheet.absoluteFill,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(255, 255, 255, 0.07)',
+    borderTopColor: 'rgba(255, 255, 255, 0.096)',
+    borderBottomColor: 'rgba(255, 255, 255, 0.06)',
   },
 });
