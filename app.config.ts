@@ -28,7 +28,7 @@ const config: ExpoConfig = {
     usesAppleSignIn: true,
     infoPlist: {
       NSCameraUsageDescription:
-        'Macronaut uses the camera to scan barcodes and photograph meals for AI food logging.',
+        'Macronaut uses the camera to scan barcodes, photograph meals and share photos in chats.',
     },
   },
   android: {
@@ -61,14 +61,14 @@ const config: ExpoConfig = {
       'expo-camera',
       {
         cameraPermission:
-          'Macronaut uses the camera to scan barcodes and photograph meals for AI food logging.',
+          'Macronaut uses the camera to scan barcodes, photograph meals and share photos in chats.',
       },
     ],
     [
       'expo-image-picker',
       {
         photosPermission:
-          'Macronaut needs access to your photos so you can choose a profile picture, a profile banner and photos for your posts.',
+          'Macronaut needs access to your photos so you can choose profile images, create posts and share photos or videos in chats.',
       },
     ],
     [

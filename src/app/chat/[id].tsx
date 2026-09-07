@@ -4,7 +4,9 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Animated,
   KeyboardAvoidingView,
+  Linking,
   Platform,
   Pressable,
   ScrollView,
@@ -16,7 +18,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { groupMessages, messageTime, type ChatTurn } from '@/domain/chatThread';
 import type { ChatMessage, ChatPerson, ChatThread } from '@/repositories/chatRepo';
-import { pickAttachment } from '@/services/media/pickAttachment';
+import { pickAttachment, takePhotoAttachment } from '@/services/media/pickAttachment';
 import type { PickedAttachment } from '@/services/media/pickedAttachment';
 import { useAuth } from '@/state/AuthProvider';
 import {
@@ -42,6 +44,8 @@ const TAIL_RADIUS = 7;
 const MEDIA_MAX_HEIGHT = 320;
 const MEDIA_MAX_WIDTH = 340;
 const MEDIA_DEFAULT_RATIO = 4 / 3;
+const ATTACHMENT_MENU_HEIGHT = 82;
+type IconName = keyof typeof Ionicons.glyphMap;
 
 export default function ChatScreen() {
   return (
@@ -75,13 +79,28 @@ function Conversation() {
     markRead(chatId);
   }, [chatId, markRead, thread.data?.unreadCount, thread.data?.updatedAt]);
 
-  async function attach() {
+  async function chooseAttachment(source: 'library' | 'camera') {
     setError(null);
     try {
-      const picked = await pickAttachment();
+      const picked = source === 'camera' ? await takePhotoAttachment() : await pickAttachment();
       if (picked) setAttachment(picked);
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Could not open your library.');
+      setError(
+        e instanceof Error
+          ? e.message
+          : source === 'camera'
+            ? 'Could not open your camera.'
+            : 'Could not open your library.',
+      );
+    }
+  }
+
+  async function openShareProvider(name: string, url: string) {
+    setError(null);
+    try {
+      await Linking.openURL(url);
+    } catch {
+      setError(`Could not open ${name}.`);
     }
   }
 
@@ -138,7 +157,10 @@ function Conversation() {
       draft={draft}
       onDraft={setDraft}
       attachment={attachment}
-      onAttach={() => void attach()}
+      onAttach={() => void chooseAttachment('library')}
+      onTakePhoto={() => void chooseAttachment('camera')}
+      onOpenGiphy={() => void openShareProvider('GIPHY', 'https://giphy.com/search')}
+      onOpenMaps={() => void openShareProvider('Google Maps', 'https://maps.google.com')}
       onRemoveAttachment={() => setAttachment(null)}
       onSend={() => void sendMessage()}
       sending={send.isPending}
@@ -164,6 +186,9 @@ export interface ConversationViewProps {
   onDraft: (value: string) => void;
   attachment: PickedAttachment | null;
   onAttach: () => void;
+  onTakePhoto: () => void;
+  onOpenGiphy: () => void;
+  onOpenMaps: () => void;
   onRemoveAttachment: () => void;
   onSend: () => void;
   sending: boolean;
@@ -182,6 +207,9 @@ export function ConversationView({
   onDraft,
   attachment,
   onAttach,
+  onTakePhoto,
+  onOpenGiphy,
+  onOpenMaps,
   onRemoveAttachment,
   onSend,
   sending,
@@ -194,8 +222,31 @@ export function ConversationView({
   const insets = useSafeAreaInsets();
   const { colors } = useTheme();
   const scroll = useRef<ScrollView>(null);
+  const [menuProgress] = useState(() => new Animated.Value(0));
+  const [attachmentMenuOpen, setAttachmentMenuOpen] = useState(false);
   const turns = useMemo(() => groupMessages(data.messages), [data.messages]);
   const canSend = Boolean(draft.trim() || attachment) && !sending;
+
+  useEffect(() => {
+    Animated.timing(menuProgress, {
+      toValue: attachmentMenuOpen ? 1 : 0,
+      duration: 180,
+      useNativeDriver: false,
+    }).start();
+  }, [attachmentMenuOpen, menuProgress]);
+
+  const menuHeight = menuProgress.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, ATTACHMENT_MENU_HEIGHT],
+  });
+  const menuOpacity = menuProgress.interpolate({
+    inputRange: [0, 0.25, 1],
+    outputRange: [0, 0, 1],
+  });
+  const plusRotation = menuProgress.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0deg', '45deg'],
+  });
 
   return (
     <KeyboardAvoidingView
@@ -278,8 +329,7 @@ export function ConversationView({
           style={[
             styles.composerWrap,
             {
-              backgroundColor: colors.chrome,
-              borderTopColor: colors.border,
+              backgroundColor: colors.background,
               paddingBottom: Math.max(insets.bottom, spacing.sm),
             },
           ]}
@@ -298,24 +348,66 @@ export function ConversationView({
             />
           ) : null}
 
+          <Animated.View
+            pointerEvents={attachmentMenuOpen ? 'auto' : 'none'}
+            style={[styles.attachmentMenuClip, { height: menuHeight, opacity: menuOpacity }]}
+          >
+            <View style={[styles.attachmentMenu, { backgroundColor: colors.surfaceRaised }]}>
+              <AttachmentAction
+                icon="images-outline"
+                label="Photos"
+                onPress={() => {
+                  setAttachmentMenuOpen(false);
+                  onAttach();
+                }}
+              />
+              <AttachmentAction
+                icon="camera-outline"
+                label="Camera"
+                onPress={() => {
+                  setAttachmentMenuOpen(false);
+                  onTakePhoto();
+                }}
+              />
+              <AttachmentAction
+                icon="sparkles-outline"
+                label="GIF"
+                onPress={() => {
+                  setAttachmentMenuOpen(false);
+                  onOpenGiphy();
+                }}
+              />
+              <AttachmentAction
+                icon="location-outline"
+                label="Location"
+                onPress={() => {
+                  setAttachmentMenuOpen(false);
+                  onOpenMaps();
+                }}
+              />
+            </View>
+          </Animated.View>
+
           <View style={styles.composer}>
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel="Add a photo or video"
+              accessibilityLabel={
+                attachmentMenuOpen ? 'Close attachment menu' : 'Open attachment menu'
+              }
+              accessibilityState={{ expanded: attachmentMenuOpen }}
               disabled={sending}
-              onPress={onAttach}
+              onPress={() => setAttachmentMenuOpen((open) => !open)}
               hitSlop={6}
               style={({ pressed }) => [
                 styles.composerHit,
                 { opacity: sending ? 0.4 : pressed ? 0.6 : 1 },
               ]}
             >
-              <Ionicons name="image-outline" size={24} color={colors.textSecondary} />
+              <Animated.View style={{ transform: [{ rotate: plusRotation }] }}>
+                <Ionicons name="add" size={28} color={colors.textSecondary} />
+              </Animated.View>
             </Pressable>
 
-            {/* `track`, not `surfaceRaised`: the composer sits on chrome, which
-                is plain white in the light theme, and a raised surface there
-                is the same white. */}
             <View style={[styles.inputWrap, { backgroundColor: colors.track }]}>
               <TextInput
                 accessibilityLabel={`Message ${data.peer.displayName}`}
@@ -323,8 +415,11 @@ export function ConversationView({
                 onChangeText={onDraft}
                 placeholder="Message"
                 placeholderTextColor={colors.textMuted}
-                multiline
                 maxLength={2000}
+                returnKeyType="send"
+                onSubmitEditing={() => {
+                  if (canSend) onSend();
+                }}
                 style={[styles.input, { color: colors.textPrimary }]}
               />
             </View>
@@ -333,7 +428,10 @@ export function ConversationView({
               accessibilityRole="button"
               accessibilityLabel="Send message"
               disabled={!canSend}
-              onPress={onSend}
+              onPress={() => {
+                setAttachmentMenuOpen(false);
+                onSend();
+              }}
               hitSlop={6}
               style={({ pressed }) => [
                 styles.composerHit,
@@ -359,6 +457,33 @@ export function ConversationView({
         />
       )}
     </KeyboardAvoidingView>
+  );
+}
+
+function AttachmentAction({
+  icon,
+  label,
+  onPress,
+}: {
+  icon: IconName;
+  label: string;
+  onPress: () => void;
+}) {
+  const { colors } = useTheme();
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      onPress={onPress}
+      style={({ pressed }) => [styles.attachmentAction, pressed && styles.actionPressed]}
+    >
+      <View style={[styles.attachmentActionIcon, { backgroundColor: colors.track }]}>
+        <Ionicons name={icon} size={21} color={colors.textPrimary} />
+      </View>
+      <AppText variant="micro" tone="secondary" numberOfLines={1}>
+        {label}
+      </AppText>
+    </Pressable>
   );
 }
 
@@ -722,13 +847,12 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.xs,
   },
   composerWrap: {
-    borderTopWidth: StyleSheet.hairlineWidth,
     paddingHorizontal: spacing.md,
     paddingTop: spacing.sm,
   },
   composer: {
     flexDirection: 'row',
-    alignItems: 'flex-end',
+    alignItems: 'center',
     gap: spacing.xs,
   },
   composerHit: {
@@ -737,11 +861,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  // The pill grows upward with the text; the buttons stay on the bottom line.
   inputWrap: {
     flex: 1,
-    minHeight: touchTarget,
-    maxHeight: 132,
+    height: touchTarget,
     justifyContent: 'center',
     borderRadius: touchTarget / 2,
     paddingHorizontal: spacing.md + 2,
@@ -749,11 +871,39 @@ const styles = StyleSheet.create({
   },
   input: {
     ...type.body,
-    paddingVertical: 9,
+    height: touchTarget,
+    paddingVertical: 0,
     ...Platform.select({
       web: { outlineStyle: 'none', outlineWidth: 0 } as object,
       default: {},
     }),
+  },
+  attachmentMenuClip: {
+    overflow: 'hidden',
+  },
+  attachmentMenu: {
+    alignSelf: 'flex-start',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    borderRadius: radius.lg,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.sm,
+  },
+  attachmentAction: {
+    width: 56,
+    alignItems: 'center',
+    gap: 3,
+  },
+  attachmentActionIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  actionPressed: {
+    opacity: 0.6,
   },
   previewRow: {
     flexDirection: 'row',

@@ -17,9 +17,17 @@ import { scaleToFit } from './pickedImage';
  * video in a canvas is not something a browser can do cheaply.
  */
 export async function pickAttachment(): Promise<PickedAttachment | null> {
-  const file = await chooseFile();
-  if (!file) return null;
+  const file = await chooseFile(false);
+  return file ? attachmentFromFile(file) : null;
+}
 
+/** Ask a phone browser for its rear camera; desktop browsers fall back to a file chooser. */
+export async function takePhotoAttachment(): Promise<PickedAttachment | null> {
+  const file = await chooseFile(true);
+  return file ? attachmentFromFile(file) : null;
+}
+
+async function attachmentFromFile(file: File): Promise<PickedAttachment> {
   const kind = attachmentKind(file.type);
   if (kind === 'video') {
     assertAttachmentSize('video', file.size);
@@ -32,7 +40,7 @@ export async function pickAttachment(): Promise<PickedAttachment | null> {
   return { kind: 'image', blob, previewUri: URL.createObjectURL(blob), width, height };
 }
 
-function chooseFile(): Promise<File | null> {
+function chooseFile(camera: boolean): Promise<File | null> {
   return new Promise((resolve) => {
     if (typeof document === 'undefined') {
       resolve(null);
@@ -40,7 +48,8 @@ function chooseFile(): Promise<File | null> {
     }
     const input = document.createElement('input');
     input.type = 'file';
-    input.accept = 'image/*,video/*';
+    input.accept = camera ? 'image/*' : 'image/*,video/*';
+    if (camera) input.capture = 'environment';
     input.style.display = 'none';
     // Firefox needs the input in the document for `click()` to open a dialog.
     document.body.appendChild(input);
