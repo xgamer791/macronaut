@@ -3,14 +3,7 @@ import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import React, { useMemo, useState } from 'react';
-import {
-  Image as RNImage,
-  Platform,
-  Pressable,
-  StyleSheet,
-  View,
-  type ImageStyle,
-} from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 import Animated, {
   Easing,
   useAnimatedStyle,
@@ -24,7 +17,7 @@ import { keys, useSetting } from '@/state/queries';
 import { spacing, touchTarget } from '@/ui/theme/tokens';
 import { AppText } from './AppText';
 
-const WATCH_FACE = require('../../../assets/images/signup-health-watch.png');
+const WATCH_FACE = require('../../../assets/images/header-watch.png');
 
 const ICON = '#FFFFFF';
 const DOT = '#2EE66A';
@@ -149,7 +142,12 @@ export function AppHeader({ onBellPress, notifyDot = true }: AppHeaderProps) {
           dot
         >
           <View style={styles.watch}>
-            <RNImage source={WATCH_FACE} style={styles.watchImg} resizeMode="cover" />
+            <Image
+              source={WATCH_FACE}
+              style={styles.watchImg}
+              contentFit="cover"
+              contentPosition="center"
+            />
           </View>
         </HeaderHit>
       </View>
@@ -202,8 +200,6 @@ function initialsFrom(name?: string | null, email?: string): string {
 }
 
 const AVATAR = 32;
-const webBlock: ImageStyle | undefined =
-  Platform.OS === 'web' ? ({ display: 'block' } as ImageStyle) : undefined;
 
 const styles = StyleSheet.create({
   row: {
@@ -265,7 +261,6 @@ const styles = StyleSheet.create({
   watchImg: {
     width: GLYPH,
     height: GLYPH,
-    ...webBlock,
   },
   dot: {
     position: 'absolute',
