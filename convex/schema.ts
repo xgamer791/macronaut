@@ -184,13 +184,16 @@ export default defineSchema({
     .index('by_user', ['userId'])
     .index('by_handle', ['handleLower']),
 
-  /** Posts on a user's own profile page. Public exactly when the profile is. */
+  /** Posts on a profile. Public pages expose them to everyone; the friends
+   * feed exposes them only across a verified mutual follow. */
   profilePosts: defineTable({
     userId: v.id('users'),
     createdAt: v.string(),
     updatedAt: v.string(),
     ...profilePostFields,
-  }).index('by_user_created', ['userId', 'createdAt']),
+  })
+    .index('by_user_created', ['userId', 'createdAt'])
+    .index('by_created', ['createdAt']),
 
   /** One account following another. `userId` is the follower — they own the
    * row — and `followeeId` is who they follow. Counts on a profile page are

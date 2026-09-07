@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { DayKey, weekDays } from '@/utils/date';
 import { DayProgress, WeekProgress, dayProgress, weekProgress } from '@/domain/aggregation';
 import { GoalConfig } from '@/domain/goals';
@@ -40,6 +40,7 @@ export const keys = {
   emailTaken: (email: string) => ['email-taken', email] as const,
   profile: ['profile'] as const,
   profilePosts: ['profile-posts'] as const,
+  friendsFeed: ['friends-feed'] as const,
   publicProfile: (handle: string) => ['public-profile', handle] as const,
   photos: ['photos'] as const,
   publicPhotos: (handle: string) => ['public-photos', handle] as const,
@@ -148,6 +149,18 @@ export function useMyProfilePosts() {
   });
 }
 
+export function useFriendsFeed() {
+  const { signedIn } = useAuth();
+  const { profile } = useRepos();
+  return useInfiniteQuery({
+    queryKey: keys.friendsFeed,
+    queryFn: ({ pageParam }) => profile.friendsFeed(pageParam),
+    initialPageParam: null as string | null,
+    getNextPageParam: (lastPage) => (lastPage.isDone ? undefined : lastPage.continueCursor),
+    enabled: signedIn,
+  });
+}
+
 /** Someone's profile by handle. Resolves to null when it is private or does
  * not exist, so a public page can be opened without a session. */
 export function usePublicProfile(handle: string) {
@@ -166,6 +179,7 @@ function useInvalidateProfile() {
   return () => {
     qc.invalidateQueries({ queryKey: keys.profile });
     qc.invalidateQueries({ queryKey: keys.profilePosts });
+    qc.invalidateQueries({ queryKey: keys.friendsFeed });
     qc.invalidateQueries({ queryKey: ['public-profile'] });
   };
 }

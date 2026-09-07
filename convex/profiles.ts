@@ -25,6 +25,8 @@ const LIMITS = {
 /** Posts returned for one profile page. Profiles are a page, not a feed, so
  * the whole page is one read rather than a cursor. */
 const POST_LIMIT = 200;
+/** Every friends-feed request is capped here, not merely in the UI. */
+export const FRIENDS_FEED_PAGE_SIZE = 10;
 
 function capped(value: string | undefined, max: number): string | undefined {
   const trimmed = (value ?? '').trim();
@@ -236,13 +238,75 @@ export const myPosts = query({
 });
 
 /**
+ * Newest profile posts from mutual follows. One-way follows are still friend
+ * requests, so they never leak into this feed. The cursor is Convex-owned and
+ * each response is capped at ten posts regardless of the client.
+ */
+export const friendsFeed = query({
+  args: { cursor: v.union(v.string(), v.null()) },
+  handler: async (ctx, { cursor }) => {
+    const viewerId = await requireUserId(ctx);
+    const [outgoing, incoming] = await Promise.all([
+      ctx.db
+        .query('profileFollows')
+        .withIndex('by_user', (q) => q.eq('userId', viewerId))
+        .collect(),
+      ctx.db
+        .query('profileFollows')
+        .withIndex('by_followee', (q) => q.eq('followeeId', viewerId))
+        .collect(),
+    ]);
+    const incomingIds = new Set(incoming.map((row) => row.userId as string));
+    const friendIds = outgoing
+      .map((row) => row.followeeId)
+      .filter((friendId) => incomingIds.has(friendId as string));
+
+    if (friendIds.length === 0) {
+      return { page: [], isDone: true, continueCursor: '' };
+    }
+
+    const result = await ctx.db
+      .query('profilePosts')
+      .withIndex('by_created')
+      .order('desc')
+      .filter((q) => q.or(...friendIds.map((friendId) => q.eq(q.field('userId'), friendId))))
+      .paginate({ cursor, numItems: FRIENDS_FEED_PAGE_SIZE });
+
+    const page = await Promise.all(
+      result.page.map(async (post) => {
+        const [profile, account] = await Promise.all([
+          rowForUser(ctx, post.userId),
+          ctx.db.get(post.userId),
+        ]);
+        // addPost always creates a profile first. Keep the fallback defensive
+        // for legacy rows rather than dropping a post mid-page.
+        const handle = profile?.handle ?? handleSeed(account?.name, account?.email);
+        return {
+          ...(await postView(ctx, post)),
+          author: {
+            id: post.userId as string,
+            handle,
+            displayName: profile?.displayName ?? account?.name,
+            avatarUrl: (await storageUrl(ctx, profile?.avatarId)) ?? account?.image ?? undefined,
+            canOpenProfile: profile?.isPublic ?? false,
+          },
+        };
+      }),
+    );
+
+    return { ...result, page };
+  },
+});
+
+/**
  * A profile by handle, for anyone — including callers with no session.
  *
- * This is the one read in the app that crosses accounts, so it is written to
- * be dull: it resolves the handle, returns null unless the profile is public
- * or the caller owns it, and hands back `profileView` / `postView` rather
- * than rows. A private profile and a handle nobody has taken are the same
- * answer, so flipping the toggle off does not confirm the page exists.
+ * This public-page read resolves the handle, returns null unless the profile
+ * is public or the caller owns it, and hands back `profileView` / `postView`
+ * rather than rows. A private profile and a handle nobody has taken are the
+ * same answer, so flipping the toggle off does not confirm the page exists.
+ * Cross-account access for `friendsFeed` is separate and requires a mutual
+ * follow before it returns a post.
  */
 export const byHandle = query({
   args: { handle: v.string() },

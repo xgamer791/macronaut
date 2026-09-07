@@ -36,6 +36,22 @@ export interface ProfilePost {
   updatedAt: string;
 }
 
+export interface FriendsFeedPost extends ProfilePost {
+  author: {
+    id: string;
+    handle: string;
+    displayName?: string;
+    avatarUrl?: string;
+    canOpenProfile: boolean;
+  };
+}
+
+export interface FriendsFeedPage {
+  page: FriendsFeedPost[];
+  isDone: boolean;
+  continueCursor: string;
+}
+
 export interface ProfilePatch {
   displayName?: string;
   bio?: string;
@@ -54,6 +70,7 @@ export interface ProfileRepo {
   /** The signed-in user's own profile. */
   me(): Promise<ProfileView>;
   myPosts(): Promise<ProfilePost[]>;
+  friendsFeed(cursor: string | null): Promise<FriendsFeedPage>;
   /** A profile by handle. Null when it does not exist or is not public and
    * is not yours — the caller cannot tell those apart, by design. */
   byHandle(handle: string): Promise<{ profile: ProfileView; posts: ProfilePost[] } | null>;
@@ -80,6 +97,7 @@ export function createProfileRepo(convex: ConvexCaller): ProfileRepo {
     ensure: () => convex.mutation(api.profiles.ensure, {}),
     me: () => convex.query(api.profiles.me, {}),
     myPosts: () => convex.query(api.profiles.myPosts, {}),
+    friendsFeed: (cursor) => convex.query(api.profiles.friendsFeed, { cursor }),
     byHandle: (handle) => convex.query(api.profiles.byHandle, { handle }),
     update: (patch) => convex.mutation(api.profiles.update, clean(patch)),
 

@@ -34,8 +34,8 @@ type TabItem =
     }
   | { kind: 'profile' };
 
-/** Today, chats, groups, notifications, then the account picture. Meals and
- * Settings stay registered as hidden tabs so existing links still work. */
+/** Today, chats, friends, notifications, then the account picture. Meals,
+ * Progress and Settings stay registered as hidden tabs so existing links work. */
 const ITEMS: TabItem[] = [
   { kind: 'tab', name: 'index', label: 'Today', icon: 'home-outline', iconActive: 'home' },
   {
@@ -47,11 +47,10 @@ const ITEMS: TabItem[] = [
   },
   {
     kind: 'tab',
-    name: 'progress',
-    label: 'Groups',
+    name: 'friends',
+    label: 'Friends',
     icon: 'people-outline',
     iconActive: 'people',
-    comingSoon: true,
   },
   {
     kind: 'link',
