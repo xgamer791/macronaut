@@ -9,6 +9,7 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
+  useWindowDimensions,
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -20,6 +21,7 @@ import { spacing, touchTarget } from '@/ui/theme/tokens';
 import { AppText } from './AppText';
 import { Button } from './Button';
 import { TextField } from './TextField';
+import { usePushWhileOpen } from '@/ui/motion/SlidePush';
 
 const LOVE_RED = '#F0284F';
 const ON_PHOTO = '#FFFFFF';
@@ -110,6 +112,10 @@ export function PhotoViewer({
     onClose();
   }
 
+  // A full-screen viewer, so the page it opened over travels a full screen.
+  const { height: windowHeight } = useWindowDimensions();
+  usePushWhileOpen(Boolean(photo), { y: -windowHeight });
+
   if (!photo) return null;
 
   return (
@@ -131,7 +137,10 @@ export function PhotoViewer({
             ) : null}
           </View>
 
-          <View style={[styles.top, { paddingTop: insets.top + spacing.sm }]} pointerEvents="box-none">
+          <View
+            style={[styles.top, { paddingTop: insets.top + spacing.sm }]}
+            pointerEvents="box-none"
+          >
             <View style={styles.identity}>
               <AppText variant="heading" weight="700" style={styles.onPhoto}>
                 {ownerName}
@@ -166,7 +175,10 @@ export function PhotoViewer({
           </View>
 
           <View
-            style={[styles.bottom, { paddingBottom: commentsOpen ? spacing.sm : insets.bottom + spacing.md }]}
+            style={[
+              styles.bottom,
+              { paddingBottom: commentsOpen ? spacing.sm : insets.bottom + spacing.md },
+            ]}
             pointerEvents="box-none"
           >
             <View style={styles.actions}>
@@ -177,11 +189,7 @@ export function PhotoViewer({
               >
                 <Feather name="thumbs-up" size={23} color={liked ? colors.accent : ON_PHOTO} />
               </Engage>
-              <Engage
-                count={comments.length}
-                label="Comment on photo"
-                onPress={tapComment}
-              >
+              <Engage count={comments.length} label="Comment on photo" onPress={tapComment}>
                 <Ionicons name="chatbubble-outline" size={22} color={ON_PHOTO} />
               </Engage>
               <Engage label="Share photo" onPress={onShare}>
@@ -204,7 +212,12 @@ export function PhotoViewer({
         </View>
 
         {menuOpen && canEdit ? (
-          <View style={[styles.panel, { backgroundColor: colors.surface, paddingBottom: insets.bottom + spacing.md }]}>
+          <View
+            style={[
+              styles.panel,
+              { backgroundColor: colors.surface, paddingBottom: insets.bottom + spacing.md },
+            ]}
+          >
             <Pressable
               accessibilityRole="button"
               accessibilityLabel={photo.isPublic ? 'Make photo private' : 'Make photo public'}
@@ -230,7 +243,12 @@ export function PhotoViewer({
         ) : null}
 
         {commentsOpen ? (
-          <View style={[styles.panel, { backgroundColor: colors.surface, paddingBottom: insets.bottom + spacing.sm }]}>
+          <View
+            style={[
+              styles.panel,
+              { backgroundColor: colors.surface, paddingBottom: insets.bottom + spacing.sm },
+            ]}
+          >
             <View style={styles.commentHead}>
               <AppText variant="heading" weight="600">
                 Comments
@@ -274,7 +292,10 @@ export function PhotoViewer({
                 accessibilityLabel="Post comment"
                 onPress={() => void send()}
                 disabled={sending || !draft.trim()}
-                style={[styles.send, { backgroundColor: colors.textPrimary, opacity: draft.trim() ? 1 : 0.4 }]}
+                style={[
+                  styles.send,
+                  { backgroundColor: colors.textPrimary, opacity: draft.trim() ? 1 : 0.4 },
+                ]}
               >
                 <Ionicons name="arrow-up" size={18} color={colors.background} />
               </Pressable>
@@ -357,7 +378,12 @@ function CommentRow({
         </AppText>
       </View>
       {canDelete ? (
-        <Pressable accessibilityRole="button" accessibilityLabel="Delete comment" onPress={onDelete} hitSlop={8}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Delete comment"
+          onPress={onDelete}
+          hitSlop={8}
+        >
           <Ionicons name="trash-outline" size={16} color="rgba(255,255,255,0.45)" />
         </Pressable>
       ) : null}

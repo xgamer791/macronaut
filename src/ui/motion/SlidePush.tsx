@@ -1,4 +1,4 @@
-import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Platform, StyleSheet, View } from 'react-native';
 import Animated, {
   ReduceMotion,
@@ -9,73 +9,125 @@ import Animated, {
 
 import { SLIDE_DURATION_MS, SLIDE_EASING } from './slideTiming';
 
-/**
- * A slide-out does not cover the page, it pushes it: the two travel together
- * like one filmstrip, and the page is pulled back as the panel leaves.
- *
- * Every layer that can have something slide over it — the tab shell, and each
- * panel, since panels open panels — offers a push slot to whatever mounts
- * above it. `SlideScreen` drives the slot it finds and provides a fresh one to
- * its own children, so the shove travels down the stack one layer at a time
- * and nothing has to know how deep it is.
- */
-const SlidePushContext = createContext<((px: number) => void) | null>(null);
+/** How far, and along which axis, a layer has been shoved aside. */
+export type SlideOffset = { x?: number; y?: number };
 
-/** The layer below this one, to be pushed aside. Null at the very bottom. */
-export function useSlidePush(): ((px: number) => void) | null {
-  return useContext(SlidePushContext);
+type Layer = (offset: SlideOffset) => void;
+
+/**
+ * Anything that slides in pushes the page aside rather than covering it, and
+ * pulls it back on the way out. The page and the panel travel as one strip.
+ *
+ * The layers live in one module-level stack rather than in React context,
+ * because context cannot express what is needed here: a screen and the panel
+ * that slides over it are *siblings* under the navigator, not ancestor and
+ * descendant, so a panel looking upward through the tree never finds the page
+ * it is covering. Mount order is navigation order, and overlays close in the
+ * order they opened, so the top of this stack is always the layer directly
+ * beneath whatever is opening.
+ */
+const layers: Layer[] = [];
+
+function registerLayer(layer: Layer): () => void {
+  layers.push(layer);
+  return () => {
+    const at = layers.indexOf(layer);
+    if (at >= 0) layers.splice(at, 1);
+  };
+}
+
+function topLayer(): Layer | null {
+  return layers[layers.length - 1] ?? null;
 }
 
 /**
- * Marks content that a slide-out should push aside, and offers the push slot
- * the panel above it will drive. Layers nest: the panel's own children get a
- * new slot of their own.
+ * The layer to push, captured while rendering — before this panel's own layer
+ * can register and make itself the answer. For a panel that hosts a layer of
+ * its own; anything else wants {@link usePushWhileOpen}.
+ */
+export function useLayerBelow(): Layer | null {
+  return useState(topLayer)[0];
+}
+
+/**
+ * Pushes the page aside for as long as `open`, by `offset`, and releases it
+ * after. The layer is resolved when the overlay opens rather than when it
+ * mounts: a sheet inside a panel is mounted with the page, long before the
+ * panel it belongs to has registered.
+ */
+export function usePushWhileOpen(open: boolean, offset: SlideOffset): void {
+  const { x = 0, y = 0 } = offset;
+
+  useEffect(() => {
+    if (!open) return;
+    const layer = topLayer();
+    layer?.({ x, y });
+    return () => layer?.({});
+  }, [open, x, y]);
+}
+
+/**
+ * Marks content that a slide-out should push aside. Every layer that can have
+ * something open over it — the tab shell, and each panel, since panels open
+ * panels — wraps itself in one of these.
  */
 export function SlidePushLayer({ children }: { children: React.ReactNode }) {
-  const [offset, setOffset] = useState(0);
-  // Stable, so a panel's effect does not re-run and re-push on every render
-  // of the layer it is shoving.
-  const push = useCallback((px: number) => setOffset(px), []);
+  const [offset, setOffset] = useState<SlideOffset>({});
+  // Stable, so registering does not churn as the page it wraps re-renders.
+  const push = useCallback<Layer>((next) => setOffset(next), []);
 
-  return (
-    <SlidePushContext.Provider value={push}>
-      {Platform.OS === 'web' ? (
-        <PushedWeb offset={offset}>{children}</PushedWeb>
-      ) : (
-        <PushedNative offset={offset}>{children}</PushedNative>
-      )}
-    </SlidePushContext.Provider>
+  useEffect(() => registerLayer(push), [push]);
+
+  const x = offset.x ?? 0;
+  const y = offset.y ?? 0;
+
+  return Platform.OS === 'web' ? (
+    <PushedWeb x={x} y={y}>
+      {children}
+    </PushedWeb>
+  ) : (
+    <PushedNative x={x} y={y}>
+      {children}
+    </PushedNative>
   );
 }
 
 /** The web moves it with the same CSS transition the panel uses, so the page
  * and the panel are driven by one curve rather than two clocks. */
-function PushedWeb({ offset, children }: { offset: number; children: React.ReactNode }) {
+function PushedWeb({ x, y, children }: { x: number; y: number; children: React.ReactNode }) {
   return (
     <View
       // RN-web turns dataSet into data-* attributes for the CSS transition.
       {...{ dataSet: { slidepush: 'true' } }}
-      style={[styles.layer, { transform: [{ translateX: offset }] }]}
+      style={[styles.layer, { transform: [{ translateX: x }, { translateY: y }] }]}
     >
       {children}
     </View>
   );
 }
 
-function PushedNative({ offset, children }: { offset: number; children: React.ReactNode }) {
-  const shift = useSharedValue(offset);
+function PushedNative({ x, y, children }: { x: number; y: number; children: React.ReactNode }) {
+  const shiftX = useSharedValue(x);
+  const shiftY = useSharedValue(y);
+  const timing = useMemo(
+    () => ({
+      duration: SLIDE_DURATION_MS,
+      easing: SLIDE_EASING,
+      reduceMotion: ReduceMotion.System,
+    }),
+    [],
+  );
 
   // Only when the target actually moves. Assigning during render would restart
   // the timing on every unrelated re-render of the page being pushed.
   useEffect(() => {
-    shift.value = withTiming(offset, {
-      duration: SLIDE_DURATION_MS,
-      easing: SLIDE_EASING,
-      reduceMotion: ReduceMotion.System,
-    });
-  }, [offset, shift]);
+    shiftX.value = withTiming(x, timing);
+    shiftY.value = withTiming(y, timing);
+  }, [x, y, shiftX, shiftY, timing]);
 
-  const style = useAnimatedStyle(() => ({ transform: [{ translateX: shift.value }] }));
+  const style = useAnimatedStyle(() => ({
+    transform: [{ translateX: shiftX.value }, { translateY: shiftY.value }],
+  }));
 
   return <Animated.View style={[styles.layer, style]}>{children}</Animated.View>;
 }
@@ -84,7 +136,7 @@ const styles = StyleSheet.create({
   layer: {
     flex: 1,
     // The page leaves the screen entirely; without this the web grows a
-    // horizontal scrollbar for the part that has gone.
+    // scrollbar for the part that has gone.
     overflow: 'hidden',
   },
 });

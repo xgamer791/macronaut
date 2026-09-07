@@ -52,15 +52,57 @@ describe('directional slide navigation', () => {
   it('pushes the layer below by the panel width, and releases it on the way out', () => {
     const slide = read(srcDir, 'ui', 'motion', 'SlideScreen.tsx');
     // Both platform paths shove the layer below, by the width the panel takes.
-    expect(slide.match(/pushBelow\?\.\(-dir \* width\)/g)).toHaveLength(2);
+    expect(slide.match(/pushBelow\?\.\(\{ x: -dir \* width \}\)/g)).toHaveLength(2);
     // ...and let it come back as the panel leaves, not after it has gone.
-    expect(slide.match(/pushBelow\?\.\(0\)/g)).toHaveLength(2);
+    expect(slide.match(/pushBelow\?\.\(\{\}\)/g)).toHaveLength(4);
+    // Dismissing is not the only way out. Browser back, a hardware back and a
+    // deep link all drop the panel without running `leave`, and the page would
+    // stay shoved off to one side for good, so unmount releases it too.
+    expect(
+      slide.match(/useEffect\(\(\) => \(\) => pushBelow\?\.\(\{\}\), \[pushBelow\]\)/g),
+    ).toHaveLength(2);
 
     const push = read(srcDir, 'ui', 'motion', 'SlidePush.tsx');
     expect(push).toContain('SLIDE_DURATION_MS');
     expect(push).toContain('SLIDE_EASING');
-    // The page leaving must not give the web a horizontal scrollbar.
+    // The page leaving must not give the web a scrollbar.
     expect(push).toContain("overflow: 'hidden'");
+  });
+
+  /** The layer below is found by navigation order, not by React ancestry: a
+   * screen and the panel covering it are siblings under the navigator, so a
+   * panel looking up the tree never finds the page it is covering. */
+  it('finds the layer below through the stack, not the React tree', () => {
+    const push = read(srcDir, 'ui', 'motion', 'SlidePush.tsx');
+    expect(push).not.toContain('createContext');
+    expect(push).not.toContain('useContext');
+    expect(push).toContain('const layers: Layer[] = []');
+    // Captured while rendering, before this panel's own layer registers and
+    // makes itself the answer.
+    expect(push).toContain('return useState(topLayer)[0];');
+
+    const slide = read(srcDir, 'ui', 'motion', 'SlideScreen.tsx');
+    expect(slide.match(/useLayerBelow\(\)/g)).toHaveLength(2);
+  });
+
+  it('pushes for every other thing that slides in, by the room it takes', () => {
+    // The hamburger drawer moves the page by its own width, not the screen's.
+    const header = read(srcDir, 'ui', 'components', 'AppHeader.tsx');
+    expect(header).toContain('usePushWhileOpen(open, { x: panelWidth })');
+
+    // A bottom sheet is as tall as its content, so it measures first.
+    const sheet = read(srcDir, 'ui', 'components', 'Sheet.tsx');
+    expect(sheet).toContain('usePushWhileOpen(visible && height > 0, { y: -height })');
+    expect(sheet).toContain('onLayout=');
+
+    // The photo viewer is full screen, so the page travels a full screen.
+    const viewer = read(srcDir, 'ui', 'components', 'PhotoViewer.tsx');
+    expect(viewer).toContain('usePushWhileOpen(Boolean(photo), { y: -windowHeight })');
+
+    // These are all Modals, portalled clear of the page, so they resolve the
+    // layer when they open rather than when they mount.
+    const push = read(srcDir, 'ui', 'motion', 'SlidePush.tsx');
+    expect(push).toContain('export function usePushWhileOpen');
   });
 
   it('offers a push slot at every depth, since panels open panels', () => {

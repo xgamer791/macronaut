@@ -2,6 +2,7 @@ import React, {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useLayoutEffect,
   useRef,
   useState,
@@ -18,7 +19,7 @@ import { useRouter } from 'expo-router';
 
 import { goBackOrHome } from '@/utils/navigation';
 import { useTheme } from '@/ui/theme/ThemeProvider';
-import { SlidePushLayer, useSlidePush } from './SlidePush';
+import { SlidePushLayer, useLayerBelow } from './SlidePush';
 import { SLIDE_DURATION_MS, SLIDE_EASING } from './slideTiming';
 
 type Side = 'left' | 'right';
@@ -69,7 +70,7 @@ function SlideScreenWeb({ from, children }: { from: Side; children: React.ReactN
   const { colors } = useTheme();
   const [open, setOpen] = useState(false);
   const leaving = useRef(false);
-  const pushBelow = useSlidePush();
+  const pushBelow = useLayerBelow();
   const dir = from === 'right' ? 1 : -1;
 
   useLayoutEffect(() => {
@@ -80,7 +81,7 @@ function SlideScreenWeb({ from, children }: { from: Side; children: React.ReactN
         // The page underneath leaves by exactly the width this panel takes,
         // on the same frame, so the pair reads as one strip rather than two
         // things that happen to move at once.
-        pushBelow?.(-dir * width);
+        pushBelow?.({ x: -dir * width });
       });
     });
     return () => {
@@ -89,11 +90,16 @@ function SlideScreenWeb({ from, children }: { from: Side; children: React.ReactN
     };
   }, [dir, pushBelow, width]);
 
+  // Dismissing is not the only way out: browser back, a hardware back, or a
+  // deep link all drop this panel without ever running `leave`, and the page
+  // would stay shoved off to one side for good.
+  useEffect(() => () => pushBelow?.({}), [pushBelow]);
+
   const leave = useCallback(() => {
     if (leaving.current) return;
     leaving.current = true;
     setOpen(false);
-    pushBelow?.(0);
+    pushBelow?.({});
     const reduce =
       typeof window !== 'undefined' &&
       window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -127,7 +133,7 @@ function SlideScreenNative({ from, children }: { from: Side; children: React.Rea
   const { colors } = useTheme();
   const progress = useSharedValue(0);
   const leaving = useRef(false);
-  const pushBelow = useSlidePush();
+  const pushBelow = useLayerBelow();
   const dir = from === 'right' ? 1 : -1;
 
   useLayoutEffect(() => {
@@ -137,8 +143,12 @@ function SlideScreenNative({ from, children }: { from: Side; children: React.Rea
       reduceMotion: ReduceMotion.System,
     });
     // Same distance, same curve, same moment as the panel's own entrance.
-    pushBelow?.(-dir * width);
+    pushBelow?.({ x: -dir * width });
   }, [dir, progress, pushBelow, width]);
+
+  // As on the web: a back gesture or a hardware back unmounts this without
+  // ever running `leave`, and the page must still be let go.
+  useEffect(() => () => pushBelow?.({}), [pushBelow]);
 
   const finish = useCallback(() => {
     goBackOrHome(router);
@@ -147,7 +157,7 @@ function SlideScreenNative({ from, children }: { from: Side; children: React.Rea
   const leave = useCallback(() => {
     if (leaving.current) return;
     leaving.current = true;
-    pushBelow?.(0);
+    pushBelow?.({});
     // Reanimated shared values are mutated on purpose to drive the slide-out.
     // eslint-disable-next-line react-hooks/immutability -- SharedValue setter
     progress.value = withTiming(
