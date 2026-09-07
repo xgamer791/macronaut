@@ -35,6 +35,7 @@ describe('composer keyboard gap', () => {
     expect(hook).toContain('composerPad(keyboardOpen, restingPad)');
     // Both conversations sit on that one composer rather than their own.
     expect(read('app', 'chat', '[id].tsx')).toContain('<MessageComposer');
+    expect(read('app', 'group-chat', '[id].tsx')).toContain('<MessageComposer');
   });
 
   it('never measures the viewport to place the composer', () => {

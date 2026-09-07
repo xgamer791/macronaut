@@ -55,6 +55,8 @@ function NotificationsScreen() {
       router.push('/calendar');
     } else if (item.kind === 'chat_message' && item.chatId) {
       router.push({ pathname: '/chat/[id]', params: { id: item.chatId } });
+    } else if (item.kind === 'group_message' && item.groupId) {
+      router.push({ pathname: '/group-chat/[id]', params: { id: item.groupId } });
     } else if (item.actor.handle) {
       router.push(`/u/${item.actor.handle}`);
     }
@@ -209,7 +211,7 @@ function NotificationRow({
   busy: boolean;
 }) {
   const { colors } = useTheme();
-  const isMessage = item.kind === 'chat_message';
+  const isMessage = item.kind === 'chat_message' || item.kind === 'group_message';
   const isGoal = item.kind === 'calorie_goal';
   // Their page may be private, so the request is answered here or nowhere.
   const canAccept = item.kind === 'friend_request' && item.actor.friendship === 'incoming';

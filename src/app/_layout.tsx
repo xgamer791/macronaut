@@ -90,6 +90,7 @@ function ThemedApp() {
           <Stack.Screen name="connections" options={SLIDE_OVER_OPTIONS} />
           <Stack.Screen name="new-chat" options={{ presentation: 'modal' }} />
           <Stack.Screen name="chat/[id]" options={SLIDE_OVER_OPTIONS} />
+          <Stack.Screen name="group-chat/[id]" options={SLIDE_OVER_OPTIONS} />
           <Stack.Screen name="notifications" options={SLIDE_OVER_OPTIONS} />
           <Stack.Screen name="fasting" options={SLIDE_OVER_OPTIONS} />
           <Stack.Screen name="calendar" options={SLIDE_OVER_OPTIONS} />
@@ -122,7 +123,11 @@ const AUTH_FLOW_PATHS = new Set([
 
 export function shouldShowPersistentFooter(signedIn: boolean, pathname: string) {
   if (!signedIn || isPrimaryTabPath(pathname) || AUTH_FLOW_PATHS.has(pathname)) return false;
-  return pathname !== '/chat' && !pathname.startsWith('/chat/');
+  return (
+    pathname !== '/chat' &&
+    !pathname.startsWith('/chat/') &&
+    !pathname.startsWith('/group-chat/')
+  );
 }
 
 /**

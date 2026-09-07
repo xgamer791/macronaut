@@ -3,12 +3,14 @@ import { useRouter } from 'expo-router';
 import React, { useMemo, useState } from 'react';
 import { ActivityIndicator, Platform, Pressable, StyleSheet, TextInput, View } from 'react-native';
 import type { ChatSummary } from '@/repositories/chatRepo';
-import { useChats } from '@/state/queries';
+import type { GroupChatSummary } from '@/repositories/groupChatRepo';
+import { useChats, useGroupChats } from '@/state/queries';
 import {
   AppText,
   ChatAvatar,
   ChatPeopleList,
   EmptyState,
+  GroupIdentity,
   Screen,
   ScreenHeader,
 } from '@/ui/components';
@@ -24,23 +26,56 @@ export default function ChatsScreen() {
   );
 }
 
+/** One list of conversations, direct and group alike, newest activity first. */
+type ListRow =
+  | { key: string; at: string; kind: 'direct'; chat: ChatSummary }
+  | { key: string; at: string; kind: 'group'; chat: GroupChatSummary };
+
+function matchesDirect(chat: ChatSummary, wanted: string): boolean {
+  return (
+    chat.peer.displayName.toLowerCase().includes(wanted) ||
+    (chat.peer.handle ?? '').toLowerCase().includes(wanted) ||
+    Boolean(chat.lastMessage?.body.toLowerCase().includes(wanted))
+  );
+}
+
+function matchesGroup(chat: GroupChatSummary, wanted: string): boolean {
+  return (
+    chat.group.name.toLowerCase().includes(wanted) ||
+    chat.group.handle.toLowerCase().includes(wanted) ||
+    Boolean(chat.lastMessage?.body.toLowerCase().includes(wanted)) ||
+    Boolean(chat.lastMessage?.senderName.toLowerCase().includes(wanted))
+  );
+}
+
 function ChatList() {
   const router = useRouter();
   const { colors } = useTheme();
   const chats = useChats();
+  const groupChats = useGroupChats();
   const [search, setSearch] = useState('');
   const wanted = search.trim().toLowerCase();
-  const list = useMemo(
-    () =>
-      (chats.data ?? []).filter(
-        (chat) =>
-          !wanted ||
-          chat.peer.displayName.toLowerCase().includes(wanted) ||
-          (chat.peer.handle ?? '').toLowerCase().includes(wanted) ||
-          chat.lastMessage?.body.toLowerCase().includes(wanted),
-      ),
-    [chats.data, wanted],
-  );
+  const list = useMemo(() => {
+    const rows: ListRow[] = [
+      ...(chats.data ?? [])
+        .filter((chat) => !wanted || matchesDirect(chat, wanted))
+        .map<ListRow>((chat) => ({
+          key: `direct:${chat.id}`,
+          at: chat.lastMessage?.createdAt ?? chat.updatedAt,
+          kind: 'direct',
+          chat,
+        })),
+      ...(groupChats.data ?? [])
+        .filter((chat) => !wanted || matchesGroup(chat, wanted))
+        .map<ListRow>((chat) => ({
+          key: `group:${chat.group.id}`,
+          at: chat.lastMessageAt,
+          kind: 'group',
+          chat,
+        })),
+    ];
+    return rows.sort((a, b) => b.at.localeCompare(a.at));
+  }, [chats.data, groupChats.data, wanted]);
 
   return (
     <Screen padded={false}>
@@ -83,7 +118,7 @@ function ChatList() {
         </View>
       </View>
 
-      {chats.isLoading ? (
+      {chats.isLoading || groupChats.isLoading ? (
         <View style={styles.loading}>
           <ActivityIndicator color={colors.accent} />
         </View>
@@ -96,13 +131,28 @@ function ChatList() {
                   CHATS
                 </AppText>
               ) : null}
-              {list.map((chat) => (
-                <ChatRow
-                  key={chat.id}
-                  chat={chat}
-                  onPress={() => router.push({ pathname: '/chat/[id]', params: { id: chat.id } })}
-                />
-              ))}
+              {list.map((row) =>
+                row.kind === 'direct' ? (
+                  <ChatRow
+                    key={row.key}
+                    chat={row.chat}
+                    onPress={() =>
+                      router.push({ pathname: '/chat/[id]', params: { id: row.chat.id } })
+                    }
+                  />
+                ) : (
+                  <GroupChatRow
+                    key={row.key}
+                    chat={row.chat}
+                    onPress={() =>
+                      router.push({
+                        pathname: '/group-chat/[id]',
+                        params: { id: row.chat.group.id },
+                      })
+                    }
+                  />
+                ),
+              )}
             </View>
           ) : null}
 
@@ -140,10 +190,15 @@ function previewOf(last: ChatSummary['lastMessage']): string {
   return `${last.isMine ? 'You: ' : ''}${body}`;
 }
 
+/** A group row names who spoke last: with many voices, the text alone does not. */
+function groupPreviewOf(last: GroupChatSummary['lastMessage']): string {
+  if (!last) return 'No messages yet';
+  const body = last.body || (last.mediaKind === 'video' ? 'Video' : 'Photo');
+  return `${last.isMine ? 'You' : last.senderName}: ${body}`;
+}
+
 function ChatRow({ chat, onPress }: { chat: ChatSummary; onPress: () => void }) {
   const { colors } = useTheme();
-  const preview = previewOf(chat.lastMessage);
-
   return (
     <Pressable
       accessibilityRole="button"
@@ -152,40 +207,87 @@ function ChatRow({ chat, onPress }: { chat: ChatSummary; onPress: () => void }) 
       style={({ pressed }) => [styles.chatRow, pressed && { opacity: 0.65 }]}
     >
       <ChatAvatar person={chat.peer} />
-      <View style={[styles.chatCopy, { borderBottomColor: colors.border }]}>
-        <View style={styles.chatTopline}>
-          <AppText
-            variant="body"
-            weight={chat.unreadCount ? '700' : '600'}
-            numberOfLines={1}
-            style={{ flex: 1 }}
-          >
-            {chat.peer.displayName}
-          </AppText>
-          <AppText variant="caption" tone={chat.unreadCount ? 'primary' : 'muted'}>
-            {chatTime(chat.lastMessage?.createdAt ?? chat.updatedAt)}
-          </AppText>
-        </View>
-        <View style={styles.previewRow}>
-          <AppText
-            variant="body"
-            tone={chat.unreadCount ? 'primary' : 'muted'}
-            weight={chat.unreadCount ? '600' : '400'}
-            numberOfLines={1}
-            style={{ flex: 1 }}
-          >
-            {preview}
-          </AppText>
-          {chat.unreadCount ? (
-            <View style={[styles.unread, { backgroundColor: colors.accent }]}>
-              <AppText variant="micro" weight="700" style={{ color: colors.onAccent }}>
-                {chat.unreadCount > 99 ? '99+' : chat.unreadCount}
-              </AppText>
-            </View>
-          ) : null}
-        </View>
-      </View>
+      <RowCopy
+        title={chat.peer.displayName}
+        time={chatTime(chat.lastMessage?.createdAt ?? chat.updatedAt)}
+        preview={previewOf(chat.lastMessage)}
+        unread={chat.unreadCount}
+        borderColor={colors.border}
+      />
     </Pressable>
+  );
+}
+
+function GroupChatRow({ chat, onPress }: { chat: GroupChatSummary; onPress: () => void }) {
+  const { colors } = useTheme();
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={`Open ${chat.group.name} group chat`}
+      onPress={onPress}
+      style={({ pressed }) => [styles.chatRow, pressed && { opacity: 0.65 }]}
+    >
+      <GroupIdentity group={chat.group} size={54} />
+      <RowCopy
+        title={chat.group.name}
+        time={chatTime(chat.lastMessageAt)}
+        preview={groupPreviewOf(chat.lastMessage)}
+        unread={chat.unreadCount}
+        borderColor={colors.border}
+      />
+    </Pressable>
+  );
+}
+
+/** The words of a row: name and time on top, preview and unread pill under. */
+function RowCopy({
+  title,
+  time,
+  preview,
+  unread,
+  borderColor,
+}: {
+  title: string;
+  time: string;
+  preview: string;
+  unread: number;
+  borderColor: string;
+}) {
+  const { colors } = useTheme();
+  return (
+    <View style={[styles.chatCopy, { borderBottomColor: borderColor }]}>
+      <View style={styles.chatTopline}>
+        <AppText
+          variant="body"
+          weight={unread ? '700' : '600'}
+          numberOfLines={1}
+          style={{ flex: 1 }}
+        >
+          {title}
+        </AppText>
+        <AppText variant="caption" tone={unread ? 'primary' : 'muted'}>
+          {time}
+        </AppText>
+      </View>
+      <View style={styles.previewRow}>
+        <AppText
+          variant="body"
+          tone={unread ? 'primary' : 'muted'}
+          weight={unread ? '600' : '400'}
+          numberOfLines={1}
+          style={{ flex: 1 }}
+        >
+          {preview}
+        </AppText>
+        {unread ? (
+          <View style={[styles.unread, { backgroundColor: colors.accent }]}>
+            <AppText variant="micro" weight="700" style={{ color: colors.onAccent }}>
+              {unread > 99 ? '99+' : unread}
+            </AppText>
+          </View>
+        ) : null}
+      </View>
+    </View>
   );
 }
 

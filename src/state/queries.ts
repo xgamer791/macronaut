@@ -59,6 +59,8 @@ export const keys = {
   chats: ['chats'] as const,
   chatPeople: (search: string) => ['chat-people', search] as const,
   chatThread: (id: string) => ['chat-thread', id] as const,
+  groupChats: ['group-chats'] as const,
+  groupChatThread: (id: string) => ['group-chat-thread', id] as const,
   notifications: ['notifications'] as const,
   fasting: ['fasting'] as const,
   trainingSchedule: (from: DayKey, to: DayKey) => ['training-schedule', from, to] as const,
@@ -448,6 +450,9 @@ function useInvalidateGroups() {
     qc.invalidateQueries({ queryKey: ['public-groups'] });
     qc.invalidateQueries({ queryKey: ['group-members'] });
     qc.invalidateQueries({ queryKey: keys.myGym });
+    // Joining or leaving flips whether a group's chat is yours to read.
+    qc.invalidateQueries({ queryKey: keys.groupChats });
+    qc.invalidateQueries({ queryKey: ['group-chat-thread'] });
   };
 }
 
@@ -720,6 +725,80 @@ export function useMarkChatRead() {
       invalidate(id);
       invalidateNotifications();
     },
+  });
+}
+
+function useInvalidateGroupChats() {
+  const qc = useQueryClient();
+  return (id?: string) => {
+    qc.invalidateQueries({ queryKey: keys.groupChats });
+    if (id) qc.invalidateQueries({ queryKey: keys.groupChatThread(id) });
+  };
+}
+
+/** Every group chat you are in that has had a message, newest first. */
+export function useGroupChats() {
+  const { signedIn } = useAuth();
+  const { groupChats } = useRepos();
+  return useQuery({
+    queryKey: keys.groupChats,
+    queryFn: () => groupChats.list(),
+    enabled: signedIn,
+    refetchInterval: 10_000,
+  });
+}
+
+export function useGroupChatThread(id: string) {
+  const { signedIn } = useAuth();
+  const { groupChats } = useRepos();
+  return useQuery({
+    queryKey: keys.groupChatThread(id),
+    queryFn: () => groupChats.thread(id),
+    enabled: signedIn && id.length > 0,
+    refetchInterval: 3_000,
+  });
+}
+
+export function useSendGroupMessage() {
+  const { chats, groupChats } = useRepos();
+  const invalidate = useInvalidateGroupChats();
+  return useMutation({
+    mutationFn: async (input: { id: string; body: string; attachment?: PickedAttachment }) => {
+      const picked = input.attachment;
+      if (!picked) return groupChats.send(input.id, input.body);
+      // Storage is storage: the direct chats' upload serves a group message
+      // too, and the row is only written once its file exists.
+      const mediaId = await chats.upload(picked.blob);
+      return groupChats.send(input.id, input.body, {
+        mediaId,
+        kind: picked.kind,
+        width: picked.width,
+        height: picked.height,
+      });
+    },
+    onSuccess: (_message, input) => invalidate(input.id),
+  });
+}
+
+export function useMarkGroupChatRead() {
+  const { groupChats } = useRepos();
+  const invalidate = useInvalidateGroupChats();
+  const invalidateNotifications = useInvalidateNotifications();
+  return useMutation({
+    mutationFn: (id: string) => groupChats.markRead(id),
+    onSuccess: (_nothing, id) => {
+      invalidate(id);
+      invalidateNotifications();
+    },
+  });
+}
+
+export function useRemoveGroupMessage() {
+  const { groupChats } = useRepos();
+  const invalidate = useInvalidateGroupChats();
+  return useMutation({
+    mutationFn: (input: { id: string; messageId: string }) => groupChats.remove(input.messageId),
+    onSuccess: (_nothing, input) => invalidate(input.id),
   });
 }
 

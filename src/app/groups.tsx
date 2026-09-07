@@ -16,6 +16,7 @@ import { useAuth } from '@/state/AuthProvider';
 import {
   useCreateGroup,
   useDeleteGroup,
+  useGroupChats,
   useGroupDiscovery,
   useGroupMembers,
   useJoinGroup,
@@ -333,6 +334,10 @@ function GroupsList() {
         onSetHomeGym={() => {
           setOpen(null);
           router.push('/home-gym');
+        }}
+        onOpenChat={(group) => {
+          setOpen(null);
+          router.push({ pathname: '/group-chat/[id]', params: { id: group.id } });
         }}
       />
     </Screen>
@@ -682,6 +687,10 @@ function ProfileGroups({
   onLeave: (group: FitnessGroup) => Promise<void>;
 }) {
   const router = useRouter();
+  const openChat = (group: FitnessGroup) => {
+    onCloseDetail();
+    router.push({ pathname: '/group-chat/[id]', params: { id: group.id } });
+  };
   if (!loading && data === null) {
     return (
       <Screen>
@@ -716,6 +725,7 @@ function ProfileGroups({
         onClose={onCloseDetail}
         onJoin={(group) => void onJoin(group)}
         onLeave={(group) => void onLeave(group)}
+        onOpenChat={openChat}
       />
     </Screen>
   );
@@ -737,6 +747,7 @@ function YourGymCard({
 }) {
   const { colors } = useTheme();
   const { group, restriction } = gym;
+  const unread = useGroupUnread(group?.id);
   const line = restriction
     ? restriction.kind === 'ban'
       ? `Removed by its members until ${untilLabel(restriction.until)}`
@@ -750,9 +761,12 @@ function YourGymCard({
         <Ionicons name="barbell-outline" size={22} color={colors.accent} />
       </View>
       <View style={styles.startCopy}>
-        <AppText weight="600" numberOfLines={1}>
-          {gym.gym.name}
-        </AppText>
+        <View style={styles.titleBadgeRow}>
+          <AppText weight="600" numberOfLines={1} style={{ flexShrink: 1 }}>
+            {gym.gym.name}
+          </AppText>
+          <UnreadPill count={unread} />
+        </View>
         <AppText variant="caption" tone="secondary" numberOfLines={1}>
           {line}
         </AppText>
@@ -802,6 +816,28 @@ function SectionHeading({
   );
 }
 
+/** Unread messages in a group's chat, from the one list every row shares. */
+function useGroupUnread(groupId?: string): number {
+  const groupChats = useGroupChats();
+  if (!groupId) return 0;
+  return groupChats.data?.find((row) => row.group.id === groupId)?.unreadCount ?? 0;
+}
+
+function UnreadPill({ count }: { count: number }) {
+  const { colors } = useTheme();
+  if (!count) return null;
+  return (
+    <View
+      accessibilityLabel={`${count} unread ${count === 1 ? 'message' : 'messages'}`}
+      style={[styles.unreadPill, { backgroundColor: colors.accent }]}
+    >
+      <AppText variant="micro" weight="700" style={{ color: colors.onAccent }}>
+        {count > 99 ? '99+' : count}
+      </AppText>
+    </View>
+  );
+}
+
 function GroupRow({
   group,
   badge,
@@ -816,6 +852,7 @@ function GroupRow({
   onAction?: () => void;
 }) {
   const { colors } = useTheme();
+  const unread = useGroupUnread(group.id);
   return (
     <Card padded={false} style={styles.groupRow}>
       <Pressable
@@ -837,6 +874,7 @@ function GroupRow({
                 </AppText>
               </View>
             ) : null}
+            <UnreadPill count={unread} />
           </View>
           <AppText variant="caption" tone="secondary" numberOfLines={1}>
             {groupMeta(group)}
@@ -955,6 +993,7 @@ function GroupDetailsSheet({
   onJoin,
   onLeave,
   onSetHomeGym,
+  onOpenChat,
 }: {
   group: FitnessGroup | null;
   onClose: () => void;
@@ -963,10 +1002,13 @@ function GroupDetailsSheet({
   onLeave?: (group: FitnessGroup) => void;
   /** A gym group is joined by making the gym home, not by a join button. */
   onSetHomeGym?: () => void;
+  /** The group's chat, for members. */
+  onOpenChat?: (group: FitnessGroup) => void;
 }) {
   const isGym = group?.kind === 'gym';
   // Only members may see who else is in; the query refuses everyone else.
   const members = useGroupMembers(group?.id ?? '', Boolean(group?.isMember));
+  const unread = useGroupUnread(group?.id);
   return (
     <Sheet visible={group !== null} onClose={onClose} title={group?.name}>
       {group ? (
@@ -989,6 +1031,12 @@ function GroupDetailsSheet({
           <AppText>
             {group.description || 'This community has not added a description yet.'}
           </AppText>
+          {group.isMember && onOpenChat ? (
+            <Button
+              title={unread ? `Group chat · ${unread} new` : 'Group chat'}
+              onPress={() => onOpenChat(group)}
+            />
+          ) : null}
           {isGym ? (
             group.isMember ? (
               <Button title="Leave group" variant="secondary" onPress={() => onLeave?.(group)} />
@@ -1455,6 +1503,14 @@ const styles = StyleSheet.create({
   groupCopy: { flex: 1, gap: 3 },
   titleBadgeRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   badge: { paddingHorizontal: 7, paddingVertical: 2, borderRadius: radius.full },
+  unreadPill: {
+    minWidth: 20,
+    height: 20,
+    borderRadius: 10,
+    paddingHorizontal: 5,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   rowAction: {
     minWidth: 54,
     minHeight: 34,

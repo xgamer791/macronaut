@@ -137,6 +137,23 @@ counts once, but no function ever returns `voterUserId` — the response carries
 a count and the caller's own vote. Removal writes a dated `groupBans` row that
 `gyms.claim` and `groups.join` check.
 
+### Group chat
+
+Every fitness group has one chat, and it is for members: `groupChats.thread`
+returns messages only to an account holding a seat (`membership`), and
+`groupChats.send` refuses everyone else. A non-member of a public group gets
+the group and an empty thread, so the screen can offer to join; a private
+group's thread is `null`, exactly like a missing one. A message is the
+sender's to delete, plus the owner's in a group that has one — a gym group has
+no owner, so there it is the author's alone. Unread state is a per-seat
+`lastReadAt`, and the bell keeps one `group_message` row per recipient per
+group, updated in place, rather than a row per message: a gym group can have
+hundreds of members, and a send never writes hundreds of rows (past 500 seats
+it writes none, and the unread counts remain). Sends are capped at 30 a
+minute per account. Deleting a group takes its messages, files and bell rows
+with it; deleting an account removes only what that account wrote, and the
+threads of the groups it owned.
+
 ## 2. Open
 
 Ordered by how much they matter.
