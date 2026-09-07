@@ -21,7 +21,10 @@ describe('tab bar', () => {
     expect(tabBar).toContain('chatbubbles-outline');
     expect(tabBar).toContain('Open your profile');
     expect(tabBar).toContain('size={ICON}');
-    expect(tabBar).toContain('const ICON = 24');
+    expect(tabBar).toContain('const ICON = 27');
+    expect(tabBar).toContain('const AVATAR = 32');
+    expect(tabBar).toContain('useMyProfile');
+    expect(tabBar).toContain('avatarUrl');
     expect(tabBar).not.toContain('restaurant');
     expect(tabBar).not.toContain('settings-outline');
   });
