@@ -33,7 +33,7 @@ describe('direct chats', () => {
 
     await alice.repos.profile.setFollow('bob_lifts', true);
 
-    const chat = await bob.repos.chats.open('alice_runner');
+    const chat = await bob.repos.chats.open(alice.userId);
     await bob.repos.chats.send(chat.id, '  Morning run tomorrow?  ');
 
     const aliceList = await alice.repos.chats.list();
@@ -88,15 +88,15 @@ describe('direct chats', () => {
     }
 
     // Friendship, not page visibility, is the gate on a conversation.
-    await expect(bob.repos.chats.open('holly_ky')).rejects.toThrow(/friends/i);
+    await expect(bob.repos.chats.open(holly.userId)).rejects.toThrow(/friends/i);
     await bob.repos.profile.setFollow('holly_ky', true);
-    await expect(bob.repos.chats.open('holly_ky')).rejects.toThrow(/friends/i);
+    await expect(bob.repos.chats.open(holly.userId)).rejects.toThrow(/friends/i);
     expect(await holly.repos.chats.people()).toEqual([
       expect.objectContaining({ handle: 'bob_lifts', friendship: 'incoming' }),
     ]);
 
     await holly.repos.profile.setFollow('bob_lifts', true);
-    const chat = await bob.repos.chats.open('holly_ky');
+    const chat = await bob.repos.chats.open(holly.userId);
     await bob.repos.chats.send(chat.id, 'Morning run tomorrow?');
     expect(await holly.repos.chats.list()).toEqual([
       expect.objectContaining({
@@ -106,27 +106,56 @@ describe('direct chats', () => {
     ]);
   });
 
-  /** A row was only written the first time somebody edited their profile, so
-   * an account that signed up and just logged food was missing from the table
-   * search reads. Opening the app claims it. */
-  it('finds an account that has never edited its profile, once it opens the app', async () => {
+  /** Search reads the accounts table, so an account that signed up and only
+   * ever logged food — no profile row at all — is found by the name it signed
+   * up with, befriended by id, and messaged. */
+  it('finds an account that has never edited its profile, straight from the users table', async () => {
     const t = backend();
     const holly = await signIn(t, 'holly@example.com', 'Holly Ky');
     const bob = await signIn(t, 'bob@example.com');
     await bob.repos.profile.update({ handle: 'bob_lifts' });
+    expect(await t.run(async (ctx) => ctx.db.query('profiles').collect())).toHaveLength(1);
 
-    expect(await bob.repos.chats.people('holly')).toEqual([]);
+    // No profile row, so no handle yet — but the account is right there.
+    const [found] = await bob.repos.chats.people('holly');
+    expect(found).toEqual(
+      expect.objectContaining({ id: holly.userId, handle: null, displayName: 'Holly Ky' }),
+    );
 
-    // What the app does for every signed-in session.
-    const { handle } = await holly.repos.profile.ensure();
-    expect(handle).toBe('holly_ky');
+    // The friend request is addressed to the account, and gives it the same
+    // row and handle it would have claimed for itself.
+    await bob.repos.profile.requestFriend(holly.userId, true);
     expect(await bob.repos.chats.people('holly')).toEqual([
-      expect.objectContaining({ handle: 'holly_ky', displayName: 'Holly Ky' }),
+      expect.objectContaining({ id: holly.userId, handle: 'holly_ky', friendship: 'outgoing' }),
+    ]);
+    // Holly sees the request even though she never touched her profile.
+    expect((await holly.repos.notifications.list()).items).toEqual([
+      expect.objectContaining({
+        kind: 'friend_request',
+        actor: expect.objectContaining({ id: bob.userId, handle: 'bob_lifts' }),
+      }),
     ]);
 
-    // Claiming twice keeps the one row and the one handle.
-    expect((await holly.repos.profile.ensure()).handle).toBe('holly_ky');
-    expect(await t.run(async (ctx) => ctx.db.query('profiles').collect())).toHaveLength(2);
+    await holly.repos.profile.requestFriend(bob.userId, true);
+    const chat = await bob.repos.chats.open(holly.userId);
+    expect(chat.peer).toEqual(expect.objectContaining({ id: holly.userId, handle: 'holly_ky' }));
+  });
+
+  /** One person, two sign-ups: the same address on two accounts is not a
+   * second person to find, so a search never hands you yourself. */
+  it('never returns your own account, nor another account with your email', async () => {
+    const t = backend();
+    const chris = await signIn(t, 'chris@example.com', 'Christopher Garcia');
+    const chrisAgain = await signIn(t, 'Chris@Example.com', 'Christopher Garcia');
+    const holly = await signIn(t, 'holly@example.com', 'Holly Ky');
+    await chris.repos.profile.update({ handle: 'christopher_garcia' });
+
+    expect(await chris.repos.chats.people('ch')).toEqual([]);
+    expect(await chrisAgain.repos.chats.people('christopher')).toEqual([]);
+    expect(await holly.repos.chats.people('ch')).toEqual([
+      expect.objectContaining({ handle: 'christopher_garcia' }),
+      expect.objectContaining({ id: chrisAgain.userId, handle: null }),
+    ]);
   });
 
   it('browses a public profile by any part of its handle or name', async () => {
@@ -158,12 +187,12 @@ describe('direct chats', () => {
     await bob.repos.profile.update({ handle: 'bob_lifts', isPublic: true });
     await stranger.repos.profile.update({ handle: 'stranger', isPublic: true });
 
-    await expect(alice.repos.chats.open('bob_lifts')).rejects.toThrow(/friends/i);
+    await expect(alice.repos.chats.open(bob.userId)).rejects.toThrow(/friends/i);
     await alice.repos.profile.setFollow('bob_lifts', true);
-    await expect(alice.repos.chats.open('bob_lifts')).rejects.toThrow(/friends/i);
+    await expect(alice.repos.chats.open(bob.userId)).rejects.toThrow(/friends/i);
     await bob.repos.profile.setFollow('alice_runner', true);
 
-    const chat = await alice.repos.chats.open('bob_lifts');
+    const chat = await alice.repos.chats.open(bob.userId);
     await alice.repos.chats.send(chat.id, 'Private message');
 
     expect(await stranger.repos.chats.thread(chat.id)).toBeNull();
@@ -182,7 +211,7 @@ describe('direct chats', () => {
     await bob.repos.profile.update({ handle: 'bob_lifts', isPublic: true });
     await alice.repos.profile.setFollow('bob_lifts', true);
     await bob.repos.profile.setFollow('alice_runner', true);
-    const chat = await alice.repos.chats.open('bob_lifts');
+    const chat = await alice.repos.chats.open(bob.userId);
     await alice.repos.chats.send(chat.id, 'Stored in Convex');
 
     await alice.repos.account.deleteAllData();

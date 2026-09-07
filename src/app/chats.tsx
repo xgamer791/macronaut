@@ -31,7 +31,7 @@ function ChatList() {
         (chat) =>
           !wanted ||
           chat.peer.displayName.toLowerCase().includes(wanted) ||
-          chat.peer.handle.toLowerCase().includes(wanted) ||
+          (chat.peer.handle ?? '').toLowerCase().includes(wanted) ||
           chat.lastMessage?.body.toLowerCase().includes(wanted),
       ),
     [chats.data, wanted],

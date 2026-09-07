@@ -400,26 +400,39 @@ async function followRow(
 }
 
 /**
- * Follow or unfollow a profile by handle — the friend request Macronaut is
- * built on. The follow row is owned by the caller (`userId` is them), so this
- * is not a write to someone else's data, it is a write about them.
+ * Follow or unfollow a person — the friend request Macronaut is built on. The
+ * follow row is owned by the caller (`userId` is them), so this is not a write
+ * to someone else's data, it is a write about them.
  *
- * A private page is still a person you can befriend: naming their exact
- * handle is the request, and what comes back is only the identity the request
- * was made against. Their page contents stay private until they make the page
- * public, exactly as before. Your own page refuses.
+ * The target is an account, named by its id from a people search or by the
+ * handle on its profile page. An account that has never edited its profile
+ * has no row yet; it gets the same one it would claim for itself on launch,
+ * so the request has a handle to point at. A private page is still a person
+ * you can befriend, and what comes back is only the identity the request was
+ * made against: the page contents stay private until its owner opens them.
+ * Your own account refuses.
  */
 export const setFollow = mutation({
-  args: { handle: v.string(), follow: v.boolean() },
-  handler: async (ctx, { handle, follow }) => {
+  args: {
+    handle: v.optional(v.string()),
+    userId: v.optional(v.id('users')),
+    follow: v.boolean(),
+  },
+  handler: async (ctx, { handle, userId: targetId, follow }) => {
     const userId = await requireUserId(ctx);
-    const wanted = normalizeHandle(handle);
-    const row = wanted
-      ? await ctx.db
-          .query('profiles')
-          .withIndex('by_handle', (q) => q.eq('handleLower', wanted))
-          .first()
-      : null;
+    let row: Doc<'profiles'> | null = null;
+    if (targetId) {
+      const target = await ctx.db.get(targetId);
+      if (target) row = await loadOrCreate(ctx, target._id);
+    } else if (handle) {
+      const wanted = normalizeHandle(handle);
+      row = wanted
+        ? await ctx.db
+            .query('profiles')
+            .withIndex('by_handle', (q) => q.eq('handleLower', wanted))
+            .first()
+        : null;
+    }
     if (!row || row.userId === userId) {
       throw new ConvexError('Profile not available');
     }

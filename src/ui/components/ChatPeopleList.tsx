@@ -48,10 +48,10 @@ export function ChatPeopleList({
 
   async function message(person: ChatPerson) {
     if (person.friendship !== 'friends') return;
-    setOpening(person.handle);
+    setOpening(person.id);
     setError(null);
     try {
-      const chat = await openChat.mutateAsync(person.handle);
+      const chat = await openChat.mutateAsync(person.id);
       const to = { pathname: '/chat/[id]' as const, params: { id: chat.id } };
       if (navigate === 'replace') router.replace(to);
       else router.push(to);
@@ -63,10 +63,10 @@ export function ChatPeopleList({
   }
 
   async function addFriend(person: ChatPerson) {
-    setFriending(person.handle);
+    setFriending(person.id);
     setError(null);
     try {
-      await setFriend.mutateAsync({ handle: person.handle, follow: true });
+      await setFriend.mutateAsync({ userId: person.id, follow: true });
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not send that friend request.');
     } finally {
@@ -104,11 +104,13 @@ export function ChatPeopleList({
       {rows.length
         ? rows.map((person) => (
             <ChatPersonRow
-              key={person.handle}
+              key={person.id}
               person={person}
-              busy={opening === person.handle || friending === person.handle}
+              busy={opening === person.id || friending === person.id}
               disabled={opening !== null || friending !== null}
-              onProfile={() => router.push(`/u/${person.handle}`)}
+              onProfile={() => {
+                if (person.handle) router.push(`/u/${person.handle}`);
+              }}
               onAddFriend={() => void addFriend(person)}
               onAcceptFriend={() => void addFriend(person)}
               onMessage={() => void message(person)}

@@ -119,7 +119,10 @@ function Conversation() {
         <Pressable
           accessibilityRole="button"
           accessibilityLabel={`Open ${data.peer.displayName}'s profile`}
-          onPress={() => router.push(`/u/${data.peer.handle}`)}
+          disabled={!data.peer.handle}
+          onPress={() => {
+            if (data.peer.handle) router.push(`/u/${data.peer.handle}`);
+          }}
           style={styles.identity}
         >
           <ChatAvatar person={data.peer} size={36} />
@@ -127,9 +130,11 @@ function Conversation() {
             <AppText weight="700" numberOfLines={1}>
               {data.peer.displayName}
             </AppText>
-            <AppText variant="micro" tone="muted" numberOfLines={1}>
-              @{data.peer.handle}
-            </AppText>
+            {data.peer.handle ? (
+              <AppText variant="micro" tone="muted" numberOfLines={1}>
+                @{data.peer.handle}
+              </AppText>
+            ) : null}
           </View>
         </Pressable>
         <View style={styles.back} />
@@ -219,7 +224,7 @@ function Conversation() {
           onAdd={async () => {
             setError(null);
             try {
-              await setFriend.mutateAsync({ handle: data.peer.handle, follow: true });
+              await setFriend.mutateAsync({ userId: data.peer.id, follow: true });
             } catch (e) {
               setError(e instanceof Error ? e.message : 'Could not update that friend request.');
             }
