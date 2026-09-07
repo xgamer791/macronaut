@@ -17,7 +17,6 @@ import { SLIDE_DURATION_MS, SLIDE_EASING } from './SlideScreen';
 import {
   HEADER_HIDE_COMMIT,
   HEADER_HIDE_TOP,
-  HEADER_LAYOUT_SETTLE_MS,
   headerHideForScroll,
   headerLayoutHidden,
 } from './headerAutoHideLogic';
@@ -28,7 +27,6 @@ export {
   HEADER_HIDE_COMMIT,
   HEADER_HIDE_DELTA,
   HEADER_HIDE_TOP,
-  HEADER_LAYOUT_SETTLE_MS,
   headerHideForScroll,
   headerLayoutHidden,
 } from './headerAutoHideLogic';
@@ -39,75 +37,44 @@ export function useHeaderScrollHide(enabled: boolean) {
   const lastY = useRef(0);
   const hiddenRef = useRef(false);
   const collapsedRef = useRef(false);
-  const yRef = useRef(0);
-  const settleTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const clearSettle = useCallback(() => {
-    if (settleTimer.current != null) {
-      clearTimeout(settleTimer.current);
-      settleTimer.current = null;
-    }
-  }, []);
-
-  const applyLayout = useCallback((y: number, visualHidden: boolean, settled: boolean) => {
-    const next = headerLayoutHidden(y, visualHidden, collapsedRef.current, settled);
+  const applyLayout = useCallback((y: number, visualHidden: boolean) => {
+    const next = headerLayoutHidden(y, visualHidden, collapsedRef.current);
     if (next === collapsedRef.current) return;
     collapsedRef.current = next;
     setCollapsed(next);
   }, []);
 
-  const settleAtTop = useCallback(() => {
-    hiddenRef.current = false;
-    lastY.current = Math.max(0, yRef.current);
-    setHidden(false);
-    applyLayout(yRef.current, false, true);
-  }, [applyLayout]);
-
   const onScroll = useCallback(
     (e: NativeSyntheticEvent<NativeScrollEvent>) => {
       if (!enabled) return;
       const y = e.nativeEvent.contentOffset.y;
-      yRef.current = y;
+      // Rubber-band samples are not page scroll — leave lastY and hide state alone.
+      if (y < HEADER_HIDE_TOP) return;
       const next = headerHideForScroll(y, lastY.current, hiddenRef.current);
-      lastY.current = Math.max(0, y);
+      lastY.current = y;
       if (next !== hiddenRef.current) {
         hiddenRef.current = next;
         setHidden(next);
       }
-
-      if (y <= HEADER_HIDE_TOP) {
-        clearSettle();
-        settleTimer.current = setTimeout(settleAtTop, HEADER_LAYOUT_SETTLE_MS);
-        applyLayout(y, next, false);
-        return;
-      }
-
-      clearSettle();
-      if (y > HEADER_HIDE_COMMIT) applyLayout(y, next, false);
+      if (y >= HEADER_HIDE_COMMIT) applyLayout(y, next);
     },
-    [applyLayout, clearSettle, enabled, settleAtTop],
+    [applyLayout, enabled],
   );
 
   const onScrollSettle = useCallback(() => {
     if (!enabled) return;
-    clearSettle();
-    const y = yRef.current;
-    if (y <= HEADER_HIDE_TOP) {
-      settleAtTop();
-      return;
-    }
-    applyLayout(y, hiddenRef.current, true);
-  }, [applyLayout, clearSettle, enabled, settleAtTop]);
-
-  useEffect(() => () => clearSettle(), [clearSettle]);
+    const y = lastY.current;
+    if (y <= HEADER_HIDE_TOP) return;
+    applyLayout(y, hiddenRef.current);
+  }, [applyLayout, enabled]);
 
   return { hidden, collapsed, onScroll, onScrollSettle };
 }
 
 /** One slab — bar fill and icons share a single translate. Negative margin
  * gives the page the space back without a second motion on the children.
- * Layout collapse is deferred near the top so iOS rubber-band is not fighting
- * a 294ms reflow. */
+ * Rubber-band at the top is ignored; only scrolling up brings the header back. */
 export function AutoHideHeader({
   hidden,
   collapsed = hidden,
