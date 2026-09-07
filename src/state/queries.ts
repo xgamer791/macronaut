@@ -538,7 +538,10 @@ export function useMyGym() {
 /** On demand, never as you type: each call is a paid request. */
 export function useGeocode() {
   const { gyms } = useRepos();
-  return useMutation({ mutationFn: (address: string) => gyms.geocode(address) });
+  return useMutation({
+    mutationFn: ({ address, near }: { address: string; near?: { lat: number; lng: number } }) =>
+      gyms.geocode(address, near),
+  });
 }
 
 export function useSearchGyms() {

@@ -33,19 +33,28 @@ export const available = query({
 
 /** A rough address → one point to search around. */
 export const geocode = action({
-  args: { address: v.string() },
-  handler: async (ctx, { address }): Promise<{ lat: number; lng: number; label: string }> => {
+  args: {
+    address: v.string(),
+    near: v.optional(v.object({ lat: v.number(), lng: v.number() })),
+  },
+  handler: async (ctx, { address, near }): Promise<{ lat: number; lng: number; label: string }> => {
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new ConvexError('Not signed in');
     const wanted = address.trim().slice(0, ADDRESS_MAX);
     if (!wanted) throw new ConvexError('Enter an address or use your location');
+    const bias = near && isFiniteCoordinate(near.lat, near.lng) ? near : undefined;
     const key = configuredKey();
     if (!key) throw new ConvexError('Gym search is not configured');
-    await ctx.runMutation(internal.places.recordSearch, {});
     try {
-      return await geocodeAddress({ apiKey: key, address: wanted });
+      await ctx.runMutation(internal.places.recordSearch, {});
     } catch (e) {
-      throw new ConvexError(e instanceof Error ? e.message : 'Could not find that address');
+      if (e instanceof ConvexError) throw e;
+      throw new ConvexError('Location search is temporarily unavailable');
+    }
+    try {
+      return await geocodeAddress({ apiKey: key, address: wanted, bias });
+    } catch (e) {
+      throw new ConvexError(e instanceof Error ? e.message : 'Could not find that location');
     }
   },
 });
@@ -74,7 +83,12 @@ export const searchGyms = action({
     }
     const key = configuredKey();
     if (!key) throw new ConvexError('Gym search is not configured');
-    await ctx.runMutation(internal.places.recordSearch, {});
+    try {
+      await ctx.runMutation(internal.places.recordSearch, {});
+    } catch (e) {
+      if (e instanceof ConvexError) throw e;
+      throw new ConvexError('Gym search is temporarily unavailable');
+    }
 
     let found;
     try {

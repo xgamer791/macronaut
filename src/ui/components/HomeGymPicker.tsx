@@ -4,6 +4,7 @@ import * as Location from 'expo-location';
 import React, { useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 import type { GymCandidate, MyGym } from '@/repositories/gymRepo';
+import { friendlyActionError } from '@/services/actionError';
 import { useClaimGym, useGeocode, useGymSearchAvailable, useSearchGyms } from '@/state/queries';
 import { useTheme } from '@/ui/theme/ThemeProvider';
 import { radius, spacing, touchTarget } from '@/ui/theme/tokens';
@@ -87,12 +88,19 @@ export function HomeGymPicker({ confirmLabel, onDone, onSkip, busy = false }: Ho
     if (!wanted) return;
     setError(null);
     try {
-      const point = await geocode.mutateAsync(wanted);
+      const near =
+        anchor?.label === 'Your location' ? { lat: anchor.lat, lng: anchor.lng } : undefined;
+      const point = await geocode.mutateAsync({ address: wanted, near });
       setAnchor(point);
       setResults(null);
       setSelected(null);
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Could not find that address.');
+      setError(
+        friendlyActionError(
+          e,
+          'Couldn’t find that location. Try a city, ZIP code, or street address.',
+        ),
+      );
     }
   }
 
@@ -106,7 +114,7 @@ export function HomeGymPicker({ confirmLabel, onDone, onSkip, busy = false }: Ho
       setResults(found);
     } catch (e) {
       setResults(null);
-      setError(e instanceof Error ? e.message : 'Gym search failed.');
+      setError(friendlyActionError(e, 'We couldn’t search for gyms right now. Please try again.'));
     }
   }
 
@@ -118,7 +126,7 @@ export function HomeGymPicker({ confirmLabel, onDone, onSkip, busy = false }: Ho
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       onDone?.(result);
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Could not save your home gym.');
+      setError(friendlyActionError(e, 'We couldn’t save your home gym. Please try again.'));
     }
   }
 

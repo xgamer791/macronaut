@@ -69,7 +69,7 @@ jobs:
           fi
           npx convex env set XAI_API_KEY "$XAI_API_KEY"
 
-      # Google Places + Geocoding key for home-gym search. Lives only on the
+      # Google Places (New) key for home-gym search. Lives only on the
       # Convex deployment; the actions in convex/places.ts are the only code
       # that reads it. Add repository secret GOOGLE_PLACES_API_KEY.
       - name: Set GOOGLE_PLACES_API_KEY on the Convex deployment
