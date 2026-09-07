@@ -425,7 +425,7 @@ export function ConversationView({
             styles.composerWrap,
             {
               backgroundColor: colors.background,
-              paddingBottom: Math.max(insets.bottom, spacing.sm),
+              paddingBottom: Math.max(insets.bottom, 12),
             },
           ]}
         >
