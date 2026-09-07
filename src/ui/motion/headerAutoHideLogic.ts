@@ -20,17 +20,3 @@ export function headerHideForScroll(y: number, lastY: number, hidden: boolean): 
   if (dy < -HEADER_HIDE_DELTA) return false;
   return hidden;
 }
-
-/**
- * In-flow collapse must not run during rubber-band. Follow the visual state
- * only once the page has actually moved off the top.
- */
-export function headerLayoutHidden(
-  y: number,
-  visualHidden: boolean,
-  prevLayoutHidden: boolean,
-): boolean {
-  if (y <= HEADER_HIDE_TOP) return prevLayoutHidden;
-  if (y >= HEADER_HIDE_COMMIT) return visualHidden;
-  return prevLayoutHidden;
-}

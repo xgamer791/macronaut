@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { ScrollView, StyleProp, StyleSheet, View, ViewStyle } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AutoHideHeader, useHeaderScrollHide } from '@/ui/motion/headerAutoHide';
@@ -15,9 +15,9 @@ export interface ScreenProps {
   /** When false, content can draw under the status bar (full-bleed heroes). */
   safeTop?: boolean;
   /**
-   * Chrome above the scrolling layer. Occupies layout space so the page
-   * starts below it. Scrolls away on the way down and back in on the way up
-   * unless `collapseHeader` is false.
+   * Chrome above the scrolling layer. The page starts below it. Scrolls away
+   * on the way down and back in on the way up unless `collapseHeader` is
+   * false.
    */
   stickyHeader?: React.ReactNode;
   /** When false, `stickyHeader` stays put instead of hiding on scroll. */
@@ -41,6 +41,10 @@ export function Screen({
   const insets = useSafeAreaInsets();
   const hideOnScroll = Boolean(scroll && stickyHeader && collapseHeader);
   const hide = useHeaderScrollHide(hideOnScroll);
+  // A collapsing header floats over the page, so the space it would have
+  // taken is reserved here and never changes. Anything that resized the
+  // scroll layer as the header left would drag the content with it.
+  const [headerHeight, setHeaderHeight] = useState(0);
   const base: StyleProp<ViewStyle> = [
     { flex: 1, backgroundColor: colors.background },
     { paddingTop: safeTop && !stickyHeader ? insets.top : 0 },
@@ -53,7 +57,11 @@ export function Screen({
 
   const header = stickyHeader ? (
     hideOnScroll ? (
-      <AutoHideHeader hidden={hide.hidden} collapsed={hide.collapsed}>
+      <AutoHideHeader
+        hidden={hide.hidden}
+        floating={headerHeight > 0}
+        onHeight={setHeaderHeight}
+      >
         {stickyHeader}
       </AutoHideHeader>
     ) : (
@@ -79,16 +87,29 @@ export function Screen({
     );
   }
 
+  // Last, so the reserved band always matches the slab covering it.
+  const headerPad = hideOnScroll ? { paddingTop: headerHeight } : null;
+
   const scrollProps = {
-    contentContainerStyle: [contentPad, style],
+    contentContainerStyle: [contentPad, style, headerPad],
     keyboardShouldPersistTaps: 'handled' as const,
     showsVerticalScrollIndicator: false,
     onScroll: hideOnScroll ? hide.onScroll : undefined,
-    onScrollEndDrag: hideOnScroll ? hide.onScrollSettle : undefined,
-    onMomentumScrollEnd: hideOnScroll ? hide.onScrollSettle : undefined,
     scrollEventThrottle: 16 as const,
     ...(hideOnScroll ? { dataSet: { screenscroll: '1' } } : null),
   };
+
+  // Once floating, the slab paints over the scroll layer, so it is mounted
+  // after it. Before that it is still in flow and has to come first.
+  if (hideOnScroll && headerHeight > 0) {
+    return (
+      <View style={base}>
+        <ScrollView {...scrollProps}>{children}</ScrollView>
+        {header}
+        {floatingOverlay}
+      </View>
+    );
+  }
 
   return (
     <View style={base}>
