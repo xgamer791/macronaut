@@ -2,16 +2,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useMemo, useState } from 'react';
 import { ActivityIndicator, Platform, Pressable, StyleSheet, TextInput, View } from 'react-native';
-import type { ChatPerson, ChatSummary } from '@/repositories/chatRepo';
-import { useChatPeople, useChats, useOpenChat, useSetProfileFollow } from '@/state/queries';
-import {
-  AppText,
-  ChatAvatar,
-  ChatPersonRow,
-  EmptyState,
-  Screen,
-  ScreenHeader,
-} from '@/ui/components';
+import type { ChatSummary } from '@/repositories/chatRepo';
+import { useChats } from '@/state/queries';
+import { AppText, ChatAvatar, EmptyState, Screen, ScreenHeader } from '@/ui/components';
 import { useTheme } from '@/ui/theme/ThemeProvider';
 import { radius, spacing, touchTarget, type } from '@/ui/theme/tokens';
 
@@ -24,13 +17,7 @@ function ChatList() {
   const { colors } = useTheme();
   const chats = useChats();
   const [search, setSearch] = useState('');
-  const [opening, setOpening] = useState<string | null>(null);
-  const [friending, setFriending] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
   const wanted = search.trim().toLowerCase();
-  const people = useChatPeople(search, Boolean(wanted));
-  const openChat = useOpenChat();
-  const setFriend = useSetProfileFollow();
   const list = useMemo(
     () =>
       (chats.data ?? []).filter(
@@ -42,34 +29,6 @@ function ChatList() {
       ),
     [chats.data, wanted],
   );
-  const peopleList = useMemo(() => {
-    const chatHandles = new Set(list.map((chat) => chat.peer.handle));
-    return (people.data ?? []).filter((person) => !chatHandles.has(person.handle));
-  }, [list, people.data]);
-
-  async function message(person: ChatPerson) {
-    setOpening(person.handle);
-    setError(null);
-    try {
-      const chat = await openChat.mutateAsync(person.handle);
-      router.push({ pathname: '/chat/[id]', params: { id: chat.id } });
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Could not start that chat.');
-      setOpening(null);
-    }
-  }
-
-  async function addFriend(person: ChatPerson) {
-    setFriending(person.handle);
-    setError(null);
-    try {
-      await setFriend.mutateAsync({ handle: person.handle, follow: true });
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Could not update that friend request.');
-    } finally {
-      setFriending(null);
-    }
-  }
 
   return (
     <Screen padded={false}>
@@ -94,10 +53,10 @@ function ChatList() {
         <View style={[styles.search, { backgroundColor: colors.surfaceRaised }]}>
           <Ionicons name="search" size={20} color={colors.textMuted} />
           <TextInput
-            accessibilityLabel="Search chats and people on Macronaut"
+            accessibilityLabel="Search chats"
             value={search}
             onChangeText={setSearch}
-            placeholder="Search chats or people"
+            placeholder="Search"
             placeholderTextColor={colors.textMuted}
             returnKeyType="search"
             style={[styles.searchInput, { color: colors.textPrimary }]}
@@ -110,24 +69,22 @@ function ChatList() {
         </View>
       </View>
 
-      {error ? (
-        <AppText variant="caption" tone="danger" style={styles.error}>
-          {error}
-        </AppText>
-      ) : null}
-
-      {!wanted && chats.isLoading ? (
+      {chats.isLoading ? (
         <View style={styles.loading}>
           <ActivityIndicator color={colors.accent} />
         </View>
-      ) : !wanted && list.length === 0 ? (
+      ) : list.length === 0 ? (
         <EmptyState
-          title="No chats yet"
-          body="Start a conversation with a friend or find someone on Macronaut."
-          actionTitle="Find friends"
-          onAction={() => router.push('/new-chat')}
+          title={wanted ? 'No matching chats' : 'No chats yet'}
+          body={
+            wanted
+              ? 'Try another name or message.'
+              : 'Start a conversation with a contact or find someone on Macronaut.'
+          }
+          actionTitle={wanted ? undefined : 'Start a chat'}
+          onAction={wanted ? undefined : () => router.push('/new-chat')}
         />
-      ) : !wanted ? (
+      ) : (
         <View>
           {list.map((chat) => (
             <ChatRow
@@ -136,55 +93,6 @@ function ChatList() {
               onPress={() => router.push({ pathname: '/chat/[id]', params: { id: chat.id } })}
             />
           ))}
-        </View>
-      ) : chats.isLoading && people.isLoading ? (
-        <View style={styles.loading}>
-          <ActivityIndicator color={colors.accent} />
-        </View>
-      ) : (
-        <View>
-          {list.length ? (
-            <>
-              <AppText variant="caption" weight="700" tone="secondary" style={styles.sectionLabel}>
-                CHATS
-              </AppText>
-              {list.map((chat) => (
-                <ChatRow
-                  key={chat.id}
-                  chat={chat}
-                  onPress={() => router.push({ pathname: '/chat/[id]', params: { id: chat.id } })}
-                />
-              ))}
-            </>
-          ) : null}
-
-          <AppText variant="caption" weight="700" tone="secondary" style={styles.sectionLabel}>
-            PEOPLE ON MACRONAUT
-          </AppText>
-          {people.isLoading ? (
-            <View style={styles.peopleLoading}>
-              <ActivityIndicator color={colors.accent} />
-            </View>
-          ) : peopleList.length ? (
-            peopleList.map((person) => (
-              <ChatPersonRow
-                key={person.handle}
-                person={person}
-                busy={opening === person.handle || friending === person.handle}
-                disabled={opening !== null || friending !== null}
-                onProfile={() => router.push(`/u/${person.handle}`)}
-                onAddFriend={() => void addFriend(person)}
-                onAcceptFriend={() => void addFriend(person)}
-                onMessage={() => void message(person)}
-              />
-            ))
-          ) : !list.length ? (
-            <EmptyState title="No people found" body="Try a different name or @handle." />
-          ) : (
-            <AppText variant="caption" tone="muted" style={styles.noMorePeople}>
-              No additional people found.
-            </AppText>
-          )}
         </View>
       )}
     </Screen>
@@ -290,24 +198,6 @@ const styles = StyleSheet.create({
   loading: {
     paddingVertical: spacing.xxl * 2,
     alignItems: 'center',
-  },
-  peopleLoading: {
-    paddingVertical: spacing.lg,
-    alignItems: 'center',
-  },
-  error: {
-    paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.sm,
-  },
-  sectionLabel: {
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.md,
-    paddingBottom: spacing.sm,
-    letterSpacing: 0.5,
-  },
-  noMorePeople: {
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
   },
   chatRow: {
     minHeight: 76,

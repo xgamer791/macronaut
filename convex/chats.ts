@@ -143,9 +143,7 @@ export const people = query({
   args: { search: v.optional(v.string()) },
   handler: async (ctx, { search }) => {
     const userId = await requireUserId(ctx);
-    // People commonly type the @ shown beside a handle. It is decoration,
-    // never part of the stored handle, so strip it before matching.
-    const wanted = (search?.trim().toLowerCase() ?? '').replace(/^@+/, '');
+    const wanted = search?.trim().toLowerCase() ?? '';
     let profiles: Doc<'profiles'>[];
 
     if (wanted) {

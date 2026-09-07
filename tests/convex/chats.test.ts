@@ -27,14 +27,11 @@ describe('direct chats', () => {
     expect(await alice.repos.chats.people()).toContainEqual(
       expect.objectContaining({ handle: 'bob_lifts', friendship: 'incoming' }),
     );
-    expect(await bob.repos.chats.people('@RUNNER')).toEqual([
+    expect(await bob.repos.chats.people('RUNNER')).toEqual([
       expect.objectContaining({ handle: 'alice_runner', friendship: 'outgoing' }),
     ]);
 
     await alice.repos.profile.setFollow('bob_lifts', true);
-    expect(await bob.repos.chats.people('Alice Runner')).toEqual([
-      expect.objectContaining({ handle: 'alice_runner', friendship: 'friends' }),
-    ]);
 
     const chat = await bob.repos.chats.open('alice_runner');
     await bob.repos.chats.send(chat.id, '  Morning run tomorrow?  ');

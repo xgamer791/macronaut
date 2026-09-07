@@ -47,8 +47,6 @@ describe('chat routes', () => {
     expect(picker).toContain('Search people on Macronaut');
     expect(picker).toContain('CONTACTS');
     expect(picker).toContain('PEOPLE ON MACRONAUT');
-    expect(chats).toContain('Search chats and people on Macronaut');
-    expect(chats).toContain('useChatPeople');
     expect(picker).toContain('ChatPersonRow');
     expect(picker).toContain("pathname: '/chat/[id]'");
     expect(chats).not.toContain('initialMode="light"');

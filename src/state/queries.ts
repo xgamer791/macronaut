@@ -437,13 +437,13 @@ export function useChats() {
   });
 }
 
-export function useChatPeople(search: string, enabled = true) {
+export function useChatPeople(search: string) {
   const { signedIn } = useAuth();
   const { chats } = useRepos();
   return useQuery({
     queryKey: keys.chatPeople(search.trim().toLowerCase()),
     queryFn: () => chats.people(search),
-    enabled: signedIn && enabled,
+    enabled: signedIn,
   });
 }
 
