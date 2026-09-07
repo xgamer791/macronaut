@@ -63,7 +63,29 @@ const ITEMS: TabItem[] = [
   { kind: 'profile' },
 ];
 
-const ICON = 27;
+/** What each tab glyph actually paints, edge to edge. */
+const ICON_INK = 23.5;
+/**
+ * Lucide draws on a 24-unit grid, and every glyph covers a different amount of
+ * it — a house is narrower than a group of people. One `size` for all four
+ * therefore paints four different marks, so each is scaled by the widest
+ * extent it really covers (geometry plus its 2-unit stroke, in grid units)
+ * and they come out the same size on screen.
+ */
+const GLYPH_EXTENT: [LucideIcon, number][] = [
+  [House, 21],
+  [MessageSquare, 22],
+  [Users, 22],
+  [UserGroup, 22],
+];
+/** Fallback matches Lucide's most common extent. */
+const DEFAULT_EXTENT = 22;
+
+function glyphSize(glyph: LucideIcon): number {
+  const found = GLYPH_EXTENT.find(([icon]) => icon === glyph);
+  return (ICON_INK * 24) / (found ? found[1] : DEFAULT_EXTENT);
+}
+
 /** Same circular picture the Today header used to show. */
 const AVATAR = 32;
 /**
@@ -75,10 +97,11 @@ const AVATAR_GLYPH = 18;
 
 function TabGlyph({ name, color }: { name: TabGlyphName; color: string }) {
   if (typeof name === 'string') {
-    return <Ionicons name={name} size={ICON} color={color} />;
+    // Ionicons is a font, so there is no grid to measure — this one is nominal.
+    return <Ionicons name={name} size={ICON_INK} color={color} />;
   }
   const Lucide = name;
-  return <Lucide size={ICON} color={color} />;
+  return <Lucide size={glyphSize(name)} color={color} />;
 }
 
 const PRIMARY_TAB_PATHS = new Set(['/', '/meals', '/progress', '/settings']);
