@@ -5,7 +5,7 @@ import React from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { ProfileView } from '@/repositories/profileRepo';
-import { profileStatLine } from '@/utils/compactCount';
+import { followerLabel, followingLabel, postLabel, profileStatLine } from '@/utils/compactCount';
 import { useTheme } from '@/ui/theme/ThemeProvider';
 import { radius, spacing, touchTarget } from '@/ui/theme/tokens';
 import { HeaderAvatarButton, HeaderChatsButton, HeaderNotifyButton } from './AppHeader';
@@ -29,6 +29,11 @@ export interface ProfileHeaderProps {
   onPickBanner?: () => void;
   /** Which image is mid-upload, so its tap target shows a spinner. */
   uploading?: 'avatar' | 'banner' | null;
+  /** Open the follower and following lists. Supplied together or not at all:
+   * without them the stat line is plain text, which is what a page with
+   * nowhere to send the tap wants. */
+  onOpenFollowers?: () => void;
+  onOpenFollowing?: () => void;
 }
 
 /**
@@ -47,6 +52,8 @@ export function ProfileHeader({
   onPickAvatar,
   onPickBanner,
   uploading,
+  onOpenFollowers,
+  onOpenFollowing,
 }: ProfileHeaderProps) {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
@@ -151,9 +158,29 @@ export function ProfileHeader({
           {name}
         </AppText>
 
-        <AppText variant="caption" weight="600" accessibilityRole="text">
-          {profileStatLine(profile.followerCount, profile.followingCount, profile.postCount)}
-        </AppText>
+        {onOpenFollowers || onOpenFollowing ? (
+          <View style={styles.stats}>
+            <Stat
+              label={followerLabel(profile.followerCount)}
+              hint={`See who follows ${name}`}
+              onPress={onOpenFollowers}
+            />
+            <StatDot />
+            <Stat
+              label={followingLabel(profile.followingCount)}
+              hint={`See who ${name} follows`}
+              onPress={onOpenFollowing}
+            />
+            <StatDot />
+            <AppText variant="caption" weight="600">
+              {postLabel(profile.postCount)}
+            </AppText>
+          </View>
+        ) : (
+          <AppText variant="caption" weight="600" accessibilityRole="text">
+            {profileStatLine(profile.followerCount, profile.followingCount, profile.postCount)}
+          </AppText>
+        )}
 
         {profile.bio ? (
           <AppText variant="body" tone="secondary" style={styles.bio}>
@@ -162,6 +189,42 @@ export function ProfileHeader({
         ) : null}
       </View>
     </View>
+  );
+}
+
+/** One tappable count in the stat line. Without a handler it is the same
+ * text without the touch target, so the line reads identically either way. */
+function Stat({ label, hint, onPress }: { label: string; hint: string; onPress?: () => void }) {
+  if (!onPress) {
+    return (
+      <AppText variant="caption" weight="600">
+        {label}
+      </AppText>
+    );
+  }
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      accessibilityHint={hint}
+      onPress={onPress}
+      hitSlop={{ top: 10, bottom: 10, left: 4, right: 4 }}
+      style={({ pressed }) => pressed && { opacity: 0.6 }}
+    >
+      <AppText variant="caption" weight="600">
+        {label}
+      </AppText>
+    </Pressable>
+  );
+}
+
+/** The separator between counts. A gap either side stands in for the spaces
+ * around the dot in `profileStatLine`, so the line keeps its measure. */
+function StatDot() {
+  return (
+    <AppText variant="caption" weight="600" tone="secondary" accessibilityElementsHidden>
+      ·
+    </AppText>
   );
 }
 
@@ -307,6 +370,12 @@ const styles = StyleSheet.create({
     marginTop: spacing.xs,
     fontSize: 32,
     lineHeight: 38,
+  },
+  stats: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: spacing.xs,
   },
   bio: {
     marginTop: 2,

@@ -2,8 +2,10 @@ import { getAuthUserId } from '@convex-dev/auth/server';
 import { ConvexError, v } from 'convex/values';
 import type { Doc, Id } from './_generated/dataModel';
 import { mutation, query, type MutationCtx, type QueryCtx } from './_generated/server';
+import { identity, matchesSearch, profileFor } from './chats';
 import { nowIso, requireOwned, requireUserId } from './lib/auth';
 import { firstFreeHandle, handleSeed, isValidHandle, normalizeHandle } from './lib/handles';
+import { readableProfile } from './lib/profileAccess';
 import { profileEditableFields } from './lib/validators';
 import {
   addFriendAcceptedNotification,
@@ -27,6 +29,8 @@ const LIMITS = {
 const POST_LIMIT = 200;
 /** Every friends-feed request is capped here, not merely in the UI. */
 export const FRIENDS_FEED_PAGE_SIZE = 10;
+/** How many people one followers / following / friends list hands back. */
+export const CONNECTIONS_LIMIT = 200;
 
 function capped(value: string | undefined, max: number): string | undefined {
   const trimmed = (value ?? '').trim();
@@ -50,8 +54,16 @@ async function postCountFor(ctx: QueryCtx | MutationCtx, userId: Id<'users'>) {
   ).length;
 }
 
-/** Followers of `subjectId` and who they follow. `isFollowing` is whether
- * the viewer follows them — always false for yourself or a signed-out caller. */
+/**
+ * Followers of `subjectId` and who they follow.
+ *
+ * `isFollowing` is whether the viewer follows them and `isFollowedBy` whether
+ * they follow the viewer back — both false for yourself or a signed-out
+ * caller. Together they are the mutual follow that makes a friend, which is
+ * what decides whether the page may offer to open a conversation. Both are
+ * read off the two lists this already collected rather than costing another
+ * index lookup.
+ */
 async function socialFor(
   ctx: QueryCtx | MutationCtx,
   subjectId: Id<'users'>,
@@ -67,18 +79,12 @@ async function socialFor(
       .withIndex('by_user', (q) => q.eq('userId', subjectId))
       .collect(),
   ]);
-  let isFollowing = false;
-  if (viewerId && viewerId !== subjectId) {
-    const row = await ctx.db
-      .query('profileFollows')
-      .withIndex('by_user_followee', (q) => q.eq('userId', viewerId).eq('followeeId', subjectId))
-      .first();
-    isFollowing = row !== null;
-  }
+  const other = viewerId !== null && viewerId !== subjectId ? viewerId : null;
   return {
     followerCount: followers.length,
     followingCount: following.length,
-    isFollowing,
+    isFollowing: other !== null && followers.some((row) => row.userId === other),
+    isFollowedBy: other !== null && following.some((row) => row.followeeId === other),
   };
 }
 
@@ -324,6 +330,108 @@ export const byHandle = query({
     const posts = await postsForUser(ctx, row.userId);
     const profile = await profileView(ctx, row, { isOwner, viewerId });
     return { profile, posts };
+  },
+});
+
+const connectionTab = v.union(
+  v.literal('followers'),
+  v.literal('following'),
+  v.literal('friends'),
+);
+
+/**
+ * The people around one profile: who follows it, who it follows, and the
+ * mutual follows that make a friend.
+ *
+ * Reachable for your own account with no handle, and for anybody else's page
+ * on the same terms as the page itself — `readableProfile` answers null for a
+ * private profile and for a handle nobody owns alike, so this cannot be used
+ * to tell those apart either. Every row carries where the viewer stands with
+ * that person, which is what lets the list offer the one action their
+ * friendship permits, and `isYou` marks the viewer's own row so the list
+ * never offers to befriend the person reading it.
+ *
+ * `search` is answered here rather than in the client because it has to look
+ * at the whole list before the cap, not at the page that happened to arrive.
+ * All three counts come back on every read, so the tabs can be labelled
+ * without three round trips.
+ */
+export const connections = query({
+  args: {
+    /** Omitted for your own connections — the one case with no page to read. */
+    handle: v.optional(v.string()),
+    tab: connectionTab,
+    search: v.optional(v.string()),
+  },
+  handler: async (ctx, { handle, tab, search }) => {
+    const viewerId = await getAuthUserId(ctx);
+
+    let subjectId: Id<'users'>;
+    let subject: { handle: string; displayName: string };
+    if (handle) {
+      const readable = await readableProfile(ctx, handle);
+      if (!readable) return null;
+      subjectId = readable.row.userId;
+      subject = {
+        handle: readable.row.handle,
+        displayName: readable.row.displayName?.trim() || `@${readable.row.handle}`,
+      };
+    } else {
+      if (!viewerId) return null;
+      subjectId = viewerId;
+      const [row, account] = await Promise.all([rowForUser(ctx, viewerId), ctx.db.get(viewerId)]);
+      const own = row?.handle ?? handleSeed(account?.name, account?.email);
+      subject = {
+        handle: own,
+        displayName: row?.displayName?.trim() || account?.name?.trim() || `@${own}`,
+      };
+    }
+
+    const [followerRows, followingRows] = await Promise.all([
+      ctx.db
+        .query('profileFollows')
+        .withIndex('by_followee', (q) => q.eq('followeeId', subjectId))
+        .collect(),
+      ctx.db
+        .query('profileFollows')
+        .withIndex('by_user', (q) => q.eq('userId', subjectId))
+        .collect(),
+    ]);
+    const followerIds = followerRows.map((row) => row.userId);
+    const followingIds = followingRows.map((row) => row.followeeId);
+    // A friend is a follow that goes both ways, the same rule chats enforce.
+    const followsBack = new Set(followerIds.map((id) => id as string));
+    const friendIds = followingIds.filter((id) => followsBack.has(id as string));
+
+    const wantedIds =
+      tab === 'followers' ? followerIds : tab === 'following' ? followingIds : friendIds;
+    // People type the @ shown beside a handle; it is never part of the
+    // stored handle, so strip it before matching.
+    const wanted = (search?.trim().toLowerCase() ?? '').replace(/^@+/, '');
+
+    const people = [];
+    for (const id of wantedIds) {
+      const user = await ctx.db.get(id);
+      // An account deleted since the follow was written leaves a row behind.
+      if (!user) continue;
+      const profile = await profileFor(ctx, id);
+      if (wanted && !matchesSearch(user, profile, wanted)) continue;
+      people.push({
+        ...(await identity(ctx, viewerId, user, profile)),
+        isYou: viewerId !== null && user._id === viewerId,
+      });
+    }
+    people.sort((a, b) => a.displayName.localeCompare(b.displayName));
+
+    return {
+      subject,
+      counts: {
+        followers: followerIds.length,
+        following: followingIds.length,
+        friends: friendIds.length,
+      },
+      people: people.slice(0, CONNECTIONS_LIMIT),
+    };
   },
 });
 

@@ -21,6 +21,10 @@ export function followingLabel(n: number): string {
   return `${compactCount(n)} following`;
 }
 
+export function friendLabel(n: number): string {
+  return `${compactCount(n)} ${n === 1 ? 'friend' : 'friends'}`;
+}
+
 export function postLabel(n: number): string {
   return `${compactCount(n)} ${n === 1 ? 'post' : 'posts'}`;
 }

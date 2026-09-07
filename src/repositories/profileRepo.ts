@@ -23,6 +23,9 @@ export interface ProfileView {
   followingCount: number;
   /** Whether the signed-in viewer follows this page. Always false on yours. */
   isFollowing: boolean;
+  /** Whether this page follows the viewer back. The two together are the
+   * mutual follow that makes a friend, and friends may message each other. */
+  isFollowedBy: boolean;
   isOwner: boolean;
   /** False while the profile is still the placeholder built from the account. */
   saved: boolean;
@@ -50,6 +53,31 @@ export interface FriendsFeedPage {
   page: FriendsFeedPost[];
   isDone: boolean;
   continueCursor: string;
+}
+
+export type ConnectionTab = 'followers' | 'following' | 'friends';
+
+/** One person in a followers / following / friends list. The identity card
+ * and nothing else: where the viewer stands with them decides which single
+ * action the row offers, exactly as it does in people search. */
+export interface ConnectionPerson {
+  /** The account, which is what every friend and chat action addresses. */
+  id: string;
+  /** Null until the account has claimed a profile; the name still shows. */
+  handle: string | null;
+  displayName: string;
+  avatarUrl?: string;
+  friendship: 'none' | 'outgoing' | 'incoming' | 'friends';
+  /** The viewer's own row, which offers no action against itself. */
+  isYou: boolean;
+}
+
+export interface ConnectionsView {
+  /** Whose lists these are — the page title above the tabs. */
+  subject: { handle: string; displayName: string };
+  /** All three, on every read, so the tabs are labelled without three trips. */
+  counts: { followers: number; following: number; friends: number };
+  people: ConnectionPerson[];
 }
 
 export interface ProfilePatch {
@@ -87,6 +115,15 @@ export interface ProfileRepo {
   /** The same friend request, addressed to an account by id — how a people
    * search result is befriended, since it may have no handle yet. */
   requestFriend(userId: string, follow: boolean): Promise<ProfileView>;
+  /** One tab of the people around a profile. No handle means your own. Null
+   * when the page is private or the handle is nobody's — the caller cannot
+   * tell those apart, as with `byHandle`. Searching is answered by the server
+   * so it looks at the whole list rather than the page that arrived. */
+  connections(input: {
+    handle?: string;
+    tab: ConnectionTab;
+    search?: string;
+  }): Promise<ConnectionsView | null>;
 }
 
 const postId = (id: string) => id as Id<'profilePosts'>;
@@ -134,5 +171,8 @@ export function createProfileRepo(convex: ConvexCaller): ProfileRepo {
     setFollow: (handle, follow) => convex.mutation(api.profiles.setFollow, { handle, follow }),
     requestFriend: (userId, follow) =>
       convex.mutation(api.profiles.setFollow, { userId: userId as Id<'users'>, follow }),
+
+    connections: ({ handle, tab, search }) =>
+      convex.query(api.profiles.connections, clean({ handle, tab, search })),
   };
 }

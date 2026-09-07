@@ -11,6 +11,9 @@ export interface ChatPersonRowProps {
   person: ChatPerson;
   busy?: boolean;
   disabled?: boolean;
+  /** False for a row there is nothing to do with — your own, in a list of
+   * people that legitimately includes you. */
+  showAction?: boolean;
   onProfile: () => void;
   onAddFriend: () => void;
   onAcceptFriend: () => void;
@@ -22,6 +25,7 @@ export function ChatPersonRow({
   person,
   busy = false,
   disabled = false,
+  showAction = true,
   onProfile,
   onAddFriend,
   onAcceptFriend,
@@ -67,15 +71,17 @@ export function ChatPersonRow({
           ) : null}
         </View>
       </Pressable>
-      <Button
-        compact
-        title={action.title}
-        variant={action.variant}
-        disabled={disabled || action.disabled}
-        loading={busy}
-        onPress={action.onPress}
-        style={[styles.action, { borderColor: colors.borderStrong }]}
-      />
+      {showAction ? (
+        <Button
+          compact
+          title={action.title}
+          variant={action.variant}
+          disabled={disabled || action.disabled}
+          loading={busy}
+          onPress={action.onPress}
+          style={[styles.action, { borderColor: colors.borderStrong }]}
+        />
+      ) : null}
     </View>
   );
 }
