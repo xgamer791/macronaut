@@ -58,7 +58,7 @@ export function ToolLauncher() {
   return (
     <View
       pointerEvents="box-none"
-      style={[styles.anchor, { bottom: insets.bottom + 70, right: spacing.lg }]}
+      style={[styles.anchor, { bottom: insets.bottom + 53, right: spacing.lg }]}
     >
       <Animated.View
         pointerEvents={open ? 'auto' : 'none'}
@@ -174,8 +174,8 @@ const styles = StyleSheet.create({
   toolCopy: { flex: 1, gap: 1 },
   pressed: { opacity: 0.68 },
   button: {
-    width: 58,
-    height: 58,
+    width: 48,
+    height: 48,
     borderRadius: radius.lg,
     alignItems: 'center',
     justifyContent: 'center',
