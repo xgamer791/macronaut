@@ -9,7 +9,9 @@ import {
   dayTypeValidator,
   diaryEntryFields,
   goalConfigFields,
+  fitnessGroupFields,
   profileFields,
+  profilePhotoFields,
   profilePostFields,
 } from './lib/validators';
 
@@ -201,6 +203,36 @@ export default defineSchema({
     .index('by_user', ['userId'])
     .index('by_followee', ['followeeId'])
     .index('by_user_followee', ['userId', 'followeeId']),
+
+  /** Photos on a profile wall. Public ones are visible on a public profile;
+   * private ones stay on the owner's wall only. */
+  profilePhotos: defineTable({
+    userId: v.id('users'),
+    createdAt: v.string(),
+    updatedAt: v.string(),
+    ...profilePhotoFields,
+  }).index('by_user_created', ['userId', 'createdAt']),
+
+  /** Fitness groups a profile can belong to. `userId` is the owner. */
+  fitnessGroups: defineTable({
+    userId: v.id('users'),
+    createdAt: v.string(),
+    updatedAt: v.string(),
+    ...fitnessGroupFields,
+  })
+    .index('by_user', ['userId'])
+    .index('by_handle', ['handleLower']),
+
+  /** Membership in a fitness group. `userId` is the member. */
+  groupMembers: defineTable({
+    userId: v.id('users'),
+    groupId: v.id('fitnessGroups'),
+    role: v.union(v.literal('owner'), v.literal('member')),
+    createdAt: v.string(),
+  })
+    .index('by_user', ['userId'])
+    .index('by_group', ['groupId'])
+    .index('by_user_group', ['userId', 'groupId']),
 
   /** Frozen set of accounts that may use AI food scan until Pro. Written once
    * by `foodScan.ensureRoster`; later sign-ups are not added. Not user-scoped. */

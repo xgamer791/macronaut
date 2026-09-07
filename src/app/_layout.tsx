@@ -68,6 +68,8 @@ function ThemedApp() {
         <Stack.Screen name="recipe-editor" options={{ presentation: 'modal' }} />
         <Stack.Screen name="meal/[id]" />
         <Stack.Screen name="profile" />
+        <Stack.Screen name="photos" />
+        <Stack.Screen name="groups" />
         {/* Reachable signed-out: the create-account legal gate links to both,
             and a shared public profile link is opened by people with no
             account at all. */}

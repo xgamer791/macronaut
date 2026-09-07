@@ -41,6 +41,10 @@ export const keys = {
   profile: ['profile'] as const,
   profilePosts: ['profile-posts'] as const,
   publicProfile: (handle: string) => ['public-profile', handle] as const,
+  photos: ['photos'] as const,
+  publicPhotos: (handle: string) => ['public-photos', handle] as const,
+  groups: ['groups'] as const,
+  publicGroups: (handle: string) => ['public-groups', handle] as const,
 };
 
 export function useInvalidateDiary() {
@@ -220,6 +224,127 @@ export function useSetProfileFollow() {
   return useMutation({
     mutationFn: (input: { handle: string; follow: boolean }) =>
       profile.setFollow(input.handle, input.follow),
+    onSuccess: invalidate,
+  });
+}
+
+function useInvalidatePhotos() {
+  const qc = useQueryClient();
+  return () => {
+    qc.invalidateQueries({ queryKey: keys.photos });
+    qc.invalidateQueries({ queryKey: ['public-photos'] });
+  };
+}
+
+export function useMyPhotos() {
+  const { signedIn } = useAuth();
+  const { photos } = useRepos();
+  return useQuery({
+    queryKey: keys.photos,
+    queryFn: () => photos.mine(),
+    enabled: signedIn,
+  });
+}
+
+export function usePublicPhotos(handle: string) {
+  const { photos } = useRepos();
+  return useQuery({
+    queryKey: keys.publicPhotos(handle),
+    queryFn: () => photos.forHandle(handle),
+    enabled: handle.length > 0,
+  });
+}
+
+export function useAddPhoto() {
+  const { photos } = useRepos();
+  const invalidate = useInvalidatePhotos();
+  return useMutation({
+    mutationFn: async (input: { file: Blob; caption?: string; isPublic?: boolean }) => {
+      const imageId = await photos.upload(input.file);
+      return photos.add(imageId, input.caption, input.isPublic);
+    },
+    onSuccess: invalidate,
+  });
+}
+
+export function useSetPhotoPublic() {
+  const { photos } = useRepos();
+  const invalidate = useInvalidatePhotos();
+  return useMutation({
+    mutationFn: (input: { id: string; isPublic: boolean }) => photos.setPublic(input.id, input.isPublic),
+    onSuccess: invalidate,
+  });
+}
+
+export function useDeletePhoto() {
+  const { photos } = useRepos();
+  const invalidate = useInvalidatePhotos();
+  return useMutation({
+    mutationFn: (id: string) => photos.remove(id),
+    onSuccess: invalidate,
+  });
+}
+
+function useInvalidateGroups() {
+  const qc = useQueryClient();
+  return () => {
+    qc.invalidateQueries({ queryKey: keys.groups });
+    qc.invalidateQueries({ queryKey: ['public-groups'] });
+  };
+}
+
+export function useMyGroups() {
+  const { signedIn } = useAuth();
+  const { groups } = useRepos();
+  return useQuery({
+    queryKey: keys.groups,
+    queryFn: () => groups.mine(),
+    enabled: signedIn,
+  });
+}
+
+export function usePublicGroups(handle: string) {
+  const { groups } = useRepos();
+  return useQuery({
+    queryKey: keys.publicGroups(handle),
+    queryFn: () => groups.forHandle(handle),
+    enabled: handle.length > 0,
+  });
+}
+
+export function useCreateGroup() {
+  const { groups } = useRepos();
+  const invalidate = useInvalidateGroups();
+  return useMutation({
+    mutationFn: (input: { name: string; sport?: string; description?: string; isPublic?: boolean }) =>
+      groups.create(input),
+    onSuccess: invalidate,
+  });
+}
+
+export function useJoinGroup() {
+  const { groups } = useRepos();
+  const invalidate = useInvalidateGroups();
+  return useMutation({
+    mutationFn: (id: string) => groups.join(id),
+    onSuccess: invalidate,
+  });
+}
+
+export function useLeaveGroup() {
+  const { groups } = useRepos();
+  const invalidate = useInvalidateGroups();
+  return useMutation({
+    mutationFn: (id: string) => groups.leave(id),
+    onSuccess: invalidate,
+  });
+}
+
+export function useDeleteGroup() {
+  const { groups } = useRepos();
+  const invalidate = useInvalidateGroups();
+  return useMutation({
+    mutationFn: (id: string) => groups.remove(id),
     onSuccess: invalidate,
   });
 }
