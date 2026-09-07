@@ -2,7 +2,8 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
 import { useRouter, type Href } from 'expo-router';
-import { MessagesSquare } from 'lucide-react-native';
+import { CalendarDays, Menu, MessagesSquare } from 'lucide-react-native';
+import { BellIcon } from 'phosphor-react-native';
 import React, { useEffect, useLayoutEffect, useMemo, useState } from 'react';
 import { Modal, Platform, Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
@@ -49,7 +50,7 @@ export function AppHeader({ onCalendarPress }: AppHeaderProps) {
         }}
         slot={MENU}
       >
-        <Ionicons name="menu-outline" size={MENU} color={icon} />
+        <Menu size={MENU} color={icon} />
       </HeaderHit>
 
       <View style={styles.cluster}>
@@ -71,7 +72,7 @@ export function AppHeader({ onCalendarPress }: AppHeaderProps) {
             onCalendarPress?.();
           }}
         >
-          <Ionicons name="calendar-outline" size={GLYPH} color={icon} />
+          <CalendarDays size={GLYPH} color={icon} />
         </HeaderHit>
 
         <HeaderNotifyButton iconColor={icon} />
@@ -301,11 +302,7 @@ export function HeaderNotifyButton({
       }}
       dot={active}
     >
-      <Ionicons
-        name={active ? 'notifications' : 'notifications-outline'}
-        size={GLYPH}
-        color={iconColor}
-      />
+      <BellIcon size={GLYPH} color={iconColor} weight={active ? 'fill' : 'regular'} />
     </HeaderHit>
   );
 }
