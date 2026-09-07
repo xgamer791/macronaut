@@ -10,12 +10,13 @@ import {
   GlassHeaderBar,
   ProfileHeader,
   ProfileHeaderChrome,
+  ProfilePhotoBlock,
   ProfilePostList,
   Screen,
   SectionHeader,
 } from '@/ui/components';
 import { useAuth } from '@/state/AuthProvider';
-import { usePublicProfile, useSetProfileFollow } from '@/state/queries';
+import { usePublicPhotos, usePublicProfile, useSetProfileFollow } from '@/state/queries';
 import { goBackOrHome } from '@/utils/navigation';
 import { ThemeProvider, useTheme } from '@/ui/theme/ThemeProvider';
 import { spacing } from '@/ui/theme/tokens';
@@ -43,6 +44,7 @@ function PublicProfile() {
   const { colors } = useTheme();
   const { signedIn } = useAuth();
   const result = usePublicProfile(handle ?? '');
+  const photos = usePublicPhotos(handle ?? '');
   const setFollow = useSetProfileFollow();
 
   if (result.isLoading) {
@@ -125,6 +127,20 @@ function PublicProfile() {
             }}
           />
         )}
+        <ProfilePhotoBlock
+          photos={photos.data?.photos ?? []}
+          loading={photos.isLoading}
+          canSeePrivate={photos.data?.isOwner === true}
+          onOpenPhoto={(photo) =>
+            router.push({
+              pathname: '/photos',
+              params: { handle: found.profile.handle, photo: photo.id },
+            })
+          }
+          onSeeAll={() =>
+            router.push({ pathname: '/photos', params: { handle: found.profile.handle } })
+          }
+        />
         <SectionHeader title="Posts" />
         <ProfilePostList
           posts={found.posts}
