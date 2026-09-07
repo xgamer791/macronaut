@@ -17,8 +17,10 @@ import {
   Button,
   Card,
   ErrorState,
+  GlassHeaderBar,
   ListRow,
   ProfileHeader,
+  ProfileHeaderChrome,
   ProfilePostList,
   Screen,
   SectionHeader,
@@ -146,12 +148,22 @@ function OwnProfile() {
   }
 
   return (
-    <Screen padded={false} safeTop={false} scroll>
+    <Screen
+      padded={false}
+      safeTop={false}
+      scroll
+      stickyHeader={
+        <GlassHeaderBar inset={spacing.md}>
+          <ProfileHeaderChrome onBack={() => goBackOrHome(router)} />
+        </GlassHeaderBar>
+      }
+    >
       {data ? (
         <>
           <ProfileHeader
             profile={data}
             onBack={() => goBackOrHome(router)}
+            showChrome={false}
             onPickAvatar={() => void replaceImage('avatar')}
             onPickBanner={() => void replaceImage('banner')}
             uploading={uploading}

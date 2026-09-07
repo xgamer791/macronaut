@@ -20,6 +20,8 @@ type IconName = keyof typeof Ionicons.glyphMap;
 export interface ProfileHeaderProps {
   profile: ProfileView;
   onBack: () => void;
+  /** False when the page lifts the navigation chrome into a sticky glass bar. */
+  showChrome?: boolean;
   /** Trailing control on the identity row — the small gear on your own page. */
   right?: React.ReactNode;
   /** Owner-only: tapping the picture or the banner replaces it. */
@@ -40,6 +42,7 @@ export interface ProfileHeaderProps {
 export function ProfileHeader({
   profile,
   onBack,
+  showChrome = true,
   right,
   onPickAvatar,
   onPickBanner,
@@ -95,16 +98,11 @@ export function ProfileHeader({
         ) : null}
       </Pressable>
 
-      {/* Back on the left; chats, notifications, then the same account picture
-          as Today on the right. */}
-      <View style={[styles.chrome, { top: insets.top + spacing.sm }]} pointerEvents="box-none">
-        <GhostButton icon="chevron-back" label="Back" onPress={onBack} size={28} contrast />
-        <View style={styles.menu}>
-          <HeaderChatsButton />
-          <HeaderNotifyButton />
-          <HeaderAvatarButton />
+      {showChrome ? (
+        <View style={[styles.chrome, { top: insets.top + spacing.sm }]} pointerEvents="box-none">
+          <ProfileHeaderChrome onBack={onBack} />
         </View>
-      </View>
+      ) : null}
 
       <View style={[styles.identity, { marginTop: -AVATAR_DROP }]}>
         <View style={styles.identityTop}>
@@ -167,6 +165,24 @@ export function ProfileHeader({
   );
 }
 
+/**
+ * Back on the left; chats, notifications, then the same account picture as
+ * Today on the right. Shared by the inline banner chrome and the sticky
+ * glass bar.
+ */
+export function ProfileHeaderChrome({ onBack }: { onBack: () => void }) {
+  return (
+    <View style={styles.chromeRow}>
+      <GhostButton icon="chevron-back" label="Back" onPress={onBack} size={28} contrast />
+      <View style={styles.menu}>
+        <HeaderChatsButton />
+        <HeaderNotifyButton />
+        <HeaderAvatarButton />
+      </View>
+    </View>
+  );
+}
+
 /** Icon-only control with no circular plate. `contrast` stamps a dark
  * offset behind a white glyph so a banner photo cannot swallow it. */
 export function GhostButton({
@@ -214,6 +230,9 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: spacing.md,
     right: spacing.md,
+  },
+  chromeRow: {
+    height: touchTarget,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
