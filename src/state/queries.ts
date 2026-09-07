@@ -267,6 +267,21 @@ export function useAddPhoto() {
   });
 }
 
+export function useAddPhotos() {
+  const { photos } = useRepos();
+  const invalidate = useInvalidatePhotos();
+  return useMutation({
+    mutationFn: async (input: { files: Blob[]; isPublic?: boolean }) => {
+      const imageIds: string[] = [];
+      for (const file of input.files) {
+        imageIds.push(await photos.upload(file));
+      }
+      return photos.addMany(imageIds, input.isPublic);
+    },
+    onSuccess: invalidate,
+  });
+}
+
 export function useSetPhotoPublic() {
   const { photos } = useRepos();
   const invalidate = useInvalidatePhotos();

@@ -1,5 +1,7 @@
 import {
   assertImageSize,
+  GALLERY_PICKER_OPTIONS,
+  GALLERY_SELECTION_LIMIT,
   IMAGE_MAX_BYTES,
   IMAGE_MAX_EDGE,
   scaleToFit,
@@ -27,5 +29,12 @@ describe('picked profile images', () => {
 
   it('keeps the avatar smaller than the banner it sits on', () => {
     expect(IMAGE_MAX_EDGE.avatar).toBeLessThan(IMAGE_MAX_EDGE.banner);
+  });
+
+  it('gallery picks select-only, in tap order, without opening a crop', () => {
+    expect(GALLERY_PICKER_OPTIONS.allowsEditing).toBe(false);
+    expect(GALLERY_PICKER_OPTIONS.allowsMultipleSelection).toBe(true);
+    expect(GALLERY_PICKER_OPTIONS.orderedSelection).toBe(true);
+    expect(GALLERY_PICKER_OPTIONS.selectionLimit).toBe(GALLERY_SELECTION_LIMIT);
   });
 });

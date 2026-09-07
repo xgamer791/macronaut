@@ -19,9 +19,9 @@ import {
   Sheet,
 } from '@/ui/components';
 import type { ProfilePhoto } from '@/repositories/photoRepo';
-import { pickImage } from '@/services/media/pickImage';
+import { pickImages } from '@/services/media/pickImage';
 import {
-  useAddPhoto,
+  useAddPhotos,
   useDeletePhoto,
   useMyPhotos,
   usePublicPhotos,
@@ -49,7 +49,7 @@ function PhotoWall() {
   const { width } = useWindowDimensions();
   const own = useMyPhotos();
   const other = usePublicPhotos(handle ?? '');
-  const addPhoto = useAddPhoto();
+  const addPhotos = useAddPhotos();
   const setPublic = useSetPhotoPublic();
   const deletePhoto = useDeletePhoto();
 
@@ -67,12 +67,13 @@ function PhotoWall() {
   async function add() {
     setError(null);
     try {
-      const picked = await pickImage('post');
-      if (!picked) return;
+      const picked = await pickImages();
+      if (!picked?.length) return;
       setAdding(true);
-      await addPhoto.mutateAsync({ file: picked.blob, isPublic: true });
+      // Upload in tap order. Do not open a preview — select is the whole action.
+      await addPhotos.mutateAsync({ files: picked.map((photo) => photo.blob), isPublic: true });
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Could not add that photo.');
+      setError(e instanceof Error ? e.message : 'Could not add those photos.');
     } finally {
       setAdding(false);
     }
@@ -101,7 +102,7 @@ function PhotoWall() {
             canEdit ? (
               <Pressable
                 accessibilityRole="button"
-                accessibilityLabel="Add a photo"
+                accessibilityLabel="Add photos"
                 onPress={() => void add()}
                 hitSlop={8}
                 style={{ minHeight: 44, justifyContent: 'center' }}

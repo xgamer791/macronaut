@@ -676,6 +676,14 @@ export function createMemoryPhotoRepo(): PhotoRepo {
       photos.unshift(photo);
       return clone(photo);
     },
+    async addMany(imageIds, isPublic = true) {
+      const added: ProfilePhoto[] = [];
+      // Unshift last-selected first so the first selected photo leads the wall.
+      for (let i = imageIds.length - 1; i >= 0; i--) {
+        added.unshift(await this.add(imageIds[i]!, undefined, isPublic));
+      }
+      return added;
+    },
     async setPublic(id, isPublic) {
       const photo = photos.find((p) => p.id === id);
       if (!photo) throw new Error('Photo not found');

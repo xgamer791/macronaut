@@ -21,6 +21,7 @@ export interface PhotoRepo {
   forHandle(handle: string): Promise<PhotoWall | null>;
   upload(file: Blob): Promise<string>;
   add(imageId: string, caption?: string, isPublic?: boolean): Promise<ProfilePhoto>;
+  addMany(imageIds: string[], isPublic?: boolean): Promise<ProfilePhoto[]>;
   setPublic(id: string, isPublic: boolean): Promise<ProfilePhoto>;
   remove(id: string): Promise<void>;
 }
@@ -46,6 +47,8 @@ export function createPhotoRepo(convex: ConvexCaller): PhotoRepo {
     },
     add: (imageId, caption, isPublic) =>
       convex.mutation(api.photos.add, clean({ imageId: fileId(imageId), caption, isPublic })),
+    addMany: (imageIds, isPublic) =>
+      convex.mutation(api.photos.addMany, clean({ imageIds: imageIds.map(fileId), isPublic })),
     setPublic: (id, isPublic) => convex.mutation(api.photos.setPublic, { id: photoId(id), isPublic }),
     async remove(id) {
       await convex.mutation(api.photos.remove, { id: photoId(id) });
