@@ -226,10 +226,17 @@ export function useDeleteProfilePost() {
 export function useSetProfileFollow() {
   const { profile } = useRepos();
   const invalidate = useInvalidateProfile();
+  const qc = useQueryClient();
   return useMutation({
     mutationFn: (input: { handle: string; follow: boolean }) =>
       profile.setFollow(input.handle, input.follow),
-    onSuccess: invalidate,
+    onSuccess: () => {
+      invalidate();
+      qc.invalidateQueries({ queryKey: ['chat-people'] });
+      qc.invalidateQueries({ queryKey: keys.chats });
+      qc.invalidateQueries({ queryKey: ['chat-thread'] });
+      qc.invalidateQueries({ queryKey: keys.notifications });
+    },
   });
 }
 
@@ -430,13 +437,13 @@ export function useChats() {
   });
 }
 
-export function useChatPeople(search: string) {
+export function useChatPeople(search: string, enabled = true) {
   const { signedIn } = useAuth();
   const { chats } = useRepos();
   return useQuery({
     queryKey: keys.chatPeople(search.trim().toLowerCase()),
     queryFn: () => chats.people(search),
-    enabled: signedIn,
+    enabled: signedIn && enabled,
   });
 }
 

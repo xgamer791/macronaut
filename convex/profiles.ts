@@ -252,7 +252,8 @@ export const update = mutation({
     const row = await loadOrCreate(ctx, userId);
 
     const patch: Partial<Doc<'profiles'>> = { updatedAt: nowIso() };
-    if (args.displayName !== undefined) patch.displayName = capped(args.displayName, LIMITS.displayName);
+    if (args.displayName !== undefined)
+      patch.displayName = capped(args.displayName, LIMITS.displayName);
     if (args.bio !== undefined) patch.bio = capped(args.bio, LIMITS.bio);
     if (args.location !== undefined) patch.location = capped(args.location, LIMITS.location);
     if (args.primarySport !== undefined) {
@@ -318,7 +319,9 @@ export const setImage = mutation({
     // The header avatar reads `users.image`, so keep it pointing at whatever
     // the profile picture is now.
     if (kind === 'avatar') {
-      await ctx.db.patch(userId, { image: (await storageUrl(ctx, storageId ?? undefined)) ?? undefined });
+      await ctx.db.patch(userId, {
+        image: (await storageUrl(ctx, storageId ?? undefined)) ?? undefined,
+      });
     }
 
     const next = { ...row, ...patch };
@@ -401,12 +404,19 @@ export const setFollow = mutation({
 
     const existing = await followRow(ctx, userId, row.userId);
     if (follow && !existing) {
+      const incoming = await followRow(ctx, row.userId, userId);
       await ctx.db.insert('profileFollows', {
         userId,
         followeeId: row.userId,
         createdAt: nowIso(),
       });
-      await addFriendRequestNotification(ctx, row.userId, userId);
+      if (incoming) {
+        // Following someone who already follows you accepts their request.
+        // Clear that request instead of sending a misleading request back.
+        await removeFriendRequestNotification(ctx, userId, row.userId);
+      } else {
+        await addFriendRequestNotification(ctx, row.userId, userId);
+      }
     } else if (!follow && existing) {
       await ctx.db.delete(existing._id);
       await removeFriendRequestNotification(ctx, row.userId, userId);

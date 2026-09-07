@@ -21,11 +21,19 @@ describe('direct chats', () => {
     });
     await bob.repos.profile.setFollow('alice_runner', true);
 
-    expect((await bob.repos.chats.people()).map((person) => person.handle)).toContain(
-      'alice_runner',
+    expect(await bob.repos.chats.people()).toContainEqual(
+      expect.objectContaining({ handle: 'alice_runner', friendship: 'outgoing' }),
     );
-    expect((await bob.repos.chats.people('RUNNER')).map((person) => person.handle)).toEqual([
-      'alice_runner',
+    expect(await alice.repos.chats.people()).toContainEqual(
+      expect.objectContaining({ handle: 'bob_lifts', friendship: 'incoming' }),
+    );
+    expect(await bob.repos.chats.people('@RUNNER')).toEqual([
+      expect.objectContaining({ handle: 'alice_runner', friendship: 'outgoing' }),
+    ]);
+
+    await alice.repos.profile.setFollow('bob_lifts', true);
+    expect(await bob.repos.chats.people('Alice Runner')).toEqual([
+      expect.objectContaining({ handle: 'alice_runner', friendship: 'friends' }),
     ]);
 
     const chat = await bob.repos.chats.open('alice_runner');
@@ -62,7 +70,7 @@ describe('direct chats', () => {
     expect((await again.chats.list())[0]?.unreadCount).toBe(0);
   });
 
-  it('keeps a conversation private to its two participants', async () => {
+  it('requires accepted friendship and keeps a conversation private to its participants', async () => {
     const t = backend();
     const alice = await signIn(t, 'alice@example.com');
     const bob = await signIn(t, 'bob@example.com');
@@ -71,12 +79,20 @@ describe('direct chats', () => {
     await bob.repos.profile.update({ handle: 'bob_lifts', isPublic: true });
     await stranger.repos.profile.update({ handle: 'stranger', isPublic: true });
 
+    await expect(alice.repos.chats.open('bob_lifts')).rejects.toThrow(/friends/i);
+    await alice.repos.profile.setFollow('bob_lifts', true);
+    await expect(alice.repos.chats.open('bob_lifts')).rejects.toThrow(/friends/i);
+    await bob.repos.profile.setFollow('alice_runner', true);
+
     const chat = await alice.repos.chats.open('bob_lifts');
     await alice.repos.chats.send(chat.id, 'Private message');
 
     expect(await stranger.repos.chats.thread(chat.id)).toBeNull();
     await expect(stranger.repos.chats.send(chat.id, 'Intrusion')).rejects.toThrow(/not available/i);
     expect(await stranger.repos.chats.list()).toEqual([]);
+
+    await alice.repos.profile.setFollow('bob_lifts', false);
+    await expect(alice.repos.chats.send(chat.id, 'No longer friends')).rejects.toThrow(/friends/i);
   });
 
   it('removes the conversation and its messages when either account clears its data', async () => {
@@ -85,6 +101,8 @@ describe('direct chats', () => {
     const bob = await signIn(t, 'bob@example.com');
     await alice.repos.profile.update({ handle: 'alice_runner', isPublic: true });
     await bob.repos.profile.update({ handle: 'bob_lifts', isPublic: true });
+    await alice.repos.profile.setFollow('bob_lifts', true);
+    await bob.repos.profile.setFollow('alice_runner', true);
     const chat = await alice.repos.chats.open('bob_lifts');
     await alice.repos.chats.send(chat.id, 'Stored in Convex');
 

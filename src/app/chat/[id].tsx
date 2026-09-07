@@ -14,8 +14,13 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { ChatMessage } from '@/repositories/chatRepo';
 import { useAuth } from '@/state/AuthProvider';
-import { useChatThread, useMarkChatRead, useSendChatMessage } from '@/state/queries';
-import { AppText, ChatAvatar, EmptyState } from '@/ui/components';
+import {
+  useChatThread,
+  useMarkChatRead,
+  useSendChatMessage,
+  useSetProfileFollow,
+} from '@/state/queries';
+import { AppText, Button, ChatAvatar, EmptyState } from '@/ui/components';
 import { useTheme } from '@/ui/theme/ThemeProvider';
 import { radius, spacing, touchTarget, type } from '@/ui/theme/tokens';
 import { goBackOrHome } from '@/utils/navigation';
@@ -33,6 +38,7 @@ function Conversation() {
   const { signedIn } = useAuth();
   const thread = useChatThread(chatId);
   const send = useSendChatMessage();
+  const setFriend = useSetProfileFollow();
   const { mutate: markRead } = useMarkChatRead();
   const scroll = useRef<ScrollView>(null);
   const lastMarkedRead = useRef<string | null>(null);
@@ -161,49 +167,100 @@ function Conversation() {
         </AppText>
       ) : null}
 
-      <View
-        style={[
-          styles.composer,
-          {
-            borderTopColor: colors.border,
-            paddingBottom: Math.max(insets.bottom, spacing.sm),
-          },
-        ]}
-      >
-        <TextInput
-          accessibilityLabel={`Message ${data.peer.displayName}`}
-          value={draft}
-          onChangeText={setDraft}
-          placeholder="Message"
-          placeholderTextColor={colors.textMuted}
-          multiline
-          maxLength={2000}
+      {data.peer.friendship === 'friends' ? (
+        <View
           style={[
-            styles.input,
-            { color: colors.textPrimary, backgroundColor: colors.surfaceRaised },
-          ]}
-        />
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Send message"
-          disabled={!draft.trim() || send.isPending}
-          onPress={() => void sendMessage()}
-          style={[
-            styles.send,
+            styles.composer,
             {
-              backgroundColor: colors.accent,
-              opacity: draft.trim() && !send.isPending ? 1 : 0.4,
+              borderTopColor: colors.border,
+              paddingBottom: Math.max(insets.bottom, spacing.sm),
             },
           ]}
         >
-          {send.isPending ? (
-            <ActivityIndicator size="small" color={colors.onAccent} />
-          ) : (
-            <Ionicons name="arrow-up" size={20} color={colors.onAccent} />
-          )}
-        </Pressable>
-      </View>
+          <TextInput
+            accessibilityLabel={`Message ${data.peer.displayName}`}
+            value={draft}
+            onChangeText={setDraft}
+            placeholder="Message"
+            placeholderTextColor={colors.textMuted}
+            multiline
+            maxLength={2000}
+            style={[
+              styles.input,
+              { color: colors.textPrimary, backgroundColor: colors.surfaceRaised },
+            ]}
+          />
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Send message"
+            disabled={!draft.trim() || send.isPending}
+            onPress={() => void sendMessage()}
+            style={[
+              styles.send,
+              {
+                backgroundColor: colors.accent,
+                opacity: draft.trim() && !send.isPending ? 1 : 0.4,
+              },
+            ]}
+          >
+            {send.isPending ? (
+              <ActivityIndicator size="small" color={colors.onAccent} />
+            ) : (
+              <Ionicons name="arrow-up" size={20} color={colors.onAccent} />
+            )}
+          </Pressable>
+        </View>
+      ) : (
+        <FriendGate
+          friendship={data.peer.friendship}
+          name={data.peer.displayName}
+          busy={setFriend.isPending}
+          bottom={Math.max(insets.bottom, spacing.sm)}
+          onAdd={async () => {
+            setError(null);
+            try {
+              await setFriend.mutateAsync({ handle: data.peer.handle, follow: true });
+            } catch (e) {
+              setError(e instanceof Error ? e.message : 'Could not update that friend request.');
+            }
+          }}
+        />
+      )}
     </KeyboardAvoidingView>
+  );
+}
+
+function FriendGate({
+  friendship,
+  name,
+  busy,
+  bottom,
+  onAdd,
+}: {
+  friendship: 'none' | 'outgoing' | 'incoming';
+  name: string;
+  busy: boolean;
+  bottom: number;
+  onAdd: () => void;
+}) {
+  const { colors } = useTheme();
+  const incoming = friendship === 'incoming';
+  return (
+    <View style={[styles.friendGate, { borderTopColor: colors.border, paddingBottom: bottom }]}>
+      <View style={{ flex: 1 }}>
+        <AppText weight="700">Friends can message</AppText>
+        <AppText variant="caption" tone="muted">
+          {friendship === 'outgoing'
+            ? `Your request is waiting for ${name}.`
+            : incoming
+              ? `${name} sent you a friend request.`
+              : `Add ${name} as a friend before sending a message.`}
+        </AppText>
+      </View>
+      {friendship === 'outgoing' ? null : (
+        <Button compact title={incoming ? 'Accept' : 'Add friend'} loading={busy} onPress={onAdd} />
+      )}
+    </View>
   );
 }
 
@@ -321,6 +378,14 @@ const styles = StyleSheet.create({
     borderTopWidth: StyleSheet.hairlineWidth,
     paddingHorizontal: spacing.md,
     paddingTop: spacing.sm,
+  },
+  friendGate: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.md,
   },
   input: {
     ...type.body,

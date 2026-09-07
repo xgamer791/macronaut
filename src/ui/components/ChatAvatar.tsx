@@ -1,11 +1,11 @@
 import { Image } from 'expo-image';
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
-import type { ChatPerson } from '@/repositories/chatRepo';
+import type { ChatIdentity } from '@/repositories/chatRepo';
 import { useTheme } from '@/ui/theme/ThemeProvider';
 import { AppText } from './AppText';
 
-export function ChatAvatar({ person, size = 54 }: { person: ChatPerson; size?: number }) {
+export function ChatAvatar({ person, size = 54 }: { person: ChatIdentity; size?: number }) {
   const { colors } = useTheme();
   const initials = person.displayName
     .replace(/^@/, '')

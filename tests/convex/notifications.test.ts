@@ -36,6 +36,11 @@ describe('notifications', () => {
 
     await bob.repos.profile.setFollow('alice_runner', false);
     expect(await alice.repos.notifications.list()).toEqual({ items: [], unreadCount: 0 });
+
+    await bob.repos.profile.setFollow('alice_runner', true);
+    await alice.repos.profile.setFollow('bob_lifts', true);
+    expect(await alice.repos.notifications.list()).toEqual({ items: [], unreadCount: 0 });
+    expect(await bob.repos.notifications.list()).toEqual({ items: [], unreadCount: 0 });
   });
 
   it('fires private chat-message events and clears them when the chat is read', async () => {
@@ -46,6 +51,8 @@ describe('notifications', () => {
     await alice.repos.profile.update({ handle: 'alice_runner', isPublic: true });
     await bob.repos.profile.update({ handle: 'bob_lifts', isPublic: true });
     await stranger.repos.profile.update({ handle: 'stranger', isPublic: true });
+    await alice.repos.profile.setFollow('bob_lifts', true);
+    await bob.repos.profile.setFollow('alice_runner', true);
 
     const chat = await alice.repos.chats.open('bob_lifts');
     await alice.repos.chats.send(chat.id, 'Training at six?');
@@ -74,6 +81,8 @@ describe('notifications', () => {
     const bob = await signIn(t, 'bob@example.com');
     await alice.repos.profile.update({ handle: 'alice_runner', isPublic: true });
     await bob.repos.profile.update({ handle: 'bob_lifts', isPublic: true });
+    await bob.repos.profile.setFollow('alice_runner', true);
+    await alice.repos.profile.setFollow('bob_lifts', true);
 
     const chat = await bob.repos.chats.open('alice_runner');
     await bob.repos.chats.send(chat.id, 'First');

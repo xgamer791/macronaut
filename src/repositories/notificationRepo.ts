@@ -1,6 +1,6 @@
 import { api } from '../../convex/_generated/api';
 import type { Id } from '../../convex/_generated/dataModel';
-import type { ChatPerson } from './chatRepo';
+import type { ChatIdentity } from './chatRepo';
 import type { ConvexCaller } from './convexCall';
 
 export type NotificationKind = 'friend_request' | 'chat_message';
@@ -8,7 +8,7 @@ export type NotificationKind = 'friend_request' | 'chat_message';
 export interface AppNotification {
   id: string;
   kind: NotificationKind;
-  actor: ChatPerson;
+  actor: ChatIdentity;
   title: string;
   body: string;
   chatId?: string;

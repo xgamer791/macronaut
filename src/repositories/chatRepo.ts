@@ -2,10 +2,15 @@ import { api } from '../../convex/_generated/api';
 import type { Id } from '../../convex/_generated/dataModel';
 import type { ConvexCaller } from './convexCall';
 
-export interface ChatPerson {
+export interface ChatIdentity {
   handle: string;
   displayName: string;
   avatarUrl?: string;
+}
+
+export interface ChatPerson extends ChatIdentity {
+  /** Mutual follows are friends; one-way follows are pending requests. */
+  friendship: 'none' | 'outgoing' | 'incoming' | 'friends';
 }
 
 export interface ChatMessage {

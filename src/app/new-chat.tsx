@@ -3,8 +3,8 @@ import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import { ActivityIndicator, Platform, Pressable, StyleSheet, TextInput, View } from 'react-native';
 import type { ChatPerson } from '@/repositories/chatRepo';
-import { useChatPeople, useOpenChat } from '@/state/queries';
-import { AppText, ChatAvatar, EmptyState, Screen, ScreenHeader } from '@/ui/components';
+import { useChatPeople, useOpenChat, useSetProfileFollow } from '@/state/queries';
+import { AppText, ChatPersonRow, EmptyState, Screen, ScreenHeader } from '@/ui/components';
 import { useTheme } from '@/ui/theme/ThemeProvider';
 import { radius, spacing, touchTarget, type } from '@/ui/theme/tokens';
 
@@ -17,12 +17,15 @@ function PeopleList() {
   const { colors } = useTheme();
   const [search, setSearch] = useState('');
   const [opening, setOpening] = useState<string | null>(null);
+  const [friending, setFriending] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const people = useChatPeople(search);
   const openChat = useOpenChat();
+  const setFriend = useSetProfileFollow();
   const searching = Boolean(search.trim());
 
   async function select(person: ChatPerson) {
+    if (person.friendship !== 'friends') return;
     setOpening(person.handle);
     setError(null);
     try {
@@ -31,6 +34,18 @@ function PeopleList() {
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not start that chat.');
       setOpening(null);
+    }
+  }
+
+  async function addFriend(person: ChatPerson) {
+    setFriending(person.handle);
+    setError(null);
+    try {
+      await setFriend.mutateAsync({ handle: person.handle, follow: true });
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Could not update that friend request.');
+    } finally {
+      setFriending(null);
     }
   }
 
@@ -88,31 +103,16 @@ function PeopleList() {
       ) : (
         <View>
           {people.data.map((person) => (
-            <Pressable
+            <ChatPersonRow
               key={person.handle}
-              accessibilityRole="button"
-              accessibilityLabel={`Chat with ${person.displayName}`}
-              disabled={opening !== null}
-              onPress={() => void select(person)}
-              style={({ pressed }) => [styles.personRow, pressed && { opacity: 0.65 }]}
-            >
-              <ChatAvatar person={person} size={48} />
-              <View style={[styles.personCopy, { borderBottomColor: colors.border }]}>
-                <View style={{ flex: 1 }}>
-                  <AppText weight="600" numberOfLines={1}>
-                    {person.displayName}
-                  </AppText>
-                  <AppText variant="caption" tone="muted" numberOfLines={1}>
-                    @{person.handle}
-                  </AppText>
-                </View>
-                {opening === person.handle ? (
-                  <ActivityIndicator color={colors.accent} />
-                ) : (
-                  <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
-                )}
-              </View>
-            </Pressable>
+              person={person}
+              busy={opening === person.handle || friending === person.handle}
+              disabled={opening !== null || friending !== null}
+              onProfile={() => router.push(`/u/${person.handle}`)}
+              onAddFriend={() => void addFriend(person)}
+              onAcceptFriend={() => void addFriend(person)}
+              onMessage={() => void select(person)}
+            />
           ))}
         </View>
       )}
@@ -159,21 +159,5 @@ const styles = StyleSheet.create({
   error: {
     paddingHorizontal: spacing.lg,
     paddingBottom: spacing.sm,
-  },
-  personRow: {
-    minHeight: 68,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-    paddingLeft: spacing.lg,
-  },
-  personCopy: {
-    flex: 1,
-    minHeight: 68,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    paddingRight: spacing.lg,
   },
 });

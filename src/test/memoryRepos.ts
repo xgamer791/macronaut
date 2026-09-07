@@ -831,7 +831,7 @@ export function createMemoryChatRepo(): ChatRepo {
       const ts = nowIso();
       const chat: ChatSummary = {
         id: newId(),
-        peer: { handle, displayName: `@${handle}` },
+        peer: { handle, displayName: `@${handle}`, friendship: 'friends' },
         lastMessage: null,
         unreadCount: 0,
         createdAt: ts,

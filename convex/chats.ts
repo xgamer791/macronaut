@@ -34,7 +34,32 @@ async function avatarUrl(
   return (await ctx.storage.getUrl(profile.avatarId)) ?? undefined;
 }
 
-async function personView(ctx: QueryCtx | MutationCtx, userId: Id<'users'>) {
+type FriendshipState = 'none' | 'outgoing' | 'incoming' | 'friends';
+
+/** A friend is a mutual follow. That gives both people an explicit action in
+ * the existing social graph before either one can message the other. */
+async function friendshipState(
+  ctx: QueryCtx | MutationCtx,
+  viewerId: Id<'users'>,
+  otherId: Id<'users'>,
+): Promise<FriendshipState> {
+  const [outgoing, incoming] = await Promise.all([
+    ctx.db
+      .query('profileFollows')
+      .withIndex('by_user_followee', (q) => q.eq('userId', viewerId).eq('followeeId', otherId))
+      .first(),
+    ctx.db
+      .query('profileFollows')
+      .withIndex('by_user_followee', (q) => q.eq('userId', otherId).eq('followeeId', viewerId))
+      .first(),
+  ]);
+  if (outgoing && incoming) return 'friends';
+  if (outgoing) return 'outgoing';
+  if (incoming) return 'incoming';
+  return 'none';
+}
+
+async function personView(ctx: QueryCtx | MutationCtx, viewerId: Id<'users'>, userId: Id<'users'>) {
   const profile = await ctx.db
     .query('profiles')
     .withIndex('by_user', (q) => q.eq('userId', userId))
@@ -44,6 +69,7 @@ async function personView(ctx: QueryCtx | MutationCtx, userId: Id<'users'>) {
     handle: profile.handle,
     displayName: profile.displayName?.trim() || `@${profile.handle}`,
     avatarUrl: await avatarUrl(ctx, profile),
+    friendship: await friendshipState(ctx, viewerId, userId),
   };
 }
 
@@ -63,7 +89,7 @@ async function unreadCount(
 }
 
 async function summary(ctx: QueryCtx | MutationCtx, chat: Doc<'directChats'>, userId: Id<'users'>) {
-  const peer = await personView(ctx, peerId(chat, userId));
+  const peer = await personView(ctx, userId, peerId(chat, userId));
   if (!peer) return null;
   const last = await ctx.db
     .query('chatMessages')
@@ -111,13 +137,15 @@ export const list = query({
   },
 });
 
-/** Contacts are followers, people the viewer follows, and existing chat peers.
- * Typing searches every public Macronaut profile instead. */
+/** Contacts are friend requests, friends, and existing chat peers. Typing
+ * searches public profile rows in the Macronaut database instead. */
 export const people = query({
   args: { search: v.optional(v.string()) },
   handler: async (ctx, { search }) => {
     const userId = await requireUserId(ctx);
-    const wanted = search?.trim().toLowerCase() ?? '';
+    // People commonly type the @ shown beside a handle. It is decoration,
+    // never part of the stored handle, so strip it before matching.
+    const wanted = (search?.trim().toLowerCase() ?? '').replace(/^@+/, '');
     let profiles: Doc<'profiles'>[];
 
     if (wanted) {
@@ -164,6 +192,7 @@ export const people = query({
         handle: profile.handle,
         displayName: profile.displayName?.trim() || `@${profile.handle}`,
         avatarUrl: await avatarUrl(ctx, profile),
+        friendship: await friendshipState(ctx, userId, profile.userId),
       })),
     );
   },
@@ -182,6 +211,9 @@ export const open = mutation({
       : null;
     if (!profile || !profile.isPublic || profile.userId === userId) {
       throw new ConvexError('Person not available');
+    }
+    if ((await friendshipState(ctx, userId, profile.userId)) !== 'friends') {
+      throw new ConvexError('You must be friends before starting a chat');
     }
     const key = pairKey(userId, profile.userId);
     const existing = await ctx.db
@@ -215,7 +247,7 @@ export const thread = query({
     const userId = await requireUserId(ctx);
     const chat = await ctx.db.get(id);
     if (!chat || !isParticipant(chat, userId)) return null;
-    const peer = await personView(ctx, peerId(chat, userId));
+    const peer = await personView(ctx, userId, peerId(chat, userId));
     if (!peer) return null;
     const newest = await ctx.db
       .query('chatMessages')
@@ -245,6 +277,9 @@ export const send = mutation({
     const userId = await requireUserId(ctx);
     const chat = await ctx.db.get(id);
     if (!chat || !isParticipant(chat, userId)) throw new ConvexError('Chat not available');
+    if ((await friendshipState(ctx, userId, peerId(chat, userId))) !== 'friends') {
+      throw new ConvexError('You must be friends before sending a message');
+    }
     const trimmed = body.trim().slice(0, MAX_MESSAGE_LENGTH);
     if (!trimmed) throw new ConvexError('Write a message first');
     const ts = nowIso();

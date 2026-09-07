@@ -47,6 +47,9 @@ describe('chat routes', () => {
     expect(picker).toContain('Search people on Macronaut');
     expect(picker).toContain('CONTACTS');
     expect(picker).toContain('PEOPLE ON MACRONAUT');
+    expect(chats).toContain('Search chats and people on Macronaut');
+    expect(chats).toContain('useChatPeople');
+    expect(picker).toContain('ChatPersonRow');
     expect(picker).toContain("pathname: '/chat/[id]'");
     expect(chats).not.toContain('initialMode="light"');
     expect(picker).not.toContain('initialMode="light"');
@@ -64,5 +67,8 @@ describe('chat routes', () => {
     expect(backend).toContain("query('directChats')");
     expect(backend).toContain("insert('chatMessages'");
     expect(backend).toContain('requireUserId');
+    expect(backend).toContain('friendshipState');
+    expect(backend).toContain('You must be friends before starting a chat');
+    expect(backend).toContain('You must be friends before sending a message');
   });
 });
