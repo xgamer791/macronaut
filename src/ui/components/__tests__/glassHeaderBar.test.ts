@@ -39,12 +39,12 @@ describe('sticky glass headers', () => {
     const html = read('app', '+html.tsx');
     expect(html).toContain('.glass');
     expect(html).toContain('[data-headerglass]');
-    expect(html).toContain('blur(26px) saturate(140%)');
+    expect(html).toContain('blur(39px) saturate(135%)');
     expect(html).toContain('border-radius: 24px');
-    expect(html).toContain('rgba(10, 12, 20, 0.630)');
-    expect(html).toContain('mix-blend-mode: screen');
-    expect(html).toContain('inset 0 0 0 0.5px rgba(255, 255, 255, 0.070)');
-    expect(html).toContain('background: rgba(10, 12, 20, 1.000)');
+    expect(html).toContain('rgba(0, 0, 0, 0.630)');
+    expect(html).toContain('opacity: 0.00');
+    expect(html).toContain('inset 0 -1px 0 rgba(255, 255, 255, 0.050)');
+    expect(html).toContain('background: rgba(0, 0, 0, 1.000)');
   });
 
   it('hands Today its header instead of drawing one inside the hero', () => {

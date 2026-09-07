@@ -75,11 +75,11 @@ input[data-darkfield]:-webkit-autofill:focus, input[data-darkfield]:-webkit-auto
    Works on any colorful background; flat backgrounds will look subtler. */
 .glass,
 [data-headerglass] {
-  background: radial-gradient(ellipse 130% 90% at 50% 0%, rgba(10, 12, 20, 0.630) 0%, rgba(10, 12, 20, 0.550) 45%, rgba(10, 12, 20, 0.500) 100%);
-  backdrop-filter: blur(26px) saturate(140%);
-  -webkit-backdrop-filter: blur(26px) saturate(140%);
+  background: radial-gradient(ellipse 130% 90% at 50% 0%, rgba(0, 0, 0, 0.630) 0%, rgba(0, 0, 0, 0.550) 45%, rgba(0, 0, 0, 0.500) 100%);
+  backdrop-filter: blur(39px) saturate(135%);
+  -webkit-backdrop-filter: blur(39px) saturate(135%);
   border-radius: 24px;
-  box-shadow: 0 20px 58px -15px rgba(0, 0, 0, 0.312), 0 1px 2px rgba(0, 0, 0, 0.156), inset 0 0 16px rgba(255, 255, 255, 0.040), inset 0 4px 8px -4px rgba(0, 0, 0, 0.220), inset 0 -1px 1px rgba(0, 0, 0, 0.280), inset 0 1px 1px rgba(255, 255, 255, 0.096), inset 0 0 0 1px rgba(255, 255, 255, 0.063);
+  box-shadow: 0 3px 8px -2px rgba(0, 0, 0, 0.198), 0 1px 2px rgba(0, 0, 0, 0.099), inset 0 0 23px rgba(255, 255, 255, 0.040), inset 0 4px 8px -4px rgba(0, 0, 0, 0.220), inset 0 -1px 1px rgba(0, 0, 0, 0.280), inset 0 1px 1px rgba(255, 255, 255, 0.000), inset 0 0 0 1px rgba(255, 255, 255, 0.000);
   color: #ffffff;
   overflow: hidden;
   isolation: isolate;
@@ -90,8 +90,8 @@ input[data-darkfield]:-webkit-autofill:focus, input[data-darkfield]:-webkit-auto
   position: absolute;
   inset: 0;
   border-radius: inherit;
-  background: radial-gradient(ellipse 110% 65% at 50% -15%, rgba(255, 255, 255, 0.121) 0%, rgba(255, 255, 255, 0) 70%);
-  opacity: 0.55;
+  background: radial-gradient(ellipse 110% 65% at 50% -15%, rgba(255, 255, 255, 0.000) 0%, rgba(255, 255, 255, 0) 70%);
+  opacity: 0.00;
   mix-blend-mode: screen;
   pointer-events: none;
   z-index: 1;
@@ -102,7 +102,7 @@ input[data-darkfield]:-webkit-autofill:focus, input[data-darkfield]:-webkit-auto
   position: absolute;
   inset: 0;
   border-radius: inherit;
-  box-shadow: inset 0 0 0 0.5px rgba(255, 255, 255, 0.070), inset 0 1px 0 rgba(255, 255, 255, 0.096), inset 0 -1px 0 rgba(255, 255, 255, 0.060);
+  box-shadow: inset 0 0 0 0.5px rgba(255, 255, 255, 0.000), inset 0 1px 0 rgba(255, 255, 255, 0.000), inset 0 -1px 0 rgba(255, 255, 255, 0.050);
   pointer-events: none;
   z-index: 1;
 }
@@ -111,7 +111,7 @@ input[data-darkfield]:-webkit-autofill:focus, input[data-darkfield]:-webkit-auto
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
   .glass,
   [data-headerglass] {
-    background: rgba(10, 12, 20, 1.000);
+    background: rgba(0, 0, 0, 1.000);
   }
 }`,
           }}

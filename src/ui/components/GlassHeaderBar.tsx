@@ -75,18 +75,17 @@ const styles = StyleSheet.create({
   nativeGlass: {
     borderRadius: GLASS_RADIUS,
     overflow: 'hidden',
-    backgroundColor: 'rgba(10, 12, 20, 0.55)',
+    backgroundColor: 'rgba(0, 0, 0, 0.55)',
   },
   sheen: {
     ...StyleSheet.absoluteFill,
-    backgroundColor: 'rgba(255, 255, 255, 0.066)',
+    opacity: 0,
   },
   rim: {
     ...StyleSheet.absoluteFill,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(255, 255, 255, 0.07)',
-    borderTopColor: 'rgba(255, 255, 255, 0.096)',
-    borderBottomColor: 'rgba(255, 255, 255, 0.06)',
+    borderColor: 'transparent',
+    borderBottomColor: 'rgba(255, 255, 255, 0.05)',
     borderRadius: GLASS_RADIUS,
   },
 });
