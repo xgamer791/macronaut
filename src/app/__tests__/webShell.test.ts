@@ -65,6 +65,13 @@ describe('web html shell', () => {
     expect(html).toContain('prefers-reduced-motion: reduce');
   });
 
+  it('slides the hamburger drawer on the same 294ms curve', () => {
+    expect(html).toContain('[data-headermenu]');
+    expect(html).toContain('[data-headermenu] [data-menudrawer]');
+    expect(html).toContain('[data-headermenu="shut"] [data-menuscrim]');
+    expect(html).toContain('opacity 294ms cubic-bezier(0.22, 1, 0.36, 1)');
+  });
+
   it('slides the sticky header as one slab on the same 294ms curve', () => {
     expect(html).toContain('[data-headerhide]');
     expect(html).toContain('[data-headerhide="out"]');

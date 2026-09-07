@@ -15,10 +15,13 @@ describe('Today header hamburger', () => {
 
   it('opens and closes on the same friends-feed curve', () => {
     expect(header).toContain('SLIDE_DURATION_MS');
-    expect(header).toContain('const DRAWER_MS = SLIDE_DURATION_MS');
-    expect(header).toContain('Easing.bezier(0.22, 1, 0.36, 1)');
-    expect(header).not.toContain('DRAWER_MS = 320');
-    expect(header).not.toContain('SLIDE_EASING');
+    expect(header).toContain('SLIDE_EASING');
+    expect(header).toContain('withTiming');
+    expect(header).toContain('visible={mounted}');
+    expect(header).toContain("dataSet: { headermenu: open ? 'open' : 'shut' }");
+    expect(header).not.toContain('Animated.timing');
+    expect(header).not.toContain('useNativeDriver');
+    expect(header).not.toContain('DRAWER_MS');
   });
 
   it('opens a left drawer of pages that are not in the tab bar', () => {

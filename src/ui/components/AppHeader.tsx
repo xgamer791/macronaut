@@ -2,21 +2,25 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
 import { useRouter, type Href } from 'expo-router';
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useMemo, useState } from 'react';
 import {
-  Animated,
-  Easing,
   Modal,
+  Platform,
   Pressable,
   StyleSheet,
   useWindowDimensions,
   View,
 } from 'react-native';
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+} from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { displayNameFromUser } from '@/services/auth/displayName';
 import { useAuth } from '@/state/AuthProvider';
 import { useNotifications, useSetting } from '@/state/queries';
-import { SLIDE_DURATION_MS } from '@/ui/motion/SlideScreen';
+import { SLIDE_DURATION_MS, SLIDE_EASING } from '@/ui/motion/SlideScreen';
 import { useTheme } from '@/ui/theme/ThemeProvider';
 import { palette, spacing, touchTarget } from '@/ui/theme/tokens';
 import { AppText } from './AppText';
@@ -97,44 +101,80 @@ const MENU_ITEMS: MenuItem[] = [
   { href: '/terms', label: 'Terms of Service', icon: 'document-text-outline' },
 ];
 
-const DRAWER_MS = SLIDE_DURATION_MS;
-
 function HeaderMenu({ visible, onClose }: { visible: boolean; onClose: () => void }) {
   const router = useRouter();
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
-  const panelWidth = Math.min(Math.round(width * 0.86), 360);
+  const panelWidth = Math.min(Math.round((width || 390) * 0.86), 360);
   const [mounted, setMounted] = useState(visible);
-  const [progress] = useState(() => new Animated.Value(0));
+  const [prevVisible, setPrevVisible] = useState(visible);
+  const [webOpen, setWebOpen] = useState(false);
+  const progress = useSharedValue(0);
 
-  if (visible && !mounted) {
-    setMounted(true);
+  if (visible !== prevVisible) {
+    setPrevVisible(visible);
+    if (visible) setMounted(true);
   }
 
-  useEffect(() => {
-    Animated.timing(progress, {
-      toValue: visible ? 1 : 0,
-      duration: DRAWER_MS,
-      easing: Easing.bezier(0.22, 1, 0.36, 1),
-      useNativeDriver: true,
-    }).start(({ finished }) => {
-      if (finished && !visible) setMounted(false);
+  useLayoutEffect(() => {
+    if (Platform.OS !== 'web' || !mounted) return;
+    if (!visible) {
+      setWebOpen(false);
+      return;
+    }
+    let second = 0;
+    const first = requestAnimationFrame(() => {
+      second = requestAnimationFrame(() => setWebOpen(true));
     });
-  }, [progress, visible]);
+    return () => {
+      cancelAnimationFrame(first);
+      cancelAnimationFrame(second);
+    };
+  }, [mounted, visible]);
+
+  useEffect(() => {
+    if (visible) {
+      // Reanimated shared values are mutated on purpose to drive the drawer.
+      // eslint-disable-next-line react-hooks/immutability -- SharedValue setter
+      progress.value = withTiming(1, {
+        duration: SLIDE_DURATION_MS,
+        easing: SLIDE_EASING,
+      });
+      return;
+    }
+    if (!mounted) return;
+    // eslint-disable-next-line react-hooks/immutability -- SharedValue setter
+    progress.value = withTiming(0, {
+      duration: SLIDE_DURATION_MS,
+      easing: SLIDE_EASING,
+    });
+    const id = setTimeout(() => setMounted(false), SLIDE_DURATION_MS);
+    return () => clearTimeout(id);
+  }, [mounted, progress, visible]);
+
+  const overlayStyle = useAnimatedStyle(() => ({
+    opacity: progress.value,
+  }));
+  const drawerStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: (progress.value - 1) * panelWidth }],
+  }));
 
   if (!mounted) return null;
 
+  const open = Platform.OS === 'web' ? webOpen : visible;
+  const webRoot =
+    Platform.OS === 'web' ? { dataSet: { headermenu: open ? 'open' : 'shut' } } : null;
+
   return (
-    <Modal visible transparent animationType="none" onRequestClose={onClose}>
-      <View style={styles.menuRoot} pointerEvents="box-none">
+    <Modal visible={mounted} transparent animationType="none" onRequestClose={onClose}>
+      <View style={styles.menuRoot} pointerEvents="box-none" {...webRoot}>
         <Animated.View
+          {...(Platform.OS === 'web' ? { dataSet: { menuscrim: '' } } : null)}
           style={[
             StyleSheet.absoluteFill,
-            {
-              backgroundColor: colors.overlay,
-              opacity: progress,
-            },
+            { backgroundColor: colors.overlay },
+            Platform.OS === 'web' ? null : overlayStyle,
           ]}
         >
           <Pressable
@@ -145,6 +185,7 @@ function HeaderMenu({ visible, onClose }: { visible: boolean; onClose: () => voi
           />
         </Animated.View>
         <Animated.View
+          {...(Platform.OS === 'web' ? { dataSet: { menudrawer: '' } } : null)}
           style={[
             styles.drawer,
             {
@@ -153,15 +194,10 @@ function HeaderMenu({ visible, onClose }: { visible: boolean; onClose: () => voi
               paddingBottom: insets.bottom + spacing.lg,
               backgroundColor: colors.surface,
               borderRightColor: colors.border,
-              transform: [
-                {
-                  translateX: progress.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: [-panelWidth, 0],
-                  }),
-                },
-              ],
             },
+            Platform.OS === 'web'
+              ? { transform: [{ translateX: open ? 0 : -panelWidth }] }
+              : drawerStyle,
           ]}
         >
           <View style={styles.menuHeading}>

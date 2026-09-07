@@ -125,11 +125,26 @@ input[data-darkfield]:-webkit-autofill:focus, input[data-darkfield]:-webkit-auto
 [data-headerhide="out"] {
   transform: translateY(-100%);
 }
+/* Hamburger drawer: same 294ms curve as stack / friends feed. */
+[data-headermenu] [data-menuscrim] {
+  transition: opacity 294ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+[data-headermenu="shut"] [data-menuscrim] {
+  opacity: 0;
+}
+[data-headermenu] [data-menudrawer] {
+  will-change: transform;
+  transition: transform 294ms cubic-bezier(0.22, 1, 0.36, 1);
+}
 @media (prefers-reduced-motion: reduce) {
   [data-slidescreen] {
     transition: none;
   }
   [data-headerhide] {
+    transition: none;
+  }
+  [data-headermenu] [data-menuscrim],
+  [data-headermenu] [data-menudrawer] {
     transition: none;
   }
 }`,
