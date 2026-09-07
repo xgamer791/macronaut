@@ -3,7 +3,6 @@ import * as Haptics from 'expo-haptics';
 import { useRouter, type Href } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { Animated, Platform, Pressable, StyleSheet, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '@/ui/theme/ThemeProvider';
 import { radius, spacing } from '@/ui/theme/tokens';
 import { AppText } from './AppText';
@@ -33,12 +32,14 @@ const TOOLS: { title: string; subtitle: string; icon: IconName; href: Href }[] =
 ];
 
 const MENU_HEIGHT = 248;
+/** The tab bar already owns the home-indicator inset, so the FAB only
+ * needs a tight gap above that chrome. */
+const FAB_ABOVE_FOOTER = spacing.sm;
 
 /** Expandable home utility tray. It is intentionally data-driven so future
  * Macronaut tools only need another item in `TOOLS`. */
 export function ToolLauncher() {
   const router = useRouter();
-  const insets = useSafeAreaInsets();
   const { colors } = useTheme();
   const [open, setOpen] = useState(false);
   const [progress] = useState(() => new Animated.Value(0));
@@ -58,7 +59,7 @@ export function ToolLauncher() {
   return (
     <View
       pointerEvents="box-none"
-      style={[styles.anchor, { bottom: insets.bottom + 53, right: spacing.lg }]}
+      style={[styles.anchor, { bottom: FAB_ABOVE_FOOTER, right: spacing.lg }]}
     >
       <Animated.View
         pointerEvents={open ? 'auto' : 'none'}
