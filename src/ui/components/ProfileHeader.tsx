@@ -276,6 +276,8 @@ const styles = StyleSheet.create({
   },
   name: {
     marginTop: spacing.xs,
+    fontSize: 36,
+    lineHeight: 42,
   },
   bio: {
     marginTop: 2,
