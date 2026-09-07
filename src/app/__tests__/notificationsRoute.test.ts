@@ -29,6 +29,30 @@ describe('notification center', () => {
     expect(page).not.toContain('initialMode="light"');
   });
 
+  it('packs the list down so more of it reaches the screen', () => {
+    const page = readApp('notifications.tsx');
+    // The message runs on from the title rather than claiming a line of its
+    // own, and the pair is cut at two lines.
+    expect(page).toContain('<AppText numberOfLines={2} style={styles.message}>');
+    expect(page).toContain("{`  ${item.body}`}");
+    // Three quarters, so the turn happens clear of the timestamp.
+    expect(page).toContain("width: '75%'");
+    expect(page).toContain('minHeight: 68');
+    expect(page).not.toContain('minHeight: 92');
+    expect(page).toContain('size={42}');
+  });
+
+  it('leaves one rule above EARLIER, not a summary bar and its own', () => {
+    const page = readApp('notifications.tsx');
+    // The bar counted what the NEW and EARLIER labels already say, and its
+    // border was the second of two rules stacked on top of each other.
+    expect(page).not.toContain('styles.summary');
+    expect(page).not.toContain('summaryDot');
+    expect(page).not.toContain('feed.data.unreadCount');
+    // The empty state is a different thing and stays.
+    expect(page).toContain('title="You\'re all caught up"');
+  });
+
   it('creates durable events from follows and messages', () => {
     const profile = fs.readFileSync(path.join(appDir, '..', '..', 'convex', 'profiles.ts'), 'utf8');
     const chats = fs.readFileSync(path.join(appDir, '..', '..', 'convex', 'chats.ts'), 'utf8');
