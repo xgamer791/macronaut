@@ -51,8 +51,11 @@ describe('web html shell', () => {
     expect(html).toContain('blur(39px) saturate(135%)');
     expect(html).toContain('-webkit-backdrop-filter: blur(39px) saturate(135%)');
     expect(html).toContain('border-radius: 0');
+    expect(html).toContain('border: none');
+    expect(html).toContain('outline: none');
     expect(html).toContain('.glass::before');
     expect(html).toContain('.glass::after');
+    expect(html).toContain('content: none');
     expect(html).toContain('rgba(0, 0, 0, 0.630)');
   });
 });
