@@ -46,9 +46,12 @@ describe('header auto-hide wiring', () => {
     const screen = read('ui', 'components', 'Screen.tsx');
     expect(screen).toContain('useHeaderScrollHide');
     expect(screen).toContain('AutoHideHeader');
-    expect(screen).toContain('onScroll: stickyHeader ? hide.onScroll');
+    expect(screen).toContain('onScroll: hideOnScroll ? hide.onScroll');
+    expect(screen).toContain('collapseHeader');
     expect(read('app', '(tabs)', 'index.tsx')).toContain('stickyHeader={');
     expect(read('app', 'profile.tsx')).toContain('stickyHeader={');
     expect(read('app', 'u', '[handle].tsx')).toContain('stickyHeader={');
+    expect(read('app', 'training-schedule.tsx')).toContain('collapseHeader={false}');
+    expect(read('app', 'fasting.tsx')).toContain('collapseHeader={false}');
   });
 });

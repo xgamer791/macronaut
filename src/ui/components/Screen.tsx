@@ -16,9 +16,12 @@ export interface ScreenProps {
   safeTop?: boolean;
   /**
    * Chrome above the scrolling layer. Occupies layout space so the page
-   * starts below it. Scrolls away on the way down and back in on the way up.
+   * starts below it. Scrolls away on the way down and back in on the way up
+   * unless `collapseHeader` is false.
    */
   stickyHeader?: React.ReactNode;
+  /** When false, `stickyHeader` stays put instead of hiding on scroll. */
+  collapseHeader?: boolean;
   /** Fixed content rendered above the scroll layer (for example a FAB). */
   floatingOverlay?: React.ReactNode;
 }
@@ -31,11 +34,13 @@ export function Screen({
   tabBarSpace = false,
   safeTop = true,
   stickyHeader,
+  collapseHeader = true,
   floatingOverlay,
 }: ScreenProps) {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
-  const hide = useHeaderScrollHide(Boolean(scroll && stickyHeader));
+  const hideOnScroll = Boolean(scroll && stickyHeader && collapseHeader);
+  const hide = useHeaderScrollHide(hideOnScroll);
   const base: StyleProp<ViewStyle> = [
     { flex: 1, backgroundColor: colors.background },
     { paddingTop: safeTop && !stickyHeader ? insets.top : 0 },
@@ -47,7 +52,11 @@ export function Screen({
   };
 
   const header = stickyHeader ? (
-    <AutoHideHeader hidden={hide.hidden}>{stickyHeader}</AutoHideHeader>
+    hideOnScroll ? (
+      <AutoHideHeader hidden={hide.hidden}>{stickyHeader}</AutoHideHeader>
+    ) : (
+      stickyHeader
+    )
   ) : null;
 
   if (!scroll) {
@@ -72,7 +81,7 @@ export function Screen({
     contentContainerStyle: [contentPad, style],
     keyboardShouldPersistTaps: 'handled' as const,
     showsVerticalScrollIndicator: false,
-    onScroll: stickyHeader ? hide.onScroll : undefined,
+    onScroll: hideOnScroll ? hide.onScroll : undefined,
     scrollEventThrottle: 16 as const,
   };
 

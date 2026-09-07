@@ -164,6 +164,7 @@ function TrainingScheduleScreen() {
     <Screen
       padded={false}
       safeTop={false}
+      collapseHeader={false}
       stickyHeader={
         <GlassHeaderBar inset={spacing.lg}>
           <ScreenHeader

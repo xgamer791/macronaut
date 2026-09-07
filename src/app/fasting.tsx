@@ -252,6 +252,7 @@ function FastingScreen() {
 
   return (
     <Screen
+      collapseHeader={false}
       stickyHeader={
         <GlassHeaderBar inset={spacing.lg}>
           <ScreenHeader title="Fasting" />

@@ -9,6 +9,7 @@ describe('training schedule route', () => {
     const schedule = fs.readFileSync(path.join(appDir, 'training-schedule.tsx'), 'utf8');
     expect(today).toContain("router.push('/training-schedule')");
     expect(schedule).toContain('title="Training Schedule"');
+    expect(schedule).toContain('collapseHeader={false}');
     expect(schedule).toContain('accessibilityLabel="Open full calendar"');
     expect(schedule).toContain('<MonthCalendarPopup');
     expect(schedule).toContain('const ADD_ICON_SIZE = 30');
