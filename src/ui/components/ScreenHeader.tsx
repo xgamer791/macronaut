@@ -1,8 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
 import React from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
-import { goBackOrHome } from '@/utils/navigation';
+import { useSlideBack } from '@/ui/motion/SlideScreen';
 import { useTheme } from '@/ui/theme/ThemeProvider';
 import { touchTarget } from '@/ui/theme/tokens';
 import { AppText } from './AppText';
@@ -12,7 +11,7 @@ export interface ScreenHeaderProps {
   title?: string;
   /** Optional trailing control (favorite, etc.). Mirrored width keeps the title centered. */
   right?: React.ReactNode;
-  /** Override back action. Defaults to goBackOrHome. */
+  /** Override back action. Defaults to the slide-out, or goBackOrHome. */
   onBack?: () => void;
 }
 
@@ -21,8 +20,8 @@ export interface ScreenHeaderProps {
  * Tab roots should not use this — only pages you can navigate away from.
  */
 export function ScreenHeader({ title, right, onBack }: ScreenHeaderProps) {
-  const router = useRouter();
   const { colors } = useTheme();
+  const slideBack = useSlideBack();
 
   return (
     <View style={styles.row}>
@@ -30,7 +29,7 @@ export function ScreenHeader({ title, right, onBack }: ScreenHeaderProps) {
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Back"
-          onPress={onBack ?? (() => goBackOrHome(router))}
+          onPress={onBack ?? slideBack}
           hitSlop={8}
           style={styles.backHit}
         >

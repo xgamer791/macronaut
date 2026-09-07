@@ -58,4 +58,10 @@ describe('web html shell', () => {
     expect(html).toContain('content: none');
     expect(html).toContain('rgba(0, 0, 0, 0.630)');
   });
+
+  it('slides stack pages with a CSS transform so web actually animates', () => {
+    expect(html).toContain('[data-slidescreen]');
+    expect(html).toContain('transform 420ms cubic-bezier(0.22, 1, 0.36, 1)');
+    expect(html).toContain('prefers-reduced-motion: reduce');
+  });
 });

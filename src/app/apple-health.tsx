@@ -1,6 +1,7 @@
 import React from 'react';
 import { View } from 'react-native';
 import { AppText, Card, LegalSection, Screen, ScreenHeader } from '@/ui/components';
+import { SlideScreen } from '@/ui/motion/SlideScreen';
 import { spacing } from '@/ui/theme/tokens';
 import {
   APPLE_HEALTH_DONE,
@@ -10,7 +11,15 @@ import {
 
 /** Pause note so we can pick this up after the rest of the build. HealthKit
  * is iOS-only — this page is documentation, not a working integration. */
-export default function AppleHealthStatusScreen() {
+export default function AppleHealthStatusRoute() {
+  return (
+    <SlideScreen from="left">
+      <AppleHealthStatusScreen />
+    </SlideScreen>
+  );
+}
+
+function AppleHealthStatusScreen() {
   return (
     <Screen>
       <ScreenHeader title="Apple Health" />

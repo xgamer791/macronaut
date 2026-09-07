@@ -22,6 +22,7 @@ import {
   useMyGroups,
   usePublicGroups,
 } from '@/state/queries';
+import { SlideScreen } from '@/ui/motion/SlideScreen';
 import { ThemeProvider, useTheme } from '@/ui/theme/ThemeProvider';
 import { radius, spacing } from '@/ui/theme/tokens';
 
@@ -33,7 +34,9 @@ import { radius, spacing } from '@/ui/theme/tokens';
 export default function GroupsScreen() {
   return (
     <ThemeProvider initialMode="dark">
-      <GroupsList />
+      <SlideScreen from="left">
+        <GroupsList />
+      </SlideScreen>
     </ThemeProvider>
   );
 }

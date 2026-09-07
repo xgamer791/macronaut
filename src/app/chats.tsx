@@ -12,11 +12,16 @@ import {
   Screen,
   ScreenHeader,
 } from '@/ui/components';
+import { SlideScreen } from '@/ui/motion/SlideScreen';
 import { useTheme } from '@/ui/theme/ThemeProvider';
 import { radius, spacing, touchTarget, type } from '@/ui/theme/tokens';
 
 export default function ChatsScreen() {
-  return <ChatList />;
+  return (
+    <SlideScreen from="left">
+      <ChatList />
+    </SlideScreen>
+  );
 }
 
 function ChatList() {

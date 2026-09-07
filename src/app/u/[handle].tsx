@@ -17,7 +17,7 @@ import {
 } from '@/ui/components';
 import { useAuth } from '@/state/AuthProvider';
 import { usePublicPhotos, usePublicProfile, useSetProfileFollow } from '@/state/queries';
-import { goBackOrHome } from '@/utils/navigation';
+import { SlideScreen, useSlideBack } from '@/ui/motion/SlideScreen';
 import { ThemeProvider, useTheme } from '@/ui/theme/ThemeProvider';
 import { spacing } from '@/ui/theme/tokens';
 
@@ -33,7 +33,9 @@ import { spacing } from '@/ui/theme/tokens';
 export default function PublicProfileScreen() {
   return (
     <ThemeProvider initialMode="dark">
-      <PublicProfile />
+      <SlideScreen from="right">
+        <PublicProfile />
+      </SlideScreen>
     </ThemeProvider>
   );
 }
@@ -41,6 +43,7 @@ export default function PublicProfileScreen() {
 function PublicProfile() {
   const { handle } = useLocalSearchParams<{ handle: string }>();
   const router = useRouter();
+  const onBack = useSlideBack();
   const { colors } = useTheme();
   const { signedIn } = useAuth();
   const result = usePublicProfile(handle ?? '');
@@ -65,7 +68,7 @@ function PublicProfile() {
           title="Profile not available"
           body={`Nobody at @${handle ?? ''} has a public profile. The link may be wrong, or they may have made their page private.`}
           actionTitle="Back"
-          onAction={() => goBackOrHome(router)}
+          onAction={onBack}
         />
       </Screen>
     );
@@ -78,13 +81,13 @@ function PublicProfile() {
       scroll
       stickyHeader={
         <GlassHeaderBar inset={spacing.md}>
-          <ProfileHeaderChrome onBack={() => goBackOrHome(router)} />
+          <ProfileHeaderChrome onBack={onBack} />
         </GlassHeaderBar>
       }
     >
       <ProfileHeader
         profile={found.profile}
-        onBack={() => goBackOrHome(router)}
+        onBack={onBack}
         showChrome={false}
       />
       <View style={styles.actions}>

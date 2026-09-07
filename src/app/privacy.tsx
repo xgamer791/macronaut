@@ -2,10 +2,19 @@ import { useRouter } from 'expo-router';
 import React from 'react';
 import { Linking, View } from 'react-native';
 import { AppText, Card, LegalSection, ListRow, Screen, ScreenHeader } from '@/ui/components';
+import { SlideScreen } from '@/ui/motion/SlideScreen';
 import { spacing } from '@/ui/theme/tokens';
 import { CONTACT_EMAIL, LEGAL_LAST_UPDATED } from '@/utils/legal';
 
-export default function PrivacyScreen() {
+export default function PrivacyRoute() {
+  return (
+    <SlideScreen from="left">
+      <PrivacyScreen />
+    </SlideScreen>
+  );
+}
+
+function PrivacyScreen() {
   const router = useRouter();
 
   return (

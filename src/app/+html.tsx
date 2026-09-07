@@ -109,6 +109,17 @@ input[data-darkfield]:-webkit-autofill:focus, input[data-darkfield]:-webkit-auto
   [data-headerglass] {
     background: rgba(0, 0, 0, 1.000);
   }
+}
+/* Stack pages slide over the screen underneath. Notifications and profiles
+ * enter from the right; everything else from the left. */
+[data-slidescreen] {
+  will-change: transform;
+  transition: transform 420ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+@media (prefers-reduced-motion: reduce) {
+  [data-slidescreen] {
+    transition: none;
+  }
 }`,
           }}
         />

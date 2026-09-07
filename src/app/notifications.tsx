@@ -19,10 +19,19 @@ import {
   Screen,
   ScreenHeader,
 } from '@/ui/components';
+import { SlideScreen } from '@/ui/motion/SlideScreen';
 import { useTheme } from '@/ui/theme/ThemeProvider';
 import { radius, spacing, touchTarget } from '@/ui/theme/tokens';
 
-export default function NotificationsScreen() {
+export default function NotificationsRoute() {
+  return (
+    <SlideScreen from="right">
+      <NotificationsScreen />
+    </SlideScreen>
+  );
+}
+
+function NotificationsScreen() {
   const router = useRouter();
   const { colors } = useTheme();
   const { signedIn } = useAuth();
