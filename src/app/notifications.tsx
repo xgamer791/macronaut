@@ -16,6 +16,7 @@ import {
   ChatAvatar,
   EmptyState,
   ErrorState,
+  NotificationOptIn,
   Screen,
   ScreenHeader,
 } from '@/ui/components';
@@ -109,6 +110,8 @@ function NotificationsScreen() {
           }
         />
       </View>
+
+      <NotificationOptIn />
 
       {feed.isLoading ? (
         <View style={styles.loading}>
