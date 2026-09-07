@@ -20,6 +20,8 @@ type IconName = keyof typeof Ionicons.glyphMap;
 export interface ProfileHeaderProps {
   profile: ProfileView;
   onBack: () => void;
+  /** The screen can lift the navigation chrome into a fixed glass surface. */
+  showChrome?: boolean;
   /** Trailing control on the identity row — the small gear on your own page. */
   right?: React.ReactNode;
   /** Owner-only: tapping the picture or the banner replaces it. */
@@ -40,6 +42,7 @@ export interface ProfileHeaderProps {
 export function ProfileHeader({
   profile,
   onBack,
+  showChrome = true,
   right,
   onPickAvatar,
   onPickBanner,
@@ -95,15 +98,11 @@ export function ProfileHeader({
         ) : null}
       </Pressable>
 
-      {/* Back on the left; notifications then the same account picture as
-          Today on the right. */}
-      <View style={[styles.chrome, { top: insets.top + spacing.sm }]} pointerEvents="box-none">
-        <GhostButton icon="chevron-back" label="Back" onPress={onBack} size={28} contrast />
-        <View style={styles.menu}>
-          <HeaderNotifyButton />
-          <HeaderAvatarButton />
+      {showChrome ? (
+        <View style={[styles.chrome, { top: insets.top + spacing.sm }]} pointerEvents="box-none">
+          <ProfileHeaderChrome onBack={onBack} />
         </View>
-      </View>
+      ) : null}
 
       <View style={[styles.identity, { marginTop: -AVATAR_DROP }]}>
         <View style={styles.identityTop}>
@@ -166,6 +165,25 @@ export function ProfileHeader({
   );
 }
 
+/** Back and account actions shared by inline and sticky profile headers. */
+export function ProfileHeaderChrome({
+  onBack,
+  contrast = true,
+}: {
+  onBack: () => void;
+  contrast?: boolean;
+}) {
+  return (
+    <View style={styles.chromeRow}>
+      <GhostButton icon="chevron-back" label="Back" onPress={onBack} size={28} contrast={contrast} />
+      <View style={styles.menu}>
+        <HeaderNotifyButton />
+        <HeaderAvatarButton />
+      </View>
+    </View>
+  );
+}
+
 /** Icon-only control with no circular plate. `contrast` stamps a dark
  * offset behind a white glyph so a banner photo cannot swallow it. */
 export function GhostButton({
@@ -213,9 +231,12 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: spacing.md,
     right: spacing.md,
+  },
+  chromeRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    height: touchTarget,
   },
   menu: {
     flexDirection: 'row',

@@ -8,9 +8,11 @@ import {
   Button,
   EmptyState,
   ProfileHeader,
+  ProfileHeaderChrome,
   ProfilePostList,
   Screen,
   SectionHeader,
+  StickyGlassHeader,
 } from '@/ui/components';
 import { useAuth } from '@/state/AuthProvider';
 import { usePublicProfile, useSetProfileFollow } from '@/state/queries';
@@ -68,8 +70,21 @@ function PublicProfile() {
   }
 
   return (
-    <Screen padded={false} safeTop={false} scroll>
-      <ProfileHeader profile={found.profile} onBack={() => goBackOrHome(router)} />
+    <Screen
+      padded={false}
+      safeTop={false}
+      scroll
+      fixedHeader={
+        <StickyGlassHeader>
+          <ProfileHeaderChrome onBack={() => goBackOrHome(router)} contrast={false} />
+        </StickyGlassHeader>
+      }
+    >
+      <ProfileHeader
+        profile={found.profile}
+        onBack={() => goBackOrHome(router)}
+        showChrome={false}
+      />
       <View style={styles.actions}>
         <PublicAction
           icon="images-outline"

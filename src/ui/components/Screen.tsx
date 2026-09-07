@@ -1,11 +1,13 @@
 import React from 'react';
-import { ScrollView, StyleProp, View, ViewStyle } from 'react-native';
+import { ScrollView, StyleProp, StyleSheet, View, ViewStyle } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '@/ui/theme/ThemeProvider';
 import { spacing } from '@/ui/theme/tokens';
 
 export interface ScreenProps {
   children: React.ReactNode;
+  /** Content rendered above the scrolling layer, such as a sticky glass header. */
+  fixedHeader?: React.ReactNode;
   scroll?: boolean;
   padded?: boolean;
   style?: StyleProp<ViewStyle>;
@@ -17,6 +19,7 @@ export interface ScreenProps {
 
 export function Screen({
   children,
+  fixedHeader,
   scroll = true,
   padded = true,
   style,
@@ -36,7 +39,13 @@ export function Screen({
   };
 
   if (!scroll) {
-    return <View style={[base, contentPad, style]}>{children}</View>;
+    if (!fixedHeader) return <View style={[base, contentPad, style]}>{children}</View>;
+    return (
+      <View style={base}>
+        <View style={[styles.fill, contentPad, style]}>{children}</View>
+        {fixedHeader}
+      </View>
+    );
   }
   return (
     <View style={base}>
@@ -47,6 +56,11 @@ export function Screen({
       >
         {children}
       </ScrollView>
+      {fixedHeader}
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  fill: { flex: 1 },
+});
