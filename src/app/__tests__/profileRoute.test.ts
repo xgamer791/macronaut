@@ -152,7 +152,9 @@ describe('profile routes', () => {
     expect(viewer).not.toContain('thumb-up-outline');
     expect(viewer).toContain('liked ? colors.accent : ON_PHOTO');
     expect(viewer).toContain('backgroundColor: colors.accent');
-    expect(viewer).toContain('focusColor={colors.accent}');
+    expect(viewer).not.toContain('focusColor');
+    expect(viewer).not.toContain('engageFocused');
+    expect(viewer).toContain("outlineStyle: 'none'");
     expect(viewer).not.toContain('LIKE_BLUE');
     expect(viewer).toContain('ACTION_GAP = spacing.sm');
     expect(viewer).toContain('animationType="slide"');

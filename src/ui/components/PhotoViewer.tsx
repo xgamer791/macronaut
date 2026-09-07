@@ -172,7 +172,6 @@ export function PhotoViewer({
             <View style={styles.actions}>
               <Engage
                 count={likeCount}
-                focusColor={colors.accent}
                 label={liked ? 'Unlike photo' : 'Like photo'}
                 onPress={tapLike}
               >
@@ -180,13 +179,12 @@ export function PhotoViewer({
               </Engage>
               <Engage
                 count={comments.length}
-                focusColor={colors.accent}
                 label="Comment on photo"
                 onPress={tapComment}
               >
                 <Ionicons name="chatbubble-outline" size={22} color={ON_PHOTO} />
               </Engage>
-              <Engage focusColor={colors.accent} label="Share photo" onPress={onShare}>
+              <Engage label="Share photo" onPress={onShare}>
                 <Ionicons name="arrow-redo-outline" size={22} color={ON_PHOTO} />
               </Engage>
             </View>
@@ -291,31 +289,21 @@ export function PhotoViewer({
 function Engage({
   children,
   count,
-  focusColor,
   label,
   onPress,
 }: {
   children: React.ReactNode;
   count?: number;
-  focusColor: string;
   label: string;
   onPress: () => void;
 }) {
-  const [focused, setFocused] = useState(false);
-
   return (
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={label}
       onPress={onPress}
-      onFocus={() => setFocused(true)}
-      onBlur={() => setFocused(false)}
       hitSlop={6}
-      style={[
-        styles.engage,
-        focused && styles.engageFocused,
-        focused && Platform.OS === 'web' ? ({ outlineColor: focusColor } as object) : null,
-      ]}
+      style={styles.engage}
     >
       {children}
       {count !== undefined && count > 0 ? (
@@ -444,15 +432,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
-    borderRadius: spacing.xs,
-  },
-  engageFocused: {
     ...Platform.select({
-      web: {
-        outlineStyle: 'solid',
-        outlineWidth: 2,
-        outlineOffset: 2,
-      } as object,
+      web: { outlineStyle: 'none' } as object,
       default: {},
     }),
   },
