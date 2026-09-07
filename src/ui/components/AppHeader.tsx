@@ -1,9 +1,18 @@
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
-import { useRouter } from 'expo-router';
-import React, { useMemo } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { useRouter, type Href } from 'expo-router';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import {
+  Animated,
+  Easing,
+  Modal,
+  Pressable,
+  StyleSheet,
+  useWindowDimensions,
+  View,
+} from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { displayNameFromUser } from '@/services/auth/displayName';
 import { useAuth } from '@/state/AuthProvider';
 import { useNotifications, useSetting } from '@/state/queries';
@@ -23,16 +32,27 @@ export interface AppHeaderProps {
 }
 
 /**
- * Garmin-style chrome: add / calendar on the right. Profile, chats
- * and notifications live in the tab bar, not here.
+ * Garmin-style chrome: hamburger on the left, add / calendar on the right.
+ * Profile, chats and notifications live in the tab bar, not here.
  */
 export function AppHeader({ onCalendarPress }: AppHeaderProps) {
   const router = useRouter();
   const { colors } = useTheme();
   const icon = colors.textPrimary;
+  const [menuOpen, setMenuOpen] = useState(false);
 
   return (
     <View style={styles.row}>
+      <HeaderHit
+        accessibilityLabel="Open menu"
+        onPress={() => {
+          void Haptics.selectionAsync();
+          setMenuOpen(true);
+        }}
+      >
+        <Ionicons name="menu-outline" size={GLYPH} color={icon} />
+      </HeaderHit>
+
       <View style={styles.cluster}>
         <HeaderHit
           accessibilityLabel="Add food"
@@ -55,7 +75,136 @@ export function AppHeader({ onCalendarPress }: AppHeaderProps) {
           <Ionicons name="calendar-outline" size={GLYPH} color={icon} />
         </HeaderHit>
       </View>
+
+      <HeaderMenu visible={menuOpen} onClose={() => setMenuOpen(false)} />
     </View>
+  );
+}
+
+type MenuItem = {
+  href: Href;
+  label: string;
+  icon: keyof typeof Ionicons.glyphMap;
+};
+
+const MENU_ITEMS: MenuItem[] = [
+  { href: '/settings', label: 'Settings', icon: 'settings-outline' },
+  { href: '/meals', label: 'Meals', icon: 'restaurant-outline' },
+  { href: '/goals', label: 'Goals', icon: 'flag-outline' },
+  { href: '/apple-health', label: 'Apple Health', icon: 'heart-outline' },
+  { href: '/privacy', label: 'Privacy Policy', icon: 'shield-outline' },
+  { href: '/terms', label: 'Terms of Service', icon: 'document-text-outline' },
+];
+
+const DRAWER_MS = 320;
+
+function HeaderMenu({ visible, onClose }: { visible: boolean; onClose: () => void }) {
+  const router = useRouter();
+  const { colors } = useTheme();
+  const insets = useSafeAreaInsets();
+  const { width } = useWindowDimensions();
+  const panelWidth = Math.min(Math.round(width * 0.86), 360);
+  const [mounted, setMounted] = useState(visible);
+  const progress = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (visible) {
+      setMounted(true);
+      Animated.timing(progress, {
+        toValue: 1,
+        duration: DRAWER_MS,
+        easing: Easing.bezier(0.22, 1, 0.36, 1),
+        useNativeDriver: true,
+      }).start();
+      return;
+    }
+    Animated.timing(progress, {
+      toValue: 0,
+      duration: DRAWER_MS,
+      easing: Easing.bezier(0.22, 1, 0.36, 1),
+      useNativeDriver: true,
+    }).start(({ finished }) => {
+      if (finished) setMounted(false);
+    });
+  }, [progress, visible]);
+
+  if (!mounted) return null;
+
+  return (
+    <Modal visible transparent animationType="none" onRequestClose={onClose}>
+      <View style={styles.menuRoot} pointerEvents="box-none">
+        <Animated.View
+          style={[
+            StyleSheet.absoluteFill,
+            {
+              backgroundColor: colors.overlay,
+              opacity: progress,
+            },
+          ]}
+        >
+          <Pressable
+            style={StyleSheet.absoluteFill}
+            onPress={onClose}
+            accessibilityRole="button"
+            accessibilityLabel="Close menu"
+          />
+        </Animated.View>
+        <Animated.View
+          style={[
+            styles.drawer,
+            {
+              width: panelWidth,
+              paddingTop: insets.top + spacing.sm,
+              paddingBottom: insets.bottom + spacing.lg,
+              backgroundColor: colors.surface,
+              borderRightColor: colors.border,
+              transform: [
+                {
+                  translateX: progress.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [-panelWidth, 0],
+                  }),
+                },
+              ],
+            },
+          ]}
+        >
+          <View style={styles.menuHeading}>
+            <AppText variant="heading" weight="600">
+              Menu
+            </AppText>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Close menu"
+              onPress={onClose}
+              hitSlop={8}
+              style={styles.menuClose}
+            >
+              <Ionicons name="close" size={24} color={colors.textPrimary} />
+            </Pressable>
+          </View>
+          {MENU_ITEMS.map((item) => (
+            <Pressable
+              key={item.label}
+              accessibilityRole="button"
+              accessibilityLabel={item.label}
+              onPress={() => {
+                void Haptics.selectionAsync();
+                onClose();
+                router.push(item.href);
+              }}
+              style={({ pressed }) => [
+                styles.menuRow,
+                pressed && { backgroundColor: colors.surfaceRaised },
+              ]}
+            >
+              <Ionicons name={item.icon} size={22} color={colors.textPrimary} />
+              <AppText weight="600">{item.label}</AppText>
+            </Pressable>
+          ))}
+        </Animated.View>
+      </View>
+    </Modal>
   );
 }
 
@@ -212,9 +361,39 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'flex-end',
+    justifyContent: 'space-between',
     height: touchTarget,
     marginTop: 3,
+  },
+  menuRoot: {
+    flex: 1,
+  },
+  drawer: {
+    flex: 1,
+    maxWidth: '100%',
+    borderRightWidth: StyleSheet.hairlineWidth,
+    paddingHorizontal: spacing.lg,
+  },
+  menuHeading: {
+    minHeight: touchTarget,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: spacing.sm,
+  },
+  menuClose: {
+    width: touchTarget,
+    height: touchTarget,
+    alignItems: 'flex-end',
+    justifyContent: 'center',
+  },
+  menuRow: {
+    minHeight: touchTarget,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    marginHorizontal: -spacing.lg,
+    paddingHorizontal: spacing.lg,
   },
   cluster: {
     flexDirection: 'row',

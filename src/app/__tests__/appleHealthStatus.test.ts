@@ -27,10 +27,10 @@ describe('Apple Health pause note', () => {
       path.join(__dirname, '..', '..', 'ui', 'components', 'AppHeader.tsx'),
       'utf8',
     );
-    expect(header).not.toContain("router.push('/apple-health')");
     expect(header).not.toContain('WatchButton');
     expect(header).not.toContain('header-watch.png');
     expect(header).not.toContain('isAppleWatchConnected');
+    expect(header).toContain("href: '/apple-health'");
     expect(isAppleWatchConnected()).toBe(false);
   });
 
