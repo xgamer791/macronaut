@@ -1,6 +1,7 @@
-import React from 'react';
-import { Modal, Pressable, ScrollView, View } from 'react-native';
+import React, { useState } from 'react';
+import { LayoutChangeEvent, Modal, Pressable, ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { usePushWhileOpen } from '@/ui/motion/SlidePush';
 import { useTheme } from '@/ui/theme/ThemeProvider';
 import { radius, spacing } from '@/ui/theme/tokens';
 import { AppText } from './AppText';
@@ -16,6 +17,11 @@ export interface SheetProps {
 export function Sheet({ visible, onClose, title, children }: SheetProps) {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
+  // A sheet is only as tall as its content, so how far the page steps up is
+  // not known until the sheet has been laid out.
+  const [height, setHeight] = useState(0);
+  usePushWhileOpen(visible && height > 0, { y: -height });
+
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: colors.overlay }}>
@@ -26,6 +32,7 @@ export function Sheet({ visible, onClose, title, children }: SheetProps) {
           accessibilityLabel="Close"
         />
         <View
+          onLayout={(e: LayoutChangeEvent) => setHeight(e.nativeEvent.layout.height)}
           style={{
             backgroundColor: colors.surface,
             borderTopLeftRadius: radius.xl,

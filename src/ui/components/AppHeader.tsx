@@ -3,23 +3,13 @@ import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
 import { useRouter, type Href } from 'expo-router';
 import React, { useEffect, useLayoutEffect, useMemo, useState } from 'react';
-import {
-  Modal,
-  Platform,
-  Pressable,
-  StyleSheet,
-  useWindowDimensions,
-  View,
-} from 'react-native';
-import Animated, {
-  useAnimatedStyle,
-  useSharedValue,
-  withTiming,
-} from 'react-native-reanimated';
+import { Modal, Platform, Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
+import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { displayNameFromUser } from '@/services/auth/displayName';
 import { useAuth } from '@/state/AuthProvider';
 import { useNotifications, useSetting } from '@/state/queries';
+import { usePushWhileOpen } from '@/ui/motion/SlidePush';
 import { SLIDE_DURATION_MS, SLIDE_EASING } from '@/ui/motion/SlideScreen';
 import { useTheme } from '@/ui/theme/ThemeProvider';
 import { palette, spacing, touchTarget } from '@/ui/theme/tokens';
@@ -148,6 +138,13 @@ function HeaderMenu({ visible, onClose }: { visible: boolean; onClose: () => voi
     return () => clearTimeout(id);
   }, [mounted, progress, visible]);
 
+  // The drawer is a Modal, so it is portalled clear of the page and is never
+  // pushed itself. `open` is what actually drives it on each platform, so the
+  // page steps aside on the same frame — by the drawer's width, not the
+  // screen's.
+  const open = Platform.OS === 'web' ? webOpen : visible;
+  usePushWhileOpen(open, { x: panelWidth });
+
   const overlayStyle = useAnimatedStyle(() => ({
     opacity: progress.value,
   }));
@@ -157,7 +154,6 @@ function HeaderMenu({ visible, onClose }: { visible: boolean; onClose: () => voi
 
   if (!mounted) return null;
 
-  const open = Platform.OS === 'web' ? webOpen : visible;
   const webRoot =
     Platform.OS === 'web' ? { dataSet: { headermenu: open ? 'open' : 'shut' } } : null;
 
