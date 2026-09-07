@@ -86,8 +86,9 @@ describe('directional slide navigation', () => {
   });
 
   it('pushes for every other thing that slides in, by the room it takes', () => {
-    // The hamburger drawer moves the page by its own width, not the screen's.
+    // The full-width hamburger drawer moves the page by its viewport width.
     const header = read(srcDir, 'ui', 'components', 'AppHeader.tsx');
+    expect(header).toContain('const panelWidth = width || 390');
     expect(header).toContain('usePushWhileOpen(open, { x: panelWidth })');
 
     // A bottom sheet is as tall as its content, so it measures first.
