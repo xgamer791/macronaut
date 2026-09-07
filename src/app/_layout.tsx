@@ -1,6 +1,6 @@
 import { useFonts } from 'expo-font';
 import { QueryClient, QueryClientProvider, useQueryClient } from '@tanstack/react-query';
-import { Stack } from 'expo-router';
+import { Stack, usePathname } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import React, { useEffect, useRef, useSyncExternalStore } from 'react';
 import { Platform, StyleSheet, Text, View } from 'react-native';
@@ -9,6 +9,7 @@ import { convexConfigStatus } from '@/services/convex/client';
 import { AppProvider, useRepos } from '@/state/AppProvider';
 import { AuthProvider, useAuth } from '@/state/AuthProvider';
 import { keys, useSetting } from '@/state/queries';
+import { isPrimaryTabPath, PersistentTabBar } from '@/ui/components/TabBar';
 import { SLIDE_OVER_OPTIONS } from '@/ui/motion/SlideScreen';
 import { AppearanceMode, ThemeProvider } from '@/ui/theme/ThemeProvider';
 import { fonts } from '@/ui/theme/tokens';
@@ -30,6 +31,7 @@ function ThemedApp() {
   const { settings, profile } = useRepos();
   const qc = useQueryClient();
   const { signedIn } = useAuth();
+  const pathname = usePathname();
   const appearance = useSetting<AppearanceMode>('appearance', 'system', signedIn);
 
   // A profile row was only written the first time somebody edited their
@@ -56,49 +58,69 @@ function ThemedApp() {
         });
       }}
     >
-      <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="(tabs)" />
-        <Stack.Screen name="welcome" />
-        <Stack.Screen name="login" />
-        <Stack.Screen name="forgot-password" />
-        <Stack.Screen name="signup-legal" />
-        <Stack.Screen name="signup-account" />
-        <Stack.Screen name="signup-credentials" />
-        <Stack.Screen name="signup-health" />
-        <Stack.Screen name="preview-signup-health" />
-        <Stack.Screen name="onboarding" />
-        <Stack.Screen name="add" options={{ presentation: 'modal' }} />
-        <Stack.Screen name="manual-entry" options={{ presentation: 'modal' }} />
-        <Stack.Screen name="goals" options={SLIDE_OVER_OPTIONS} />
-        <Stack.Screen name="activity" options={{ presentation: 'modal' }} />
-        <Stack.Screen name="scan" options={{ presentation: 'modal' }} />
-        <Stack.Screen name="ai-scan" options={{ presentation: 'modal' }} />
-        <Stack.Screen name="custom-food" options={{ presentation: 'modal' }} />
-        <Stack.Screen name="log-collection" options={{ presentation: 'modal' }} />
-        <Stack.Screen name="meal-editor" options={{ presentation: 'modal' }} />
-        <Stack.Screen name="recipe-editor" options={{ presentation: 'modal' }} />
-        <Stack.Screen name="meal/[id]" options={SLIDE_OVER_OPTIONS} />
-        <Stack.Screen name="profile" options={SLIDE_OVER_OPTIONS} />
-        <Stack.Screen name="photos" options={SLIDE_OVER_OPTIONS} />
-        <Stack.Screen name="groups" options={SLIDE_OVER_OPTIONS} />
-        <Stack.Screen name="chats" options={SLIDE_OVER_OPTIONS} />
-        <Stack.Screen name="friends" options={SLIDE_OVER_OPTIONS} />
-        <Stack.Screen name="connections" options={SLIDE_OVER_OPTIONS} />
-        <Stack.Screen name="new-chat" options={{ presentation: 'modal' }} />
-        <Stack.Screen name="chat/[id]" options={SLIDE_OVER_OPTIONS} />
-        <Stack.Screen name="notifications" options={SLIDE_OVER_OPTIONS} />
-        <Stack.Screen name="fasting" options={SLIDE_OVER_OPTIONS} />
-        <Stack.Screen name="training-schedule" options={{ animation: 'none' }} />
-        {/* Reachable signed-out: the create-account legal gate links to both,
-            and a shared public profile link is opened by people with no
-            account at all. */}
-        <Stack.Screen name="privacy" options={SLIDE_OVER_OPTIONS} />
-        <Stack.Screen name="terms" options={SLIDE_OVER_OPTIONS} />
-        <Stack.Screen name="apple-health" options={SLIDE_OVER_OPTIONS} />
-        <Stack.Screen name="u/[handle]" options={SLIDE_OVER_OPTIONS} />
-      </Stack>
+      <View style={styles.appShell}>
+        <Stack screenOptions={{ headerShown: false }}>
+          <Stack.Screen name="(tabs)" />
+          <Stack.Screen name="welcome" />
+          <Stack.Screen name="login" />
+          <Stack.Screen name="forgot-password" />
+          <Stack.Screen name="signup-legal" />
+          <Stack.Screen name="signup-account" />
+          <Stack.Screen name="signup-credentials" />
+          <Stack.Screen name="signup-health" />
+          <Stack.Screen name="preview-signup-health" />
+          <Stack.Screen name="onboarding" />
+          <Stack.Screen name="add" options={{ presentation: 'modal' }} />
+          <Stack.Screen name="manual-entry" options={{ presentation: 'modal' }} />
+          <Stack.Screen name="goals" options={SLIDE_OVER_OPTIONS} />
+          <Stack.Screen name="activity" options={{ presentation: 'modal' }} />
+          <Stack.Screen name="scan" options={{ presentation: 'modal' }} />
+          <Stack.Screen name="ai-scan" options={{ presentation: 'modal' }} />
+          <Stack.Screen name="custom-food" options={{ presentation: 'modal' }} />
+          <Stack.Screen name="log-collection" options={{ presentation: 'modal' }} />
+          <Stack.Screen name="meal-editor" options={{ presentation: 'modal' }} />
+          <Stack.Screen name="recipe-editor" options={{ presentation: 'modal' }} />
+          <Stack.Screen name="meal/[id]" options={SLIDE_OVER_OPTIONS} />
+          <Stack.Screen name="profile" options={SLIDE_OVER_OPTIONS} />
+          <Stack.Screen name="photos" options={SLIDE_OVER_OPTIONS} />
+          <Stack.Screen name="groups" options={SLIDE_OVER_OPTIONS} />
+          <Stack.Screen name="chats" options={SLIDE_OVER_OPTIONS} />
+          <Stack.Screen name="friends" options={SLIDE_OVER_OPTIONS} />
+          <Stack.Screen name="connections" options={SLIDE_OVER_OPTIONS} />
+          <Stack.Screen name="new-chat" options={{ presentation: 'modal' }} />
+          <Stack.Screen name="chat/[id]" options={SLIDE_OVER_OPTIONS} />
+          <Stack.Screen name="notifications" options={SLIDE_OVER_OPTIONS} />
+          <Stack.Screen name="fasting" options={SLIDE_OVER_OPTIONS} />
+          <Stack.Screen name="training-schedule" options={{ animation: 'none' }} />
+          {/* Reachable signed-out: the create-account legal gate links to both,
+              and a shared public profile link is opened by people with no
+              account at all. */}
+          <Stack.Screen name="privacy" options={SLIDE_OVER_OPTIONS} />
+          <Stack.Screen name="terms" options={SLIDE_OVER_OPTIONS} />
+          <Stack.Screen name="apple-health" options={SLIDE_OVER_OPTIONS} />
+          <Stack.Screen name="u/[handle]" options={SLIDE_OVER_OPTIONS} />
+        </Stack>
+        {shouldShowPersistentFooter(signedIn, pathname) ? <PersistentTabBar /> : null}
+      </View>
     </ThemeProvider>
   );
+}
+
+const AUTH_FLOW_PATHS = new Set([
+  '/welcome',
+  '/login',
+  '/forgot-password',
+  '/signup-legal',
+  '/signup-account',
+  '/signup-credentials',
+  '/signup-health',
+  '/preview-signup-health',
+  '/onboarding',
+]);
+
+export function shouldShowPersistentFooter(signedIn: boolean, pathname: string) {
+  if (!signedIn || isPrimaryTabPath(pathname) || AUTH_FLOW_PATHS.has(pathname)) return false;
+  return pathname !== '/chat' && !pathname.startsWith('/chat/');
 }
 
 /**
@@ -177,6 +199,9 @@ export default function RootLayout() {
 }
 
 const styles = StyleSheet.create({
+  appShell: {
+    flex: 1,
+  },
   notConfigured: {
     flex: 1,
     alignItems: 'center',

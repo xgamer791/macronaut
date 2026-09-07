@@ -64,9 +64,32 @@ const ITEMS: TabItem[] = [
 const ICON = 27;
 /** Same circular picture the Today header used to show. */
 const AVATAR = 32;
+const PRIMARY_TAB_PATHS = new Set(['/', '/meals', '/progress', '/settings']);
+
+export function isPrimaryTabPath(pathname: string) {
+  return PRIMARY_TAB_PATHS.has(pathname);
+}
 
 /** Bottom tab bar. Icons only — labels stay on the accessibility name. */
 export function TabBar({ state, navigation }: BottomTabBarProps) {
+  const pathname = usePathname();
+
+  // Stack pages get the copy mounted beside the root navigator so they cannot
+  // cover it. Hiding this copy also prevents the two bars from overlapping.
+  if (!isPrimaryTabPath(pathname)) return null;
+
+  return <TabBarItems state={state} navigation={navigation} />;
+}
+
+/** Footer used outside the tab navigator, beneath signed-in stack pages. */
+export function PersistentTabBar() {
+  return <TabBarItems />;
+}
+
+function TabBarItems({
+  state,
+  navigation,
+}: Partial<Pick<BottomTabBarProps, 'state' | 'navigation'>>) {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const router = useRouter();
@@ -95,6 +118,7 @@ export function TabBar({ state, navigation }: BottomTabBarProps) {
               key={item.label}
               accessibilityRole="tab"
               accessibilityLabel={item.label}
+              accessibilityState={{ selected: active }}
               onPress={() => {
                 void Haptics.selectionAsync();
                 router.push(item.href);
@@ -112,9 +136,13 @@ export function TabBar({ state, navigation }: BottomTabBarProps) {
           );
         }
 
-        const route = state.routes.find((r) => r.name === item.name);
-        const routeIndex = route ? state.routes.findIndex((r) => r.key === route.key) : -1;
-        const focused = routeIndex >= 0 && state.index === routeIndex && !item.comingSoon;
+        const route = state?.routes.find((r) => r.name === item.name);
+        const routeIndex = route ? state?.routes.findIndex((r) => r.key === route.key) : -1;
+        const focused =
+          routeIndex !== undefined &&
+          routeIndex >= 0 &&
+          state?.index === routeIndex &&
+          !item.comingSoon;
 
         const icon = (
           <Ionicons
@@ -125,6 +153,29 @@ export function TabBar({ state, navigation }: BottomTabBarProps) {
         );
 
         if (item.comingSoon || !route) {
+          if (!item.comingSoon && !state && !navigation) {
+            const active = pathname === '/';
+            return (
+              <Pressable
+                key={item.name}
+                accessibilityRole="tab"
+                accessibilityLabel={item.label}
+                accessibilityState={{ selected: active }}
+                onPress={() => {
+                  void Haptics.selectionAsync();
+                  router.replace('/');
+                }}
+                style={styles.tab}
+              >
+                <Ionicons
+                  name={active ? item.iconActive : item.icon}
+                  size={ICON}
+                  color={active ? colors.accent : colors.textMuted}
+                />
+              </Pressable>
+            );
+          }
+
           return (
             <View
               key={item.name}
@@ -145,13 +196,13 @@ export function TabBar({ state, navigation }: BottomTabBarProps) {
             accessibilityLabel={item.label}
             accessibilityState={{ selected: focused }}
             onPress={() => {
-              const event = navigation.emit({
+              const event = navigation!.emit({
                 type: 'tabPress',
                 target: route.key,
                 canPreventDefault: true,
               });
               if (!focused && !event.defaultPrevented) {
-                navigation.navigate(item.name);
+                navigation!.navigate(item.name);
               }
             }}
             style={styles.tab}

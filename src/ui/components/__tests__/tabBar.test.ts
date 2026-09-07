@@ -32,4 +32,13 @@ describe('tab bar', () => {
     expect(tabBar).not.toContain('restaurant');
     expect(tabBar).not.toContain('settings-outline');
   });
+
+  it('uses one footer inside tabs and one beneath stack pages', () => {
+    expect(tabBar).toContain(
+      "const PRIMARY_TAB_PATHS = new Set(['/', '/meals', '/progress', '/settings'])",
+    );
+    expect(tabBar).toContain('if (!isPrimaryTabPath(pathname)) return null;');
+    expect(tabBar).toContain('export function PersistentTabBar()');
+    expect(tabBar).toContain("router.replace('/')");
+  });
 });
