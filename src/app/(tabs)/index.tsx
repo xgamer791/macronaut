@@ -38,7 +38,11 @@ import {
 import type { HeroMetricValues } from '@/ui/components/HeroMetricModule';
 import { useTheme } from '@/ui/theme/ThemeProvider';
 import { radius, spacing } from '@/ui/theme/tokens';
-import { todayHeroHeight, glassHeaderHeight } from '@/ui/components/todayHeroLayout';
+import {
+  TODAY_SECTION_GAP,
+  todayHeroHeight,
+  glassHeaderHeight,
+} from '@/ui/components/todayHeroLayout';
 
 const HERO_IMAGE = require('../../../assets/images/today/hero-gym.jpg');
 
@@ -309,7 +313,9 @@ function TodayBody() {
         </View>
 
         {/* —— Meals —— */}
+        <View style={styles.section}>
         <SectionHeader
+          flush
           title="Meals"
           right={
             <Pressable
@@ -376,9 +382,12 @@ function TodayBody() {
             );
           })}
         </View>
+        </View>
 
         {/* —— Activity (below fold; keeps logging entry points) —— */}
+        <View style={styles.section}>
         <SectionHeader
+          flush
           title="Activity"
           right={
             <Pressable
@@ -404,6 +413,7 @@ function TodayBody() {
             router.push({ pathname: '/activity', params: { type } });
           }}
         />
+        </View>
       </View>
     </Screen>
   );
@@ -423,7 +433,7 @@ const styles = StyleSheet.create({
   },
   heroBottom: {
     paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.md + 15,
+    paddingBottom: TODAY_SECTION_GAP,
     zIndex: 3,
     gap: spacing.md,
   },
@@ -435,8 +445,11 @@ const styles = StyleSheet.create({
   },
   body: {
     paddingHorizontal: spacing.lg,
-    paddingTop: spacing.lg,
-    gap: spacing.lg,
+    paddingTop: 0,
+    gap: TODAY_SECTION_GAP,
+  },
+  section: {
+    gap: spacing.sm,
   },
   macroRow: {
     flexDirection: 'row',
