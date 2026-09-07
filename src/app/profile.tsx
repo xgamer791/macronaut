@@ -19,12 +19,10 @@ import {
   ErrorState,
   ListRow,
   ProfileHeader,
-  ProfileHeaderChrome,
   ProfilePostList,
   Screen,
   SectionHeader,
   Sheet,
-  StickyGlassHeader,
   TextField,
 } from '@/ui/components';
 import type { ProfilePost, ProfileView } from '@/repositories/profileRepo';
@@ -148,22 +146,12 @@ function OwnProfile() {
   }
 
   return (
-    <Screen
-      padded={false}
-      safeTop={false}
-      scroll
-      fixedHeader={
-        <StickyGlassHeader>
-          <ProfileHeaderChrome onBack={() => goBackOrHome(router)} contrast={false} />
-        </StickyGlassHeader>
-      }
-    >
+    <Screen padded={false} safeTop={false} scroll>
       {data ? (
         <>
           <ProfileHeader
             profile={data}
             onBack={() => goBackOrHome(router)}
-            showChrome={false}
             onPickAvatar={() => void replaceImage('avatar')}
             onPickBanner={() => void replaceImage('banner')}
             uploading={uploading}
