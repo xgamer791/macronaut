@@ -20,7 +20,9 @@ import { AppText } from './AppText';
 const WATCH_FACE = require('../../../assets/images/header-watch.png');
 
 const ICON = '#FFFFFF';
-const DOT = '#2EE66A';
+const NOTIFY_DOT = '#2EE66A';
+/** Watch HealthKit isn't wired yet — treat the status LED as disconnected. */
+const WATCH_DOT = '#FF3B3B';
 const GLYPH = 22;
 const GLYPH_INSET = (touchTarget - GLYPH) / 2;
 /** The watch is a photo, not a line glyph, so it needs a slightly wider
@@ -137,12 +139,13 @@ export function AppHeader({ onBellPress, notifyDot = true }: AppHeaderProps) {
         </HeaderHit>
 
         <HeaderHit
-          accessibilityLabel="Apple Watch and Apple Health"
+          accessibilityLabel="Apple Watch and Apple Health, not connected"
           onPress={() => {
             void Haptics.selectionAsync();
             router.push('/apple-health');
           }}
           dot
+          dotColor={WATCH_DOT}
           slot={WATCH_CIRCLE}
         >
           <View style={styles.watch}>
@@ -160,6 +163,7 @@ function HeaderHit({
   onPress,
   disabled,
   dot,
+  dotColor = NOTIFY_DOT,
   slot = GLYPH,
 }: {
   children: React.ReactNode;
@@ -167,6 +171,7 @@ function HeaderHit({
   onPress: () => void;
   disabled?: boolean;
   dot?: boolean;
+  dotColor?: string;
   /** Size of the centered content box. Defaults to the shared glyph size. */
   slot?: number;
 }) {
@@ -189,7 +194,9 @@ function HeaderHit({
       >
         {children}
       </View>
-      {dot ? <View style={[styles.dot, { top: dotOffset, right: dotOffset }]} /> : null}
+      {dot ? (
+        <View style={[styles.dot, { top: dotOffset, right: dotOffset, backgroundColor: dotColor }]} />
+      ) : null}
     </Pressable>
   );
 }
@@ -279,7 +286,7 @@ const styles = StyleSheet.create({
     borderRadius: 3.5,
     marginTop: -3.5,
     marginRight: -3.5,
-    backgroundColor: DOT,
+    backgroundColor: NOTIFY_DOT,
     zIndex: 1,
   },
 });
