@@ -5,6 +5,10 @@ nothing reads Health data yet. Picked back up after the rest of the build,
 once a development iOS build is on a real iPhone. The same checklist is in
 the app at Settings → Apple Health and Watch (`/apple-health`).
 
+Apple Health is one item on a longer list of work that is waiting on the same
+native iOS build — see `docs/native-ios.md`, which is the to-do list to work
+through once the app is native.
+
 This document is the plan for reading Apple Health data (steps, heart rate,
 calories burned) and for starting and stopping workouts from the app on an
 Apple Watch.

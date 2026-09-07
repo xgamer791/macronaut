@@ -141,6 +141,8 @@ Both suites run in plain Node against an in-memory backend, so no simulator, dev
 
 MFA, offline queueing of writes, [Apple Health and Apple Watch](docs/apple-health.md)
 (paused — Settings → Apple Health and Watch), widgets, Android polish, web dashboard.
+Everything waiting on a native iOS build — Health and push notifications — is
+listed in [docs/native-ios.md](docs/native-ios.md).
 
 ## Documentation
 
@@ -150,3 +152,4 @@ MFA, offline queueing of writes, [Apple Health and Apple Watch](docs/apple-healt
 - [Security review](docs/security.md)
 - [Food-data providers + adding your own](docs/providers.md)
 - [Apple Health and Apple Watch plan](docs/apple-health.md)
+- [After the native iOS app — the to-do list](docs/native-ios.md)
