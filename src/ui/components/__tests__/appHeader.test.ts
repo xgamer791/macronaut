@@ -19,6 +19,8 @@ describe('Today header hamburger', () => {
     expect(header).toContain('withTiming');
     expect(header).toContain('visible={mounted}');
     expect(header).toContain("dataSet: { headermenu: open ? 'open' : 'shut' }");
+    expect(header).toContain('useSetDrawerPush');
+    expect(header).toContain('menuClosePage');
     expect(header).not.toContain('Animated.timing');
     expect(header).not.toContain('useNativeDriver');
     expect(header).not.toContain('DRAWER_MS');

@@ -20,6 +20,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { displayNameFromUser } from '@/services/auth/displayName';
 import { useAuth } from '@/state/AuthProvider';
 import { useNotifications, useSetting } from '@/state/queries';
+import { useSetDrawerPush } from '@/ui/motion/slidePush';
 import { SLIDE_DURATION_MS, SLIDE_EASING } from '@/ui/motion/SlideScreen';
 import { useTheme } from '@/ui/theme/ThemeProvider';
 import { palette, spacing, touchTarget } from '@/ui/theme/tokens';
@@ -111,12 +112,12 @@ function HeaderMenu({ visible, onClose }: { visible: boolean; onClose: () => voi
   const [prevVisible, setPrevVisible] = useState(visible);
   const [webOpen, setWebOpen] = useState(false);
   const progress = useSharedValue(0);
+  const setDrawer = useSetDrawerPush();
 
   if (visible !== prevVisible) {
     setPrevVisible(visible);
     setWebOpen(false);
     if (visible) setMounted(true);
-    setWebOpen(false);
   }
 
   useLayoutEffect(() => {
@@ -130,6 +131,16 @@ function HeaderMenu({ visible, onClose }: { visible: boolean; onClose: () => voi
       cancelAnimationFrame(second);
     };
   }, [mounted, visible]);
+
+  const drawerOpen = Platform.OS === 'web' ? webOpen : visible;
+  useLayoutEffect(() => {
+    if (!mounted) {
+      setDrawer(null);
+      return;
+    }
+    setDrawer({ width: panelWidth, open: drawerOpen });
+    return () => setDrawer(null);
+  }, [drawerOpen, mounted, panelWidth, setDrawer]);
 
   useEffect(() => {
     if (visible) {
@@ -148,9 +159,6 @@ function HeaderMenu({ visible, onClose }: { visible: boolean; onClose: () => voi
     return () => clearTimeout(id);
   }, [mounted, progress, visible]);
 
-  const overlayStyle = useAnimatedStyle(() => ({
-    opacity: progress.value,
-  }));
   const drawerStyle = useAnimatedStyle(() => ({
     transform: [{ translateX: (progress.value - 1) * panelWidth }],
   }));
@@ -164,21 +172,6 @@ function HeaderMenu({ visible, onClose }: { visible: boolean; onClose: () => voi
   return (
     <Modal visible={mounted} transparent animationType="none" onRequestClose={onClose}>
       <View style={styles.menuRoot} pointerEvents="box-none" {...webRoot}>
-        <Animated.View
-          {...(Platform.OS === 'web' ? { dataSet: { menuscrim: '' } } : null)}
-          style={[
-            StyleSheet.absoluteFill,
-            { backgroundColor: colors.overlay },
-            Platform.OS === 'web' ? null : overlayStyle,
-          ]}
-        >
-          <Pressable
-            style={StyleSheet.absoluteFill}
-            onPress={onClose}
-            accessibilityRole="button"
-            accessibilityLabel="Close menu"
-          />
-        </Animated.View>
         <Animated.View
           {...(Platform.OS === 'web' ? { dataSet: { menudrawer: '' } } : null)}
           style={[
@@ -229,6 +222,13 @@ function HeaderMenu({ visible, onClose }: { visible: boolean; onClose: () => voi
             </Pressable>
           ))}
         </Animated.View>
+        <Pressable
+          {...(Platform.OS === 'web' ? { dataSet: { menuscrim: '' } } : null)}
+          style={styles.menuClosePage}
+          onPress={onClose}
+          accessibilityRole="button"
+          accessibilityLabel="Close menu"
+        />
       </View>
     </Modal>
   );
@@ -393,12 +393,14 @@ const styles = StyleSheet.create({
   },
   menuRoot: {
     flex: 1,
+    flexDirection: 'row',
   },
   drawer: {
-    flex: 1,
-    maxWidth: '100%',
     borderRightWidth: StyleSheet.hairlineWidth,
     paddingHorizontal: spacing.lg,
+  },
+  menuClosePage: {
+    flex: 1,
   },
   menuHeading: {
     minHeight: touchTarget,

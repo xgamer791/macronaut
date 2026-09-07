@@ -110,9 +110,10 @@ input[data-darkfield]:-webkit-autofill:focus, input[data-darkfield]:-webkit-auto
     background: rgba(0, 0, 0, 1.000);
   }
 }
-/* Stack pages slide over the screen underneath. Notifications and profiles
+/* Stack pages and the page they push. Notifications and profiles
  * enter from the right; everything else from the left. */
-[data-slidescreen] {
+[data-slidescreen],
+[data-slidebase] {
   will-change: transform;
   transition: transform 294ms cubic-bezier(0.22, 1, 0.36, 1);
 }
@@ -127,23 +128,20 @@ input[data-darkfield]:-webkit-autofill:focus, input[data-darkfield]:-webkit-auto
 }
 /* Hamburger drawer: same 294ms curve as stack / friends feed. */
 [data-headermenu] [data-menuscrim] {
-  transition: opacity 294ms cubic-bezier(0.22, 1, 0.36, 1);
-}
-[data-headermenu="shut"] [data-menuscrim] {
-  opacity: 0;
+  background: transparent;
 }
 [data-headermenu] [data-menudrawer] {
   will-change: transform;
   transition: transform 294ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 @media (prefers-reduced-motion: reduce) {
-  [data-slidescreen] {
+  [data-slidescreen],
+  [data-slidebase] {
     transition: none;
   }
   [data-headerhide] {
     transition: none;
   }
-  [data-headermenu] [data-menuscrim],
   [data-headermenu] [data-menudrawer] {
     transition: none;
   }

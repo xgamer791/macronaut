@@ -61,6 +61,7 @@ describe('web html shell', () => {
 
   it('slides stack pages with a CSS transform so web actually animates', () => {
     expect(html).toContain('[data-slidescreen]');
+    expect(html).toContain('[data-slidebase]');
     expect(html).toContain('transform 294ms cubic-bezier(0.22, 1, 0.36, 1)');
     expect(html).toContain('prefers-reduced-motion: reduce');
   });
@@ -68,8 +69,8 @@ describe('web html shell', () => {
   it('slides the hamburger drawer on the same 294ms curve', () => {
     expect(html).toContain('[data-headermenu]');
     expect(html).toContain('[data-headermenu] [data-menudrawer]');
-    expect(html).toContain('[data-headermenu="shut"] [data-menuscrim]');
-    expect(html).toContain('opacity 294ms cubic-bezier(0.22, 1, 0.36, 1)');
+    expect(html).toContain('[data-headermenu] [data-menuscrim]');
+    expect(html).not.toContain('opacity 294ms');
   });
 
   it('slides the sticky header as one slab on the same 294ms curve', () => {

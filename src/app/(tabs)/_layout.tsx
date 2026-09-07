@@ -4,6 +4,7 @@ import React from 'react';
 import { useAuth } from '@/state/AuthProvider';
 import { useSetting } from '@/state/queries';
 import { TabBar } from '@/ui/components/TabBar';
+import { SlidePushable } from '@/ui/motion/slidePush';
 
 export default function TabsLayout() {
   const { loading, signedIn } = useAuth();
@@ -14,11 +15,13 @@ export default function TabsLayout() {
   if (!onboarded.data) return <Redirect href="/onboarding" />;
 
   return (
-    <Tabs screenOptions={{ headerShown: false }} tabBar={(props) => <TabBar {...props} />}>
-      <Tabs.Screen name="index" />
-      <Tabs.Screen name="meals" />
-      <Tabs.Screen name="progress" />
-      <Tabs.Screen name="settings" />
-    </Tabs>
+    <SlidePushable>
+      <Tabs screenOptions={{ headerShown: false }} tabBar={(props) => <TabBar {...props} />}>
+        <Tabs.Screen name="index" />
+        <Tabs.Screen name="meals" />
+        <Tabs.Screen name="progress" />
+        <Tabs.Screen name="settings" />
+      </Tabs>
+    </SlidePushable>
   );
 }

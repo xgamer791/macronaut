@@ -9,6 +9,7 @@ import { useSetting } from '@/state/queries';
 import { AppText } from '@/ui/components';
 import { WelcomeBackground } from '@/ui/WelcomeBackground';
 import { WelcomeCta } from '@/ui/WelcomeCta';
+import { SlidePushable } from '@/ui/motion/slidePush';
 import { fonts, palette, radius, type } from '@/ui/theme/tokens';
 
 const TRACK_W = 51;
@@ -89,6 +90,7 @@ export default function SignupLegalScreen() {
   };
 
   return (
+    <SlidePushable>
     <View style={styles.root}>
       <StatusBar style="light" />
       <WelcomeBackground />
@@ -148,6 +150,7 @@ export default function SignupLegalScreen() {
         </View>
       </View>
     </View>
+    </SlidePushable>
   );
 }
 

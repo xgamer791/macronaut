@@ -9,6 +9,7 @@ import { convexConfigStatus } from '@/services/convex/client';
 import { AppProvider, useRepos } from '@/state/AppProvider';
 import { AuthProvider, useAuth } from '@/state/AuthProvider';
 import { keys, useSetting } from '@/state/queries';
+import { SlidePushProvider } from '@/ui/motion/slidePush';
 import { SLIDE_OVER_OPTIONS } from '@/ui/motion/SlideScreen';
 import { AppearanceMode, ThemeProvider } from '@/ui/theme/ThemeProvider';
 import { fonts } from '@/ui/theme/tokens';
@@ -56,6 +57,7 @@ function ThemedApp() {
         });
       }}
     >
+      <SlidePushProvider>
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="welcome" />
@@ -96,6 +98,7 @@ function ThemedApp() {
         <Stack.Screen name="apple-health" options={SLIDE_OVER_OPTIONS} />
         <Stack.Screen name="u/[handle]" options={SLIDE_OVER_OPTIONS} />
       </Stack>
+      </SlidePushProvider>
     </ThemeProvider>
   );
 }

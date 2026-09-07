@@ -2,6 +2,7 @@ import React from 'react';
 import { ScrollView, StyleProp, StyleSheet, View, ViewStyle } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AutoHideHeader, useHeaderScrollHide } from '@/ui/motion/headerAutoHide';
+import { SlidePushable } from '@/ui/motion/slidePush';
 import { useTheme } from '@/ui/theme/ThemeProvider';
 import { spacing } from '@/ui/theme/tokens';
 
@@ -53,18 +54,22 @@ export function Screen({
   if (!scroll) {
     if (!stickyHeader) {
       return (
-        <View style={base}>
-          <View style={[styles.fill, contentPad, style]}>{children}</View>
-          {floatingOverlay}
-        </View>
+        <SlidePushable>
+          <View style={base}>
+            <View style={[styles.fill, contentPad, style]}>{children}</View>
+            {floatingOverlay}
+          </View>
+        </SlidePushable>
       );
     }
     return (
-      <View style={base}>
-        {header}
-        <View style={[styles.fill, contentPad, style]}>{children}</View>
-        {floatingOverlay}
-      </View>
+      <SlidePushable>
+        <View style={base}>
+          {header}
+          <View style={[styles.fill, contentPad, style]}>{children}</View>
+          {floatingOverlay}
+        </View>
+      </SlidePushable>
     );
   }
 
@@ -77,11 +82,13 @@ export function Screen({
   };
 
   return (
-    <View style={base}>
-      {header}
-      <ScrollView {...scrollProps}>{children}</ScrollView>
-      {floatingOverlay}
-    </View>
+    <SlidePushable>
+      <View style={base}>
+        {header}
+        <ScrollView {...scrollProps}>{children}</ScrollView>
+        {floatingOverlay}
+      </View>
+    </SlidePushable>
   );
 }
 

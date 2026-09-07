@@ -1,7 +1,6 @@
-import React, { createContext, useCallback, useContext, useLayoutEffect, useRef, useState } from 'react';
+import React, { createContext, useCallback, useContext, useLayoutEffect, useRef } from 'react';
 import { Platform, StyleSheet, useWindowDimensions, View } from 'react-native';
 import Animated, {
-  Easing,
   ReduceMotion,
   runOnJS,
   useAnimatedStyle,
@@ -12,6 +11,11 @@ import { useRouter } from 'expo-router';
 
 import { goBackOrHome } from '@/utils/navigation';
 import { useTheme } from '@/ui/theme/ThemeProvider';
+import { SlidePushNested, useSlideLayer } from './slidePush';
+import { slideLayerTranslate } from './slidePushLogic';
+import { SLIDE_DURATION_MS, SLIDE_EASING } from './slideTokens';
+
+export { SLIDE_DURATION_MS, SLIDE_EASING } from './slideTokens';
 
 type Side = 'left' | 'right';
 
@@ -30,9 +34,6 @@ export function useSlideBack() {
     else goBackOrHome(router);
   }, [dismiss, router]);
 }
-
-export const SLIDE_EASING = Easing.bezier(0.22, 1, 0.36, 1);
-export const SLIDE_DURATION_MS = 294;
 
 export const SLIDE_OVER_OPTIONS = {
   headerShown: false,
@@ -66,8 +67,9 @@ function SlideScreenWeb({ from, children }: { from: Side; children: React.ReactN
   const width = useSlideWidth();
   const router = useRouter();
   const { colors } = useTheme();
-  const [open, setOpen] = useState(false);
+  const layer = useSlideLayer(from);
   const leaving = useRef(false);
+  const setOpen = layer.setOpen;
 
   useLayoutEffect(() => {
     let second = 0;
@@ -78,7 +80,7 @@ function SlideScreenWeb({ from, children }: { from: Side; children: React.ReactN
       cancelAnimationFrame(first);
       cancelAnimationFrame(second);
     };
-  }, []);
+  }, [setOpen]);
 
   const leave = useCallback(() => {
     if (leaving.current) return;
@@ -88,10 +90,9 @@ function SlideScreenWeb({ from, children }: { from: Side; children: React.ReactN
       typeof window !== 'undefined' &&
       window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     window.setTimeout(() => goBackOrHome(router), reduce ? 0 : SLIDE_DURATION_MS);
-  }, [router]);
+  }, [router, setOpen]);
 
-  const dir = from === 'right' ? 1 : -1;
-  const translateX = open ? 0 : dir * width;
+  const translateX = slideLayerTranslate(from, layer.open, width, layer.above);
 
   return (
     <SlideDismissContext.Provider value={leave}>
@@ -105,7 +106,7 @@ function SlideScreenWeb({ from, children }: { from: Side; children: React.ReactN
             from === 'right' ? styles.fromRight : styles.fromLeft,
           ]}
         >
-          {children}
+          <SlidePushNested>{children}</SlidePushNested>
         </View>
       </View>
     </SlideDismissContext.Provider>
@@ -116,16 +117,25 @@ function SlideScreenNative({ from, children }: { from: Side; children: React.Rea
   const width = useSlideWidth();
   const router = useRouter();
   const { colors } = useTheme();
-  const progress = useSharedValue(0);
+  const { above, setOpen } = useSlideLayer(from);
+  const progress = useSharedValue(from === 'right' ? width : -width);
   const leaving = useRef(false);
+  const aboveOpen = above?.open ?? false;
+  const aboveFrom = above?.from;
 
   useLayoutEffect(() => {
-    progress.value = withTiming(1, {
+    setOpen(true);
+  }, [setOpen]);
+
+  useLayoutEffect(() => {
+    if (leaving.current) return;
+    const target = aboveOpen && aboveFrom ? slideLayerTranslate(from, true, width, { from: aboveFrom, open: true }) : 0;
+    progress.value = withTiming(target, {
       duration: SLIDE_DURATION_MS,
       easing: SLIDE_EASING,
       reduceMotion: ReduceMotion.System,
     });
-  }, [progress]);
+  }, [aboveFrom, aboveOpen, from, progress, width]);
 
   const finish = useCallback(() => {
     goBackOrHome(router);
@@ -134,23 +144,22 @@ function SlideScreenNative({ from, children }: { from: Side; children: React.Rea
   const leave = useCallback(() => {
     if (leaving.current) return;
     leaving.current = true;
-    // Reanimated shared values are mutated on purpose to drive the slide-out.
-    // eslint-disable-next-line react-hooks/immutability -- SharedValue setter
+    setOpen(false);
+    const out = from === 'right' ? width : -width;
+    // Reanimated shared values are mutated on purpose.
+    // eslint-disable-next-line react-hooks/immutability -- shared value, not React state
     progress.value = withTiming(
-      0,
+      out,
       { duration: SLIDE_DURATION_MS, easing: SLIDE_EASING, reduceMotion: ReduceMotion.System },
       (finished) => {
         if (finished) runOnJS(finish)();
       },
     );
-  }, [finish, progress]);
+  }, [finish, from, progress, setOpen, width]);
 
-  const style = useAnimatedStyle(() => {
-    const dir = from === 'right' ? 1 : -1;
-    return {
-      transform: [{ translateX: (1 - progress.value) * dir * width }],
-    };
-  });
+  const style = useAnimatedStyle(() => ({
+    transform: [{ translateX: progress.value }],
+  }));
 
   return (
     <SlideDismissContext.Provider value={leave}>
@@ -163,7 +172,7 @@ function SlideScreenNative({ from, children }: { from: Side; children: React.Rea
             style,
           ]}
         >
-          {children}
+          <SlidePushNested>{children}</SlidePushNested>
         </Animated.View>
       </View>
     </SlideDismissContext.Provider>

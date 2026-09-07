@@ -7,6 +7,7 @@ import { useSetting } from '@/state/queries';
 import { AppText } from '@/ui/components';
 import { WelcomeBackground } from '@/ui/WelcomeBackground';
 import { WelcomeCta } from '@/ui/WelcomeCta';
+import { SlidePushable } from '@/ui/motion/slidePush';
 import { fonts } from '@/ui/theme/tokens';
 
 /** Poster splash: full-bleed photo, mid-canvas stacked wordmark, two identical
@@ -21,6 +22,7 @@ export default function WelcomeScreen() {
   if (signedIn) return <Redirect href={onboarded.data ? '/' : '/onboarding'} />;
 
   return (
+    <SlidePushable>
     <View style={styles.root}>
       <WelcomeBackground />
       {/* Flat 50% film so white type stays readable. No extra gradient. */}
@@ -52,6 +54,7 @@ export default function WelcomeScreen() {
         </View>
       </View>
     </View>
+    </SlidePushable>
   );
 }
 

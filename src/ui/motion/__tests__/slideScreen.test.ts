@@ -9,11 +9,15 @@ describe('directional slide navigation', () => {
   it('slides notifications and profiles in from the right', () => {
     const slide = read(srcDir, 'ui', 'motion', 'SlideScreen.tsx');
     expect(slide).toContain("from: Side");
-    expect(slide).toContain("from === 'right' ? 1 : -1");
+    expect(slide).toContain('from === \'right\' ? width : -width');
     expect(slide).toContain('useSlideBack');
     expect(slide).toContain("presentation: 'transparentModal'");
-    expect(slide).toContain('SLIDE_DURATION_MS = 294');
+    expect(slide).toContain("from './slideTokens'");
+    expect(read(srcDir, 'ui', 'motion', 'slideTokens.ts')).toContain('SLIDE_DURATION_MS = 294');
     expect(slide).toContain("dataSet: { slidescreen: from }");
+    expect(slide).toContain('slideLayerTranslate');
+    expect(slide).toContain('useSlideLayer');
+    expect(slide).toContain('SlidePushNested');
     expect(slide).toContain("Platform.OS === 'web'");
 
     expect(read(appDir, 'notifications.tsx')).toContain('<SlideScreen from="right">');
@@ -34,6 +38,7 @@ describe('directional slide navigation', () => {
 
   it('keeps the page underneath visible and pops along the same path', () => {
     const layout = read(appDir, '_layout.tsx');
+    expect(layout).toContain('SlidePushProvider');
     expect(layout).toContain('SLIDE_OVER_OPTIONS');
     expect(layout).toContain('name="notifications" options={SLIDE_OVER_OPTIONS}');
     expect(layout).toContain('name="profile" options={SLIDE_OVER_OPTIONS}');
@@ -44,5 +49,10 @@ describe('directional slide navigation', () => {
     const header = read(srcDir, 'ui', 'components', 'ScreenHeader.tsx');
     expect(header).toContain('useSlideBack');
     expect(header).toContain('onBack ?? slideBack');
+
+    expect(read(appDir, '(tabs)', '_layout.tsx')).toContain('<SlidePushable>');
+    expect(read(srcDir, 'ui', 'components', 'Screen.tsx')).toContain('<SlidePushable>');
+    expect(read(appDir, 'welcome.tsx')).toContain('<SlidePushable>');
+    expect(read(appDir, 'signup-legal.tsx')).toContain('<SlidePushable>');
   });
 });
