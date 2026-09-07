@@ -8,7 +8,7 @@ import type { ProfileView } from '@/repositories/profileRepo';
 import { profileStatLine } from '@/utils/compactCount';
 import { useTheme } from '@/ui/theme/ThemeProvider';
 import { radius, spacing, touchTarget } from '@/ui/theme/tokens';
-import { HeaderAvatarButton, HeaderNotifyButton } from './AppHeader';
+import { HeaderAvatarButton, HeaderChatsButton, HeaderNotifyButton } from './AppHeader';
 import { AppText } from './AppText';
 
 const AVATAR = 92;
@@ -95,11 +95,12 @@ export function ProfileHeader({
         ) : null}
       </Pressable>
 
-      {/* Back on the left; notifications then the same account picture as
-          Today on the right. */}
+      {/* Back on the left; chats, notifications, then the same account picture
+          as Today on the right. */}
       <View style={[styles.chrome, { top: insets.top + spacing.sm }]} pointerEvents="box-none">
         <GhostButton icon="chevron-back" label="Back" onPress={onBack} size={28} contrast />
         <View style={styles.menu}>
+          <HeaderChatsButton />
           <HeaderNotifyButton />
           <HeaderAvatarButton />
         </View>

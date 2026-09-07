@@ -113,9 +113,38 @@ async function purgeUserData(ctx: MutationCtx, userId: Id<'users'>, budget: numb
           .withIndex('by_user', (q) => q.eq('userId', userId))
           .take(remaining)
       ).map((row) => ({ _id: row._id, files: [row.avatarId, row.bannerId] })),
-    () => ctx.db.query('profileFollows').withIndex('by_user', (q) => q.eq('userId', userId)).take(remaining),
+    async () => {
+      const [asOne, asTwo] = await Promise.all([
+        ctx.db
+          .query('directChats')
+          .withIndex('by_user_one_updated', (q) => q.eq('userOneId', userId))
+          .take(remaining),
+        ctx.db
+          .query('directChats')
+          .withIndex('by_user_two_updated', (q) => q.eq('userTwoId', userId))
+          .take(remaining),
+      ]);
+      const rows: PurgeRow[] = [];
+      for (const chat of [...asOne, ...asTwo]) {
+        const messages = await ctx.db
+          .query('chatMessages')
+          .withIndex('by_chat_created', (q) => q.eq('chatId', chat._id))
+          .collect();
+        for (const message of messages) rows.push({ _id: message._id });
+        rows.push({ _id: chat._id });
+      }
+      return rows;
+    },
     () =>
-      ctx.db.query('profileFollows').withIndex('by_followee', (q) => q.eq('followeeId', userId)).take(remaining),
+      ctx.db
+        .query('profileFollows')
+        .withIndex('by_user', (q) => q.eq('userId', userId))
+        .take(remaining),
+    () =>
+      ctx.db
+        .query('profileFollows')
+        .withIndex('by_followee', (q) => q.eq('followeeId', userId))
+        .take(remaining),
     async () => {
       const owned = await ctx.db
         .query('profilePhotos')
@@ -137,8 +166,16 @@ async function purgeUserData(ctx: MutationCtx, userId: Id<'users'>, budget: numb
       }
       return rows;
     },
-    () => ctx.db.query('photoLikes').withIndex('by_user', (q) => q.eq('userId', userId)).take(remaining),
-    () => ctx.db.query('photoComments').withIndex('by_user', (q) => q.eq('userId', userId)).take(remaining),
+    () =>
+      ctx.db
+        .query('photoLikes')
+        .withIndex('by_user', (q) => q.eq('userId', userId))
+        .take(remaining),
+    () =>
+      ctx.db
+        .query('photoComments')
+        .withIndex('by_user', (q) => q.eq('userId', userId))
+        .take(remaining),
     async () => {
       const owned = await ctx.db
         .query('fitnessGroups')
@@ -155,21 +192,81 @@ async function purgeUserData(ctx: MutationCtx, userId: Id<'users'>, budget: numb
       }
       return rows;
     },
-    () => ctx.db.query('groupMembers').withIndex('by_user', (q) => q.eq('userId', userId)).take(remaining),
-    () => ctx.db.query('diaryEntries').withIndex('by_user_date', (q) => q.eq('userId', userId)).take(remaining),
-    () => ctx.db.query('foodLogHistory').withIndex('by_user', (q) => q.eq('userId', userId)).take(remaining),
-    () => ctx.db.query('cachedFoods').withIndex('by_user_provider', (q) => q.eq('userId', userId)).take(remaining),
-    () => ctx.db.query('customFoods').withIndex('by_user', (q) => q.eq('userId', userId)).take(remaining),
-    () => ctx.db.query('savedMeals').withIndex('by_user', (q) => q.eq('userId', userId)).take(remaining),
-    () => ctx.db.query('recipes').withIndex('by_user', (q) => q.eq('userId', userId)).take(remaining),
-    () => ctx.db.query('searchHistory').withIndex('by_user_query', (q) => q.eq('userId', userId)).take(remaining),
-    () => ctx.db.query('favorites').withIndex('by_user', (q) => q.eq('userId', userId)).take(remaining),
-    () => ctx.db.query('goalConfigs').withIndex('by_user_effective', (q) => q.eq('userId', userId)).take(remaining),
-    () => ctx.db.query('dayTypeMarks').withIndex('by_user_date', (q) => q.eq('userId', userId)).take(remaining),
-    () => ctx.db.query('activityEntries').withIndex('by_user_date', (q) => q.eq('userId', userId)).take(remaining),
-    () => ctx.db.query('dayNotes').withIndex('by_user_date', (q) => q.eq('userId', userId)).take(remaining),
-    () => ctx.db.query('mealCategories').withIndex('by_user', (q) => q.eq('userId', userId)).take(remaining),
-    () => ctx.db.query('settings').withIndex('by_user_key', (q) => q.eq('userId', userId)).take(remaining),
+    () =>
+      ctx.db
+        .query('groupMembers')
+        .withIndex('by_user', (q) => q.eq('userId', userId))
+        .take(remaining),
+    () =>
+      ctx.db
+        .query('diaryEntries')
+        .withIndex('by_user_date', (q) => q.eq('userId', userId))
+        .take(remaining),
+    () =>
+      ctx.db
+        .query('foodLogHistory')
+        .withIndex('by_user', (q) => q.eq('userId', userId))
+        .take(remaining),
+    () =>
+      ctx.db
+        .query('cachedFoods')
+        .withIndex('by_user_provider', (q) => q.eq('userId', userId))
+        .take(remaining),
+    () =>
+      ctx.db
+        .query('customFoods')
+        .withIndex('by_user', (q) => q.eq('userId', userId))
+        .take(remaining),
+    () =>
+      ctx.db
+        .query('savedMeals')
+        .withIndex('by_user', (q) => q.eq('userId', userId))
+        .take(remaining),
+    () =>
+      ctx.db
+        .query('recipes')
+        .withIndex('by_user', (q) => q.eq('userId', userId))
+        .take(remaining),
+    () =>
+      ctx.db
+        .query('searchHistory')
+        .withIndex('by_user_query', (q) => q.eq('userId', userId))
+        .take(remaining),
+    () =>
+      ctx.db
+        .query('favorites')
+        .withIndex('by_user', (q) => q.eq('userId', userId))
+        .take(remaining),
+    () =>
+      ctx.db
+        .query('goalConfigs')
+        .withIndex('by_user_effective', (q) => q.eq('userId', userId))
+        .take(remaining),
+    () =>
+      ctx.db
+        .query('dayTypeMarks')
+        .withIndex('by_user_date', (q) => q.eq('userId', userId))
+        .take(remaining),
+    () =>
+      ctx.db
+        .query('activityEntries')
+        .withIndex('by_user_date', (q) => q.eq('userId', userId))
+        .take(remaining),
+    () =>
+      ctx.db
+        .query('dayNotes')
+        .withIndex('by_user_date', (q) => q.eq('userId', userId))
+        .take(remaining),
+    () =>
+      ctx.db
+        .query('mealCategories')
+        .withIndex('by_user', (q) => q.eq('userId', userId))
+        .take(remaining),
+    () =>
+      ctx.db
+        .query('settings')
+        .withIndex('by_user_key', (q) => q.eq('userId', userId))
+        .take(remaining),
   ];
   for (const step of steps) {
     if (remaining <= 0) break;
