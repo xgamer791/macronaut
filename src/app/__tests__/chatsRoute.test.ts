@@ -142,4 +142,16 @@ describe('chat routes', () => {
     expect(layout).toContain('profile.ensure()');
     expect(layout).toContain('if (!signedIn || claimed.current) return;');
   });
+
+  it('drops the home-indicator inset under the composer once the keyboard is up', () => {
+    const thread = readApp(path.join('chat', '[id].tsx'));
+    // 34pt of safe area under the composer is dead space when the keyboard is
+    // already covering the indicator.
+    expect(thread).toContain('const COMPOSER_KEYBOARD_GAP = spacing.md');
+    expect(thread).toContain(
+      'paddingBottom: typing ? COMPOSER_KEYBOARD_GAP : Math.max(insets.bottom, spacing.sm)',
+    );
+    expect(thread).toContain('onFocus={() => setTyping(true)}');
+    expect(thread).toContain('onBlur={() => setTyping(false)}');
+  });
 });

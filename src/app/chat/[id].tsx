@@ -47,6 +47,8 @@ const BUBBLE_RADIUS = 20;
 const TAIL_RADIUS = 7;
 /** A media bubble is capped so a tall photo cannot take the whole thread. */
 const MEDIA_MAX_HEIGHT = 320;
+/** Space left under the composer once the keyboard is up. */
+const COMPOSER_KEYBOARD_GAP = spacing.md;
 const MEDIA_MAX_WIDTH = 340;
 const MEDIA_DEFAULT_RATIO = 4 / 3;
 const ATTACHMENT_MENU_HEIGHT = 82;
@@ -248,6 +250,7 @@ export function ConversationView({
   const [listening, setListening] = useState(false);
   const [startingDictation, setStartingDictation] = useState(false);
   const [dictationError, setDictationError] = useState<string | null>(null);
+  const [typing, setTyping] = useState(false);
   const dictationBase = useRef('');
   const turns = useMemo(() => groupMessages(data.messages), [data.messages]);
   const canSend = Boolean(draft.trim() || attachment) && !sending;
@@ -425,7 +428,10 @@ export function ConversationView({
             styles.composerWrap,
             {
               backgroundColor: colors.background,
-              paddingBottom: Math.max(insets.bottom, spacing.sm),
+              // The home-indicator inset only earns its space when the
+              // indicator is showing. Once the keyboard is over it, that inset
+              // is a dead band between the composer and the keys.
+              paddingBottom: typing ? COMPOSER_KEYBOARD_GAP : Math.max(insets.bottom, spacing.sm),
             },
           ]}
         >
@@ -517,6 +523,8 @@ export function ConversationView({
                 placeholderTextColor={colors.textMuted}
                 maxLength={2000}
                 returnKeyType="send"
+                onFocus={() => setTyping(true)}
+                onBlur={() => setTyping(false)}
                 onSubmitEditing={() => {
                   if (canSend) submitMessage();
                 }}
