@@ -106,6 +106,19 @@ async function purgeUserData(ctx: MutationCtx, userId: Id<'users'>, budget: numb
           .withIndex('by_user_created', (q) => q.eq('userId', userId))
           .take(remaining)
       ).map((row) => ({ _id: row._id, files: [row.imageId] })),
+    async () => {
+      const [received, caused] = await Promise.all([
+        ctx.db
+          .query('notifications')
+          .withIndex('by_recipient_created', (q) => q.eq('recipientId', userId))
+          .take(remaining),
+        ctx.db
+          .query('notifications')
+          .withIndex('by_actor', (q) => q.eq('actorId', userId))
+          .take(remaining),
+      ]);
+      return [...new Map([...received, ...caused].map((row) => [row._id, row])).values()];
+    },
     async () =>
       (
         await ctx.db

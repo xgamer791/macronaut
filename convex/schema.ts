@@ -228,6 +228,22 @@ export default defineSchema({
     .index('by_chat_created', ['chatId', 'createdAt'])
     .index('by_sender', ['senderId']),
 
+  /** Durable in-app events shown by the header bell. The recipient owns read
+   * state; the actor is the account that caused the event. */
+  notifications: defineTable({
+    recipientId: v.id('users'),
+    actorId: v.id('users'),
+    kind: v.union(v.literal('friend_request'), v.literal('chat_message')),
+    chatId: v.optional(v.id('directChats')),
+    body: v.optional(v.string()),
+    readAt: v.optional(v.string()),
+    createdAt: v.string(),
+  })
+    .index('by_recipient_created', ['recipientId', 'createdAt'])
+    .index('by_recipient_chat', ['recipientId', 'chatId'])
+    .index('by_recipient_kind_actor', ['recipientId', 'kind', 'actorId'])
+    .index('by_actor', ['actorId']),
+
   /** Photos on a profile wall. Public ones are visible on a public profile;
    * private ones stay on the owner's wall only. */
   profilePhotos: defineTable({

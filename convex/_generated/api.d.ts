@@ -30,6 +30,7 @@ import type * as lib_handles from '../lib/handles.js';
 import type * as lib_profileAccess from '../lib/profileAccess.js';
 import type * as lib_validators from '../lib/validators.js';
 import type * as mealCategories from '../mealCategories.js';
+import type * as notifications from '../notifications.js';
 import type * as photos from '../photos.js';
 import type * as profiles from '../profiles.js';
 import type * as recipes from '../recipes.js';
@@ -66,6 +67,7 @@ declare const fullApi: ApiFromModules<{
   'lib/profileAccess': typeof lib_profileAccess;
   'lib/validators': typeof lib_validators;
   mealCategories: typeof mealCategories;
+  notifications: typeof notifications;
   photos: typeof photos;
   profiles: typeof profiles;
   recipes: typeof recipes;

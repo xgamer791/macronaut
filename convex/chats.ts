@@ -3,6 +3,7 @@ import type { Doc, Id } from './_generated/dataModel';
 import { mutation, query, type MutationCtx, type QueryCtx } from './_generated/server';
 import { nowIso, requireUserId } from './lib/auth';
 import { normalizeHandle } from './lib/handles';
+import { addChatNotification, markChatNotificationsRead } from './notifications';
 
 const MESSAGE_LIMIT = 200;
 const CHAT_LIMIT = 100;
@@ -257,6 +258,7 @@ export const send = mutation({
       updatedAt: ts,
       ...(chat.userOneId === userId ? { userOneReadAt: ts } : { userTwoReadAt: ts }),
     });
+    await addChatNotification(ctx, peerId(chat, userId), userId, id, trimmed, ts);
     return { id: messageId as string, body: trimmed, createdAt: ts, isMine: true };
   },
 });
@@ -272,6 +274,7 @@ export const markRead = mutation({
       id,
       chat.userOneId === userId ? { userOneReadAt: ts } : { userTwoReadAt: ts },
     );
+    await markChatNotificationsRead(ctx, userId, id, ts);
     return null;
   },
 });
