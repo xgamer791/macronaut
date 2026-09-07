@@ -15,7 +15,7 @@ describe('post-signup onboarding', () => {
   });
 
   it('starts with personalization and does not repeat collected account fields', () => {
-    expect(onboarding).toContain("type Step = 'about' | 'goal' | 'activity' | 'review'");
+    expect(onboarding).toContain("type Step = 'about' | 'goal' | 'activity' | 'review' | 'gym'");
     expect(onboarding).toContain("useState<Step>('about')");
     expect(onboarding).not.toContain("step === 'welcome'");
     expect(onboarding).not.toContain('What should we call you?');
@@ -31,6 +31,19 @@ describe('post-signup onboarding', () => {
     expect(onboarding).toContain('styles.progress');
     expect(onboarding).toContain('styles.panel');
     expect(onboarding).toContain('Personalized baseline');
+  });
+
+  it('ends on the home gym, which is skippable and never blocks finishing', () => {
+    expect(onboarding).toContain(
+      "const STEPS: Step[] = ['about', 'goal', 'activity', 'review', 'gym']",
+    );
+    expect(onboarding).toContain("step === 'gym' && targets");
+    expect(onboarding).toContain('<HomeGymPicker');
+    expect(onboarding).toContain('onDone={() => void complete(targets)}');
+    expect(onboarding).toContain('onSkip={() => void complete(targets)}');
+    // Review no longer saves; it hands over to the gym step.
+    expect(onboarding).toContain("onPress={() => goTo('gym')}");
+    expect(onboarding).not.toContain('Save and start tracking');
   });
 
   it('finishes the signup state only after onboarding is saved', () => {

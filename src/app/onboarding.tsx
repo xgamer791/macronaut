@@ -25,17 +25,18 @@ import {
 import { useRepos } from '@/state/AppProvider';
 import { useAuth } from '@/state/AuthProvider';
 import { clearSignupComplete } from '@/state/signupDraft';
-import { AppText } from '@/ui/components';
+import { AppText, HomeGymPicker } from '@/ui/components';
 import { DARK_FIELD } from '@/ui/DarkField';
 import { WelcomeBackground } from '@/ui/WelcomeBackground';
 import { WelcomeCta } from '@/ui/WelcomeCta';
+import { ThemeProvider } from '@/ui/theme/ThemeProvider';
 import { fonts, palette, radius, type } from '@/ui/theme/tokens';
 import { todayKey } from '@/utils/date';
 
-type Step = 'about' | 'goal' | 'activity' | 'review';
+type Step = 'about' | 'goal' | 'activity' | 'review' | 'gym';
 type IconName = React.ComponentProps<typeof Ionicons>['name'];
 
-const STEPS: Step[] = ['about', 'goal', 'activity', 'review'];
+const STEPS: Step[] = ['about', 'goal', 'activity', 'review', 'gym'];
 
 const GOAL_OPTIONS: {
   value: GoalType;
@@ -844,11 +845,39 @@ export default function Onboarding() {
               {saveError ? <AppText style={styles.saveError}>{saveError}</AppText> : null}
               <View style={styles.actions}>
                 <WelcomeCta
-                  label={saving ? 'Saving…' : 'Save and start tracking'}
-                  onPress={() => void complete(targets)}
+                  label="Continue"
+                  onPress={() => goTo('gym')}
                   disabled={saving || targets.calories <= 0}
                 />
                 <SecondaryAction label="Back" onPress={() => goTo('activity')} disabled={saving} />
+              </View>
+            </>
+          ) : null}
+
+          {step === 'gym' && targets ? (
+            <>
+              <Intro
+                eyebrow="LAST STEP"
+                title="Where do you train?"
+                copy="Set your home gym and you'll be connected with everyone on Macronaut who trains there. Change it any time from Settings."
+              />
+
+              {/* The picker is a themed component on a screen that is always
+                  dark, so it is pinned to the dark palette like the profile
+                  page does. The claim lands first; finishing onboarding is
+                  what navigates away, so a failed claim keeps you here. */}
+              <ThemeProvider initialMode="dark">
+                <HomeGymPicker
+                  confirmLabel={saving ? 'Saving…' : 'Finish'}
+                  busy={saving}
+                  onDone={() => void complete(targets)}
+                  onSkip={() => void complete(targets)}
+                />
+              </ThemeProvider>
+
+              {saveError ? <AppText style={styles.saveError}>{saveError}</AppText> : null}
+              <View style={styles.actions}>
+                <SecondaryAction label="Back" onPress={() => goTo('review')} disabled={saving} />
               </View>
             </>
           ) : null}
