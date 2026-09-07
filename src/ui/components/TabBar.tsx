@@ -5,7 +5,6 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '@/ui/theme/ThemeProvider';
 import { spacing } from '@/ui/theme/tokens';
-import { AppText } from './AppText';
 
 type IconName = keyof typeof Ionicons.glyphMap;
 
@@ -29,7 +28,7 @@ const TAB_META: Record<string, TabMeta> = {
   settings: { label: 'Settings', icon: 'settings-outline', iconActive: 'settings' },
 };
 
-/** Bottom tab bar. Add food lives on the Today header plus, not here. */
+/** Bottom tab bar. Icons only — labels stay on the accessibility name. */
 export function TabBar({ state, navigation }: BottomTabBarProps) {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
@@ -52,21 +51,12 @@ export function TabBar({ state, navigation }: BottomTabBarProps) {
         const routeIndex = state.routes.findIndex((r) => r.key === route.key);
         const focused = state.index === routeIndex && !meta.comingSoon;
 
-        const content = (
-          <>
-            <Ionicons
-              name={focused ? meta.iconActive : meta.icon}
-              size={22}
-              color={focused ? colors.accent : colors.textMuted}
-            />
-            <AppText
-              variant="micro"
-              tone={focused ? 'accent' : 'muted'}
-              weight={focused ? '600' : '400'}
-            >
-              {meta.label}
-            </AppText>
-          </>
+        const icon = (
+          <Ionicons
+            name={focused ? meta.iconActive : meta.icon}
+            size={22}
+            color={focused ? colors.accent : colors.textMuted}
+          />
         );
 
         if (meta.comingSoon) {
@@ -78,7 +68,7 @@ export function TabBar({ state, navigation }: BottomTabBarProps) {
               accessibilityState={{ selected: false, disabled: true }}
               style={styles.tab}
             >
-              {content}
+              {icon}
             </View>
           );
         }
@@ -101,7 +91,7 @@ export function TabBar({ state, navigation }: BottomTabBarProps) {
             }}
             style={styles.tab}
           >
-            {content}
+            {icon}
           </Pressable>
         );
       })}
@@ -119,7 +109,7 @@ const styles = StyleSheet.create({
   tab: {
     flex: 1,
     alignItems: 'center',
-    gap: 2,
+    justifyContent: 'center',
     paddingVertical: spacing.sm,
   },
 });
