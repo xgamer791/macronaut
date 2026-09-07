@@ -8,7 +8,6 @@ import { displayNameFromUser } from '@/services/auth/displayName';
 import { useAuth } from '@/state/AuthProvider';
 import { useNotifications, useSetting } from '@/state/queries';
 import { isAppleWatchConnected } from '@/utils/appleHealthStatus';
-import { useTheme } from '@/ui/theme/ThemeProvider';
 import { palette, spacing, touchTarget } from '@/ui/theme/tokens';
 import { AppText } from './AppText';
 
@@ -32,11 +31,10 @@ export interface AppHeaderProps {
 /**
  * Garmin-style chrome: add / calendar / watch on the right. Profile, chats
  * and notifications live in the tab bar, not here.
+ * White icons — sits over the Today hero or any dark surface.
  */
 export function AppHeader({ onCalendarPress }: AppHeaderProps) {
   const router = useRouter();
-  const { colors } = useTheme();
-  const icon = colors.textPrimary;
 
   return (
     <View style={styles.row}>
@@ -49,7 +47,7 @@ export function AppHeader({ onCalendarPress }: AppHeaderProps) {
           }}
           slot={PLUS}
         >
-          <Ionicons name="add" size={PLUS} color={icon} />
+          <Ionicons name="add" size={PLUS} color={ICON} />
         </HeaderHit>
 
         <HeaderHit
@@ -59,7 +57,7 @@ export function AppHeader({ onCalendarPress }: AppHeaderProps) {
             onCalendarPress?.();
           }}
         >
-          <Ionicons name="calendar-outline" size={GLYPH} color={icon} />
+          <Ionicons name="calendar-outline" size={GLYPH} color={ICON} />
         </HeaderHit>
 
         <WatchButton />

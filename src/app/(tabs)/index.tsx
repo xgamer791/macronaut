@@ -229,7 +229,7 @@ function TodayBody() {
       }
     >
       {/* —— Hero —— */}
-      <View style={[styles.hero, { height: heroHeight }]}>
+      <View style={[styles.hero, { height: heroHeight + insets.top }]}>
         <Image
           source={HERO_IMAGE}
           style={StyleSheet.absoluteFill}

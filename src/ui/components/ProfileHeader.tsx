@@ -20,7 +20,7 @@ type IconName = keyof typeof Ionicons.glyphMap;
 export interface ProfileHeaderProps {
   profile: ProfileView;
   onBack: () => void;
-  /** False when the page lifts the navigation chrome into the sticky header. */
+  /** False when the page lifts the navigation chrome into a sticky glass bar. */
   showChrome?: boolean;
   /** Trailing control on the identity row — the small gear on your own page. */
   right?: React.ReactNode;
@@ -36,8 +36,8 @@ export interface ProfileHeaderProps {
  * page. Shared by your own page and by a public one; the editing affordances
  * only appear when the pick handlers are supplied.
  *
- * Inline chrome over the banner is fixed white rather than themed, because it
- * sits on a photo the user chose. The sticky header uses the page theme.
+ * The chrome over the banner is fixed white rather than themed, because it
+ * sits on a photo the user chose.
  */
 export function ProfileHeader({
   profile,
@@ -63,7 +63,7 @@ export function ProfileHeader({
         accessibilityLabel={editable ? 'Change your banner photo' : undefined}
         disabled={!editable}
         onPress={onPickBanner}
-        style={{ height: bannerHeight + (showChrome ? insets.top : 0) }}
+        style={{ height: bannerHeight + insets.top }}
       >
         {profile.bannerUrl ? (
           <Image
@@ -168,7 +168,7 @@ export function ProfileHeader({
 /**
  * Back on the left; chats, notifications, then the same account picture as
  * Today on the right. Shared by the inline banner chrome and the sticky
- * header bar.
+ * glass bar.
  */
 export function ProfileHeaderChrome({ onBack }: { onBack: () => void }) {
   return (
