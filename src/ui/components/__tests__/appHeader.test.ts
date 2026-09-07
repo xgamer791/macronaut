@@ -8,7 +8,7 @@ describe('Today header hamburger', () => {
     expect(header).toContain('<Menu size={MENU}');
     expect(header).toContain('<CalendarDays size={GLYPH}');
     expect(header).toContain('<BellIcon');
-    expect(header).toContain('const MENU = 27');
+    expect(header).toContain('const MENU = 25');
     expect(header).toContain('size={MENU}');
     expect(header).toContain('Open menu');
     expect(header).toContain('Close menu');
