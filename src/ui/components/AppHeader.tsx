@@ -23,6 +23,9 @@ const ICON = '#FFFFFF';
 const DOT = '#2EE66A';
 const GLYPH = 22;
 const GLYPH_INSET = (touchTarget - GLYPH) / 2;
+/** The watch is a photo, not a line glyph, so it needs a slightly wider
+ * circle to stay legible at the same optical weight. */
+const WATCH_CIRCLE = 28;
 
 export interface AppHeaderProps {
   /** Bell action. Defaults to opening the calendar when provided by Today. */
@@ -140,14 +143,10 @@ export function AppHeader({ onBellPress, notifyDot = true }: AppHeaderProps) {
             router.push('/apple-health');
           }}
           dot
+          slot={WATCH_CIRCLE}
         >
           <View style={styles.watch}>
-            <Image
-              source={WATCH_FACE}
-              style={styles.watchImg}
-              contentFit="cover"
-              contentPosition="center"
-            />
+            <Image source={WATCH_FACE} style={styles.watchImg} contentFit="contain" />
           </View>
         </HeaderHit>
       </View>
@@ -161,13 +160,17 @@ function HeaderHit({
   onPress,
   disabled,
   dot,
+  slot = GLYPH,
 }: {
   children: React.ReactNode;
   accessibilityLabel: string;
   onPress: () => void;
   disabled?: boolean;
   dot?: boolean;
+  /** Size of the centered content box. Defaults to the shared glyph size. */
+  slot?: number;
 }) {
+  const inset = (touchTarget - slot) / 2;
   return (
     <Pressable
       accessibilityRole="button"
@@ -177,10 +180,13 @@ function HeaderHit({
       hitSlop={4}
       style={styles.hit}
     >
-      <View style={styles.glyphSlot} pointerEvents="none">
+      <View
+        style={[styles.glyphSlot, { top: inset, left: inset, width: slot, height: slot }]}
+        pointerEvents="none"
+      >
         {children}
       </View>
-      {dot ? <View style={styles.dot} /> : null}
+      {dot ? <View style={[styles.dot, { top: inset - 2, right: inset - 2 }]} /> : null}
     </Pressable>
   );
 }
@@ -252,15 +258,15 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   watch: {
-    width: GLYPH,
-    height: GLYPH,
-    borderRadius: GLYPH / 2,
+    width: WATCH_CIRCLE,
+    height: WATCH_CIRCLE,
+    borderRadius: WATCH_CIRCLE / 2,
     overflow: 'hidden',
     backgroundColor: '#111',
   },
   watchImg: {
-    width: GLYPH,
-    height: GLYPH,
+    width: WATCH_CIRCLE,
+    height: WATCH_CIRCLE,
   },
   dot: {
     position: 'absolute',
