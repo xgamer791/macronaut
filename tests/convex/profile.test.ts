@@ -437,6 +437,136 @@ describe('profile follows', () => {
   });
 });
 
+describe('profile connections', () => {
+  /** Alice is followed by Bob and Cara, follows Bob and Dan back, so Bob is
+   * her only friend. Every list below is read against that shape. */
+  async function graph() {
+    const t = backend();
+    const a = await signIn(t, 'a@example.com', 'Alice Runner');
+    const b = await signIn(t, 'b@example.com', 'Bob Stone');
+    const c = await signIn(t, 'c@example.com', 'Cara Wells');
+    const d = await signIn(t, 'd@example.com', 'Dan Pike');
+
+    await a.repos.profile.update({ handle: 'alice', displayName: 'Alice Runner', isPublic: true });
+    await b.repos.profile.update({ handle: 'bob', displayName: 'Bob Stone', isPublic: true });
+    await c.repos.profile.update({ handle: 'cara', displayName: 'Cara Wells', isPublic: true });
+    await d.repos.profile.update({ handle: 'dan', displayName: 'Dan Pike', isPublic: true });
+
+    await b.repos.profile.setFollow('alice', true);
+    await c.repos.profile.setFollow('alice', true);
+    await a.repos.profile.setFollow('bob', true);
+    await a.repos.profile.setFollow('dan', true);
+    return { t, a, b, c, d };
+  }
+
+  const names = (people: { displayName: string }[]) => people.map((person) => person.displayName);
+
+  it('lists followers, following and the mutual follows that are friends', async () => {
+    const { a } = await graph();
+
+    const followers = await a.repos.profile.connections({ tab: 'followers' });
+    expect(followers?.subject).toEqual({ handle: 'alice', displayName: 'Alice Runner' });
+    expect(followers?.counts).toEqual({ followers: 2, following: 2, friends: 1 });
+    expect(names(followers!.people)).toEqual(['Bob Stone', 'Cara Wells']);
+
+    const following = await a.repos.profile.connections({ tab: 'following' });
+    expect(names(following!.people)).toEqual(['Bob Stone', 'Dan Pike']);
+
+    // A friend is a follow that goes both ways: Cara only follows, Dan is
+    // only followed, so neither is one.
+    const friends = await a.repos.profile.connections({ tab: 'friends' });
+    expect(names(friends!.people)).toEqual(['Bob Stone']);
+    // All three counts come back whichever tab was asked for.
+    expect(friends?.counts).toEqual({ followers: 2, following: 2, friends: 1 });
+  });
+
+  it('labels every row with where the viewer stands, and marks their own', async () => {
+    const { a, c } = await graph();
+
+    const mine = await a.repos.profile.connections({ tab: 'followers' });
+    expect(mine!.people.map((person) => [person.displayName, person.friendship])).toEqual([
+      ['Bob Stone', 'friends'],
+      ['Cara Wells', 'incoming'],
+    ]);
+    expect(mine!.people.every((person) => person.isYou)).toBe(false);
+
+    // Cara reads Alice's page, and finds herself in it with nothing to do.
+    const theirs = await c.repos.profile.connections({ handle: 'alice', tab: 'followers' });
+    const cara = theirs!.people.find((person) => person.handle === 'cara');
+    expect(cara?.isYou).toBe(true);
+    expect(theirs!.people.find((person) => person.handle === 'bob')?.friendship).toBe('none');
+  });
+
+  it('searches the whole list by name and by handle, @ or not', async () => {
+    const { a } = await graph();
+    const search = async (term: string) =>
+      names((await a.repos.profile.connections({ tab: 'following', search: term }))!.people);
+
+    expect(await search('bob')).toEqual(['Bob Stone']);
+    expect(await search('  STONE ')).toEqual(['Bob Stone']);
+    expect(await search('@dan')).toEqual(['Dan Pike']);
+    expect(await search('nobody')).toEqual([]);
+    // A search never changes the counts the tabs are labelled with.
+    const narrowed = await a.repos.profile.connections({ tab: 'following', search: 'bob' });
+    expect(narrowed?.counts).toEqual({ followers: 2, following: 2, friends: 1 });
+  });
+
+  it('never finds anyone by their email address', async () => {
+    const { a } = await graph();
+    const found = await a.repos.profile.connections({ tab: 'following', search: 'b@example.com' });
+    expect(found?.people).toEqual([]);
+  });
+
+  it('answers a private page the same way a handle nobody owns is answered', async () => {
+    const { t, a, b } = await graph();
+    expect((await b.repos.profile.connections({ handle: 'alice', tab: 'followers' }))?.counts)
+      .toEqual({ followers: 2, following: 2, friends: 1 });
+
+    await a.repos.profile.update({ isPublic: false });
+    expect(await b.repos.profile.connections({ handle: 'alice', tab: 'followers' })).toBeNull();
+    expect(await b.repos.profile.connections({ handle: 'nobody', tab: 'followers' })).toBeNull();
+    // The owner still reads their own lists on a page nobody else may open.
+    expect(
+      (await a.repos.profile.connections({ handle: 'alice', tab: 'followers' }))?.people,
+    ).toHaveLength(2);
+
+    // Signed out, a public page's lists open and a private one's do not.
+    await a.repos.profile.update({ isPublic: true });
+    expect(
+      (await t.query(api.profiles.connections, { handle: 'alice', tab: 'followers' }))?.counts
+        .followers,
+    ).toBe(2);
+    // With no session nobody has any standing with anybody.
+    const anonymous = await t.query(api.profiles.connections, {
+      handle: 'alice',
+      tab: 'followers',
+    });
+    expect(anonymous!.people.every((person) => person.friendship === 'none')).toBe(true);
+    expect(anonymous!.people.every((person) => person.isYou === false)).toBe(true);
+
+    // Your own lists need a session, since there is no page to name.
+    expect(await t.query(api.profiles.connections, { tab: 'followers' })).toBeNull();
+  });
+
+  it('reports the mutual follow the profile page needs to offer a message', async () => {
+    const { a, b, c } = await graph();
+
+    const bobAsAlice = (await a.repos.profile.byHandle('bob'))!.profile;
+    expect(bobAsAlice.isFollowing).toBe(true);
+    expect(bobAsAlice.isFollowedBy).toBe(true);
+
+    // Cara follows Alice and is not followed back.
+    const aliceAsCara = (await c.repos.profile.byHandle('alice'))!.profile;
+    expect(aliceAsCara.isFollowing).toBe(true);
+    expect(aliceAsCara.isFollowedBy).toBe(false);
+
+    // Your own page never claims you follow yourself.
+    const own = await b.repos.profile.me();
+    expect(own.isFollowing).toBe(false);
+    expect(own.isFollowedBy).toBe(false);
+  });
+});
+
 describe('deleting an account', () => {
   it('takes the profile, the posts and their stored images with it', async () => {
     const t = backend();

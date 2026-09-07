@@ -1,4 +1,11 @@
-import { compactCount, followerLabel, followingLabel, postLabel, profileStatLine } from '../compactCount';
+import {
+  compactCount,
+  followerLabel,
+  followingLabel,
+  friendLabel,
+  postLabel,
+  profileStatLine,
+} from '../compactCount';
 
 describe('compactCount', () => {
   it('leaves small numbers alone and folds thousands the way the reference does', () => {
@@ -21,6 +28,12 @@ describe('compactCount', () => {
 });
 
 describe('profileStatLine', () => {
+  it('pluralises friends the way followers and posts are pluralised', () => {
+    expect(friendLabel(0)).toBe('0 friends');
+    expect(friendLabel(1)).toBe('1 friend');
+    expect(friendLabel(2400)).toBe('2.4K friends');
+  });
+
   it('joins followers, following and posts with a middle dot', () => {
     expect(profileStatLine(1100, 866, 1700)).toBe('1.1K followers · 866 following · 1.7K posts');
     expect(profileStatLine(0, 0, 0)).toBe('0 followers · 0 following · 0 posts');

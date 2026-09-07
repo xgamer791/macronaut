@@ -29,7 +29,12 @@ import { FrequentFood, HistoryRepo, RecentFood } from '@/repositories/historyRep
 import { AppNotification, NotificationRepo } from '@/repositories/notificationRepo';
 import { FitnessGroup, GroupRepo } from '@/repositories/groupRepo';
 import { ProfilePhoto, PhotoComment, PhotoRepo, PhotoThread } from '@/repositories/photoRepo';
-import { ProfilePost, ProfileRepo, ProfileView } from '@/repositories/profileRepo';
+import {
+  ConnectionPerson,
+  ProfilePost,
+  ProfileRepo,
+  ProfileView,
+} from '@/repositories/profileRepo';
 import { AppearanceMode, OnboardingProfile, SettingsRepo } from '@/repositories/settingsRepo';
 import { TrainingScheduleDay, TrainingScheduleRepo } from '@/repositories/trainingScheduleRepo';
 import {
@@ -587,6 +592,9 @@ export const createMemoryRecipeRepo = (): RecipeRepo =>
 
 export function createMemoryProfileRepo(): ProfileRepo {
   const posts: ProfilePost[] = [];
+  /** Who follows this profile. A friend request from an account puts it in
+   * here, which is all the counts and the connections lists read. */
+  const followers: ConnectionPerson[] = [];
   let saved = false;
   let profile: ProfileView = {
     id: null,
@@ -598,10 +606,12 @@ export function createMemoryProfileRepo(): ProfileRepo {
     followerCount: 0,
     followingCount: 0,
     isFollowing: false,
+    isFollowedBy: false,
     isOwner: true,
     saved: false,
   };
-  const view = (): ProfileView => clone({ ...profile, postCount: posts.length, saved });
+  const view = (): ProfileView =>
+    clone({ ...profile, postCount: posts.length, followerCount: followers.length, saved });
   const touch = () => {
     saved = true;
     profile = { ...profile, id: profile.id ?? newId(), updatedAt: nowIso() };
@@ -673,15 +683,45 @@ export function createMemoryProfileRepo(): ProfileRepo {
       }
       return repo.requestFriend(profile.id ?? '', follow);
     },
-    async requestFriend(_userId, follow) {
-      profile = {
-        ...profile,
-        isFollowing: follow,
-        followerCount: follow
-          ? Math.max(1, profile.followerCount)
-          : Math.max(0, profile.followerCount - 1),
-      };
+    async requestFriend(userId, follow) {
+      const at = followers.findIndex((person) => person.id === userId);
+      if (follow && at < 0) {
+        followers.push({
+          id: userId,
+          handle: null,
+          displayName: 'Macronaut member',
+          friendship: profile.isFollowedBy ? 'friends' : 'outgoing',
+          isYou: false,
+        });
+      } else if (!follow && at >= 0) {
+        followers.splice(at, 1);
+      }
+      profile = { ...profile, isFollowing: follow };
       return view();
+    },
+    /** Only the follower side is modelled, which is the side friend requests
+     * write. Who this profile follows lives on the server. */
+    async connections({ handle, tab, search }) {
+      if (handle && handle.toLowerCase() !== profile.handle) return null;
+      const friends = followers.filter((person) => person.friendship === 'friends');
+      const wanted = (search ?? '').trim().toLowerCase().replace(/^@+/, '');
+      const list = tab === 'followers' ? followers : tab === 'friends' ? friends : [];
+      return {
+        subject: { handle: profile.handle, displayName: profile.displayName ?? profile.handle },
+        counts: {
+          followers: followers.length,
+          following: profile.followingCount,
+          friends: friends.length,
+        },
+        people: list
+          .filter(
+            (person) =>
+              !wanted ||
+              person.displayName.toLowerCase().includes(wanted) ||
+              (person.handle ?? '').includes(wanted),
+          )
+          .map(clone),
+      };
     },
   };
   return repo;
@@ -853,6 +893,8 @@ export function createMemoryGroupRepo(): GroupRepo {
 
 export function createMemoryChatRepo(): ChatRepo {
   const chats: ChatSummary[] = [];
+  /** Handles the stub has seen, so opening by handle twice reuses one chat. */
+  const byHandle = new Map<string, string>();
   const messages = new Map<string, ChatMessage[]>();
   /** Stand-in storage: an upload just hands back an id the send can quote. */
   const uploads = new Map<string, Blob>();
@@ -885,6 +927,14 @@ export function createMemoryChatRepo(): ChatRepo {
       chats.unshift(chat);
       messages.set(chat.id, []);
       return clone(chat);
+    },
+    async openByHandle(handle) {
+      const known = byHandle.get(handle.toLowerCase());
+      const existing = known ? chats.find((chat) => chat.peer.id === known) : undefined;
+      if (existing) return clone(existing);
+      const chat = await this.open(newId());
+      byHandle.set(handle.toLowerCase(), chat.peer.id);
+      return { ...chat, peer: { ...chat.peer, handle } };
     },
     async thread(id) {
       const chat = chats.find((row) => row.id === id);

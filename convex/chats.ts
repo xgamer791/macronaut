@@ -2,6 +2,7 @@ import { ConvexError, v } from 'convex/values';
 import type { Doc, Id } from './_generated/dataModel';
 import { mutation, query, type MutationCtx, type QueryCtx } from './_generated/server';
 import { nowIso, requireUserId } from './lib/auth';
+import { normalizeHandle } from './lib/handles';
 import { addChatNotification, markChatNotificationsRead } from './notifications';
 
 const MESSAGE_LIMIT = 200;
@@ -59,13 +60,21 @@ function readAt(chat: Doc<'directChats'>, userId: Id<'users'>): string | undefin
 
 type FriendshipState = 'none' | 'outgoing' | 'incoming' | 'friends';
 
-/** A friend is a mutual follow. That gives both people an explicit action in
- * the existing social graph before either one can message the other. */
-async function friendshipState(
+/**
+ * A friend is a mutual follow. That gives both people an explicit action in
+ * the existing social graph before either one can message the other.
+ *
+ * Exported because a profile's follower and following lists label every row
+ * with the same standing, and there must be one answer to what a friend is.
+ * A caller with no session — someone reading a public page signed out — has
+ * no standing with anybody, so it is `none` rather than an error.
+ */
+export async function friendshipState(
   ctx: QueryCtx | MutationCtx,
-  viewerId: Id<'users'>,
+  viewerId: Id<'users'> | null,
   otherId: Id<'users'>,
 ): Promise<FriendshipState> {
+  if (!viewerId || viewerId === otherId) return 'none';
   const [outgoing, incoming] = await Promise.all([
     ctx.db
       .query('profileFollows')
@@ -82,7 +91,7 @@ async function friendshipState(
   return 'none';
 }
 
-async function profileFor(ctx: QueryCtx | MutationCtx, userId: Id<'users'>) {
+export async function profileFor(ctx: QueryCtx | MutationCtx, userId: Id<'users'>) {
   return ctx.db
     .query('profiles')
     .withIndex('by_user', (q) => q.eq('userId', userId))
@@ -99,9 +108,9 @@ async function profileFor(ctx: QueryCtx | MutationCtx, userId: Id<'users'>) {
  * picture when there is one. Nobody is invisible for never having edited a
  * profile.
  */
-async function identity(
+export async function identity(
   ctx: QueryCtx | MutationCtx,
-  viewerId: Id<'users'>,
+  viewerId: Id<'users'> | null,
   user: Doc<'users'>,
   profile: Doc<'profiles'> | null,
 ) {
@@ -123,6 +132,18 @@ async function identity(
   };
 }
 
+/** The account behind a profile handle. A profile page knows the handle and
+ * never the account id, so that is how it names who to open a chat with. */
+async function userForHandle(ctx: QueryCtx | MutationCtx, handle: string | undefined) {
+  const wanted = normalizeHandle(handle ?? '');
+  if (!wanted) return null;
+  const profile = await ctx.db
+    .query('profiles')
+    .withIndex('by_handle', (q) => q.eq('handleLower', wanted))
+    .first();
+  return profile ? ctx.db.get(profile.userId) : null;
+}
+
 async function personView(ctx: QueryCtx | MutationCtx, viewerId: Id<'users'>, userId: Id<'users'>) {
   const user = await ctx.db.get(userId);
   if (!user) return null;
@@ -133,8 +154,11 @@ async function personView(ctx: QueryCtx | MutationCtx, viewerId: Id<'users'>, us
  * Whether a search term reaches an account: any part of the name it signed
  * up with, or of the handle or display name on its profile when it has one.
  * Never the email — that is a way to confirm addresses, not to find friends.
+ *
+ * Shared with the profile connections lists, so searching a follower list
+ * matches a person on exactly the words people search for anywhere else.
  */
-function matchesSearch(
+export function matchesSearch(
   user: Doc<'users'>,
   profile: Doc<'profiles'> | null,
   wanted: string,
@@ -266,11 +290,22 @@ export const people = query({
   },
 });
 
+/**
+ * The conversation with an account, created on first open.
+ *
+ * The target is named by its id from a people search, or by the handle on a
+ * profile page — the same pair `profiles.setFollow` accepts, so a page that
+ * can befriend somebody can message them without ever handling account ids.
+ * Friends only, and that is decided here rather than in the client.
+ */
 export const open = mutation({
-  args: { userId: v.id('users') },
-  handler: async (ctx, { userId: otherId }) => {
+  args: {
+    userId: v.optional(v.id('users')),
+    handle: v.optional(v.string()),
+  },
+  handler: async (ctx, { userId: otherId, handle }) => {
     const userId = await requireUserId(ctx);
-    const other = await ctx.db.get(otherId);
+    const other = otherId ? await ctx.db.get(otherId) : await userForHandle(ctx, handle);
     if (!other || other._id === userId) {
       throw new ConvexError('Person not available');
     }

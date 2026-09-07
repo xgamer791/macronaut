@@ -5,7 +5,7 @@ import { DayType, GoalConfig, classifyDay } from '@/domain/goals';
 import { WeekStart } from '@/domain/types';
 import { NewActivityEntry } from '@/repositories/activityRepo';
 import { NewDiaryEntry } from '@/repositories/diaryRepo';
-import { ProfileImageKind, ProfilePatch } from '@/repositories/profileRepo';
+import { ConnectionTab, ProfileImageKind, ProfilePatch } from '@/repositories/profileRepo';
 import type { PickedAttachment } from '@/services/media/pickedAttachment';
 import { TrainingScheduleDayInput } from '@/repositories/trainingScheduleRepo';
 import { DiaryEntry, MealCategory } from '@/repositories/types';
@@ -44,6 +44,8 @@ export const keys = {
   profilePosts: ['profile-posts'] as const,
   friendsFeed: ['friends-feed'] as const,
   publicProfile: (handle: string) => ['public-profile', handle] as const,
+  connections: (handle: string, tab: ConnectionTab, search: string) =>
+    ['connections', handle, tab, search] as const,
   photos: ['photos'] as const,
   publicPhotos: (handle: string) => ['public-photos', handle] as const,
   photoThread: (id: string) => ['photo-thread', id] as const,
@@ -179,8 +181,28 @@ export function usePublicProfile(handle: string) {
   });
 }
 
-/** Anything that touches the profile also changes the header avatar and the
- * public page, so all three are dropped together. */
+/**
+ * One tab of the people around a profile — no handle for your own. Search is
+ * part of the key because the server does the filtering, and the previous
+ * answer stays on screen while the next one loads so typing does not blink
+ * the list away between keystrokes.
+ */
+export function useConnections(handle: string, tab: ConnectionTab, search: string) {
+  const { signedIn } = useAuth();
+  const { profile } = useRepos();
+  const term = search.trim();
+  return useQuery({
+    queryKey: keys.connections(handle, tab, term.toLowerCase()),
+    queryFn: () =>
+      profile.connections({ handle: handle || undefined, tab, search: term || undefined }),
+    // A public page's lists open without a session; your own needs one.
+    enabled: handle.length > 0 || signedIn,
+    placeholderData: (previous) => previous,
+  });
+}
+
+/** Anything that touches the profile also changes the header avatar, the
+ * public page and who is in its lists, so they are dropped together. */
 function useInvalidateProfile() {
   const qc = useQueryClient();
   return () => {
@@ -188,6 +210,7 @@ function useInvalidateProfile() {
     qc.invalidateQueries({ queryKey: keys.profilePosts });
     qc.invalidateQueries({ queryKey: keys.friendsFeed });
     qc.invalidateQueries({ queryKey: ['public-profile'] });
+    qc.invalidateQueries({ queryKey: ['connections'] });
   };
 }
 
@@ -505,7 +528,8 @@ export function useOpenChat() {
   const { chats } = useRepos();
   const invalidate = useInvalidateChats();
   return useMutation({
-    mutationFn: (handle: string) => chats.open(handle),
+    mutationFn: (target: { userId?: string; handle?: string }) =>
+      target.userId ? chats.open(target.userId) : chats.openByHandle(target.handle ?? ''),
     onSuccess: () => invalidate(),
   });
 }

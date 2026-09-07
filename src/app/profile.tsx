@@ -129,6 +129,13 @@ function OwnProfile() {
     }
   }
 
+  /** Your own lists are read without a handle: the placeholder profile of an
+   * account that has never saved one has no row to look up. */
+  function openConnections(tab: 'followers' | 'following') {
+    void Haptics.selectionAsync();
+    router.push({ pathname: '/connections', params: { tab } });
+  }
+
   /** The share sheet on a phone; on the web the browser's own share dialog
    * when it has one, and the clipboard when it does not. */
   async function share() {
@@ -173,6 +180,8 @@ function OwnProfile() {
             onPickAvatar={() => void replaceImage('avatar')}
             onPickBanner={() => void replaceImage('banner')}
             uploading={uploading}
+            onOpenFollowers={() => openConnections('followers')}
+            onOpenFollowing={() => openConnections('following')}
           />
 
           <ScrollView

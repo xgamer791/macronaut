@@ -83,6 +83,7 @@ function ThemedApp() {
         <Stack.Screen name="groups" options={SLIDE_OVER_OPTIONS} />
         <Stack.Screen name="chats" options={SLIDE_OVER_OPTIONS} />
         <Stack.Screen name="friends" options={SLIDE_OVER_OPTIONS} />
+        <Stack.Screen name="connections" options={SLIDE_OVER_OPTIONS} />
         <Stack.Screen name="new-chat" options={{ presentation: 'modal' }} />
         <Stack.Screen name="chat/[id]" options={SLIDE_OVER_OPTIONS} />
         <Stack.Screen name="notifications" options={SLIDE_OVER_OPTIONS} />

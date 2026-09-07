@@ -110,8 +110,10 @@ describe('chat routes', () => {
     // Your own account, under any sign-up, is never a search result.
     expect(backend).toContain('function samePerson');
     // Friend and chat actions address the account id, so a person with no
-    // handle yet can still be befriended and messaged.
-    expect(backend).toContain("args: { userId: v.id('users') }");
+    // handle yet can still be befriended and messaged — and either one may
+    // instead name the handle a profile page carries.
+    expect(backend).toContain("userId: v.optional(v.id('users'))");
+    expect(backend).toContain('handle: v.optional(v.string())');
     expect(profiles).toContain("userId: v.optional(v.id('users'))");
   });
 

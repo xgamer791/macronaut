@@ -67,6 +67,9 @@ export interface ChatRepo {
   people(search?: string): Promise<ChatPerson[]>;
   /** The conversation with an account, created on first open. Friends only. */
   open(userId: string): Promise<ChatSummary>;
+  /** The same conversation, named by the handle a profile page carries —
+   * that page knows a handle and never an account id. */
+  openByHandle(handle: string): Promise<ChatSummary>;
   thread(id: string): Promise<ChatThread | null>;
   /** Store a picked photo or clip and hand back its storage id. */
   upload(file: Blob): Promise<string>;
@@ -82,6 +85,7 @@ export function createChatRepo(convex: ConvexCaller): ChatRepo {
     list: () => convex.query(api.chats.list, {}),
     people: (search) => convex.query(api.chats.people, search?.trim() ? { search } : {}),
     open: (userId) => convex.mutation(api.chats.open, { userId: userId as Id<'users'> }),
+    openByHandle: (handle) => convex.mutation(api.chats.open, { handle }),
     thread: (id) => convex.query(api.chats.thread, { id: chatId(id) }),
     async upload(file) {
       const uploadUrl = await convex.mutation(api.chats.generateUploadUrl, {});
