@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useRouter, type Href } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { Animated, Platform, Pressable, StyleSheet, View } from 'react-native';
+import { Animated, Pressable, StyleSheet, View } from 'react-native';
 import { useTheme } from '@/ui/theme/ThemeProvider';
 import { radius, spacing } from '@/ui/theme/tokens';
 import { AppText } from './AppText';
@@ -35,7 +35,7 @@ const MENU_HEIGHT = 248;
 /** Exact gap between the tools button and the top of the tab bar. The
  * tab scene already sits above that chrome, so this is not compounded
  * with the home-indicator inset. */
-const FAB_ABOVE_FOOTER = 10;
+const FAB_ABOVE_FOOTER = 20;
 
 /** Expandable home utility tray. It is intentionally data-driven so future
  * Macronaut tools only need another item in `TOOLS`. */
@@ -181,12 +181,6 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.34,
-    shadowRadius: 14,
-    elevation: 10,
-    ...Platform.select({ web: { boxShadow: '0 10px 28px rgba(0,0,0,0.42)' } as object }),
   },
   buttonPressed: { opacity: 0.86, transform: [{ scale: 0.97 }] },
 });
