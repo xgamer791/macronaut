@@ -1,4 +1,4 @@
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
 import React, { useState } from 'react';
@@ -24,6 +24,8 @@ import { TextField } from './TextField';
 const LIKE_BLUE = '#1877F2';
 const LOVE_RED = '#F0284F';
 const ON_PHOTO = '#FFFFFF';
+/** 5px tighter than xl so like / comment / share sit closer. */
+const ACTION_GAP = spacing.xl - 5;
 
 export interface PhotoViewerProps {
   photo: ProfilePhoto | null;
@@ -170,24 +172,31 @@ export function PhotoViewer({
           >
             <View style={styles.actions}>
               <Engage
-                icon={liked ? 'thumbs-up' : 'thumbs-up-outline'}
                 count={likeCount}
-                active={liked}
                 label={liked ? 'Unlike photo' : 'Like photo'}
                 onPress={tapLike}
-              />
+              >
+                <MaterialCommunityIcons
+                  name={liked ? 'thumb-up' : 'thumb-up-outline'}
+                  size={22}
+                  color={liked ? LIKE_BLUE : ON_PHOTO}
+                />
+              </Engage>
               <Engage
-                icon="chatbubble-outline"
                 count={comments.length}
                 label="Comment on photo"
                 onPress={tapComment}
-              />
-              <Engage icon="arrow-redo-outline" label="Share photo" onPress={onShare} />
+              >
+                <Ionicons name="chatbubble-outline" size={22} color={ON_PHOTO} />
+              </Engage>
+              <Engage label="Share photo" onPress={onShare}>
+                <Ionicons name="arrow-redo-outline" size={22} color={ON_PHOTO} />
+              </Engage>
             </View>
             {likeCount > 0 ? (
               <View style={styles.badges} accessibilityLabel={`${compactCount(likeCount)} likes`}>
                 <View style={[styles.badge, { backgroundColor: LIKE_BLUE, zIndex: 2 }]}>
-                  <Ionicons name="thumbs-up" size={10} color={ON_PHOTO} />
+                  <MaterialCommunityIcons name="thumb-up" size={10} color={ON_PHOTO} />
                 </View>
                 {likeCount > 1 ? (
                   <View style={[styles.badge, styles.badgeOverlap, { backgroundColor: LOVE_RED }]}>
@@ -283,15 +292,13 @@ export function PhotoViewer({
 }
 
 function Engage({
-  icon,
+  children,
   count,
-  active,
   label,
   onPress,
 }: {
-  icon: keyof typeof Ionicons.glyphMap;
+  children: React.ReactNode;
   count?: number;
-  active?: boolean;
   label: string;
   onPress: () => void;
 }) {
@@ -303,7 +310,7 @@ function Engage({
       hitSlop={6}
       style={styles.engage}
     >
-      <Ionicons name={icon} size={22} color={active ? LIKE_BLUE : ON_PHOTO} />
+      {children}
       {count !== undefined && count > 0 ? (
         <AppText variant="body" weight="600" style={styles.onPhoto}>
           {compactCount(count)}
@@ -422,7 +429,7 @@ const styles = StyleSheet.create({
   actions: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.xl,
+    gap: ACTION_GAP,
   },
   engage: {
     minHeight: touchTarget,
