@@ -49,7 +49,8 @@ export function useHeaderScrollHide(enabled: boolean) {
   return { hidden, onScroll };
 }
 
-/** Clips the chrome and slides it out so the page grows into the freed space. */
+/** One slab — bar fill and icons share a single translate. Negative margin
+ * gives the page the space back without a second motion on the children. */
 export function AutoHideHeader({
   hidden,
   children,
@@ -76,7 +77,7 @@ function AutoHideHeaderWeb({
     <View
       {...{ dataSet: { headerhide: hidden ? 'out' : 'in' } }}
       pointerEvents={hidden ? 'none' : 'auto'}
-      style={[styles.clip, height > 0 ? { height: hidden ? 0 : height } : null]}
+      style={[styles.slab, height > 0 ? { marginBottom: hidden ? -height : 0 } : null]}
     >
       <View
         onLayout={(e) => {
@@ -108,31 +109,30 @@ function AutoHideHeaderNative({
     });
   }, [hidden, progress]);
 
-  const clipStyle = useAnimatedStyle(() => ({
-    height: height > 0 ? (1 - progress.value) * height : undefined,
-  }));
-  const innerStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: -progress.value * (height || 0) }],
-  }));
+  const slabStyle = useAnimatedStyle(() => {
+    const offset = -progress.value * (height || 0);
+    return {
+      transform: [{ translateY: offset }],
+      marginBottom: offset,
+    };
+  });
 
   return (
-    <Animated.View style={[styles.clip, clipStyle]} pointerEvents={hidden ? 'none' : 'auto'}>
-      <Animated.View
+    <Animated.View style={[styles.slab, slabStyle]} pointerEvents={hidden ? 'none' : 'auto'}>
+      <View
         onLayout={(e) => {
           const next = Math.round(e.nativeEvent.layout.height);
           if (next > 0) setHeight(next);
         }}
-        style={innerStyle}
       >
         {children}
-      </Animated.View>
+      </View>
     </Animated.View>
   );
 }
 
 const styles = StyleSheet.create({
-  clip: {
-    overflow: 'hidden',
+  slab: {
     flexShrink: 0,
     zIndex: 20,
   },

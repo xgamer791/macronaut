@@ -65,10 +65,14 @@ describe('web html shell', () => {
     expect(html).toContain('prefers-reduced-motion: reduce');
   });
 
-  it('slides the sticky header out on the same 840ms curve', () => {
+  it('slides the sticky header as one slab on the same 840ms curve', () => {
     expect(html).toContain('[data-headerhide]');
-    expect(html).toContain('[data-headerhide="out"] > *');
+    expect(html).toContain('[data-headerhide="out"]');
     expect(html).toContain('translateY(-100%)');
-    expect(html).toContain('height 840ms cubic-bezier(0.22, 1, 0.36, 1)');
+    expect(html).toContain(
+      'transform 840ms cubic-bezier(0.22, 1, 0.36, 1),\n    margin-bottom 840ms cubic-bezier(0.22, 1, 0.36, 1)',
+    );
+    expect(html).not.toContain('[data-headerhide="out"] > *');
+    expect(html).not.toContain('height 840ms');
   });
 });
