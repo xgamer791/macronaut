@@ -41,5 +41,34 @@ describe('notification center', () => {
     expect(chats).toContain('markChatNotificationsRead');
     expect(notifications).toContain("query('notifications')");
     expect(notifications).toContain('requireUserId');
+    // Accepting is not silent: the person who asked is told, or the
+    // friendship is only ever news to one of the two.
+    expect(profile).toContain('addFriendAcceptedNotification');
+    expect(notifications).toContain("kind: 'friend_accepted'");
+  });
+
+  it('answers a friend request on the row, since the profile page may be private', () => {
+    const page = readApp('notifications.tsx');
+    const notifications = fs.readFileSync(
+      path.join(appDir, '..', '..', 'convex', 'notifications.ts'),
+      'utf8',
+    );
+    // The feed carries where you stand with the actor, so the row knows
+    // whether to offer Accept.
+    expect(notifications).toContain('friendship: await friendshipWith(ctx, viewerId, actor._id)');
+    expect(page).toContain("item.actor.friendship === 'incoming'");
+    expect(page).toContain('title="Accept"');
+    expect(page).toContain('setFriend.mutateAsync({ userId: item.actor.id, follow: true })');
+  });
+
+  it('never keeps a stale bundle talking to a freshly deployed backend', () => {
+    const cachebust = fs.readFileSync(
+      path.join(appDir, '..', '..', 'scripts', 'patch-pages-cachebust.py'),
+      'utf8',
+    );
+    // A tab left open never reloaded, so the build check has to run again
+    // when it comes back to the front, not only on first paint.
+    expect(cachebust).toContain("document.addEventListener('visibilitychange'");
+    expect(cachebust).toContain("document.visibilityState==='visible'");
   });
 });
