@@ -134,14 +134,6 @@ function NotificationsScreen() {
         </View>
       ) : (
         <>
-          <View style={[styles.summary, { borderBottomColor: colors.border }]}>
-            <View style={[styles.summaryDot, { backgroundColor: colors.accent }]} />
-            <AppText variant="caption" tone="secondary" weight="600">
-              {feed.data.unreadCount
-                ? `${feed.data.unreadCount} new ${feed.data.unreadCount === 1 ? 'update' : 'updates'}`
-                : 'All caught up'}
-            </AppText>
-          </View>
           {acceptError ? (
             <AppText variant="caption" tone="danger" style={styles.acceptError}>
               {acceptError}
@@ -228,7 +220,7 @@ function NotificationRow({
       ]}
     >
       <View style={styles.avatarWrap}>
-        <ChatAvatar person={item.actor} size={50} />
+        <ChatAvatar person={item.actor} size={42} />
         <View style={styles.kindBadge}>
           <Ionicons
             name={isMessage ? 'chatbubble' : accepted ? 'checkmark' : 'person-add'}
@@ -239,16 +231,21 @@ function NotificationRow({
       </View>
       <View style={[styles.copy, { borderBottomColor: colors.border }]}>
         <View style={styles.topline}>
-          <AppText weight={item.read ? '600' : '700'} numberOfLines={1} style={styles.title}>
-            {item.title}
+          {/* The message picks up where the title ends and wraps with it, so a
+              short one costs no second line. Nested Text flows inline on both
+              platforms; two lines is where it stops. */}
+          <AppText numberOfLines={2} style={styles.message}>
+            <AppText weight={item.read ? '600' : '700'}>{item.title}</AppText>
+            {item.body ? (
+              <AppText variant="caption" tone={item.read ? 'muted' : 'secondary'}>
+                {`  ${item.body}`}
+              </AppText>
+            ) : null}
           </AppText>
-          <AppText variant="micro" tone="muted">
+          <AppText variant="micro" tone="muted" style={styles.time}>
             {relativeTime(item.createdAt)}
           </AppText>
         </View>
-        <AppText variant="caption" tone={item.read ? 'muted' : 'secondary'} numberOfLines={2}>
-          {item.body}
-        </AppText>
         {canAccept ? (
           <Button compact title="Accept" loading={busy} onPress={onAccept} style={styles.accept} />
         ) : (
@@ -302,35 +299,22 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginBottom: -spacing.sm,
   },
-  summary: {
-    minHeight: 42,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    paddingHorizontal: spacing.lg,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-  },
-  summaryDot: {
-    width: 7,
-    height: 7,
-    borderRadius: radius.full,
-  },
   sectionLabel: {
     paddingHorizontal: spacing.lg,
-    paddingTop: spacing.lg,
-    paddingBottom: spacing.sm,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.xs,
     letterSpacing: 0.8,
   },
   row: {
-    minHeight: 92,
+    minHeight: 68,
     flexDirection: 'row',
     alignItems: 'center',
     paddingLeft: spacing.lg,
     position: 'relative',
   },
   avatarWrap: {
-    width: 50,
-    height: 50,
+    width: 42,
+    height: 42,
     position: 'relative',
   },
   kindBadge: {
@@ -344,9 +328,8 @@ const styles = StyleSheet.create({
   },
   copy: {
     flex: 1,
-    minHeight: 92,
+    minHeight: 68,
     justifyContent: 'center',
-    gap: 2,
     borderBottomWidth: StyleSheet.hairlineWidth,
     marginLeft: spacing.md,
     paddingVertical: spacing.sm,
@@ -354,14 +337,22 @@ const styles = StyleSheet.create({
   },
   topline: {
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
+    alignItems: 'flex-start',
   },
-  title: {
-    flex: 1,
+  // Three quarters of the row, so the message turns onto its second line well
+  // clear of the timestamp rather than right up against it.
+  message: {
+    width: '75%',
+  },
+  time: {
+    marginLeft: 'auto',
+    paddingLeft: spacing.sm,
+    // Micro sits in a shorter line box than the title beside it; this drops it
+    // onto the same optical line rather than riding above it.
+    paddingTop: 3,
   },
   action: {
-    marginTop: 2,
+    marginTop: 1,
     letterSpacing: 0.4,
   },
   accept: {
@@ -376,7 +367,10 @@ const styles = StyleSheet.create({
   unreadDot: {
     position: 'absolute',
     right: spacing.lg,
-    top: 44,
+    // Centred rather than pinned, so it holds its place on a row that a
+    // two-line message has made taller.
+    top: '50%',
+    marginTop: -4,
     width: 8,
     height: 8,
     borderRadius: radius.full,

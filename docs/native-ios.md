@@ -56,8 +56,9 @@ header Watch LED showing disconnected. That is the switch to flip.
 - The opt-in row at the top of Notifications
   (`src/ui/components/NotificationOptIn.tsx`) — a switch in the app's own list
   language, written as a control rather than a promotion, so there is nothing
-  to dismiss. Its status line is the honest part: off offers what push would
-  carry, on says the phone will ask once the iOS app exists.
+  to dismiss. Its status line names the events that would actually reach
+  someone, and adds "Starts on iOS." once the switch is on — the caveat has to
+  be said somewhere, and that is the moment it matters.
 - `src/utils/pushNotificationStatus.ts` — `isPushNotificationsLive()` returns
   `false`, plus `PUSH_WANTED_SETTING`.
 - The switch stores `pushNotificationsWanted`, an ordinary account setting, so
