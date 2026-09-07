@@ -34,14 +34,59 @@ async function storageUrl(
   return (await ctx.storage.getUrl(id)) ?? undefined;
 }
 
+async function postCountFor(ctx: QueryCtx | MutationCtx, userId: Id<'users'>) {
+  return (
+    await ctx.db
+      .query('profilePosts')
+      .withIndex('by_user_created', (q) => q.eq('userId', userId))
+      .collect()
+  ).length;
+}
+
+/** Followers of `subjectId` and who they follow. `isFollowing` is whether
+ * the viewer follows them — always false for yourself or a signed-out caller. */
+async function socialFor(
+  ctx: QueryCtx | MutationCtx,
+  subjectId: Id<'users'>,
+  viewerId: Id<'users'> | null,
+) {
+  const [followers, following] = await Promise.all([
+    ctx.db
+      .query('profileFollows')
+      .withIndex('by_followee', (q) => q.eq('followeeId', subjectId))
+      .collect(),
+    ctx.db
+      .query('profileFollows')
+      .withIndex('by_user', (q) => q.eq('userId', subjectId))
+      .collect(),
+  ]);
+  let isFollowing = false;
+  if (viewerId && viewerId !== subjectId) {
+    const row = await ctx.db
+      .query('profileFollows')
+      .withIndex('by_user_followee', (q) => q.eq('userId', viewerId).eq('followeeId', subjectId))
+      .first();
+    isFollowing = row !== null;
+  }
+  return {
+    followerCount: followers.length,
+    followingCount: following.length,
+    isFollowing,
+  };
+}
+
 /** What the client gets for a profile. Never the row: it drops `userId` and
  * turns storage ids into URLs, so the same shape is safe to hand to a
  * stranger reading a public page. */
 async function profileView(
   ctx: QueryCtx | MutationCtx,
   doc: Doc<'profiles'>,
-  opts: { isOwner: boolean; postCount: number },
+  opts: { isOwner: boolean; viewerId?: Id<'users'> | null },
 ) {
+  const [postCount, social] = await Promise.all([
+    postCountFor(ctx, doc.userId),
+    socialFor(ctx, doc.userId, opts.viewerId ?? null),
+  ]);
   return {
     id: doc._id as string,
     handle: doc.handle,
@@ -54,7 +99,8 @@ async function profileView(
     isPublic: doc.isPublic,
     createdAt: doc.createdAt,
     updatedAt: doc.updatedAt,
-    postCount: opts.postCount,
+    postCount,
+    ...social,
     isOwner: opts.isOwner,
     /** False for the placeholder `me` hands back before anything is saved. */
     saved: true,
@@ -130,16 +176,14 @@ export const me = query({
   handler: async (ctx) => {
     const userId = await requireUserId(ctx);
     const row = await rowForUser(ctx, userId);
-    const postCount = (
-      await ctx.db
-        .query('profilePosts')
-        .withIndex('by_user_created', (q) => q.eq('userId', userId))
-        .collect()
-    ).length;
-    if (row) return profileView(ctx, row, { isOwner: true, postCount });
+    if (row) return profileView(ctx, row, { isOwner: true, viewerId: userId });
 
     const user = await ctx.db.get(userId);
     const ts = nowIso();
+    const [postCount, social] = await Promise.all([
+      postCountFor(ctx, userId),
+      socialFor(ctx, userId, userId),
+    ]);
     return {
       id: null as string | null,
       handle: handleSeed(user?.name, user?.email),
@@ -153,6 +197,7 @@ export const me = query({
       createdAt: ts,
       updatedAt: ts,
       postCount,
+      ...social,
       isOwner: true,
       saved: false,
     };
@@ -190,7 +235,7 @@ export const byHandle = query({
     const isOwner = viewerId === row.userId;
     if (!row.isPublic && !isOwner) return null;
     const posts = await postsForUser(ctx, row.userId);
-    const profile = await profileView(ctx, row, { isOwner, postCount: posts.length });
+    const profile = await profileView(ctx, row, { isOwner, viewerId });
     return { profile, posts };
   },
 });
@@ -233,13 +278,7 @@ export const update = mutation({
 
     await ctx.db.patch(row._id, patch);
     const next = { ...row, ...patch };
-    const postCount = (
-      await ctx.db
-        .query('profilePosts')
-        .withIndex('by_user_created', (q) => q.eq('userId', userId))
-        .collect()
-    ).length;
-    return profileView(ctx, next, { isOwner: true, postCount });
+    return profileView(ctx, next, { isOwner: true, viewerId: userId });
   },
 });
 
@@ -282,13 +321,7 @@ export const setImage = mutation({
     }
 
     const next = { ...row, ...patch };
-    const postCount = (
-      await ctx.db
-        .query('profilePosts')
-        .withIndex('by_user_created', (q) => q.eq('userId', userId))
-        .collect()
-    ).length;
-    return profileView(ctx, next, { isOwner: true, postCount });
+    return profileView(ctx, next, { isOwner: true, viewerId: userId });
   },
 });
 
@@ -330,5 +363,52 @@ export const removePost = mutation({
       await ctx.db.delete(id);
     }
     return null;
+  },
+});
+
+async function followRow(
+  ctx: QueryCtx | MutationCtx,
+  followerId: Id<'users'>,
+  followeeId: Id<'users'>,
+) {
+  return ctx.db
+    .query('profileFollows')
+    .withIndex('by_user_followee', (q) => q.eq('userId', followerId).eq('followeeId', followeeId))
+    .first();
+}
+
+/**
+ * Follow or unfollow a public profile by handle. The follow row is owned by
+ * the caller (`userId` is them), so this is not a write to someone else's
+ * data — it is a write about them. Private profiles and your own page both
+ * refuse, and those two answers look the same to the client.
+ */
+export const setFollow = mutation({
+  args: { handle: v.string(), follow: v.boolean() },
+  handler: async (ctx, { handle, follow }) => {
+    const userId = await requireUserId(ctx);
+    const wanted = normalizeHandle(handle);
+    const row = wanted
+      ? await ctx.db
+          .query('profiles')
+          .withIndex('by_handle', (q) => q.eq('handleLower', wanted))
+          .first()
+      : null;
+    if (!row || row.userId === userId || !row.isPublic) {
+      throw new ConvexError('Profile not available');
+    }
+
+    const existing = await followRow(ctx, userId, row.userId);
+    if (follow && !existing) {
+      await ctx.db.insert('profileFollows', {
+        userId,
+        followeeId: row.userId,
+        createdAt: nowIso(),
+      });
+    } else if (!follow && existing) {
+      await ctx.db.delete(existing._id);
+    }
+
+    return profileView(ctx, row, { isOwner: false, viewerId: userId });
   },
 });

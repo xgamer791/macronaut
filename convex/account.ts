@@ -113,6 +113,9 @@ async function purgeUserData(ctx: MutationCtx, userId: Id<'users'>, budget: numb
           .withIndex('by_user', (q) => q.eq('userId', userId))
           .take(remaining)
       ).map((row) => ({ _id: row._id, files: [row.avatarId, row.bannerId] })),
+    () => ctx.db.query('profileFollows').withIndex('by_user', (q) => q.eq('userId', userId)).take(remaining),
+    () =>
+      ctx.db.query('profileFollows').withIndex('by_followee', (q) => q.eq('followeeId', userId)).take(remaining),
     () => ctx.db.query('diaryEntries').withIndex('by_user_date', (q) => q.eq('userId', userId)).take(remaining),
     () => ctx.db.query('foodLogHistory').withIndex('by_user', (q) => q.eq('userId', userId)).take(remaining),
     () => ctx.db.query('cachedFoods').withIndex('by_user_provider', (q) => q.eq('userId', userId)).take(remaining),

@@ -5,6 +5,7 @@ import React from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { ProfileView } from '@/repositories/profileRepo';
+import { profileStatLine } from '@/utils/compactCount';
 import { useTheme } from '@/ui/theme/ThemeProvider';
 import { radius, spacing, touchTarget } from '@/ui/theme/tokens';
 import { AppText } from './AppText';
@@ -14,21 +15,6 @@ const AVATAR = 92;
 const AVATAR_DROP = 44;
 
 type IconName = keyof typeof Ionicons.glyphMap;
-
-/** A few sports get their own glyph; everything else gets the barbell. */
-const SPORT_ICONS: { match: RegExp; icon: IconName }[] = [
-  { match: /run|jog|marathon/i, icon: 'walk-outline' },
-  { match: /cycl|bike|ride/i, icon: 'bicycle-outline' },
-  { match: /swim/i, icon: 'water-outline' },
-  { match: /walk|hike|trek/i, icon: 'footsteps-outline' },
-  { match: /yoga|pilates|mobility|stretch/i, icon: 'body-outline' },
-  { match: /lift|gym|strength|weight|crossfit/i, icon: 'barbell-outline' },
-];
-
-function sportIcon(sport?: string): IconName {
-  if (!sport) return 'barbell-outline';
-  return SPORT_ICONS.find((entry) => entry.match.test(sport))?.icon ?? 'barbell-outline';
-}
 
 export interface ProfileHeaderProps {
   profile: ProfileView;
@@ -159,18 +145,9 @@ export function ProfileHeader({
           {name}
         </AppText>
 
-        <View style={styles.metaRow}>
-          <Meta icon={sportIcon(profile.primarySport)} text={profile.primarySport ?? 'Athlete'} />
-          <Meta
-            icon="chatbubble-ellipses-outline"
-            text={`${profile.postCount} ${profile.postCount === 1 ? 'post' : 'posts'}`}
-          />
-          <Meta
-            icon={profile.isPublic ? 'globe-outline' : 'lock-closed-outline'}
-            text={profile.isPublic ? 'Public' : 'Private'}
-          />
-          {profile.location ? <Meta icon="location-outline" text={profile.location} /> : null}
-        </View>
+        <AppText variant="caption" weight="600" accessibilityRole="text">
+          {profileStatLine(profile.followerCount, profile.followingCount, profile.postCount)}
+        </AppText>
 
         {profile.bio ? (
           <AppText variant="body" tone="secondary" style={styles.bio}>
@@ -202,18 +179,6 @@ export function CircleButton({
     >
       <Ionicons name={icon} size={22} color="#14181D" />
     </Pressable>
-  );
-}
-
-function Meta({ icon, text }: { icon: IconName; text: string }) {
-  const { colors } = useTheme();
-  return (
-    <View style={styles.meta}>
-      <Ionicons name={icon} size={14} color={colors.textMuted} />
-      <AppText variant="caption" tone="secondary" weight="600" numberOfLines={1}>
-        {text}
-      </AppText>
-    </View>
   );
 }
 
@@ -289,17 +254,6 @@ const styles = StyleSheet.create({
   },
   name: {
     marginTop: spacing.xs,
-  },
-  metaRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flexWrap: 'wrap',
-    gap: spacing.md,
-  },
-  meta: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
   },
   bio: {
     marginTop: 2,
