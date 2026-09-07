@@ -16,6 +16,7 @@ import { SLIDE_DURATION_MS, SLIDE_EASING } from '@/ui/motion/SlideScreen';
 import { useTheme } from '@/ui/theme/ThemeProvider';
 import { palette, spacing, touchTarget } from '@/ui/theme/tokens';
 import { AppText } from './AppText';
+import { HEADER_ROW_LIFT } from './todayHeroLayout';
 import { CalendarIcon } from './CalendarIcon';
 
 const ICON = '#FFFFFF';
@@ -392,7 +393,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     height: touchTarget,
-    marginTop: 3,
+    marginTop: HEADER_ROW_LIFT,
   },
   menuRoot: {
     flex: 1,

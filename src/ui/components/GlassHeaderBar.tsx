@@ -3,6 +3,7 @@ import { StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '@/ui/theme/ThemeProvider';
 import { spacing } from '@/ui/theme/tokens';
+import { HEADER_PAD_TOP } from './todayHeroLayout';
 
 export interface GlassHeaderBarProps {
   children: React.ReactNode;
@@ -25,7 +26,7 @@ export function GlassHeaderBar({ children, inset = spacing.sm }: GlassHeaderBarP
         {
           backgroundColor: colors.chrome,
           borderBottomColor: colors.border,
-          paddingTop: insets.top + 2,
+          paddingTop: insets.top + HEADER_PAD_TOP,
           paddingHorizontal: inset,
         },
       ]}

@@ -5,6 +5,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import { Pressable, StyleSheet, View, useWindowDimensions } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRepos } from '@/state/AppProvider';
 import {
   keys,
@@ -37,6 +38,7 @@ import {
 import type { HeroMetricValues } from '@/ui/components/HeroMetricModule';
 import { useTheme } from '@/ui/theme/ThemeProvider';
 import { radius, spacing } from '@/ui/theme/tokens';
+import { todayHeroHeight, glassHeaderHeight } from '@/ui/components/todayHeroLayout';
 
 const HERO_IMAGE = require('../../../assets/images/today/hero-gym.jpg');
 
@@ -74,7 +76,8 @@ function TodayBody() {
   const qc = useQueryClient();
   const { settings } = useRepos();
   const { colors } = useTheme();
-  const { width, height: windowHeight } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
+  const { width } = useWindowDimensions();
   const date = useUiStore((s) => s.selectedDate);
   const setSelectedDate = useUiStore((s) => s.setSelectedDate);
   const setTargetMeal = useUiStore((s) => s.setTargetMeal);
@@ -176,8 +179,12 @@ function TodayBody() {
     burnedByType.set(a.activityType, (burnedByType.get(a.activityType) ?? 0) + a.caloriesBurned);
   }
 
-  // Hero is tall enough that the athlete stays visible above the goals card.
-  const heroHeight = Math.round(Math.min(Math.max(windowHeight * 0.42, width * 0.95), 420));
+  // Hero is only the overlay chrome, a tight gap, and the modules — not a
+  // tall plate that leaves a dark void under the hairline.
+  const heroHeight = todayHeroHeight(
+    moduleSize,
+    Math.round(glassHeaderHeight(insets.top, StyleSheet.hairlineWidth)),
+  );
   const macros = [
     {
       key: 'protein' as const,
