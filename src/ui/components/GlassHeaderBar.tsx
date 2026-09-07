@@ -11,8 +11,8 @@ export interface GlassHeaderBarProps {
 }
 
 /**
- * Full-bleed chrome above a `Screen`'s scroll layer. Same surface and hairline
- * as the tab bar, in document flow so page content starts below it.
+ * Full-bleed chrome above a `Screen`'s scroll layer. Same chrome fill and
+ * hairline as the tab bar, in document flow so page content starts below it.
  */
 export function GlassHeaderBar({ children, inset = spacing.sm }: GlassHeaderBarProps) {
   const insets = useSafeAreaInsets();
@@ -23,7 +23,7 @@ export function GlassHeaderBar({ children, inset = spacing.sm }: GlassHeaderBarP
       style={[
         styles.bar,
         {
-          backgroundColor: colors.surface,
+          backgroundColor: colors.chrome,
           borderBottomColor: colors.border,
           paddingTop: insets.top + 2,
           paddingHorizontal: inset,
