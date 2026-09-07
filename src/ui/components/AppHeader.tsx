@@ -3,7 +3,14 @@ import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import React, { useMemo, useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import {
+  Image as RNImage,
+  Platform,
+  Pressable,
+  StyleSheet,
+  View,
+  type ImageStyle,
+} from 'react-native';
 import Animated, {
   Easing,
   useAnimatedStyle,
@@ -22,6 +29,7 @@ const WATCH_FACE = require('../../../assets/images/signup-health-watch.png');
 const ICON = '#FFFFFF';
 const DOT = '#2EE66A';
 const GLYPH = 22;
+const GLYPH_INSET = (touchTarget - GLYPH) / 2;
 
 export interface AppHeaderProps {
   /** Bell action. Defaults to opening the calendar when provided by Today. */
@@ -97,67 +105,85 @@ export function AppHeader({ onBellPress, notifyDot = true }: AppHeaderProps) {
           )}
         </Pressable>
 
-        <Pressable
-          accessibilityRole="button"
+        <HeaderHit
           accessibilityLabel="Notifications"
           onPress={() => {
             void Haptics.selectionAsync();
             onBellPress?.();
           }}
-          hitSlop={4}
-          style={styles.hit}
+          dot={notifyDot}
         >
           <Ionicons name="notifications" size={GLYPH} color={ICON} />
-          {notifyDot ? <View style={styles.bellDot} /> : null}
-        </Pressable>
+        </HeaderHit>
       </View>
 
       <View style={styles.cluster}>
-        <Pressable
-          accessibilityRole="button"
+        <HeaderHit
           accessibilityLabel="Add food"
           onPress={() => {
             void Haptics.selectionAsync();
             router.push('/add');
           }}
-          hitSlop={4}
-          style={styles.hit}
         >
           <Ionicons name="add" size={GLYPH} color={ICON} />
-        </Pressable>
+        </HeaderHit>
 
-        <Pressable
-          accessibilityRole="button"
+        <HeaderHit
           accessibilityLabel="Sync data"
           disabled={syncing}
           onPress={() => {
             void onSync();
           }}
-          hitSlop={4}
-          style={styles.hit}
         >
           <Animated.View style={syncStyle}>
             <Ionicons name="sync" size={GLYPH} color={ICON} />
           </Animated.View>
-        </Pressable>
+        </HeaderHit>
 
-        <Pressable
-          accessibilityRole="button"
+        <HeaderHit
           accessibilityLabel="Apple Watch and Apple Health"
           onPress={() => {
             void Haptics.selectionAsync();
             router.push('/apple-health');
           }}
-          hitSlop={4}
-          style={styles.hit}
+          dot
         >
-          <View style={styles.watch} pointerEvents="none">
-            <Image source={WATCH_FACE} style={StyleSheet.absoluteFill} contentFit="cover" />
+          <View style={styles.watch}>
+            <RNImage source={WATCH_FACE} style={styles.watchImg} resizeMode="cover" />
           </View>
-          <View style={styles.bellDot} />
-        </Pressable>
+        </HeaderHit>
       </View>
     </View>
+  );
+}
+
+function HeaderHit({
+  children,
+  accessibilityLabel,
+  onPress,
+  disabled,
+  dot,
+}: {
+  children: React.ReactNode;
+  accessibilityLabel: string;
+  onPress: () => void;
+  disabled?: boolean;
+  dot?: boolean;
+}) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel}
+      disabled={disabled}
+      onPress={onPress}
+      hitSlop={4}
+      style={styles.hit}
+    >
+      <View style={styles.glyphSlot} pointerEvents="none">
+        {children}
+      </View>
+      {dot ? <View style={styles.dot} /> : null}
+    </Pressable>
   );
 }
 
@@ -176,24 +202,38 @@ function initialsFrom(name?: string | null, email?: string): string {
 }
 
 const AVATAR = 32;
+const webBlock: ImageStyle | undefined =
+  Platform.OS === 'web' ? ({ display: 'block' } as ImageStyle) : undefined;
 
 const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    minHeight: touchTarget,
+    height: touchTarget,
   },
   cluster: {
     flexDirection: 'row',
     alignItems: 'center',
+    height: touchTarget,
     gap: spacing.xs,
   },
   hit: {
     width: touchTarget,
     height: touchTarget,
+    position: 'relative',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  glyphSlot: {
+    position: 'absolute',
+    top: GLYPH_INSET,
+    left: GLYPH_INSET,
+    width: GLYPH,
+    height: GLYPH,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
   },
   avatar: {
     width: AVATAR,
@@ -222,7 +262,12 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     backgroundColor: '#111',
   },
-  bellDot: {
+  watchImg: {
+    width: GLYPH,
+    height: GLYPH,
+    ...webBlock,
+  },
+  dot: {
     position: 'absolute',
     top: 10,
     right: 10,
@@ -230,5 +275,6 @@ const styles = StyleSheet.create({
     height: 8,
     borderRadius: 4,
     backgroundColor: DOT,
+    zIndex: 1,
   },
 });
