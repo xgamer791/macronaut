@@ -33,6 +33,7 @@ story.
 | `dayNotes` | per-day journal notes, many per day | date, body | `by_user_date` (date) |
 | `profiles` | one profile page per account | handle, handleLower, displayName, bio, location, primarySport, avatarId, bannerId, isPublic | `by_user`, `by_handle` (handleLower) |
 | `profilePosts` | posts on your own profile page | body, imageId | `by_user_created` (createdAt) |
+| `profileFollows` | one account following another; `userId` is the follower | followeeId | `by_user`, `by_followee`, `by_user_followee` |
 | `aiScanRoster`, `aiScanRosterMeta` | frozen set of accounts allowed to use AI food scan until Pro | userId; frozenAt | `by_user`; `by_key` |
 
 ## Conventions

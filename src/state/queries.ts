@@ -214,6 +214,16 @@ export function useDeleteProfilePost() {
   });
 }
 
+export function useSetProfileFollow() {
+  const { profile } = useRepos();
+  const invalidate = useInvalidateProfile();
+  return useMutation({
+    mutationFn: (input: { handle: string; follow: boolean }) =>
+      profile.setFollow(input.handle, input.follow),
+    onSuccess: invalidate,
+  });
+}
+
 export function useDiaryEntries(date: DayKey) {
   const { signedIn } = useAuth();
   const { diary } = useRepos();

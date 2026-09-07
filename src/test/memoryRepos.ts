@@ -569,6 +569,9 @@ export function createMemoryProfileRepo(): ProfileRepo {
     createdAt: nowIso(),
     updatedAt: nowIso(),
     postCount: 0,
+    followerCount: 0,
+    followingCount: 0,
+    isFollowing: false,
     isOwner: true,
     saved: false,
   };
@@ -630,6 +633,17 @@ export function createMemoryProfileRepo(): ProfileRepo {
     async removePost(id) {
       const i = posts.findIndex((p) => p.id === id);
       if (i >= 0) posts.splice(i, 1);
+    },
+    async setFollow(handle, follow) {
+      if (handle.toLowerCase() !== profile.handle || !profile.isPublic) {
+        throw new Error('Profile not available');
+      }
+      profile = {
+        ...profile,
+        isFollowing: follow,
+        followerCount: follow ? Math.max(1, profile.followerCount) : Math.max(0, profile.followerCount - 1),
+      };
+      return view();
     },
   };
   return repo;

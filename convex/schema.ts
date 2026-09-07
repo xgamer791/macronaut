@@ -190,6 +190,18 @@ export default defineSchema({
     ...profilePostFields,
   }).index('by_user_created', ['userId', 'createdAt']),
 
+  /** One account following another. `userId` is the follower — they own the
+   * row — and `followeeId` is who they follow. Counts on a profile page are
+   * just the two index scans; following a private profile is refused. */
+  profileFollows: defineTable({
+    userId: v.id('users'),
+    followeeId: v.id('users'),
+    createdAt: v.string(),
+  })
+    .index('by_user', ['userId'])
+    .index('by_followee', ['followeeId'])
+    .index('by_user_followee', ['userId', 'followeeId']),
+
   /** Frozen set of accounts that may use AI food scan until Pro. Written once
    * by `foodScan.ensureRoster`; later sign-ups are not added. Not user-scoped. */
   aiScanRoster: defineTable({

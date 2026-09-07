@@ -260,6 +260,9 @@ describe('profile visibility', () => {
     await expect(t.mutation(api.profiles.update, { bio: 'x' })).rejects.toThrow(/not signed in/i);
     await expect(t.mutation(api.profiles.generateUploadUrl, {})).rejects.toThrow(/not signed in/i);
     await expect(t.mutation(api.profiles.addPost, { body: 'x' })).rejects.toThrow(/not signed in/i);
+    await expect(t.mutation(api.profiles.setFollow, { handle: 'x', follow: true })).rejects.toThrow(
+      /not signed in/i,
+    );
   });
 
   it("keeps one account out of another account's posts", async () => {
@@ -272,6 +275,77 @@ describe('profile visibility', () => {
     await expect(b.repos.profile.updatePost(mine.id, 'Hijacked')).rejects.toThrow();
     await b.repos.profile.removePost(mine.id);
     expect((await a.repos.profile.myPosts()).map((p) => p.body)).toEqual(['Mine']);
+  });
+});
+
+describe('profile follows', () => {
+  it('counts followers and following on both pages, and is idempotent', async () => {
+    const t = backend();
+    const a = await signIn(t, 'a@example.com');
+    const b = await signIn(t, 'b@example.com');
+    const c = await signIn(t, 'c@example.com');
+
+    await a.repos.profile.update({ handle: 'alice', isPublic: true });
+    await b.repos.profile.update({ handle: 'bob', isPublic: true });
+
+    expect((await a.repos.profile.me()).followerCount).toBe(0);
+    expect((await a.repos.profile.me()).followingCount).toBe(0);
+
+    const after = await b.repos.profile.setFollow('alice', true);
+    expect(after.isFollowing).toBe(true);
+    expect(after.followerCount).toBe(1);
+    expect(after.followingCount).toBe(0);
+
+    // Following twice does not double-count.
+    await b.repos.profile.setFollow('alice', true);
+    await c.repos.profile.setFollow('alice', true);
+    await a.repos.profile.setFollow('bob', true);
+
+    const alice = await a.repos.profile.me();
+    expect(alice.followerCount).toBe(2);
+    expect(alice.followingCount).toBe(1);
+    expect(alice.isFollowing).toBe(false);
+
+    const bobAsA = await a.repos.profile.byHandle('bob');
+    expect(bobAsA?.profile.isFollowing).toBe(true);
+    expect(bobAsA?.profile.followerCount).toBe(1);
+
+    await b.repos.profile.setFollow('alice', false);
+    expect((await a.repos.profile.me()).followerCount).toBe(1);
+    expect((await b.repos.profile.byHandle('alice'))?.profile.isFollowing).toBe(false);
+  });
+
+  it('refuses a private profile, a missing handle and following yourself', async () => {
+    const t = backend();
+    const a = await signIn(t, 'a@example.com');
+    const b = await signIn(t, 'b@example.com');
+    await a.repos.profile.update({ handle: 'alice', isPublic: false });
+    await b.repos.profile.update({ handle: 'bob', isPublic: true });
+
+    await expect(b.repos.profile.setFollow('alice', true)).rejects.toThrow(/not available/i);
+    await expect(b.repos.profile.setFollow('nobody', true)).rejects.toThrow(/not available/i);
+    await expect(b.repos.profile.setFollow('bob', true)).rejects.toThrow(/not available/i);
+
+    expect(await t.run(async (ctx) => ctx.db.query('profileFollows').collect())).toEqual([]);
+  });
+
+  it('cannot be written on someone else\'s behalf, and is erased with the account', async () => {
+    const t = backend();
+    const a = await signIn(t, 'a@example.com');
+    const b = await signIn(t, 'b@example.com');
+    const c = await signIn(t, 'c@example.com');
+    await a.repos.profile.update({ handle: 'alice', isPublic: true });
+    await b.repos.profile.update({ handle: 'bob', isPublic: true });
+    await c.repos.profile.update({ handle: 'cara', isPublic: true });
+
+    await b.repos.profile.setFollow('alice', true);
+    await a.repos.profile.setFollow('cara', true);
+
+    await a.repos.account.deleteAllData();
+    const remaining = await t.run(async (ctx) => ctx.db.query('profileFollows').collect());
+    expect(remaining).toHaveLength(0);
+    expect((await b.repos.profile.byHandle('alice'))).toBeNull();
+    expect((await c.repos.profile.me()).followerCount).toBe(0);
   });
 });
 

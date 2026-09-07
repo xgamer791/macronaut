@@ -19,6 +19,10 @@ export interface ProfileView {
   createdAt: string;
   updatedAt: string;
   postCount: number;
+  followerCount: number;
+  followingCount: number;
+  /** Whether the signed-in viewer follows this page. Always false on yours. */
+  isFollowing: boolean;
   isOwner: boolean;
   /** False while the profile is still the placeholder built from the account. */
   saved: boolean;
@@ -57,6 +61,9 @@ export interface ProfileRepo {
   addPost(body: string, imageId?: string): Promise<ProfilePost>;
   updatePost(id: string, body: string): Promise<ProfilePost>;
   removePost(id: string): Promise<void>;
+  /** Follow or unfollow a public profile. Returns that profile as it looks
+   * afterwards, so the counts on the page update from the same round trip. */
+  setFollow(handle: string, follow: boolean): Promise<ProfileView>;
 }
 
 const postId = (id: string) => id as Id<'profilePosts'>;
@@ -96,5 +103,6 @@ export function createProfileRepo(convex: ConvexCaller): ProfileRepo {
     async removePost(id) {
       await convex.mutation(api.profiles.removePost, { id: postId(id) });
     },
+    setFollow: (handle, follow) => convex.mutation(api.profiles.setFollow, { handle, follow }),
   };
 }

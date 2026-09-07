@@ -3,13 +3,15 @@ import React from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import {
   AppText,
+  Button,
   EmptyState,
   ProfileHeader,
   ProfilePostList,
   Screen,
   SectionHeader,
 } from '@/ui/components';
-import { usePublicProfile } from '@/state/queries';
+import { useAuth } from '@/state/AuthProvider';
+import { usePublicProfile, useSetProfileFollow } from '@/state/queries';
 import { goBackOrHome } from '@/utils/navigation';
 import { ThemeProvider, useTheme } from '@/ui/theme/ThemeProvider';
 import { spacing } from '@/ui/theme/tokens';
@@ -35,7 +37,9 @@ function PublicProfile() {
   const { handle } = useLocalSearchParams<{ handle: string }>();
   const router = useRouter();
   const { colors } = useTheme();
+  const { signedIn } = useAuth();
   const result = usePublicProfile(handle ?? '');
+  const setFollow = useSetProfileFollow();
 
   if (result.isLoading) {
     return (
@@ -69,7 +73,23 @@ function PublicProfile() {
           <AppText variant="caption" tone="muted">
             This is how your page looks to other people.
           </AppText>
-        ) : null}
+        ) : (
+          <Button
+            title={found.profile.isFollowing ? 'Following' : 'Follow'}
+            variant={found.profile.isFollowing ? 'secondary' : 'primary'}
+            loading={setFollow.isPending}
+            onPress={() => {
+              if (!signedIn) {
+                router.push('/login');
+                return;
+              }
+              void setFollow.mutateAsync({
+                handle: found.profile.handle,
+                follow: !found.profile.isFollowing,
+              });
+            }}
+          />
+        )}
         <SectionHeader title="Posts" />
         <ProfilePostList
           posts={found.posts}

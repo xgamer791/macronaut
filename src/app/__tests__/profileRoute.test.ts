@@ -44,4 +44,16 @@ describe('profile routes', () => {
     expect(publicPage).not.toContain('onPickBanner');
     expect(publicPage).not.toContain('pickImage');
   });
+
+  it('shows followers, following and posts under the name, not the athlete row', () => {
+    const header = fs.readFileSync(
+      path.join(srcDir, 'ui', 'components', 'ProfileHeader.tsx'),
+      'utf8',
+    );
+    expect(header).toContain('profileStatLine');
+    expect(header).not.toContain('Athlete');
+    expect(header).not.toContain('barbell');
+    expect(read(path.join('u', '[handle].tsx'))).toContain('setFollow');
+    expect(read(path.join('u', '[handle].tsx'))).toContain('Follow');
+  });
 });
