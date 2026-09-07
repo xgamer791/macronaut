@@ -56,6 +56,20 @@ describe('profile routes', () => {
     expect(read(path.join('u', '[handle].tsx'))).toContain('Follow');
   });
 
+  it('puts notifications then the home avatar on the profile banner', () => {
+    const header = fs.readFileSync(
+      path.join(srcDir, 'ui', 'components', 'ProfileHeader.tsx'),
+      'utf8',
+    );
+    expect(header).toContain('HeaderNotifyButton');
+    expect(header).toContain('HeaderAvatarButton');
+    const menu = header.slice(header.indexOf('styles.menu'));
+    expect(menu.indexOf('HeaderNotifyButton')).toBeLessThan(menu.indexOf('HeaderAvatarButton'));
+    const today = fs.readFileSync(path.join(srcDir, 'ui', 'components', 'AppHeader.tsx'), 'utf8');
+    expect(today).toContain('export function HeaderAvatarButton');
+    expect(today).toContain('export function HeaderNotifyButton');
+  });
+
   it('does not put a settings gear on either profile page', () => {
     expect(read('profile.tsx')).not.toContain('Open settings');
     expect(read('profile.tsx')).not.toContain('settings-outline');

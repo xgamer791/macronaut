@@ -36,53 +36,12 @@ export interface AppHeaderProps {
  */
 export function AppHeader({ onCalendarPress, notifyDot = true }: AppHeaderProps) {
   const router = useRouter();
-  const { user } = useAuth();
-  const savedName = useSetting<string>('displayName', '');
-
-  const displayName = savedName.data || displayNameFromUser(user);
-  const initials = useMemo(() => initialsFrom(displayName, user?.email), [displayName, user?.email]);
-  const avatarUri = user?.image?.trim() || undefined;
 
   return (
     <View style={styles.row}>
       <View style={styles.cluster}>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Open your profile"
-          onPress={() => {
-            void Haptics.selectionAsync();
-            router.push('/profile');
-          }}
-          hitSlop={4}
-          style={styles.hit}
-        >
-          {avatarUri ? (
-            <Image
-              source={{ uri: avatarUri }}
-              style={styles.avatar}
-              contentFit="cover"
-              accessibilityIgnoresInvertColors
-            />
-          ) : (
-            <View style={styles.avatarFallback}>
-              {initials ? (
-                <AppText style={styles.initials}>{initials}</AppText>
-              ) : (
-                <Ionicons name="person" size={16} color={ICON} />
-              )}
-            </View>
-          )}
-        </Pressable>
-
-        <HeaderHit
-          accessibilityLabel="Notifications"
-          onPress={() => {
-            void Haptics.selectionAsync();
-          }}
-          dot={notifyDot}
-        >
-          <Ionicons name="notifications" size={GLYPH} color={ICON} />
-        </HeaderHit>
+        <HeaderAvatarButton />
+        <HeaderNotifyButton notifyDot={notifyDot} />
       </View>
 
       <View style={styles.cluster}>
@@ -110,6 +69,61 @@ export function AppHeader({ onCalendarPress, notifyDot = true }: AppHeaderProps)
         <WatchButton />
       </View>
     </View>
+  );
+}
+
+/** Same 32px circular account picture as Today — photo when the account
+ * has one, initials otherwise. */
+export function HeaderAvatarButton() {
+  const router = useRouter();
+  const { user } = useAuth();
+  const savedName = useSetting<string>('displayName', '');
+  const displayName = savedName.data || displayNameFromUser(user);
+  const initials = useMemo(() => initialsFrom(displayName, user?.email), [displayName, user?.email]);
+  const avatarUri = user?.image?.trim() || undefined;
+
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel="Open your profile"
+      onPress={() => {
+        void Haptics.selectionAsync();
+        router.push('/profile');
+      }}
+      hitSlop={4}
+      style={styles.hit}
+    >
+      {avatarUri ? (
+        <Image
+          source={{ uri: avatarUri }}
+          style={styles.avatar}
+          contentFit="cover"
+          accessibilityIgnoresInvertColors
+        />
+      ) : (
+        <View style={styles.avatarFallback}>
+          {initials ? (
+            <AppText style={styles.initials}>{initials}</AppText>
+          ) : (
+            <Ionicons name="person" size={16} color={ICON} />
+          )}
+        </View>
+      )}
+    </Pressable>
+  );
+}
+
+export function HeaderNotifyButton({ notifyDot = true }: { notifyDot?: boolean }) {
+  return (
+    <HeaderHit
+      accessibilityLabel="Notifications"
+      onPress={() => {
+        void Haptics.selectionAsync();
+      }}
+      dot={notifyDot}
+    >
+      <Ionicons name="notifications" size={GLYPH} color={ICON} />
+    </HeaderHit>
   );
 }
 
