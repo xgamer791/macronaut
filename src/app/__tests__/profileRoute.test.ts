@@ -182,6 +182,22 @@ describe('profile routes', () => {
     expect(actions).toContain('profilePostShareUrl');
   });
 
+  it('draws the three post actions at one size, packed to the left', () => {
+    const actions = fs.readFileSync(
+      path.join(srcDir, 'ui', 'components', 'ProfilePostActions.tsx'),
+      'utf8',
+    );
+    expect(actions).toContain('const POST_ACTION_GLYPH = 18');
+    expect(actions).toContain('<ThumbsUp\n            size={POST_ACTION_GLYPH}');
+    expect(actions).toContain('<MessageSquare size={POST_ACTION_GLYPH}');
+    expect(actions).toContain('<ShareFatIcon size={POST_ACTION_GLYPH}');
+    // Each button hugs its glyph instead of taking a third of the card, which
+    // is what spread them across the full width.
+    const action = actions.slice(actions.indexOf('  action: {'));
+    expect(action).toContain('minWidth: touchTarget');
+    expect(action.slice(0, action.indexOf('},'))).not.toContain('flex: 1');
+  });
+
   it('adds wall photos from a select-only picker in tap order', () => {
     const wall = read('photos.tsx');
     expect(wall).toContain('pickImages');

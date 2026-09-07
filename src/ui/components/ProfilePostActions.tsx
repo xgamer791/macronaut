@@ -31,6 +31,9 @@ import { Button } from './Button';
 import { Sheet } from './Sheet';
 import { TextField } from './TextField';
 
+/** One size for all three glyphs, Lucide and Phosphor alike. */
+const POST_ACTION_GLYPH = 18;
+
 export interface ProfilePostActionsProps {
   post: ProfilePost;
   ownerHandle: string;
@@ -123,7 +126,7 @@ export function ProfilePostActions({ post, ownerHandle, style }: ProfilePostActi
           onPress={() => void like()}
         >
           <ThumbsUp
-            size={22}
+            size={POST_ACTION_GLYPH}
             strokeWidth={1.8}
             color={liked ? colors.accent : colors.textSecondary}
             fill={liked ? colors.accent : 'transparent'}
@@ -137,10 +140,10 @@ export function ProfilePostActions({ post, ownerHandle, style }: ProfilePostActi
             setCommentsOpen(true);
           }}
         >
-          <MessageSquare size={22} strokeWidth={1.8} color={colors.textSecondary} />
+          <MessageSquare size={POST_ACTION_GLYPH} strokeWidth={1.8} color={colors.textSecondary} />
         </PostAction>
         <PostAction label="Share post" onPress={() => void sharePost()}>
-          <ShareFatIcon size={23} weight="regular" color={colors.textSecondary} />
+          <ShareFatIcon size={POST_ACTION_GLYPH} weight="regular" color={colors.textSecondary} />
           {shared ? (
             <AppText variant="micro" tone="accent" accessibilityLiveRegion="polite">
               Copied
@@ -282,8 +285,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
+  // Sized to its own glyph rather than a third of the card, so the three sit
+  // together at the left edge. The minimums keep the tap target honest.
   action: {
-    flex: 1,
+    minWidth: touchTarget,
     minHeight: touchTarget,
     flexDirection: 'row',
     alignItems: 'center',
