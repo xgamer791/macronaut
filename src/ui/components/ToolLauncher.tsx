@@ -96,8 +96,8 @@ export function ToolLauncher() {
                 pressed && styles.pressed,
               ]}
             >
-              <View style={[styles.toolIcon, { backgroundColor: `${colors.accent}1F` }]}>
-                <Ionicons name={tool.icon} size={20} color={colors.accent} />
+              <View style={styles.toolIcon}>
+                <Ionicons name={tool.icon} size={22} color={colors.accent} />
               </View>
               <View style={styles.toolCopy}>
                 <AppText variant="body" weight="600">
@@ -169,7 +169,6 @@ const styles = StyleSheet.create({
   toolIcon: {
     width: 36,
     height: 36,
-    borderRadius: radius.md,
     alignItems: 'center',
     justifyContent: 'center',
   },

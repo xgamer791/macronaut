@@ -323,8 +323,8 @@ function FastingScreen() {
       <Card style={styles.sectionCard}>
         <View style={styles.sectionHeading}>
           <View style={styles.sectionTitleRow}>
-            <View style={[styles.sectionIcon, { backgroundColor: `${colors.accent}1F` }]}>
-              <Ionicons name="calendar-clear-outline" size={20} color={colors.accent} />
+            <View style={styles.sectionIcon}>
+              <Ionicons name="calendar-clear-outline" size={22} color={colors.accent} />
             </View>
             <View style={styles.sectionHeadingCopy}>
               <AppText variant="heading" weight="600" display>
@@ -432,8 +432,8 @@ function FastingScreen() {
                   onPress={() => applyDuration(slot.durationMinutes)}
                   style={({ pressed }) => [styles.savedMain, pressed && styles.pressed]}
                 >
-                  <View style={[styles.savedIcon, { backgroundColor: colors.surfaceRaised }]}>
-                    <Ionicons name="bookmark-outline" size={18} color={colors.accent} />
+                  <View style={styles.savedIcon}>
+                    <Ionicons name="bookmark-outline" size={20} color={colors.accent} />
                   </View>
                   <View style={styles.savedCopy}>
                     <AppText weight="600">{slot.label}</AppText>
@@ -770,7 +770,6 @@ const styles = StyleSheet.create({
   sectionIcon: {
     width: 40,
     height: 40,
-    borderRadius: radius.md,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -827,7 +826,6 @@ const styles = StyleSheet.create({
   savedIcon: {
     width: 36,
     height: 36,
-    borderRadius: radius.md,
     alignItems: 'center',
     justifyContent: 'center',
   },

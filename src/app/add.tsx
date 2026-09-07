@@ -320,12 +320,9 @@ export default function AddScreen() {
           accessibilityRole="button"
           accessibilityLabel="Scan barcode"
           onPress={() => router.push('/scan')}
-          style={[
-            styles.barcodeBtn,
-            { backgroundColor: colors.surfaceRaised, borderColor: colors.borderStrong },
-          ]}
+          style={styles.barcodeBtn}
         >
-          <Ionicons name="barcode-outline" size={22} color={colors.textPrimary} />
+          <Ionicons name="barcode-outline" size={26} color={colors.textPrimary} />
         </Pressable>
       </View>
 
@@ -659,8 +656,6 @@ const styles = StyleSheet.create({
   barcodeBtn: {
     width: 48,
     height: 48,
-    borderRadius: radius.lg,
-    borderWidth: StyleSheet.hairlineWidth,
     alignItems: 'center',
     justifyContent: 'center',
   },

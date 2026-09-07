@@ -48,8 +48,8 @@ export function MealLogList({ categories, mealTotals, onLog, onOpenMeal }: MealL
               },
             ]}
           >
-            <View style={[styles.iconWrap, { backgroundColor: colors.accent + '18' }]}>
-              <Ionicons name={icon} size={22} color={colors.accent} />
+            <View style={styles.iconWrap}>
+              <Ionicons name={icon} size={24} color={colors.accent} />
             </View>
 
             <View style={styles.copy}>
@@ -108,7 +108,6 @@ const styles = StyleSheet.create({
   iconWrap: {
     width: 40,
     height: 40,
-    borderRadius: radius.md,
     alignItems: 'center',
     justifyContent: 'center',
   },
