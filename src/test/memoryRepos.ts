@@ -18,6 +18,8 @@ import { DiaryRepo, NewDiaryEntry } from '@/repositories/diaryRepo';
 import { FoodRepo, NewCustomFood } from '@/repositories/foodRepo';
 import { GoalRepo } from '@/repositories/goalRepo';
 import { FrequentFood, HistoryRepo, RecentFood } from '@/repositories/historyRepo';
+import { FitnessGroup, GroupRepo } from '@/repositories/groupRepo';
+import { ProfilePhoto, PhotoRepo } from '@/repositories/photoRepo';
 import { ProfilePost, ProfileRepo, ProfileView } from '@/repositories/profileRepo';
 import { AppearanceMode, OnboardingProfile, SettingsRepo } from '@/repositories/settingsRepo';
 import {
@@ -649,6 +651,93 @@ export function createMemoryProfileRepo(): ProfileRepo {
   return repo;
 }
 
+export function createMemoryPhotoRepo(): PhotoRepo {
+  const photos: ProfilePhoto[] = [];
+  return {
+    async mine() {
+      return photos.map(clone);
+    },
+    async forHandle() {
+      return { isOwner: true, photos: photos.filter((p) => p.isPublic).map(clone) };
+    },
+    async upload() {
+      return newId();
+    },
+    async add(imageId, caption, isPublic = true) {
+      const ts = nowIso();
+      const photo: ProfilePhoto = {
+        id: newId(),
+        imageUrl: `memory://${imageId}`,
+        caption,
+        isPublic,
+        createdAt: ts,
+        updatedAt: ts,
+      };
+      photos.unshift(photo);
+      return clone(photo);
+    },
+    async setPublic(id, isPublic) {
+      const photo = photos.find((p) => p.id === id);
+      if (!photo) throw new Error('Photo not found');
+      photo.isPublic = isPublic;
+      photo.updatedAt = nowIso();
+      return clone(photo);
+    },
+    async remove(id) {
+      const i = photos.findIndex((p) => p.id === id);
+      if (i >= 0) photos.splice(i, 1);
+    },
+  };
+}
+
+export function createMemoryGroupRepo(): GroupRepo {
+  const groups: FitnessGroup[] = [];
+  return {
+    async mine() {
+      return groups.map(clone);
+    },
+    async forHandle() {
+      return { isOwner: true, groups: groups.filter((g) => g.isPublic).map(clone) };
+    },
+    async create(input) {
+      const ts = nowIso();
+      const group: FitnessGroup = {
+        id: newId(),
+        name: input.name.trim(),
+        handle: input.name.trim().toLowerCase().replace(/\s+/g, '_'),
+        sport: input.sport,
+        description: input.description,
+        isPublic: input.isPublic ?? true,
+        memberCount: 1,
+        isOwner: true,
+        isMember: true,
+        createdAt: ts,
+        updatedAt: ts,
+      };
+      groups.unshift(group);
+      return clone(group);
+    },
+    async join(id) {
+      const group = groups.find((g) => g.id === id);
+      if (!group || !group.isPublic) throw new Error('Group not available');
+      group.isMember = true;
+      group.memberCount += 1;
+      return clone(group);
+    },
+    async leave(id) {
+      const group = groups.find((g) => g.id === id);
+      if (group) {
+        group.isMember = false;
+        group.memberCount = Math.max(0, group.memberCount - 1);
+      }
+    },
+    async remove(id) {
+      const i = groups.findIndex((g) => g.id === id);
+      if (i >= 0) groups.splice(i, 1);
+    },
+  };
+}
+
 /** Deletion is a server concern (convex/account.ts, covered by
  * tests/convex/isolation.test.ts); the fakes hold their state privately, so
  * this is a no-op rather than a half-implementation. */
@@ -676,5 +765,7 @@ export function createMemoryRepos(): Repos {
     history: createMemoryHistoryRepo(),
     settings: createMemorySettingsRepo(),
     profile: createMemoryProfileRepo(),
+    photos: createMemoryPhotoRepo(),
+    groups: createMemoryGroupRepo(),
   };
 }

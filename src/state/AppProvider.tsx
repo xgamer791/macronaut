@@ -12,7 +12,9 @@ import { createDayNotesRepo, DayNotesRepo } from '@/repositories/dayNotesRepo';
 import { createDiaryRepo, DiaryRepo } from '@/repositories/diaryRepo';
 import { createFoodRepo, FoodRepo } from '@/repositories/foodRepo';
 import { createGoalRepo, GoalRepo } from '@/repositories/goalRepo';
+import { createGroupRepo, GroupRepo } from '@/repositories/groupRepo';
 import { createHistoryRepo, HistoryRepo } from '@/repositories/historyRepo';
+import { createPhotoRepo, PhotoRepo } from '@/repositories/photoRepo';
 import { createProfileRepo, ProfileRepo } from '@/repositories/profileRepo';
 import { createSettingsRepo, SettingsRepo } from '@/repositories/settingsRepo';
 import { getConvexClient } from '@/services/convex/client';
@@ -28,6 +30,8 @@ export interface Repos {
   history: HistoryRepo;
   settings: SettingsRepo;
   profile: ProfileRepo;
+  photos: PhotoRepo;
+  groups: GroupRepo;
   account: AccountRepo;
 }
 
@@ -48,6 +52,8 @@ export function createRepos(convex: ConvexCaller): Repos {
     history: createHistoryRepo(convex),
     settings: createSettingsRepo(convex),
     profile: createProfileRepo(convex),
+    photos: createPhotoRepo(convex),
+    groups: createGroupRepo(convex),
     account: createAccountRepo(convex),
   };
 }

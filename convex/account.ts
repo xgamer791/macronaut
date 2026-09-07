@@ -116,6 +116,30 @@ async function purgeUserData(ctx: MutationCtx, userId: Id<'users'>, budget: numb
     () => ctx.db.query('profileFollows').withIndex('by_user', (q) => q.eq('userId', userId)).take(remaining),
     () =>
       ctx.db.query('profileFollows').withIndex('by_followee', (q) => q.eq('followeeId', userId)).take(remaining),
+    async () =>
+      (
+        await ctx.db
+          .query('profilePhotos')
+          .withIndex('by_user_created', (q) => q.eq('userId', userId))
+          .take(remaining)
+      ).map((row) => ({ _id: row._id, files: [row.imageId] })),
+    async () => {
+      const owned = await ctx.db
+        .query('fitnessGroups')
+        .withIndex('by_user', (q) => q.eq('userId', userId))
+        .take(remaining);
+      const rows: PurgeRow[] = [];
+      for (const group of owned) {
+        const seats = await ctx.db
+          .query('groupMembers')
+          .withIndex('by_group', (q) => q.eq('groupId', group._id))
+          .collect();
+        for (const seat of seats) rows.push({ _id: seat._id });
+        rows.push({ _id: group._id });
+      }
+      return rows;
+    },
+    () => ctx.db.query('groupMembers').withIndex('by_user', (q) => q.eq('userId', userId)).take(remaining),
     () => ctx.db.query('diaryEntries').withIndex('by_user_date', (q) => q.eq('userId', userId)).take(remaining),
     () => ctx.db.query('foodLogHistory').withIndex('by_user', (q) => q.eq('userId', userId)).take(remaining),
     () => ctx.db.query('cachedFoods').withIndex('by_user_provider', (q) => q.eq('userId', userId)).take(remaining),

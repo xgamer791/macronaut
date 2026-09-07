@@ -188,3 +188,18 @@ export const profilePostFields = {
   body: v.string(),
   imageId: v.optional(v.id('_storage')),
 };
+
+export const profilePhotoFields = {
+  imageId: v.id('_storage'),
+  caption: v.optional(v.string()),
+  isPublic: v.boolean(),
+};
+
+export const fitnessGroupFields = {
+  name: v.string(),
+  handle: v.string(),
+  handleLower: v.string(),
+  sport: v.optional(v.string()),
+  description: v.optional(v.string()),
+  isPublic: v.boolean(),
+};

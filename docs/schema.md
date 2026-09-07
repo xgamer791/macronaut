@@ -34,6 +34,9 @@ story.
 | `profiles` | one profile page per account | handle, handleLower, displayName, bio, location, primarySport, avatarId, bannerId, isPublic | `by_user`, `by_handle` (handleLower) |
 | `profilePosts` | posts on your own profile page | body, imageId | `by_user_created` (createdAt) |
 | `profileFollows` | one account following another; `userId` is the follower | followeeId | `by_user`, `by_followee`, `by_user_followee` |
+| `profilePhotos` | photos on a profile wall | imageId, caption, isPublic | `by_user_created` (createdAt) |
+| `fitnessGroups` | fitness groups; `userId` is the owner | name, handle, handleLower, sport, description, isPublic | `by_user`, `by_handle` (handleLower) |
+| `groupMembers` | membership in a fitness group | groupId, role | `by_user`, `by_group`, `by_user_group` |
 | `aiScanRoster`, `aiScanRosterMeta` | frozen set of accounts allowed to use AI food scan until Pro | userId; frozenAt | `by_user`; `by_key` |
 
 ## Conventions

@@ -56,4 +56,19 @@ describe('profile routes', () => {
     expect(read(path.join('u', '[handle].tsx'))).toContain('setFollow');
     expect(read(path.join('u', '[handle].tsx'))).toContain('Follow');
   });
+
+  it('opens Photos and Groups from the profile action row', () => {
+    const own = read('profile.tsx');
+    expect(own).toContain("router.push('/photos')");
+    expect(own).toContain("router.push('/groups')");
+    expect(own).toContain('label="Photos"');
+    expect(own).toContain('label="Groups"');
+    expect(own).not.toContain('label="Photo"');
+    expect(own).not.toContain('label="Banner"');
+    expect(fs.existsSync(path.join(appDir, 'photos.tsx'))).toBe(true);
+    expect(fs.existsSync(path.join(appDir, 'groups.tsx'))).toBe(true);
+    const layout = read('_layout.tsx');
+    expect(layout).toContain('name="photos"');
+    expect(layout).toContain('name="groups"');
+  });
 });

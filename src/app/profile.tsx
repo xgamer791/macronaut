@@ -179,11 +179,21 @@ function OwnProfile() {
               }}
             />
             <Action
-              icon="person-circle-outline"
-              label="Photo"
-              onPress={() => void replaceImage('avatar')}
+              icon="images-outline"
+              label="Photos"
+              onPress={() => {
+                void Haptics.selectionAsync();
+                router.push('/photos');
+              }}
             />
-            <Action icon="image-outline" label="Banner" onPress={() => void replaceImage('banner')} />
+            <Action
+              icon="people-outline"
+              label="Groups"
+              onPress={() => {
+                void Haptics.selectionAsync();
+                router.push('/groups');
+              }}
+            />
             <Action
               icon={data.isPublic ? 'globe-outline' : 'lock-closed-outline'}
               label={data.isPublic ? 'Public' : 'Private'}

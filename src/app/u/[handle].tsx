@@ -1,6 +1,8 @@
+import { Ionicons } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React from 'react';
-import { ActivityIndicator, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 import {
   AppText,
   Button,
@@ -68,6 +70,24 @@ function PublicProfile() {
   return (
     <Screen padded={false} safeTop={false} scroll>
       <ProfileHeader profile={found.profile} onBack={() => goBackOrHome(router)} />
+      <View style={styles.actions}>
+        <PublicAction
+          icon="images-outline"
+          label="Photos"
+          onPress={() => {
+            void Haptics.selectionAsync();
+            router.push({ pathname: '/photos', params: { handle: found.profile.handle } });
+          }}
+        />
+        <PublicAction
+          icon="people-outline"
+          label="Groups"
+          onPress={() => {
+            void Haptics.selectionAsync();
+            router.push({ pathname: '/groups', params: { handle: found.profile.handle } });
+          }}
+        />
+      </View>
       <View style={styles.body}>
         {found.profile.isOwner ? (
           <AppText variant="caption" tone="muted">
@@ -101,10 +121,61 @@ function PublicProfile() {
   );
 }
 
+function PublicAction({
+  icon,
+  label,
+  onPress,
+}: {
+  icon: keyof typeof Ionicons.glyphMap;
+  label: string;
+  onPress: () => void;
+}) {
+  const { colors } = useTheme();
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      onPress={onPress}
+      style={({ pressed }) => [styles.action, pressed && { opacity: 0.7 }]}
+    >
+      <View
+        style={[
+          styles.actionCircle,
+          { backgroundColor: colors.surfaceRaised, borderColor: colors.border },
+        ]}
+      >
+        <Ionicons name={icon} size={22} color={colors.textPrimary} />
+      </View>
+      <AppText variant="micro" weight="600" align="center">
+        {label}
+      </AppText>
+    </Pressable>
+  );
+}
+
 const styles = StyleSheet.create({
   loading: {
     paddingVertical: spacing.xxl * 2,
     alignItems: 'center',
+  },
+  actions: {
+    flexDirection: 'row',
+    gap: spacing.lg,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.lg,
+  },
+  action: {
+    width: 68,
+    alignItems: 'center',
+    gap: 4,
+  },
+  actionCircle: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   body: {
     paddingHorizontal: spacing.lg,
