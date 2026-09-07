@@ -49,9 +49,32 @@ describe('friends feed', () => {
     expect(backend).toContain("withIndex('by_user'");
     expect(backend).toContain("withIndex('by_followee'");
     expect(backend).toContain('incomingIds.has');
-    expect(page).toContain('backgroundColor: colors.surface');
+    expect(page).toContain('backgroundColor: colors.surfaceRaised');
+    expect(page).toContain('backgroundColor: colors.track');
     expect(page).toContain('color={colors.accent}');
     expect(page).not.toContain('initialMode="light"');
     expect(page).not.toContain('#1877F2');
+  });
+
+  it('uses an edge-to-edge feed instead of rounded post cards', () => {
+    const page = fs.readFileSync(path.join(appDir, 'friends.tsx'), 'utf8');
+
+    expect(page).toContain('function FriendsFeedPostView');
+    expect(page).toContain('styles.postImage');
+    expect(page).toContain('borderBottomWidth: StyleSheet.hairlineWidth');
+    expect(page).toContain('maxWidth: MAX_FEED_WIDTH');
+    expect(page).not.toContain('styles.card');
+    expect(page).not.toContain('styles.profileAction');
+    expect(page).not.toContain('View profile');
+  });
+
+  it('keeps the find-friends action inside safe header chrome', () => {
+    const page = fs.readFileSync(path.join(appDir, 'friends.tsx'), 'utf8');
+
+    expect(page).toContain('safeTop={false}');
+    expect(page).toContain('collapseHeader={false}');
+    expect(page).toContain('<GlassHeaderBar inset={spacing.lg}>');
+    expect(page).toContain('accessibilityLabel="Find friends"');
+    expect(page).toContain('height: touchTarget');
   });
 });

@@ -19,7 +19,7 @@ const ICON = '#FFFFFF';
 const NOTIFY_DOT = palette.accentDark;
 const GLYPH = 22;
 const GLYPH_INSET = (touchTarget - GLYPH) / 2;
-const MENU = 28;
+const MENU = 30;
 const PLUS = 30;
 
 export interface AppHeaderProps {

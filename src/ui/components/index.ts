@@ -42,6 +42,7 @@ export { ScannerView } from './ScannerView';
 export { BarEntranceProvider } from '@/ui/motion/barEntrance';
 export { LiquidGlassCard } from './LiquidGlassCard';
 export { GlassHeaderBar } from './GlassHeaderBar';
+export { NotificationOptIn } from './NotificationOptIn';
 export { GlassPopup } from './GlassPopup';
 export { DayNotesPopup } from './DayNotesPopup';
 export { DayInfoPopup } from './DayInfoPopup';
