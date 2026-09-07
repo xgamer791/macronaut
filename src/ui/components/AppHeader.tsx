@@ -23,7 +23,7 @@ const GLYPH = 22;
 const GLYPH_INSET = (touchTarget - GLYPH) / 2;
 const MENU = 27;
 const PLUS = 30;
-const MENU_EDGE_GAP = 20;
+const MENU_EDGE_GAP = 45;
 
 export interface AppHeaderProps {
   /** Calendar icon in the right cluster, immediately before notifications. */

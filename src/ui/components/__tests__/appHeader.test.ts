@@ -42,8 +42,8 @@ describe('Today header hamburger', () => {
     expect(header).not.toContain("href: '/profile'");
   });
 
-  it('stretches the drawer to 20px short of the full viewport width', () => {
-    expect(header).toContain('const MENU_EDGE_GAP = 20');
+  it('stretches the drawer to 45px short of the full viewport width', () => {
+    expect(header).toContain('const MENU_EDGE_GAP = 45');
     expect(header).toContain('const panelWidth = Math.max((width || 390) - MENU_EDGE_GAP, 0)');
     expect(header).toContain('width: panelWidth');
   });
