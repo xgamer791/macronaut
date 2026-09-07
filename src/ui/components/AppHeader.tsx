@@ -2,26 +2,19 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
-import React, { useEffect, useMemo, useState } from 'react';
-import { Animated, Easing, Pressable, StyleSheet, View } from 'react-native';
+import React, { useMemo } from 'react';
+import { Pressable, StyleSheet, View } from 'react-native';
 import { displayNameFromUser } from '@/services/auth/displayName';
 import { useAuth } from '@/state/AuthProvider';
 import { useNotifications, useSetting } from '@/state/queries';
-import { isAppleWatchConnected } from '@/utils/appleHealthStatus';
 import { useTheme } from '@/ui/theme/ThemeProvider';
 import { palette, spacing, touchTarget } from '@/ui/theme/tokens';
 import { AppText } from './AppText';
 
-const WATCH_FACE = require('../../../assets/images/header-watch.png');
-
 const ICON = '#FFFFFF';
 const NOTIFY_DOT = palette.accentDark;
-const WATCH_DOT = '#FF3B3B';
 const GLYPH = 22;
 const GLYPH_INSET = (touchTarget - GLYPH) / 2;
-/** The watch is a photo, not a line glyph, so it needs a slightly wider
- * circle to stay legible at the same optical weight. */
-const WATCH_CIRCLE = 28;
 const PLUS = 30;
 
 export interface AppHeaderProps {
@@ -30,7 +23,7 @@ export interface AppHeaderProps {
 }
 
 /**
- * Garmin-style chrome: add / calendar / watch on the right. Profile, chats
+ * Garmin-style chrome: add / calendar on the right. Profile, chats
  * and notifications live in the tab bar, not here.
  */
 export function AppHeader({ onCalendarPress }: AppHeaderProps) {
@@ -61,8 +54,6 @@ export function AppHeader({ onCalendarPress }: AppHeaderProps) {
         >
           <Ionicons name="calendar-outline" size={GLYPH} color={icon} />
         </HeaderHit>
-
-        <WatchButton />
       </View>
     </View>
   );
@@ -152,95 +143,6 @@ export function HeaderChatsButton() {
     >
       <Ionicons name="chatbubbles-outline" size={GLYPH + 1} color={ICON} />
     </HeaderHit>
-  );
-}
-
-function useBreathing(active: boolean) {
-  const [pulse] = useState(() => new Animated.Value(0));
-  useEffect(() => {
-    if (!active) {
-      pulse.setValue(0);
-      return;
-    }
-    const loop = Animated.loop(
-      Animated.sequence([
-        Animated.timing(pulse, {
-          toValue: 1,
-          duration: 1400,
-          easing: Easing.inOut(Easing.sin),
-          useNativeDriver: true,
-        }),
-        Animated.timing(pulse, {
-          toValue: 0,
-          duration: 1400,
-          easing: Easing.inOut(Easing.sin),
-          useNativeDriver: true,
-        }),
-      ]),
-    );
-    loop.start();
-    return () => loop.stop();
-  }, [active, pulse]);
-  return pulse;
-}
-
-/** Header Watch — opens the Apple Health page. The red LED breathes while
- * disconnected; there is no ring around the watch itself. */
-function WatchButton() {
-  const router = useRouter();
-  const connected = isAppleWatchConnected();
-  const pulse = useBreathing(!connected);
-  const inset = (touchTarget - WATCH_CIRCLE) / 2;
-  const dotOffset = inset + (WATCH_CIRCLE / 2) * (1 - Math.SQRT1_2);
-
-  return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={
-        connected
-          ? 'Apple Watch and Apple Health, connected'
-          : 'Apple Watch and Apple Health, not connected'
-      }
-      onPress={() => {
-        void Haptics.selectionAsync();
-        router.push('/apple-health');
-      }}
-      hitSlop={4}
-      style={styles.hit}
-    >
-      <View
-        style={[
-          styles.glyphSlot,
-          { top: inset, left: inset, width: WATCH_CIRCLE, height: WATCH_CIRCLE },
-        ]}
-        pointerEvents="none"
-      >
-        <View style={styles.watch}>
-          <Image source={WATCH_FACE} style={styles.watchImg} contentFit="contain" />
-        </View>
-      </View>
-      {connected ? (
-        <View
-          style={[styles.dot, { top: dotOffset, right: dotOffset, backgroundColor: NOTIFY_DOT }]}
-        />
-      ) : (
-        <Animated.View
-          pointerEvents="none"
-          style={[
-            styles.dot,
-            {
-              top: dotOffset,
-              right: dotOffset,
-              backgroundColor: WATCH_DOT,
-              opacity: pulse.interpolate({ inputRange: [0, 1], outputRange: [0.55, 1] }),
-              transform: [
-                { scale: pulse.interpolate({ inputRange: [0, 1], outputRange: [0.92, 1.08] }) },
-              ],
-            },
-          ]}
-        />
-      )}
-    </Pressable>
   );
 }
 
@@ -356,17 +258,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     lineHeight: 14,
     fontWeight: '700',
-  },
-  watch: {
-    width: WATCH_CIRCLE,
-    height: WATCH_CIRCLE,
-    borderRadius: WATCH_CIRCLE / 2,
-    overflow: 'hidden',
-    backgroundColor: '#111',
-  },
-  watchImg: {
-    width: WATCH_CIRCLE,
-    height: WATCH_CIRCLE,
   },
   dot: {
     position: 'absolute',

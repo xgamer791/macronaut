@@ -22,17 +22,15 @@ describe('Apple Health pause note', () => {
     expect(read(path.join('(tabs)', 'settings.tsx'))).toContain('Apple Health and Watch');
   });
 
-  it('header watch opens Apple Health and pulses the LED while disconnected', () => {
+  it('does not put a watch in the Today header', () => {
     const header = fs.readFileSync(
       path.join(__dirname, '..', '..', 'ui', 'components', 'AppHeader.tsx'),
       'utf8',
     );
-    expect(header).toContain("router.push('/apple-health')");
-    expect(header).toContain('isAppleWatchConnected');
-    expect(header).toContain('useBreathing');
-    // The disconnected cue is the red LED, not a ring around the watch.
-    expect(header).not.toContain('watchRing');
-    expect(header).not.toContain('dotHalo');
+    expect(header).not.toContain("router.push('/apple-health')");
+    expect(header).not.toContain('WatchButton');
+    expect(header).not.toContain('header-watch.png');
+    expect(header).not.toContain('isAppleWatchConnected');
     expect(isAppleWatchConnected()).toBe(false);
   });
 
