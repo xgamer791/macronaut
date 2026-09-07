@@ -15,7 +15,15 @@ import {
 } from '@/state/queries';
 import { ActivityEntry, DiaryEntry } from '@/repositories/types';
 import { addDays, DayKey, rangeDays, shortWeekdayLabel, todayKey, weekDays } from '@/utils/date';
-import { AppText, Card, CalendarPanel, EmptyState, LineChart, Screen } from '@/ui/components';
+import {
+  AppText,
+  Card,
+  CalendarIcon,
+  CalendarPanel,
+  EmptyState,
+  LineChart,
+  Screen,
+} from '@/ui/components';
 import { useTheme } from '@/ui/theme/ThemeProvider';
 import { radius, spacing, touchTarget } from '@/ui/theme/tokens';
 
@@ -125,7 +133,7 @@ function ProgressBody() {
           hitSlop={8}
           style={styles.calBtn}
         >
-          <Ionicons name="calendar-outline" size={22} color={colors.accent} />
+          <CalendarIcon size={22} color={colors.accent} />
         </Pressable>
       </View>
 

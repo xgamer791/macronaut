@@ -6,7 +6,7 @@ const header = fs.readFileSync(path.join(__dirname, '..', 'AppHeader.tsx'), 'utf
 describe('Today header hamburger', () => {
   it('puts a menu control on the left and keeps add, calendar, then notifications on the right', () => {
     expect(header).toContain('<Menu size={MENU}');
-    expect(header).toContain('<CalendarDays size={GLYPH}');
+    expect(header).toContain('<CalendarIcon size={GLYPH}');
     expect(header).toContain('<BellIcon');
     expect(header).toContain('const MENU = 27');
     expect(header).toContain('size={MENU}');
@@ -16,6 +16,11 @@ describe('Today header hamburger', () => {
     expect(header.indexOf('<Menu')).toBeLessThan(header.indexOf('Add food'));
     expect(header.indexOf('Add food')).toBeLessThan(header.indexOf('Open calendar'));
     expect(header.indexOf('Open calendar')).toBeLessThan(header.indexOf('<HeaderNotifyButton'));
+  });
+
+  it('opens the calendar route instead of the training schedule', () => {
+    expect(header).toContain("router.push('/calendar')");
+    expect(header).not.toContain("router.push('/training-schedule')");
   });
 
   it('opens and closes on the same friends-feed curve', () => {

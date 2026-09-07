@@ -16,6 +16,7 @@ import { AppearanceMode, useTheme } from '@/ui/theme/ThemeProvider';
 import {
   AppText,
   Button,
+  CalendarIcon,
   Card,
   ListRow,
   Screen,
@@ -28,7 +29,8 @@ import { radius, spacing } from '@/ui/theme/tokens';
 type NutritionStyle = 'cut' | 'maintain' | 'bulk';
 type IconSpec =
   | { set: 'ion'; name: keyof typeof Ionicons.glyphMap }
-  | { set: 'mci'; name: React.ComponentProps<typeof MaterialCommunityIcons>['name'] };
+  | { set: 'mci'; name: React.ComponentProps<typeof MaterialCommunityIcons>['name'] }
+  | { set: 'calendar' };
 
 const STYLE_TO_GOAL: Record<NutritionStyle, OnboardingProfile['goalType']> = {
   cut: 'lose',
@@ -292,7 +294,7 @@ export default function SettingsScreen() {
       {/* Meal schedule */}
       <Card style={[styles.card, styles.lifestyleCard]}>
         <SectionTitle
-          icon={{ set: 'mci', name: 'calendar-clock' }}
+          icon={{ set: 'calendar' }}
           title="Meal schedule"
           subtitle="Set your daily eating windows."
         />
@@ -713,6 +715,9 @@ export default function SettingsScreen() {
 
 function AccentIcon({ icon, size = 22 }: { icon: IconSpec; size?: number }) {
   const { colors } = useTheme();
+  if (icon.set === 'calendar') {
+    return <CalendarIcon size={size} color={colors.accent} />;
+  }
   if (icon.set === 'mci') {
     return <MaterialCommunityIcons name={icon.name} size={size} color={colors.accent} />;
   }

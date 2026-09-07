@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
 import { useRouter, type Href } from 'expo-router';
-import { CalendarDays, Menu, MessagesSquare } from 'lucide-react-native';
+import { Menu, MessagesSquare } from 'lucide-react-native';
 import { BellIcon } from 'phosphor-react-native';
 import React, { useEffect, useLayoutEffect, useMemo, useState } from 'react';
 import { Modal, Platform, Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
@@ -16,6 +16,7 @@ import { SLIDE_DURATION_MS, SLIDE_EASING } from '@/ui/motion/SlideScreen';
 import { useTheme } from '@/ui/theme/ThemeProvider';
 import { palette, spacing, touchTarget } from '@/ui/theme/tokens';
 import { AppText } from './AppText';
+import { CalendarIcon } from './CalendarIcon';
 
 const ICON = '#FFFFFF';
 const NOTIFY_DOT = palette.accentDark;
@@ -25,16 +26,11 @@ const MENU = 27;
 const PLUS = 30;
 const MENU_EDGE_GAP = 45;
 
-export interface AppHeaderProps {
-  /** Calendar icon in the right cluster, immediately before notifications. */
-  onCalendarPress?: () => void;
-}
-
 /**
  * Garmin-style chrome: hamburger on the left, add / calendar / bell on the right.
  * Notifications stay reachable without spending a primary tab-bar slot.
  */
-export function AppHeader({ onCalendarPress }: AppHeaderProps) {
+export function AppHeader() {
   const router = useRouter();
   const { colors } = useTheme();
   const icon = colors.textPrimary;
@@ -69,10 +65,10 @@ export function AppHeader({ onCalendarPress }: AppHeaderProps) {
           accessibilityLabel="Open calendar"
           onPress={() => {
             void Haptics.selectionAsync();
-            onCalendarPress?.();
+            router.push('/calendar');
           }}
         >
-          <CalendarDays size={GLYPH} color={icon} />
+          <CalendarIcon size={GLYPH} color={icon} />
         </HeaderHit>
 
         <HeaderNotifyButton iconColor={icon} />

@@ -206,7 +206,7 @@ function TodayBody() {
       safeTop={false}
       stickyHeader={
         <GlassHeaderBar>
-          <AppHeader onCalendarPress={() => router.push('/training-schedule')} />
+          <AppHeader />
         </GlassHeaderBar>
       }
       floatingOverlay={<ToolLauncher />}

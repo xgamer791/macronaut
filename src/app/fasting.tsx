@@ -15,6 +15,7 @@ import { parseDayKey, toDayKey, type DayKey } from '@/utils/date';
 import {
   AppText,
   Button,
+  CalendarIcon,
   Card,
   GlassHeaderBar,
   LiquidGlassCard,
@@ -322,7 +323,7 @@ function FastingScreen() {
         <View style={styles.sectionHeading}>
           <View style={styles.sectionTitleRow}>
             <View style={styles.sectionIcon}>
-              <Ionicons name="calendar-clear-outline" size={22} color={colors.accent} />
+              <CalendarIcon size={22} color={colors.accent} />
             </View>
             <View style={styles.sectionHeadingCopy}>
               <AppText variant="heading" weight="600" display>
@@ -560,7 +561,7 @@ function DateTimeRow({
             pressed && styles.pressed,
           ]}
         >
-          <Ionicons name="calendar-outline" size={18} color={colors.accent} />
+          <CalendarIcon size={18} color={colors.accent} />
           <AppText variant="caption" weight="600">
             {formatDate(value)}
           </AppText>

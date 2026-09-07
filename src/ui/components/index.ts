@@ -29,6 +29,7 @@ export { TextField } from './TextField';
 export { TargetEditor } from './TargetEditor';
 export { DatePickSheet } from './DatePickSheet';
 export { CalendarPanel } from './CalendarPanel';
+export { CalendarIcon } from './CalendarIcon';
 export { CalendarDayDetail } from './CalendarDayDetail';
 export { DashboardHeader } from './DashboardHeader';
 export { AppHeader, HeaderAvatarButton, HeaderChatsButton, HeaderNotifyButton } from './AppHeader';

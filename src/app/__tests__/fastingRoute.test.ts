@@ -15,7 +15,7 @@ describe('home tools and fasting route', () => {
     const screen = fs.readFileSync(path.join(srcDir, 'ui', 'components', 'Screen.tsx'), 'utf8');
 
     expect(home).toContain('floatingOverlay={<ToolLauncher />}');
-    expect(home).toContain('<AppHeader onCalendarPress');
+    expect(home).toContain('<AppHeader />');
     expect(screen).toContain('floatingOverlay?: React.ReactNode');
     expect(launcher).toContain('Animated.timing');
     expect(launcher).toContain("href: '/fasting'");

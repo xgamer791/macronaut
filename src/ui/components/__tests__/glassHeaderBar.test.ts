@@ -40,7 +40,7 @@ describe('sticky chrome headers', () => {
   it('hands Today its header instead of drawing one inside the hero', () => {
     expect(today).toContain('stickyHeader={');
     expect(today).toContain('<GlassHeaderBar>');
-    expect(today).toContain('<AppHeader onCalendarPress');
+    expect(today).toContain('<AppHeader />');
     expect(today).not.toContain('headerWrap');
     expect(today).toContain('{ height: heroHeight }');
     expect(today).not.toContain('heroHeight + insets.top');
