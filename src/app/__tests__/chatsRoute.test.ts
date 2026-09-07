@@ -96,10 +96,25 @@ describe('chat routes', () => {
       path.join(appDir, '..', '..', 'convex', 'profiles.ts'),
       'utf8',
     );
-    // A private profile answers to its whole handle, and nothing less.
+    // Searching matches a name or a handle for everyone. `isPublic` decides
+    // who may read a profile page, never who may be found or befriended.
     expect(backend).toContain('function matchesSearch');
-    expect(backend).toContain('if (!profile.isPublic) return profile.handleLower === wanted;');
+    expect(backend).not.toContain('profile.isPublic &&');
     expect(backend).not.toContain('!profile.isPublic || profile.userId === userId');
     expect(profiles).not.toContain('row.userId === userId || !row.isPublic');
+  });
+
+  it('claims a profile row for every signed-in account, so search can see it', () => {
+    const profiles = fs.readFileSync(
+      path.join(appDir, '..', '..', 'convex', 'profiles.ts'),
+      'utf8',
+    );
+    const repo = fs.readFileSync(path.join(srcDir, 'repositories', 'profileRepo.ts'), 'utf8');
+    const layout = readApp('_layout.tsx');
+    expect(profiles).toContain('export const ensure = mutation');
+    expect(repo).toContain('api.profiles.ensure');
+    // Opening the app is enough — no profile edit required to be findable.
+    expect(layout).toContain('profile.ensure()');
+    expect(layout).toContain('if (!signedIn || claimed.current) return;');
   });
 });

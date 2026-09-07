@@ -48,6 +48,9 @@ export interface ProfilePatch {
 export type ProfileImageKind = 'avatar' | 'banner';
 
 export interface ProfileRepo {
+  /** Claim this account's profile row and handle if it has none yet, so the
+   * account is findable by everyone else's search. Safe to call repeatedly. */
+  ensure(): Promise<{ handle: string }>;
   /** The signed-in user's own profile. */
   me(): Promise<ProfileView>;
   myPosts(): Promise<ProfilePost[]>;
@@ -71,6 +74,7 @@ const fileId = (id: string) => id as Id<'_storage'>;
 
 export function createProfileRepo(convex: ConvexCaller): ProfileRepo {
   return {
+    ensure: () => convex.mutation(api.profiles.ensure, {}),
     me: () => convex.query(api.profiles.me, {}),
     myPosts: () => convex.query(api.profiles.myPosts, {}),
     byHandle: (handle) => convex.query(api.profiles.byHandle, { handle }),
@@ -98,7 +102,10 @@ export function createProfileRepo(convex: ConvexCaller): ProfileRepo {
       }),
 
     addPost: (body, imageId) =>
-      convex.mutation(api.profiles.addPost, clean({ body, imageId: imageId ? fileId(imageId) : undefined })),
+      convex.mutation(
+        api.profiles.addPost,
+        clean({ body, imageId: imageId ? fileId(imageId) : undefined }),
+      ),
     updatePost: (id, body) => convex.mutation(api.profiles.updatePost, { id: postId(id), body }),
     async removePost(id) {
       await convex.mutation(api.profiles.removePost, { id: postId(id) });

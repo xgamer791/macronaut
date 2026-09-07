@@ -33,8 +33,10 @@ export async function stubAuthKeys(): Promise<void> {
 
 /** A signed-in user. Convex Auth encodes `userId|sessionId` in the JWT
  * subject, which is all `getAuthUserId` reads. */
-export async function signIn(t: Backend, email = 'person@example.com') {
-  const userId = await t.run(async (ctx) => ctx.db.insert('users', { email }));
+export async function signIn(t: Backend, email = 'person@example.com', name?: string) {
+  const userId = await t.run(async (ctx) =>
+    ctx.db.insert('users', name ? { email, name } : { email }),
+  );
   const sessionId = await t.run(async (ctx) =>
     ctx.db.insert('authSessions', { userId, expirationTime: Date.now() + 86_400_000 }),
   );

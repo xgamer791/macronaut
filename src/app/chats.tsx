@@ -108,10 +108,7 @@ function ChatList() {
             label="PEOPLE ON MACRONAUT"
             empty={
               list.length ? undefined : (
-                <EmptyState
-                  title="No people found"
-                  body="Search the whole @handle to find someone whose profile page is private."
-                />
+                <EmptyState title="No people found" body="Try a different name or @handle." />
               )
             }
           />

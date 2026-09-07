@@ -51,7 +51,7 @@ function PeopleList() {
             title={searching ? 'No people found' : 'No contacts yet'}
             body={
               searching
-                ? 'Search the whole @handle to find someone whose profile page is private.'
+                ? 'Try a different name or @handle.'
                 : 'Search for someone on Macronaut to start your first conversation.'
             }
           />

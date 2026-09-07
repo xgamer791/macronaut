@@ -68,45 +68,65 @@ describe('direct chats', () => {
   });
 
   /** The case the app actually ships: nobody has touched the privacy toggle,
-   * because every profile is created private. Search has to work anyway, or
-   * there is no one to befriend and nothing to message. */
-  it('finds a default private account by its exact handle, and messages it once friends', async () => {
+   * because every profile is created private. Searching a first name has to
+   * find them anyway, or there is no one to befriend and nothing to message. */
+  it('finds a default private account by first name, and messages it once friends', async () => {
     const t = backend();
-    const alice = await signIn(t, 'alice@example.com');
+    const holly = await signIn(t, 'holly@example.com');
     const bob = await signIn(t, 'bob@example.com');
 
     // No isPublic anywhere: both accounts are left exactly as created.
-    await alice.repos.profile.update({ handle: 'alice_runner', displayName: 'Alice Runner' });
+    await holly.repos.profile.update({ handle: 'holly_ky', displayName: 'Holly Ky' });
     await bob.repos.profile.update({ handle: 'bob_lifts', displayName: 'Bob Lifts' });
 
-    expect(await bob.repos.chats.people('alice_runner')).toEqual([
-      expect.objectContaining({ handle: 'alice_runner', friendship: 'none' }),
-    ]);
-    // The @ people type beside a handle is decoration, not part of it.
-    expect(await bob.repos.chats.people('@alice_runner')).toEqual([
-      expect.objectContaining({ handle: 'alice_runner' }),
-    ]);
-    // A private page is not browsable: no partial handle, no display name.
-    expect(await bob.repos.chats.people('alice')).toEqual([]);
-    expect(await bob.repos.chats.people('Alice Runner')).toEqual([]);
+    // A first name, either case, the surname, part of the handle, the whole
+    // handle, and the @ people type beside it all reach the same person.
+    for (const term of ['holly', 'Holly', 'HOLLY KY', 'ky', 'holly_ky', '@holly_ky']) {
+      expect(await bob.repos.chats.people(term)).toEqual([
+        expect.objectContaining({ handle: 'holly_ky', friendship: 'none' }),
+      ]);
+    }
 
     // Friendship, not page visibility, is the gate on a conversation.
-    await expect(bob.repos.chats.open('alice_runner')).rejects.toThrow(/friends/i);
-    await bob.repos.profile.setFollow('alice_runner', true);
-    await expect(bob.repos.chats.open('alice_runner')).rejects.toThrow(/friends/i);
-    expect(await alice.repos.chats.people()).toEqual([
+    await expect(bob.repos.chats.open('holly_ky')).rejects.toThrow(/friends/i);
+    await bob.repos.profile.setFollow('holly_ky', true);
+    await expect(bob.repos.chats.open('holly_ky')).rejects.toThrow(/friends/i);
+    expect(await holly.repos.chats.people()).toEqual([
       expect.objectContaining({ handle: 'bob_lifts', friendship: 'incoming' }),
     ]);
 
-    await alice.repos.profile.setFollow('bob_lifts', true);
-    const chat = await bob.repos.chats.open('alice_runner');
+    await holly.repos.profile.setFollow('bob_lifts', true);
+    const chat = await bob.repos.chats.open('holly_ky');
     await bob.repos.chats.send(chat.id, 'Morning run tomorrow?');
-    expect(await alice.repos.chats.list()).toEqual([
+    expect(await holly.repos.chats.list()).toEqual([
       expect.objectContaining({
         peer: expect.objectContaining({ handle: 'bob_lifts', friendship: 'friends' }),
         unreadCount: 1,
       }),
     ]);
+  });
+
+  /** A row was only written the first time somebody edited their profile, so
+   * an account that signed up and just logged food was missing from the table
+   * search reads. Opening the app claims it. */
+  it('finds an account that has never edited its profile, once it opens the app', async () => {
+    const t = backend();
+    const holly = await signIn(t, 'holly@example.com', 'Holly Ky');
+    const bob = await signIn(t, 'bob@example.com');
+    await bob.repos.profile.update({ handle: 'bob_lifts' });
+
+    expect(await bob.repos.chats.people('holly')).toEqual([]);
+
+    // What the app does for every signed-in session.
+    const { handle } = await holly.repos.profile.ensure();
+    expect(handle).toBe('holly_ky');
+    expect(await bob.repos.chats.people('holly')).toEqual([
+      expect.objectContaining({ handle: 'holly_ky', displayName: 'Holly Ky' }),
+    ]);
+
+    // Claiming twice keeps the one row and the one handle.
+    expect((await holly.repos.profile.ensure()).handle).toBe('holly_ky');
+    expect(await t.run(async (ctx) => ctx.db.query('profiles').collect())).toHaveLength(2);
   });
 
   it('browses a public profile by any part of its handle or name', async () => {

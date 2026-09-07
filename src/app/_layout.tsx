@@ -6,7 +6,7 @@ import {
 import { QueryClient, QueryClientProvider, useQueryClient } from '@tanstack/react-query';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
-import React, { useEffect, useSyncExternalStore } from 'react';
+import React, { useEffect, useRef, useSyncExternalStore } from 'react';
 import { Platform, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { convexConfigStatus } from '@/services/convex/client';
@@ -29,10 +29,23 @@ const queryClient = new QueryClient({
 });
 
 function ThemedApp() {
-  const { settings } = useRepos();
+  const { settings, profile } = useRepos();
   const qc = useQueryClient();
   const { signedIn } = useAuth();
   const appearance = useSetting<AppearanceMode>('appearance', 'system', signedIn);
+
+  // A profile row was only written the first time somebody edited their
+  // profile, and that table is what everyone else's people search reads. An
+  // account that just signed up and started logging food was therefore
+  // invisible, so claim its row and handle as soon as we know who is here.
+  const claimed = useRef(false);
+  useEffect(() => {
+    if (!signedIn || claimed.current) return;
+    claimed.current = true;
+    profile.ensure().catch(() => {
+      claimed.current = false;
+    });
+  }, [signedIn, profile]);
 
   // Renders on the default mode and switches when the stored one arrives, so
   // signing in never unmounts the navigator below (see AccountApp).
