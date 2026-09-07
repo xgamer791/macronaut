@@ -52,4 +52,16 @@ describe('training schedule route', () => {
     expect(schedule).not.toContain('Plan this day');
     expect(schedule).not.toContain('SPECIFIC WORKOUTS');
   });
+
+  it('offers saved per-day repeats and one all-days toggle at the bottom', () => {
+    const schedule = fs.readFileSync(path.join(appDir, 'training-schedule.tsx'), 'utf8');
+
+    expect(schedule).toContain('title="Repeat every day"');
+    expect(schedule).toContain('title={`Repeat every ${longWeekday(editingDate)}`}');
+    expect(schedule).toContain('useSetTrainingScheduleRepeatDay');
+    expect(schedule).toContain('useSetAllTrainingScheduleRepeats');
+    expect(schedule).toContain('accessibilityRole="switch"');
+    expect(schedule).toContain("marginTop: 'auto'");
+    expect(schedule).toContain('backgroundColor: value ? colors.accent : colors.track');
+  });
 });

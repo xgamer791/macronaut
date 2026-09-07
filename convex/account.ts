@@ -267,6 +267,11 @@ async function purgeUserData(ctx: MutationCtx, userId: Id<'users'>, budget: numb
         .take(remaining),
     () =>
       ctx.db
+        .query('trainingScheduleRepeats')
+        .withIndex('by_user_weekday', (q) => q.eq('userId', userId))
+        .take(remaining),
+    () =>
+      ctx.db
         .query('activityEntries')
         .withIndex('by_user_date', (q) => q.eq('userId', userId))
         .take(remaining),

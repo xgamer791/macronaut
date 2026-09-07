@@ -36,7 +36,7 @@ import {
   SavedMeal,
 } from '@/repositories/types';
 import { Repos } from '@/state/AppProvider';
-import { DayKey } from '@/utils/date';
+import { DayKey, rangeDays, weekdayOf } from '@/utils/date';
 
 let counter = 0;
 const newId = () => `mem-${(counter += 1)}`;
@@ -898,9 +898,23 @@ export function createMemoryNotificationRepo(): NotificationRepo {
 
 export function createMemoryTrainingScheduleRepo(): TrainingScheduleRepo {
   const days: TrainingScheduleDay[] = [];
+  const repeats = new Set<number>();
+  const templates = new Map<number, TrainingScheduleDay>();
   return {
     async range(from, to) {
-      return clone(days.filter((day) => day.date >= from && day.date <= to));
+      const exact = new Map(
+        days.filter((day) => day.date >= from && day.date <= to).map((day) => [day.date, day]),
+      );
+      return rangeDays(from, to).flatMap((date) => {
+        const saved = exact.get(date);
+        if (saved) return [clone(saved)];
+        const template = templates.get(weekdayOf(date));
+        if (!repeats.has(weekdayOf(date)) || !template || template.date > date) return [];
+        return [clone({ ...template, id: `${template.id}:${date}`, date })];
+      });
+    },
+    async repeatDays() {
+      return [...repeats].sort((a, b) => a - b);
     },
     async save(input) {
       const index = days.findIndex((day) => day.date === input.date);
@@ -914,11 +928,37 @@ export function createMemoryTrainingScheduleRepo(): TrainingScheduleRepo {
       };
       if (index >= 0) days[index] = day;
       else days.push(day);
+      if (repeats.has(weekdayOf(day.date))) templates.set(weekdayOf(day.date), clone(day));
       return clone(day);
+    },
+    async setRepeatDay(date, enabled) {
+      const weekday = weekdayOf(date);
+      if (enabled) {
+        repeats.add(weekday);
+        const source = days.find((day) => day.date === date);
+        if (source) templates.set(weekday, clone(source));
+      } else {
+        repeats.delete(weekday);
+      }
+      return [...repeats].sort((a, b) => a - b);
+    },
+    async setRepeatAll(dates, enabled) {
+      for (const date of dates) {
+        const weekday = weekdayOf(date);
+        if (enabled) {
+          repeats.add(weekday);
+          const source = days.find((day) => day.date === date);
+          if (source) templates.set(weekday, clone(source));
+        } else {
+          repeats.delete(weekday);
+        }
+      }
+      return [...repeats].sort((a, b) => a - b);
     },
     async remove(date) {
       const index = days.findIndex((day) => day.date === date);
       if (index >= 0) days.splice(index, 1);
+      repeats.delete(weekdayOf(date));
     },
   };
 }

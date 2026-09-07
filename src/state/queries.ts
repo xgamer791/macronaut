@@ -1,5 +1,5 @@
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { DayKey, weekDays } from '@/utils/date';
+import { DayKey, weekdayOf, weekDays } from '@/utils/date';
 import { DayProgress, WeekProgress, dayProgress, weekProgress } from '@/domain/aggregation';
 import { GoalConfig } from '@/domain/goals';
 import { WeekStart } from '@/domain/types';
@@ -54,6 +54,7 @@ export const keys = {
   notifications: ['notifications'] as const,
   fasting: ['fasting'] as const,
   trainingSchedule: (from: DayKey, to: DayKey) => ['training-schedule', from, to] as const,
+  trainingScheduleRepeats: ['training-schedule-repeats'] as const,
 };
 
 export function useInvalidateDiary() {
@@ -681,9 +682,22 @@ export function useTrainingSchedule(from: DayKey, to: DayKey) {
   });
 }
 
+export function useTrainingScheduleRepeatDays() {
+  const { signedIn } = useAuth();
+  const { trainingSchedule } = useRepos();
+  return useQuery({
+    queryKey: keys.trainingScheduleRepeats,
+    queryFn: () => trainingSchedule.repeatDays(),
+    enabled: signedIn,
+  });
+}
+
 function useInvalidateTrainingSchedule() {
   const qc = useQueryClient();
-  return () => qc.invalidateQueries({ queryKey: ['training-schedule'] });
+  return () => {
+    void qc.invalidateQueries({ queryKey: ['training-schedule'] });
+    void qc.invalidateQueries({ queryKey: keys.trainingScheduleRepeats });
+  };
 }
 
 export function useSaveTrainingScheduleDay() {
@@ -701,6 +715,58 @@ export function useRemoveTrainingScheduleDay() {
   return useMutation({
     mutationFn: (date: DayKey) => trainingSchedule.remove(date),
     onSuccess: invalidate,
+  });
+}
+
+export function useSetTrainingScheduleRepeatDay() {
+  const { trainingSchedule } = useRepos();
+  const qc = useQueryClient();
+  const invalidate = useInvalidateTrainingSchedule();
+  return useMutation({
+    mutationFn: ({ date, enabled }: { date: DayKey; enabled: boolean }) =>
+      trainingSchedule.setRepeatDay(date, enabled),
+    onMutate: async ({ date, enabled }) => {
+      await qc.cancelQueries({ queryKey: keys.trainingScheduleRepeats });
+      const previous = qc.getQueryData<number[]>(keys.trainingScheduleRepeats);
+      const next = new Set(previous ?? []);
+      if (enabled) next.add(weekdayOf(date));
+      else next.delete(weekdayOf(date));
+      qc.setQueryData(
+        keys.trainingScheduleRepeats,
+        [...next].sort((a, b) => a - b),
+      );
+      return { previous };
+    },
+    onError: (_error, _variables, context) => {
+      qc.setQueryData(keys.trainingScheduleRepeats, context?.previous);
+    },
+    onSuccess: (repeatDays) => {
+      qc.setQueryData(keys.trainingScheduleRepeats, repeatDays);
+    },
+    onSettled: invalidate,
+  });
+}
+
+export function useSetAllTrainingScheduleRepeats() {
+  const { trainingSchedule } = useRepos();
+  const qc = useQueryClient();
+  const invalidate = useInvalidateTrainingSchedule();
+  return useMutation({
+    mutationFn: ({ dates, enabled }: { dates: DayKey[]; enabled: boolean }) =>
+      trainingSchedule.setRepeatAll(dates, enabled),
+    onMutate: async ({ enabled }) => {
+      await qc.cancelQueries({ queryKey: keys.trainingScheduleRepeats });
+      const previous = qc.getQueryData<number[]>(keys.trainingScheduleRepeats);
+      qc.setQueryData(keys.trainingScheduleRepeats, enabled ? [0, 1, 2, 3, 4, 5, 6] : []);
+      return { previous };
+    },
+    onError: (_error, _variables, context) => {
+      qc.setQueryData(keys.trainingScheduleRepeats, context?.previous);
+    },
+    onSuccess: (repeatDays) => {
+      qc.setQueryData(keys.trainingScheduleRepeats, repeatDays);
+    },
+    onSettled: invalidate,
   });
 }
 

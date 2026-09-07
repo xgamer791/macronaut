@@ -90,6 +90,22 @@ export default defineSchema({
     updatedAt: v.string(),
   }).index('by_user_date', ['userId', 'date']),
 
+  /** One recurrence rule per weekday. The latest saved plan for an enabled
+   * weekday is kept here as the template, so future weeks can be resolved in
+   * one bounded query instead of scanning a user's schedule history. */
+  trainingScheduleRepeats: defineTable({
+    userId: v.id('users'),
+    /** JavaScript weekday convention: 0 = Sunday … 6 = Saturday. */
+    weekday: v.number(),
+    enabled: v.boolean(),
+    sourceDate: v.optional(v.string()),
+    label: v.optional(v.string()),
+    notes: v.optional(v.string()),
+    workouts: v.optional(v.array(scheduledWorkoutValidator)),
+    createdAt: v.string(),
+    updatedAt: v.string(),
+  }).index('by_user_weekday', ['userId', 'weekday']),
+
   /** Only user-created meals live here; the four built-ins are constants. */
   mealCategories: defineTable({
     userId: v.id('users'),
