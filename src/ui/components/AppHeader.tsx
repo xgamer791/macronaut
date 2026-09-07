@@ -114,6 +114,7 @@ function HeaderMenu({ visible, onClose }: { visible: boolean; onClose: () => voi
 
   if (visible !== prevVisible) {
     setPrevVisible(visible);
+    setWebOpen(false);
     if (visible) setMounted(true);
     setWebOpen(false);
   }
