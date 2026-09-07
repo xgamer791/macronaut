@@ -18,12 +18,13 @@ describe('directional slide navigation', () => {
     expect(slide).toContain("Platform.OS === 'web'");
 
     expect(read(appDir, 'notifications.tsx')).toContain('<SlideScreen from="right">');
+    expect(read(appDir, 'groups.tsx')).toContain('<SlideScreen from="right">');
     expect(read(appDir, 'profile.tsx')).toContain('<SlideScreen from="right">');
     expect(read(appDir, 'u', '[handle].tsx')).toContain('<SlideScreen from="right">');
   });
 
   it('slides chats and the rest in from the left', () => {
-    for (const file of ['chats.tsx', 'friends.tsx', 'groups.tsx', 'photos.tsx', 'goals.tsx']) {
+    for (const file of ['chats.tsx', 'friends.tsx', 'photos.tsx', 'goals.tsx']) {
       expect(read(appDir, file)).toContain('<SlideScreen from="left">');
     }
     expect(read(appDir, 'chat', '[id].tsx')).toContain('<SlideScreen from="left">');

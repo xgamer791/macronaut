@@ -211,6 +211,8 @@ export const fitnessGroupFields = {
   handle: v.string(),
   handleLower: v.string(),
   sport: v.optional(v.string()),
+  /** Public place label chosen by the owner (for example "Austin, TX"). */
+  location: v.optional(v.string()),
   description: v.optional(v.string()),
   isPublic: v.boolean(),
 };

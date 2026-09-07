@@ -5,7 +5,7 @@ import { nowIso, requireUserId } from './lib/auth';
 import { firstFreeHandle, handleSeed } from './lib/handles';
 import { readableProfile } from './lib/profileAccess';
 
-const LIMITS = { name: 60, sport: 40, description: 280 } as const;
+const LIMITS = { name: 60, sport: 40, location: 60, description: 280 } as const;
 
 function capped(value: string | undefined, max: number): string | undefined {
   const trimmed = (value ?? '').trim();
@@ -44,6 +44,7 @@ async function groupView(
     name: doc.name,
     handle: doc.handle,
     sport: doc.sport,
+    location: doc.location,
     description: doc.description,
     isPublic: doc.isPublic,
     memberCount: await memberCount(ctx, doc._id),
@@ -89,6 +90,73 @@ export const mine = query({
   },
 });
 
+function normalized(value?: string) {
+  return (value ?? '')
+    .toLocaleLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim();
+}
+
+function placeParts(value?: string) {
+  return (value ?? '')
+    .toLocaleLowerCase()
+    .split(',')
+    .map((part) => part.replace(/[^a-z0-9]+/g, ' ').trim())
+    .filter(Boolean);
+}
+
+/** Lower is closer. A city match beats a wider region match; groups without
+ * a place remain discoverable but never pretend to be local. */
+function proximity(groupLocation?: string, viewerLocation?: string) {
+  const group = placeParts(groupLocation);
+  const viewer = placeParts(viewerLocation);
+  if (!group.length || !viewer.length) return 2;
+  if (normalized(groupLocation) === normalized(viewerLocation) || group[0] === viewer[0]) return 0;
+  if (group.some((part) => viewer.includes(part))) return 1;
+  return 2;
+}
+
+/** Public groups the viewer has not joined. The order is intentionally useful:
+ * same-city groups first, then broader location matches, then matching sports,
+ * active communities and recent arrivals. */
+export const discover = query({
+  args: {},
+  handler: async (ctx) => {
+    const userId = await requireUserId(ctx);
+    const [profile, user, seats, allGroups] = await Promise.all([
+      ctx.db
+        .query('profiles')
+        .withIndex('by_user', (q) => q.eq('userId', userId))
+        .first(),
+      ctx.db.get(userId),
+      ctx.db
+        .query('groupMembers')
+        .withIndex('by_user', (q) => q.eq('userId', userId))
+        .collect(),
+      ctx.db.query('fitnessGroups').collect(),
+    ]);
+    const memberOf = new Set(seats.map((seat) => seat.groupId as string));
+    const viewerLocation = profile?.location || user?.country;
+    const viewerSport = profile?.primarySport;
+    const visible = allGroups.filter(
+      (group) => group.isPublic && !memberOf.has(group._id as string),
+    );
+    const groups = await Promise.all(visible.map((group) => groupView(ctx, group, userId)));
+    groups.sort((a, b) => {
+      const proximityDelta =
+        proximity(a.location, viewerLocation) - proximity(b.location, viewerLocation);
+      if (proximityDelta) return proximityDelta;
+      const sport = normalized(viewerSport);
+      const aSport = sport && normalized(a.sport) === sport ? 1 : 0;
+      const bSport = sport && normalized(b.sport) === sport ? 1 : 0;
+      if (aSport !== bSport) return bSport - aSport;
+      if (a.memberCount !== b.memberCount) return b.memberCount - a.memberCount;
+      return b.createdAt.localeCompare(a.createdAt);
+    });
+    return { groups: groups.slice(0, 60), viewerLocation, viewerSport };
+  },
+});
+
 /** Groups on someone's profile. A stranger only sees public groups; the
  * owner sees every group they belong to. Private profiles return null. */
 export const forHandle = query({
@@ -109,6 +177,7 @@ export const create = mutation({
   args: {
     name: v.string(),
     sport: v.optional(v.string()),
+    location: v.optional(v.string()),
     description: v.optional(v.string()),
     isPublic: v.optional(v.boolean()),
   },
@@ -116,7 +185,9 @@ export const create = mutation({
     const userId = await requireUserId(ctx);
     const name = capped(args.name, LIMITS.name);
     if (!name) throw new ConvexError('A group needs a name');
-    const handle = await firstFreeHandle(handleSeed(name), (candidate) => handleTaken(ctx, candidate));
+    const handle = await firstFreeHandle(handleSeed(name), (candidate) =>
+      handleTaken(ctx, candidate),
+    );
     const ts = nowIso();
     const doc = {
       userId,
@@ -124,6 +195,7 @@ export const create = mutation({
       handle,
       handleLower: handle,
       sport: capped(args.sport, LIMITS.sport),
+      location: capped(args.location, LIMITS.location),
       description: capped(args.description, LIMITS.description),
       isPublic: args.isPublic ?? true,
       createdAt: ts,
@@ -132,6 +204,36 @@ export const create = mutation({
     const id = await ctx.db.insert('fitnessGroups', doc);
     await ctx.db.insert('groupMembers', { userId, groupId: id, role: 'owner', createdAt: ts });
     return groupView(ctx, { _id: id, _creationTime: Date.now(), ...doc }, userId);
+  },
+});
+
+export const update = mutation({
+  args: {
+    id: v.id('fitnessGroups'),
+    name: v.string(),
+    sport: v.optional(v.string()),
+    location: v.optional(v.string()),
+    description: v.optional(v.string()),
+    isPublic: v.optional(v.boolean()),
+  },
+  handler: async (ctx, args) => {
+    const userId = await requireUserId(ctx);
+    const group = await ctx.db.get(args.id);
+    if (!group || group.userId !== userId)
+      throw new ConvexError('Only the owner can edit this group');
+    const name = capped(args.name, LIMITS.name);
+    if (!name) throw new ConvexError('A group needs a name');
+    await ctx.db.patch(args.id, {
+      name,
+      sport: capped(args.sport, LIMITS.sport),
+      location: capped(args.location, LIMITS.location),
+      description: capped(args.description, LIMITS.description),
+      isPublic: args.isPublic ?? group.isPublic,
+      updatedAt: nowIso(),
+    });
+    const updated = await ctx.db.get(args.id);
+    if (!updated) throw new ConvexError('Group not available');
+    return groupView(ctx, updated, userId);
   },
 });
 

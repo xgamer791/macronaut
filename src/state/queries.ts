@@ -48,6 +48,7 @@ export const keys = {
   publicPhotos: (handle: string) => ['public-photos', handle] as const,
   photoThread: (id: string) => ['photo-thread', id] as const,
   groups: ['groups'] as const,
+  groupDiscovery: ['group-discovery'] as const,
   publicGroups: (handle: string) => ['public-groups', handle] as const,
   chats: ['chats'] as const,
   chatPeople: (search: string) => ['chat-people', search] as const,
@@ -376,6 +377,7 @@ function useInvalidateGroups() {
   const qc = useQueryClient();
   return () => {
     qc.invalidateQueries({ queryKey: keys.groups });
+    qc.invalidateQueries({ queryKey: keys.groupDiscovery });
     qc.invalidateQueries({ queryKey: ['public-groups'] });
   };
 }
@@ -386,6 +388,16 @@ export function useMyGroups() {
   return useQuery({
     queryKey: keys.groups,
     queryFn: () => groups.mine(),
+    enabled: signedIn,
+  });
+}
+
+export function useGroupDiscovery() {
+  const { signedIn } = useAuth();
+  const { groups } = useRepos();
+  return useQuery({
+    queryKey: keys.groupDiscovery,
+    queryFn: () => groups.discover(),
     enabled: signedIn,
   });
 }
@@ -406,9 +418,29 @@ export function useCreateGroup() {
     mutationFn: (input: {
       name: string;
       sport?: string;
+      location?: string;
       description?: string;
       isPublic?: boolean;
     }) => groups.create(input),
+    onSuccess: invalidate,
+  });
+}
+
+export function useUpdateGroup() {
+  const { groups } = useRepos();
+  const invalidate = useInvalidateGroups();
+  return useMutation({
+    mutationFn: ({
+      id,
+      ...input
+    }: {
+      id: string;
+      name: string;
+      sport?: string;
+      location?: string;
+      description?: string;
+      isPublic?: boolean;
+    }) => groups.update(id, input),
     onSuccess: invalidate,
   });
 }

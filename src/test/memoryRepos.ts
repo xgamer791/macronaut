@@ -790,6 +790,11 @@ export function createMemoryGroupRepo(): GroupRepo {
     async mine() {
       return groups.map(clone);
     },
+    async discover() {
+      return {
+        groups: groups.filter((group) => group.isPublic && !group.isMember).map(clone),
+      };
+    },
     async forHandle() {
       return { isOwner: true, groups: groups.filter((g) => g.isPublic).map(clone) };
     },
@@ -800,6 +805,7 @@ export function createMemoryGroupRepo(): GroupRepo {
         name: input.name.trim(),
         handle: input.name.trim().toLowerCase().replace(/\s+/g, '_'),
         sport: input.sport,
+        location: input.location,
         description: input.description,
         isPublic: input.isPublic ?? true,
         memberCount: 1,
@@ -809,6 +815,19 @@ export function createMemoryGroupRepo(): GroupRepo {
         updatedAt: ts,
       };
       groups.unshift(group);
+      return clone(group);
+    },
+    async update(id, input) {
+      const group = groups.find((candidate) => candidate.id === id);
+      if (!group || !group.isOwner) throw new Error('Only the owner can edit this group');
+      Object.assign(group, {
+        name: input.name.trim(),
+        sport: input.sport,
+        location: input.location,
+        description: input.description,
+        isPublic: input.isPublic ?? group.isPublic,
+        updatedAt: nowIso(),
+      });
       return clone(group);
     },
     async join(id) {
