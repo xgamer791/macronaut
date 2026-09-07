@@ -165,7 +165,7 @@ function StepsInner({ values }: { values: HeroMetricValues }) {
 
   return (
     <View style={styles.stepsLayout}>
-      <Ionicons name="walk-outline" size={26} color={colors.accent} />
+      <Ionicons name={heroMetricDef('steps').icon} size={26} color={colors.accent} />
       <AppText variant="micro" tone="muted" weight="600">
         Steps
       </AppText>

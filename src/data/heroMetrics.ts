@@ -82,7 +82,7 @@ export const HERO_METRICS: HeroMetricDef[] = [
     subtitle: 'Stride meter — count vs goal',
     kind: 'steps',
     unit: 'steps',
-    icon: 'walk-outline',
+    icon: 'footsteps-outline',
   },
   {
     id: 'burned',

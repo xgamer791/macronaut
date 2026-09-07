@@ -29,6 +29,8 @@ describe('heroMetrics', () => {
     expect(heroMetricDef('carbs').kind).toBe('ring');
     expect(heroMetricDef('fat').kind).toBe('ring');
     expect(heroMetricDef('steps').kind).toBe('steps');
+    expect(heroMetricDef('steps').icon).toBe('footsteps-outline');
+    expect(heroMetricDef('steps').icon).not.toBe('walk-outline');
     expect(heroMetricDef('water').kind).toBe('water');
     expect(heroMetricDef('burned').kind).toBe('burned');
   });
