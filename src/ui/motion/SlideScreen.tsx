@@ -32,7 +32,7 @@ export function useSlideBack() {
 }
 
 export const SLIDE_EASING = Easing.bezier(0.22, 1, 0.36, 1);
-export const SLIDE_DURATION_MS = 420;
+export const SLIDE_DURATION_MS = 294;
 
 export const SLIDE_OVER_OPTIONS = {
   headerShown: false,
