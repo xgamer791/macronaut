@@ -67,10 +67,14 @@ function ThemedApp() {
         <Stack.Screen name="meal-editor" options={{ presentation: 'modal' }} />
         <Stack.Screen name="recipe-editor" options={{ presentation: 'modal' }} />
         <Stack.Screen name="meal/[id]" />
-        {/* Reachable signed-out: the create-account legal gate links to both. */}
+        <Stack.Screen name="profile" />
+        {/* Reachable signed-out: the create-account legal gate links to both,
+            and a shared public profile link is opened by people with no
+            account at all. */}
         <Stack.Screen name="privacy" />
         <Stack.Screen name="terms" />
         <Stack.Screen name="apple-health" />
+        <Stack.Screen name="u/[handle]" />
       </Stack>
     </ThemeProvider>
   );

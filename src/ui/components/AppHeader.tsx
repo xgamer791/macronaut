@@ -49,10 +49,10 @@ export function AppHeader({ onCalendarPress, notifyDot = true }: AppHeaderProps)
       <View style={styles.cluster}>
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="Open settings"
+          accessibilityLabel="Open your profile"
           onPress={() => {
             void Haptics.selectionAsync();
-            router.push('/settings');
+            router.push('/profile');
           }}
           hitSlop={4}
           style={styles.hit}

@@ -65,6 +65,13 @@ const config: ExpoConfig = {
       },
     ],
     [
+      'expo-image-picker',
+      {
+        photosPermission:
+          'Macronaut needs access to your photos so you can choose a profile picture, a profile banner and photos for your posts.',
+      },
+    ],
+    [
       // Adds the `com.apple.developer.healthkit` entitlement, so the App ID
       // needs the HealthKit capability before a build can be signed — see
       // docs/ios-setup.md. iOS only; the web and Android builds never load the

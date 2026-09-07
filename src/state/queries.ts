@@ -5,6 +5,7 @@ import { GoalConfig } from '@/domain/goals';
 import { WeekStart } from '@/domain/types';
 import { NewActivityEntry } from '@/repositories/activityRepo';
 import { NewDiaryEntry } from '@/repositories/diaryRepo';
+import { ProfileImageKind, ProfilePatch } from '@/repositories/profileRepo';
 import { DiaryEntry, MealCategory } from '@/repositories/types';
 import { useRepos } from './AppProvider';
 import { useAuth } from './AuthProvider';
@@ -37,6 +38,9 @@ export const keys = {
   favorites: ['favorites'] as const,
   aiScanAvailable: ['ai-scan-available'] as const,
   emailTaken: (email: string) => ['email-taken', email] as const,
+  profile: ['profile'] as const,
+  profilePosts: ['profile-posts'] as const,
+  publicProfile: (handle: string) => ['public-profile', handle] as const,
 };
 
 export function useInvalidateDiary() {
@@ -111,6 +115,102 @@ export function useDeleteDayNote() {
   return useMutation({
     mutationFn: (input: { id: string; date: DayKey }) => dayNotes.remove(input.id),
     onSuccess: (_data, vars) => invalidate(vars.date),
+  });
+}
+
+/** The signed-in user's own profile page. */
+export function useMyProfile() {
+  const { signedIn } = useAuth();
+  const { profile } = useRepos();
+  return useQuery({
+    queryKey: keys.profile,
+    queryFn: () => profile.me(),
+    enabled: signedIn,
+  });
+}
+
+export function useMyProfilePosts() {
+  const { signedIn } = useAuth();
+  const { profile } = useRepos();
+  return useQuery({
+    queryKey: keys.profilePosts,
+    queryFn: () => profile.myPosts(),
+    enabled: signedIn,
+  });
+}
+
+/** Someone's profile by handle. Resolves to null when it is private or does
+ * not exist, so a public page can be opened without a session. */
+export function usePublicProfile(handle: string) {
+  const { profile } = useRepos();
+  return useQuery({
+    queryKey: keys.publicProfile(handle),
+    queryFn: () => profile.byHandle(handle),
+    enabled: handle.length > 0,
+  });
+}
+
+/** Anything that touches the profile also changes the header avatar and the
+ * public page, so all three are dropped together. */
+function useInvalidateProfile() {
+  const qc = useQueryClient();
+  return () => {
+    qc.invalidateQueries({ queryKey: keys.profile });
+    qc.invalidateQueries({ queryKey: keys.profilePosts });
+    qc.invalidateQueries({ queryKey: ['public-profile'] });
+  };
+}
+
+export function useUpdateProfile() {
+  const { profile } = useRepos();
+  const invalidate = useInvalidateProfile();
+  return useMutation({
+    mutationFn: (patch: ProfilePatch) => profile.update(patch),
+    onSuccess: invalidate,
+  });
+}
+
+/** Store a picked image, then point the avatar or banner at it. Passing no
+ * file clears the image instead. */
+export function useSetProfileImage() {
+  const { profile } = useRepos();
+  const invalidate = useInvalidateProfile();
+  return useMutation({
+    mutationFn: async (input: { kind: ProfileImageKind; file: Blob | null }) => {
+      const storageId = input.file ? await profile.uploadImage(input.file) : null;
+      return profile.setImage(input.kind, storageId);
+    },
+    onSuccess: invalidate,
+  });
+}
+
+export function useAddProfilePost() {
+  const { profile } = useRepos();
+  const invalidate = useInvalidateProfile();
+  return useMutation({
+    mutationFn: async (input: { body: string; file?: Blob | null }) => {
+      const imageId = input.file ? await profile.uploadImage(input.file) : undefined;
+      return profile.addPost(input.body, imageId);
+    },
+    onSuccess: invalidate,
+  });
+}
+
+export function useUpdateProfilePost() {
+  const { profile } = useRepos();
+  const invalidate = useInvalidateProfile();
+  return useMutation({
+    mutationFn: (input: { id: string; body: string }) => profile.updatePost(input.id, input.body),
+    onSuccess: invalidate,
+  });
+}
+
+export function useDeleteProfilePost() {
+  const { profile } = useRepos();
+  const invalidate = useInvalidateProfile();
+  return useMutation({
+    mutationFn: (id: string) => profile.removePost(id),
+    onSuccess: invalidate,
   });
 }
 

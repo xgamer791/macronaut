@@ -160,3 +160,31 @@ export const activityEntryFields = {
   sourceType: activitySourceValidator,
   sourceId: v.optional(v.string()),
 };
+
+/** What a profile owner may change. Ownership, the handle lookup key, the
+ * image ids and the timestamps are all set by the server. */
+export const profileEditableFields = {
+  displayName: v.optional(v.string()),
+  bio: v.optional(v.string()),
+  location: v.optional(v.string()),
+  primarySport: v.optional(v.string()),
+};
+
+/** Profile fields other than ownership and timestamps. `handleLower` is
+ * derived from `handle` so the by-handle index is case-insensitive, and the
+ * images are Convex storage ids rather than URLs so deleting an account also
+ * deletes the files. */
+export const profileFields = {
+  handle: v.string(),
+  handleLower: v.string(),
+  ...profileEditableFields,
+  avatarId: v.optional(v.id('_storage')),
+  bannerId: v.optional(v.id('_storage')),
+  /** When false the profile and its posts are only readable by their owner. */
+  isPublic: v.boolean(),
+};
+
+export const profilePostFields = {
+  body: v.string(),
+  imageId: v.optional(v.id('_storage')),
+};

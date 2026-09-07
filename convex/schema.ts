@@ -9,6 +9,8 @@ import {
   dayTypeValidator,
   diaryEntryFields,
   goalConfigFields,
+  profileFields,
+  profilePostFields,
 } from './lib/validators';
 
 /**
@@ -166,6 +168,27 @@ export default defineSchema({
     createdAt: v.string(),
     updatedAt: v.string(),
   }).index('by_user_date', ['userId', 'date']),
+
+  /** One profile page per account. The only table anyone other than its owner
+   * can read, and only while `isPublic` — `convex/profiles.ts` is the single
+   * place that decides, and it hands back a narrowed shape rather than the
+   * row. At most one row per user; `by_handle` is the public lookup. */
+  profiles: defineTable({
+    userId: v.id('users'),
+    createdAt: v.string(),
+    updatedAt: v.string(),
+    ...profileFields,
+  })
+    .index('by_user', ['userId'])
+    .index('by_handle', ['handleLower']),
+
+  /** Posts on a user's own profile page. Public exactly when the profile is. */
+  profilePosts: defineTable({
+    userId: v.id('users'),
+    createdAt: v.string(),
+    updatedAt: v.string(),
+    ...profilePostFields,
+  }).index('by_user_created', ['userId', 'createdAt']),
 
   /** Frozen set of accounts that may use AI food scan until Pro. Written once
    * by `foodScan.ensureRoster`; later sign-ups are not added. Not user-scoped. */

@@ -443,6 +443,13 @@ export default function SettingsScreen() {
       <SectionHeader title="Account" />
       <Card padded={false} style={{ paddingHorizontal: spacing.lg, paddingVertical: spacing.xs }}>
         <ListRow
+          title="Your profile page"
+          subtitle="Picture, banner, bio, posts and who can see them"
+          left={<Ionicons name="person-circle-outline" size={20} color={colors.accent} />}
+          right={<Ionicons name="chevron-forward" size={16} color={colors.textMuted} />}
+          onPress={() => router.push('/profile')}
+        />
+        <ListRow
           title={user?.email ?? 'Signed in'}
           subtitle={
             user?.provider === 'password'
