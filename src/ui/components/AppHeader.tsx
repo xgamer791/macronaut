@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import Animated, {
   Easing,
@@ -21,6 +21,7 @@ const WATCH_FACE = require('../../../assets/images/signup-health-watch.png');
 
 const ICON = '#FFFFFF';
 const DOT = '#2EE66A';
+const GLYPH = 22;
 
 export interface AppHeaderProps {
   /** Bell action. Defaults to opening the calendar when provided by Today. */
@@ -49,7 +50,7 @@ export function AppHeader({ onBellPress, notifyDot = true }: AppHeaderProps) {
     transform: [{ rotate: `${spin.value * 360}deg` }],
   }));
 
-  const sync = useCallback(async () => {
+  async function onSync() {
     if (syncing) return;
     setSyncing(true);
     void Haptics.selectionAsync();
@@ -63,7 +64,7 @@ export function AppHeader({ onBellPress, notifyDot = true }: AppHeaderProps) {
       qc.invalidateQueries({ queryKey: keys.goals }),
     ]);
     setSyncing(false);
-  }, [qc, spin, syncing]);
+  }
 
   return (
     <View style={styles.row}>
@@ -106,7 +107,7 @@ export function AppHeader({ onBellPress, notifyDot = true }: AppHeaderProps) {
           hitSlop={4}
           style={styles.hit}
         >
-          <Ionicons name="notifications" size={22} color={ICON} />
+          <Ionicons name="notifications" size={GLYPH} color={ICON} />
           {notifyDot ? <View style={styles.bellDot} /> : null}
         </Pressable>
       </View>
@@ -122,7 +123,7 @@ export function AppHeader({ onBellPress, notifyDot = true }: AppHeaderProps) {
           hitSlop={4}
           style={styles.hit}
         >
-          <Ionicons name="add" size={28} color={ICON} />
+          <Ionicons name="add" size={GLYPH} color={ICON} />
         </Pressable>
 
         <Pressable
@@ -130,13 +131,13 @@ export function AppHeader({ onBellPress, notifyDot = true }: AppHeaderProps) {
           accessibilityLabel="Sync data"
           disabled={syncing}
           onPress={() => {
-            void sync();
+            void onSync();
           }}
           hitSlop={4}
           style={styles.hit}
         >
           <Animated.View style={syncStyle}>
-            <Ionicons name="sync" size={22} color={ICON} />
+            <Ionicons name="sync" size={GLYPH} color={ICON} />
           </Animated.View>
         </Pressable>
 
@@ -150,10 +151,10 @@ export function AppHeader({ onBellPress, notifyDot = true }: AppHeaderProps) {
           hitSlop={4}
           style={styles.hit}
         >
-          <View style={styles.watchWrap}>
-            <Image source={WATCH_FACE} style={styles.watch} contentFit="cover" />
-            <View style={styles.watchDot} />
+          <View style={styles.watch} pointerEvents="none">
+            <Image source={WATCH_FACE} style={StyleSheet.absoluteFill} contentFit="cover" />
           </View>
+          <View style={styles.bellDot} />
         </Pressable>
       </View>
     </View>
@@ -175,7 +176,6 @@ function initialsFrom(name?: string | null, email?: string): string {
 }
 
 const AVATAR = 32;
-const WATCH = 28;
 
 const styles = StyleSheet.create({
   row: {
@@ -215,29 +215,17 @@ const styles = StyleSheet.create({
     lineHeight: 14,
     fontWeight: '700',
   },
+  watch: {
+    width: GLYPH,
+    height: GLYPH,
+    borderRadius: GLYPH / 2,
+    overflow: 'hidden',
+    backgroundColor: '#111',
+  },
   bellDot: {
     position: 'absolute',
     top: 10,
     right: 10,
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: DOT,
-  },
-  watchWrap: {
-    width: WATCH,
-    height: WATCH,
-  },
-  watch: {
-    width: WATCH,
-    height: WATCH,
-    borderRadius: WATCH / 2,
-    backgroundColor: '#111',
-  },
-  watchDot: {
-    position: 'absolute',
-    top: -1,
-    right: -1,
     width: 8,
     height: 8,
     borderRadius: 4,
