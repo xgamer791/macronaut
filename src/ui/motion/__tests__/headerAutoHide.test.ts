@@ -1,9 +1,11 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import {
+  HEADER_HIDE_COMMIT,
   HEADER_HIDE_DELTA,
   HEADER_HIDE_TOP,
   headerHideForScroll,
+  headerLayoutHidden,
 } from '../headerAutoHideLogic';
 
 const srcDir = path.join(__dirname, '..', '..', '..');
@@ -14,6 +16,12 @@ describe('headerHideForScroll', () => {
     expect(headerHideForScroll(0, 0, false)).toBe(false);
     expect(headerHideForScroll(HEADER_HIDE_TOP, 0, true)).toBe(false);
     expect(headerHideForScroll(-12, 40, true)).toBe(false);
+  });
+
+  it('does not treat rubber-band recovery as a downward hide flick', () => {
+    expect(headerHideForScroll(24, -30, false)).toBe(false);
+    expect(headerHideForScroll(HEADER_HIDE_COMMIT - 1, 0, false)).toBe(false);
+    expect(headerHideForScroll(HEADER_HIDE_COMMIT, 0, false)).toBe(true);
   });
 
   it('hides on a downward flick and shows on an upward one', () => {
@@ -27,6 +35,16 @@ describe('headerHideForScroll', () => {
   });
 });
 
+describe('headerLayoutHidden', () => {
+  it('freezes in-flow collapse in the rubber-band zone until scroll settles', () => {
+    expect(headerLayoutHidden(0, false, true, false)).toBe(true);
+    expect(headerLayoutHidden(0, false, true, true)).toBe(false);
+    expect(headerLayoutHidden(20, true, false, false)).toBe(false);
+    expect(headerLayoutHidden(80, true, false, false)).toBe(true);
+    expect(headerLayoutHidden(80, false, true, false)).toBe(false);
+  });
+});
+
 describe('header auto-hide wiring', () => {
   it('keeps the same bezier as the stack-page slide for header hide', () => {
     const hide = read('ui', 'motion', 'headerAutoHide.tsx');
@@ -36,8 +54,10 @@ describe('header auto-hide wiring', () => {
     expect(hide).toContain('SLIDE_DURATION_MS');
     expect(hide).toContain('SLIDE_EASING');
     expect(hide).toContain("dataSet: { headerhide: hidden ? 'out' : 'in' }");
-    expect(hide).toContain('marginBottom: hidden ? -height : 0');
+    expect(hide).toContain('marginBottom: collapsed ? -height : 0');
     expect(hide).toContain('transform: [{ translateY: offset }]');
+    expect(hide).toContain('Math.max(0, y)');
+    expect(hide).toContain('HEADER_LAYOUT_SETTLE_MS');
     expect(hide).not.toContain('styles.clip');
     expect(hide).not.toContain("height: hidden ? 0 : height");
   });
@@ -47,6 +67,9 @@ describe('header auto-hide wiring', () => {
     expect(screen).toContain('useHeaderScrollHide');
     expect(screen).toContain('AutoHideHeader');
     expect(screen).toContain('onScroll: hideOnScroll ? hide.onScroll');
+    expect(screen).toContain('onMomentumScrollEnd: hideOnScroll ? hide.onScrollSettle');
+    expect(screen).toContain('onScrollEndDrag: hideOnScroll ? hide.onScrollSettle');
+    expect(screen).toContain('collapsed={hide.collapsed}');
     expect(screen).toContain('collapseHeader');
     expect(read('app', '(tabs)', 'index.tsx')).toContain('stickyHeader={');
     expect(read('app', 'profile.tsx')).toContain('stickyHeader={');

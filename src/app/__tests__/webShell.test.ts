@@ -73,6 +73,8 @@ describe('web html shell', () => {
   });
 
   it('slides the sticky header as one slab on the same 294ms curve', () => {
+    expect(html).toContain('[data-screenscroll]');
+    expect(html).toContain('overflow-anchor: none');
     expect(html).toContain('[data-headerhide]');
     expect(html).toContain('[data-headerhide="out"]');
     expect(html).toContain('translateY(-100%)');

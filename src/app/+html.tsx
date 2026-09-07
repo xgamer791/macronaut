@@ -122,6 +122,11 @@ input[data-darkfield]:-webkit-autofill:focus, input[data-darkfield]:-webkit-auto
   will-change: transform;
   transition: transform 294ms cubic-bezier(0.22, 1, 0.36, 1);
 }
+/* Changing the header's in-flow size must not let the browser rewrite
+ * scrollTop — that fight is what makes iOS rubber-band hitch. */
+[data-screenscroll] {
+  overflow-anchor: none;
+}
 /* Today / profile chrome: one slab, same 294ms curve as stack / friends feed. */
 [data-headerhide] {
   will-change: transform, margin-bottom;

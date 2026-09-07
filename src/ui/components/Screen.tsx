@@ -53,7 +53,9 @@ export function Screen({
 
   const header = stickyHeader ? (
     hideOnScroll ? (
-      <AutoHideHeader hidden={hide.hidden}>{stickyHeader}</AutoHideHeader>
+      <AutoHideHeader hidden={hide.hidden} collapsed={hide.collapsed}>
+        {stickyHeader}
+      </AutoHideHeader>
     ) : (
       stickyHeader
     )
@@ -82,7 +84,10 @@ export function Screen({
     keyboardShouldPersistTaps: 'handled' as const,
     showsVerticalScrollIndicator: false,
     onScroll: hideOnScroll ? hide.onScroll : undefined,
+    onScrollEndDrag: hideOnScroll ? hide.onScrollSettle : undefined,
+    onMomentumScrollEnd: hideOnScroll ? hide.onScrollSettle : undefined,
     scrollEventThrottle: 16 as const,
+    ...(hideOnScroll ? { dataSet: { screenscroll: '1' } } : null),
   };
 
   return (
