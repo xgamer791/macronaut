@@ -23,26 +23,24 @@ describe('sticky glass headers', () => {
     expect(screen).toMatch(/<\/Animated\.ScrollView>\s*\n\s*<HeaderGlassProvider/);
   });
 
-  it('pours the glass from how far the page has scrolled', () => {
-    expect(screen).toContain('useAnimatedScrollHandler');
-    expect(screen).toContain('HEADER_GLASS_TRAVEL');
-    // Clamped both ways: no negative opacity on a bounce, no overshoot.
-    expect(screen).toContain('y <= 0 ? 0 : y >= HEADER_GLASS_TRAVEL ? 1');
-    expect(bar).toContain('opacity: progress.value');
-  });
-
-  it('leaves the hero photo untouched until the page moves', () => {
-    expect(screen).toContain('useSharedValue(0)');
+  it('keeps the glass at full strength so backdrop-filter can see the page', () => {
+    // Opacity on an ancestor flattens the blur into a solid strip.
+    expect(bar).not.toContain('opacity: progress.value');
+    expect(bar).not.toContain('useAnimatedStyle');
+    expect(bar).toContain("className: 'glass'");
   });
 
   it('uses the 2025–26 liquid-glass recipe on the sticky header', () => {
-    expect(bar).toContain("headerglass: 'true'");
-    expect(bar).toContain("backgroundColor: 'rgba(10, 12, 20, 1)'");
+    expect(bar).toContain("className: 'glass'");
+    expect(bar).toContain("data-headerglass");
+    expect(bar).toContain('GLASS_RADIUS = 24');
     expect(bar).not.toContain('GlassView');
     expect(bar).not.toContain('blur(28px)');
     const html = read('app', '+html.tsx');
+    expect(html).toContain('.glass');
     expect(html).toContain('[data-headerglass]');
     expect(html).toContain('blur(26px) saturate(140%)');
+    expect(html).toContain('border-radius: 24px');
     expect(html).toContain('rgba(10, 12, 20, 0.630)');
     expect(html).toContain('mix-blend-mode: screen');
     expect(html).toContain('inset 0 0 0 0.5px rgba(255, 255, 255, 0.070)');

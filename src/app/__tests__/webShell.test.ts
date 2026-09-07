@@ -45,12 +45,14 @@ describe('web html shell', () => {
   });
 
   it('paints the sticky header with the 2025–26 liquid-glass recipe', () => {
+    expect(html).toContain('.glass');
     expect(html).toContain('[data-headerglass]');
     expect(html).toContain('radial-gradient(ellipse 130% 90% at 50% 0%');
     expect(html).toContain('blur(26px) saturate(140%)');
     expect(html).toContain('-webkit-backdrop-filter: blur(26px) saturate(140%)');
-    expect(html).toContain('[data-headerglass]::before');
-    expect(html).toContain('[data-headerglass]::after');
+    expect(html).toContain('border-radius: 24px');
+    expect(html).toContain('.glass::before');
+    expect(html).toContain('.glass::after');
     expect(html).toContain('mix-blend-mode: screen');
   });
 });
