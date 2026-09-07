@@ -24,9 +24,8 @@ function PrivacyScreen() {
       <Card>
         <View style={{ gap: spacing.md }}>
           <AppText variant="body" tone="secondary">
-            Macronaut is a calorie and macro tracker. Your food diary is stored in your own
-            account, which only you can open. There are no ads, no analytics and no tracking of
-            any kind.
+            Macronaut is a calorie and macro tracker. Your food diary is stored in your own account,
+            which only you can open. There are no ads, no analytics and no tracking of any kind.
           </AppText>
           <AppText variant="micro" tone="muted">
             Last updated {LEGAL_LAST_UPDATED}
@@ -75,10 +74,11 @@ function PrivacyScreen() {
       </LegalSection>
 
       <LegalSection
-        title="Camera"
+        title="Camera and microphone"
         paragraphs={[
-          'The camera is used to scan barcodes and, if you choose, to photograph a meal for AI food logging.',
-          'Barcode scanning happens entirely on the device. Photos are never uploaded unless you use AI food scan.',
+          'The camera is used to scan barcodes and, if you choose, to photograph a meal for AI food logging or take a photo to share in a chat.',
+          'Barcode scanning happens entirely on the device. A photo is uploaded only when you choose AI food scan or send it in a chat.',
+          'The microphone is used only when you tap the microphone in a chat. Your device or browser speech-recognition service processes your voice and returns text to the message field. Macronaut does not store the recording.',
         ]}
       />
 

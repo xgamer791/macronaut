@@ -1,6 +1,11 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import {
+  ExpoSpeechRecognitionModule,
+  useSpeechRecognitionEvent,
+  type ExpoSpeechRecognitionErrorCode,
+} from 'expo-speech-recognition';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -46,6 +51,22 @@ const MEDIA_MAX_WIDTH = 340;
 const MEDIA_DEFAULT_RATIO = 4 / 3;
 const ATTACHMENT_MENU_HEIGHT = 82;
 type IconName = keyof typeof Ionicons.glyphMap;
+
+function dictatedMessage(existing: string, transcript: string): string {
+  return [existing.trimEnd(), transcript.trim()].filter(Boolean).join(' ').slice(0, 2000);
+}
+
+function dictationErrorMessage(error: ExpoSpeechRecognitionErrorCode): string | null {
+  if (error === 'aborted') return null;
+  if (error === 'not-allowed') return 'Allow microphone access to use speech to text.';
+  if (error === 'no-speech' || error === 'speech-timeout') {
+    return "I didn't hear anything. Tap the microphone and try again.";
+  }
+  if (error === 'network') return 'Speech recognition needs a network connection.';
+  if (error === 'language-not-supported')
+    return 'Speech recognition is unavailable in this language.';
+  return 'Speech recognition is unavailable right now.';
+}
 
 export default function ChatScreen() {
   return (
@@ -224,8 +245,37 @@ export function ConversationView({
   const scroll = useRef<ScrollView>(null);
   const [menuProgress] = useState(() => new Animated.Value(0));
   const [attachmentMenuOpen, setAttachmentMenuOpen] = useState(false);
+  const [listening, setListening] = useState(false);
+  const [startingDictation, setStartingDictation] = useState(false);
+  const [dictationError, setDictationError] = useState<string | null>(null);
+  const dictationBase = useRef('');
   const turns = useMemo(() => groupMessages(data.messages), [data.messages]);
   const canSend = Boolean(draft.trim() || attachment) && !sending;
+
+  useSpeechRecognitionEvent('start', () => {
+    setStartingDictation(false);
+    setListening(true);
+  });
+  useSpeechRecognitionEvent('end', () => {
+    setStartingDictation(false);
+    setListening(false);
+  });
+  useSpeechRecognitionEvent('result', (event) => {
+    const transcript = event.results[0]?.transcript;
+    if (transcript) onDraft(dictatedMessage(dictationBase.current, transcript));
+  });
+  useSpeechRecognitionEvent('error', (event) => {
+    setStartingDictation(false);
+    setListening(false);
+    setDictationError(dictationErrorMessage(event.error));
+  });
+
+  useEffect(
+    () => () => {
+      ExpoSpeechRecognitionModule.abort();
+    },
+    [],
+  );
 
   useEffect(() => {
     Animated.timing(menuProgress, {
@@ -247,6 +297,51 @@ export function ConversationView({
     inputRange: [0, 1],
     outputRange: ['0deg', '45deg'],
   });
+
+  async function toggleDictation() {
+    if (listening) {
+      ExpoSpeechRecognitionModule.stop();
+      return;
+    }
+    if (startingDictation) return;
+
+    setDictationError(null);
+    setStartingDictation(true);
+    try {
+      if (!ExpoSpeechRecognitionModule.isRecognitionAvailable()) {
+        setDictationError('Speech to text is not supported on this device or browser.');
+        setStartingDictation(false);
+        return;
+      }
+
+      if (Platform.OS !== 'web') {
+        const permission = await ExpoSpeechRecognitionModule.requestPermissionsAsync();
+        if (!permission.granted) {
+          setDictationError('Allow microphone access to use speech to text.');
+          setStartingDictation(false);
+          return;
+        }
+      }
+
+      dictationBase.current = draft;
+      ExpoSpeechRecognitionModule.start({
+        lang: Intl.DateTimeFormat().resolvedOptions().locale || 'en-US',
+        interimResults: true,
+        continuous: false,
+        addsPunctuation: true,
+      });
+    } catch {
+      setStartingDictation(false);
+      setListening(false);
+      setDictationError('Speech recognition is unavailable right now.');
+    }
+  }
+
+  function submitMessage() {
+    if (listening || startingDictation) ExpoSpeechRecognitionModule.abort();
+    setAttachmentMenuOpen(false);
+    onSend();
+  }
 
   return (
     <KeyboardAvoidingView
@@ -334,9 +429,9 @@ export function ConversationView({
             },
           ]}
         >
-          {error ? (
+          {error || dictationError ? (
             <AppText variant="caption" tone="danger" style={styles.error}>
-              {error}
+              {error ?? dictationError}
             </AppText>
           ) : null}
 
@@ -350,6 +445,8 @@ export function ConversationView({
 
           <Animated.View
             pointerEvents={attachmentMenuOpen ? 'auto' : 'none'}
+            accessibilityElementsHidden={!attachmentMenuOpen}
+            importantForAccessibility={attachmentMenuOpen ? 'auto' : 'no-hide-descendants'}
             style={[styles.attachmentMenuClip, { height: menuHeight, opacity: menuOpacity }]}
           >
             <View style={[styles.attachmentMenu, { backgroundColor: colors.surfaceRaised }]}>
@@ -412,26 +509,49 @@ export function ConversationView({
               <TextInput
                 accessibilityLabel={`Message ${data.peer.displayName}`}
                 value={draft}
-                onChangeText={onDraft}
+                onChangeText={(value) => {
+                  setDictationError(null);
+                  onDraft(value);
+                }}
                 placeholder="Message"
                 placeholderTextColor={colors.textMuted}
                 maxLength={2000}
                 returnKeyType="send"
                 onSubmitEditing={() => {
-                  if (canSend) onSend();
+                  if (canSend) submitMessage();
                 }}
                 style={[styles.input, { color: colors.textPrimary }]}
               />
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={listening ? 'Stop voice typing' : 'Start voice typing'}
+                accessibilityState={{ busy: startingDictation, selected: listening }}
+                disabled={sending || startingDictation}
+                onPress={() => void toggleDictation()}
+                hitSlop={4}
+                style={({ pressed }) => [
+                  styles.dictationHit,
+                  listening && { backgroundColor: colors.surface },
+                  { opacity: sending ? 0.35 : pressed ? 0.6 : 1 },
+                ]}
+              >
+                {startingDictation ? (
+                  <ActivityIndicator size="small" color={colors.accent} />
+                ) : (
+                  <Ionicons
+                    name={listening ? 'mic' : 'mic-outline'}
+                    size={20}
+                    color={listening ? colors.accent : colors.textSecondary}
+                  />
+                )}
+              </Pressable>
             </View>
 
             <Pressable
               accessibilityRole="button"
               accessibilityLabel="Send message"
               disabled={!canSend}
-              onPress={() => {
-                setAttachmentMenuOpen(false);
-                onSend();
-              }}
+              onPress={submitMessage}
               hitSlop={6}
               style={({ pressed }) => [
                 styles.composerHit,
@@ -864,19 +984,28 @@ const styles = StyleSheet.create({
   inputWrap: {
     flex: 1,
     height: touchTarget,
-    justifyContent: 'center',
+    flexDirection: 'row',
+    alignItems: 'center',
     borderRadius: touchTarget / 2,
-    paddingHorizontal: spacing.md + 2,
-    paddingVertical: 2,
+    paddingLeft: spacing.md + 2,
+    paddingRight: spacing.xs,
   },
   input: {
     ...type.body,
+    flex: 1,
     height: touchTarget,
     paddingVertical: 0,
     ...Platform.select({
       web: { outlineStyle: 'none', outlineWidth: 0 } as object,
       default: {},
     }),
+  },
+  dictationHit: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   attachmentMenuClip: {
     overflow: 'hidden',
