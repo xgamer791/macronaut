@@ -46,7 +46,7 @@ let draftSequence = 0;
 const newDraftId = () => `workout-${Date.now()}-${(draftSequence += 1)}`;
 /** Painted size of the empty-day add control — the circle itself, not an
  * Ionicons glyph box (those sit smaller than their `size`). */
-const ADD_ICON_SIZE = 30;
+const ADD_ICON_SIZE = 27;
 
 export default function TrainingScheduleRoute() {
   const { loading, signedIn } = useAuth();
