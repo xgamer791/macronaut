@@ -24,6 +24,27 @@ export async function pickAttachment(): Promise<PickedAttachment | null> {
     quality: 0.85,
     videoMaxDuration: 180,
   });
+  return pickedAsset(result);
+}
+
+/** Open the device camera and return a photo in the same shape as a library pick. */
+export async function takePhotoAttachment(): Promise<PickedAttachment | null> {
+  const permission = await ImagePicker.requestCameraPermissionsAsync();
+  if (!permission.granted) {
+    throw new Error('Macronaut needs camera access to take a photo for this chat.');
+  }
+
+  const result = await ImagePicker.launchCameraAsync({
+    mediaTypes: ['images'],
+    allowsEditing: false,
+    quality: 0.85,
+  });
+  return pickedAsset(result);
+}
+
+async function pickedAsset(
+  result: ImagePicker.ImagePickerResult,
+): Promise<PickedAttachment | null> {
   if (result.canceled) return null;
   const asset = result.assets[0];
   if (!asset) return null;
