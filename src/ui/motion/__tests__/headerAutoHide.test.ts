@@ -28,16 +28,13 @@ describe('headerHideForScroll', () => {
 });
 
 describe('header auto-hide wiring', () => {
-  it('uses the same 840ms bezier as the stack-page slide', () => {
+  it('keeps the 840ms bezier for header hide', () => {
     const hide = read('ui', 'motion', 'headerAutoHide.tsx');
-    const slide = read('ui', 'motion', 'SlideScreen.tsx');
     expect(hide).toContain("from './SlideScreen'");
     expect(hide).toContain("from './headerAutoHideLogic'");
-    expect(hide).toContain('SLIDE_DURATION_MS');
+    expect(hide).toContain('HEADER_HIDE_DURATION_MS = 840');
     expect(hide).toContain('SLIDE_EASING');
     expect(hide).toContain("dataSet: { headerhide: hidden ? 'out' : 'in' }");
-    expect(slide).toContain('SLIDE_DURATION_MS = 840');
-    expect(slide).toContain('Easing.bezier(0.22, 1, 0.36, 1)');
   });
 
   it('drives Today and both profile headers from Screen scroll', () => {

@@ -114,9 +114,9 @@ input[data-darkfield]:-webkit-autofill:focus, input[data-darkfield]:-webkit-auto
  * enter from the right; everything else from the left. */
 [data-slidescreen] {
   will-change: transform;
-  transition: transform 840ms cubic-bezier(0.22, 1, 0.36, 1);
+  transition: transform 420ms cubic-bezier(0.22, 1, 0.36, 1);
 }
-/* Today / profile chrome: same 840ms curve, slides up on scroll-down. */
+/* Today / profile chrome: 840ms curve, slides up on scroll-down. */
 [data-headerhide] {
   overflow: hidden;
   will-change: height;
