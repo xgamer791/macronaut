@@ -3,6 +3,7 @@ import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
 import { usePathname, useRouter, type Href } from 'expo-router';
 import type { BottomTabBarProps } from 'expo-router/js-tabs';
+import { MessagesSquare, Users, type LucideIcon } from 'lucide-react-native';
 import React, { useMemo } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -14,6 +15,7 @@ import { spacing } from '@/ui/theme/tokens';
 import { AppText } from './AppText';
 
 type IconName = keyof typeof Ionicons.glyphMap;
+type TabGlyphName = IconName | LucideIcon;
 
 type TabItem =
   | {
@@ -28,8 +30,8 @@ type TabItem =
       kind: 'link';
       href: Href;
       label: string;
-      icon: IconName;
-      iconActive: IconName;
+      icon: TabGlyphName;
+      iconActive: TabGlyphName;
     }
   | { kind: 'profile' };
 
@@ -41,15 +43,15 @@ const ITEMS: TabItem[] = [
     kind: 'link',
     href: '/chats',
     label: 'Chats',
-    icon: 'chatbubbles-outline',
-    iconActive: 'chatbubbles',
+    icon: MessagesSquare,
+    iconActive: MessagesSquare,
   },
   {
     kind: 'link',
     href: '/friends',
     label: 'Friends',
-    icon: 'people-outline',
-    iconActive: 'people',
+    icon: Users,
+    iconActive: Users,
   },
   {
     kind: 'link',
@@ -64,6 +66,15 @@ const ITEMS: TabItem[] = [
 const ICON = 27;
 /** Same circular picture the Today header used to show. */
 const AVATAR = 32;
+
+function TabGlyph({ name, color }: { name: TabGlyphName; color: string }) {
+  if (typeof name === 'string') {
+    return <Ionicons name={name} size={ICON} color={color} />;
+  }
+  const Lucide = name;
+  return <Lucide size={ICON} color={color} />;
+}
+
 const PRIMARY_TAB_PATHS = new Set(['/', '/meals', '/progress', '/settings']);
 
 export function isPrimaryTabPath(pathname: string) {
@@ -126,9 +137,8 @@ function TabBarItems({
               style={styles.tab}
             >
               <View>
-                <Ionicons
+                <TabGlyph
                   name={active ? item.iconActive : item.icon}
-                  size={ICON}
                   color={active ? colors.accent : colors.textMuted}
                 />
               </View>
