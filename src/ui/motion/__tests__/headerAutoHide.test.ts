@@ -35,6 +35,10 @@ describe('header auto-hide wiring', () => {
     expect(hide).toContain('HEADER_HIDE_DURATION_MS = 840');
     expect(hide).toContain('SLIDE_EASING');
     expect(hide).toContain("dataSet: { headerhide: hidden ? 'out' : 'in' }");
+    expect(hide).toContain('marginBottom: hidden ? -height : 0');
+    expect(hide).toContain('transform: [{ translateY: offset }]');
+    expect(hide).not.toContain('styles.clip');
+    expect(hide).not.toContain("height: hidden ? 0 : height");
   });
 
   it('drives Today and both profile headers from Screen scroll', () => {
