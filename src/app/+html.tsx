@@ -78,7 +78,7 @@ input[data-darkfield]:-webkit-autofill:focus, input[data-darkfield]:-webkit-auto
   background: radial-gradient(ellipse 130% 90% at 50% 0%, rgba(0, 0, 0, 0.630) 0%, rgba(0, 0, 0, 0.550) 45%, rgba(0, 0, 0, 0.500) 100%);
   backdrop-filter: blur(39px) saturate(135%);
   -webkit-backdrop-filter: blur(39px) saturate(135%);
-  border-radius: 24px;
+  border-radius: 0;
   box-shadow: 0 3px 8px -2px rgba(0, 0, 0, 0.198), 0 1px 2px rgba(0, 0, 0, 0.099), inset 0 0 23px rgba(255, 255, 255, 0.040), inset 0 4px 8px -4px rgba(0, 0, 0, 0.220), inset 0 -1px 1px rgba(0, 0, 0, 0.280), inset 0 1px 1px rgba(255, 255, 255, 0.000), inset 0 0 0 1px rgba(255, 255, 255, 0.000);
   color: #ffffff;
   overflow: hidden;

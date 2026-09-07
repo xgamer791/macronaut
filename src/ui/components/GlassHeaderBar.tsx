@@ -3,8 +3,6 @@ import { Platform, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { spacing } from '@/ui/theme/tokens';
 
-const GLASS_RADIUS = 24;
-
 export interface GlassHeaderBarProps {
   children: React.ReactNode;
   /** Horizontal padding around the row, so a page keeps its own alignment. */
@@ -73,7 +71,7 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.xs,
   },
   nativeGlass: {
-    borderRadius: GLASS_RADIUS,
+    borderRadius: 0,
     overflow: 'hidden',
     backgroundColor: 'rgba(0, 0, 0, 0.55)',
   },
@@ -86,6 +84,6 @@ const styles = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: 'transparent',
     borderBottomColor: 'rgba(255, 255, 255, 0.05)',
-    borderRadius: GLASS_RADIUS,
+    borderRadius: 0,
   },
 });
