@@ -26,7 +26,7 @@ export { TargetEditor } from './TargetEditor';
 export { DatePickSheet } from './DatePickSheet';
 export { MonthCalendarPopup } from './MonthCalendarPopup';
 export { DashboardHeader } from './DashboardHeader';
-export { AppHeader } from './AppHeader';
+export { AppHeader, HeaderAvatarButton, HeaderNotifyButton } from './AppHeader';
 export { CircleButton, GhostButton, ProfileHeader } from './ProfileHeader';
 export { ProfilePostList } from './ProfilePostList';
 export { FoodImage } from './FoodImage';
