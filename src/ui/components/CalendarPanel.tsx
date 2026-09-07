@@ -50,6 +50,8 @@ export interface CalendarPanelProps {
   selected: DayKey;
   /** Panel heading. Defaults to `Calendar`. */
   title?: string;
+  /** Use `screen` when the calendar owns a route instead of opening a modal. */
+  presentation?: 'modal' | 'screen';
   /**
    * Show everything recorded against the selected day beneath the calendar.
    * A host that turns this on must leave the panel open on a pick, so days can
@@ -71,6 +73,7 @@ export function CalendarPanel({
   visible,
   selected,
   title = 'Calendar',
+  presentation = 'modal',
   dayDetail = false,
   onClose,
   onSelect,
@@ -79,6 +82,7 @@ export function CalendarPanel({
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const weekStart = useWeekStart();
+  const embedded = presentation === 'screen';
   const panelWidth = width || 390;
 
   const [mounted, setMounted] = useState(visible);
@@ -123,10 +127,11 @@ export function CalendarPanel({
     return () => clearTimeout(id);
   }, [mounted, progress, visible]);
 
-  // The panel is a Modal, portalled clear of the page, so the page below has
-  // to be told to step aside on the same frame and by the same distance.
-  const open = Platform.OS === 'web' ? webOpen : visible;
-  usePushWhileOpen(open, { x: -panelWidth });
+  // A modal is portalled clear of the page, so the page below has to be told
+  // to step aside on the same frame and by the same distance. The routed
+  // calendar already gets this movement from SlideScreen.
+  const open = embedded || (Platform.OS === 'web' ? webOpen : visible);
+  usePushWhileOpen(!embedded && open, { x: -panelWidth });
 
   const panelStyle = useAnimatedStyle(() => ({
     transform: [{ translateX: (1 - progress.value) * panelWidth }],
@@ -171,25 +176,29 @@ export function CalendarPanel({
   if (!mounted) return null;
 
   const webRoot =
-    Platform.OS === 'web' ? { dataSet: { calendarpanel: open ? 'open' : 'shut' } } : null;
+    Platform.OS === 'web' && !embedded
+      ? { dataSet: { calendarpanel: open ? 'open' : 'shut' } }
+      : null;
 
   return (
-    <Modal visible={mounted} transparent animationType="none" onRequestClose={onClose}>
+    <CalendarHost embedded={embedded} visible={mounted} onClose={onClose}>
       <View style={styles.root} pointerEvents="box-none" {...webRoot}>
         <Animated.View
-          accessibilityViewIsModal
-          {...(Platform.OS === 'web' ? { dataSet: { calendarsheet: '' } } : null)}
+          accessibilityViewIsModal={!embedded}
+          {...(Platform.OS === 'web' && !embedded ? { dataSet: { calendarsheet: '' } } : null)}
           style={[
-            styles.panel,
+            embedded ? styles.screenPanel : styles.panel,
             {
               width: panelWidth,
               paddingTop: insets.top,
-              paddingBottom: insets.bottom,
+              paddingBottom: embedded ? 0 : insets.bottom,
               backgroundColor: colors.background,
             },
-            Platform.OS === 'web'
-              ? { transform: [{ translateX: open ? 0 : panelWidth }] }
-              : panelStyle,
+            embedded
+              ? null
+              : Platform.OS === 'web'
+                ? { transform: [{ translateX: open ? 0 : panelWidth }] }
+                : panelStyle,
           ]}
         >
           <View style={styles.header}>
@@ -381,6 +390,25 @@ export function CalendarPanel({
           </ScrollView>
         </Animated.View>
       </View>
+    </CalendarHost>
+  );
+}
+
+function CalendarHost({
+  embedded,
+  visible,
+  onClose,
+  children,
+}: {
+  embedded: boolean;
+  visible: boolean;
+  onClose: () => void;
+  children: React.ReactNode;
+}) {
+  if (embedded) return <>{children}</>;
+  return (
+    <Modal visible={visible} transparent animationType="none" onRequestClose={onClose}>
+      {children}
     </Modal>
   );
 }
@@ -513,6 +541,13 @@ const styles = StyleSheet.create({
         elevation: 16,
       },
     }),
+  },
+  screenPanel: {
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    right: 0,
+    maxWidth: '100%',
   },
   header: {
     flexDirection: 'row',

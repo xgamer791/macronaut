@@ -38,6 +38,7 @@ import {
 import {
   AppText,
   Button,
+  CalendarIcon,
   ErrorState,
   GlassHeaderBar,
   CalendarPanel,
@@ -222,7 +223,7 @@ function TrainingScheduleScreen() {
                 hitSlop={8}
                 style={styles.headerButton}
               >
-                <Ionicons name="calendar-outline" size={22} color={colors.accent} />
+                <CalendarIcon size={22} color={colors.accent} />
               </Pressable>
             }
           />

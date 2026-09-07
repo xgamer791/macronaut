@@ -1,6 +1,8 @@
-import { Feather, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
+import { MessageSquare, ThumbsUp } from 'lucide-react-native';
+import { ShareFatIcon } from 'phosphor-react-native';
 import React, { useState } from 'react';
 import {
   KeyboardAvoidingView,
@@ -187,24 +189,24 @@ export function PhotoViewer({
                 label={liked ? 'Unlike photo' : 'Like photo'}
                 onPress={tapLike}
               >
-                <Feather name="thumbs-up" size={23} color={liked ? colors.accent : ON_PHOTO} />
+                <ThumbsUp
+                  size={23}
+                  strokeWidth={1.8}
+                  color={liked ? colors.accent : ON_PHOTO}
+                  fill={liked ? colors.accent : 'transparent'}
+                />
               </Engage>
               <Engage count={comments.length} label="Comment on photo" onPress={tapComment}>
-                <Ionicons name="chatbubble-outline" size={22} color={ON_PHOTO} />
+                <MessageSquare size={22} strokeWidth={1.8} color={ON_PHOTO} />
               </Engage>
               <Engage label="Share photo" onPress={onShare}>
-                <Ionicons name="arrow-redo-outline" size={22} color={ON_PHOTO} />
+                <ShareFatIcon size={23} weight="regular" color={ON_PHOTO} />
               </Engage>
             </View>
             {likeCount > 0 ? (
               <View style={styles.badges} accessibilityLabel={`${compactCount(likeCount)} likes`}>
                 <View style={[styles.badge, { zIndex: 2 }]}>
-                  <MaterialCommunityIcons
-                    name="thumb-up"
-                    size={14}
-                    color={colors.accent}
-                    style={styles.badgeGlyph}
-                  />
+                  <ThumbsUp size={14} strokeWidth={2} color={colors.accent} fill={colors.accent} />
                 </View>
                 {likeCount > 1 ? (
                   <View style={[styles.badge, styles.badgeOverlap]}>

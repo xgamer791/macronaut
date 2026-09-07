@@ -5,15 +5,22 @@ const header = fs.readFileSync(path.join(__dirname, '..', 'AppHeader.tsx'), 'utf
 
 describe('Today header hamburger', () => {
   it('puts a menu control on the left and keeps add, calendar, then notifications on the right', () => {
-    expect(header).toContain('name="menu-outline"');
-    expect(header).toContain('const MENU = 30');
+    expect(header).toContain('<Menu size={MENU}');
+    expect(header).toContain('<CalendarIcon size={GLYPH}');
+    expect(header).toContain('<BellIcon');
+    expect(header).toContain('const MENU = 27');
     expect(header).toContain('size={MENU}');
     expect(header).toContain('Open menu');
     expect(header).toContain('Close menu');
     expect(header).toContain("justifyContent: 'space-between'");
-    expect(header.indexOf('menu-outline')).toBeLessThan(header.indexOf('Add food'));
+    expect(header.indexOf('<Menu')).toBeLessThan(header.indexOf('Add food'));
     expect(header.indexOf('Add food')).toBeLessThan(header.indexOf('Open calendar'));
     expect(header.indexOf('Open calendar')).toBeLessThan(header.indexOf('<HeaderNotifyButton'));
+  });
+
+  it('opens the calendar route instead of the training schedule', () => {
+    expect(header).toContain("router.push('/calendar')");
+    expect(header).not.toContain("router.push('/training-schedule')");
   });
 
   it('opens and closes on the same friends-feed curve', () => {
@@ -40,8 +47,8 @@ describe('Today header hamburger', () => {
     expect(header).not.toContain("href: '/profile'");
   });
 
-  it('stretches the drawer to 20px short of the full viewport width', () => {
-    expect(header).toContain('const MENU_EDGE_GAP = 20');
+  it('stretches the drawer to 45px short of the full viewport width', () => {
+    expect(header).toContain('const MENU_EDGE_GAP = 45');
     expect(header).toContain('const panelWidth = Math.max((width || 390) - MENU_EDGE_GAP, 0)');
     expect(header).toContain('width: panelWidth');
   });

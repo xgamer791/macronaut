@@ -1,4 +1,4 @@
-import { photoShareUrl, profileShareUrl } from '../publicLinks';
+import { photoShareUrl, profilePostShareUrl, profileShareUrl } from '../publicLinks';
 
 describe('publicLinks', () => {
   it('builds a profile URL and a photo URL that opens the viewer', () => {
@@ -8,6 +8,9 @@ describe('publicLinks', () => {
     );
     expect(photoShareUrl(undefined, 'photo-1')).toBe(
       'https://xgamer791.github.io/macronaut/photos?photo=photo-1',
+    );
+    expect(profilePostShareUrl('holly_ky', 'post 1')).toBe(
+      'https://xgamer791.github.io/macronaut/u/holly_ky?post=post%201',
     );
   });
 });

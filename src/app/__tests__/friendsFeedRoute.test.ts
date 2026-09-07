@@ -12,7 +12,7 @@ describe('friends feed', () => {
     const tabBar = fs.readFileSync(path.join(srcDir, 'ui', 'components', 'TabBar.tsx'), 'utf8');
     const friendsItem = tabBar.slice(
       tabBar.indexOf("href: '/friends'"),
-      tabBar.indexOf("href: '/notifications'"),
+      tabBar.indexOf("href: '/groups'"),
     );
 
     expect(fs.existsSync(page)).toBe(true);
@@ -20,7 +20,7 @@ describe('friends feed', () => {
     expect(root).toContain('name="friends" options={SLIDE_OVER_OPTIONS}');
     expect(tabs).not.toContain('name="friends"');
     expect(friendsItem).toContain("label: 'Friends'");
-    expect(friendsItem).toContain("icon: 'people-outline'");
+    expect(friendsItem).toContain('icon: Users');
     expect(friendsItem).not.toContain('comingSoon: true');
     expect(fs.readFileSync(page, 'utf8')).toContain('<SlideScreen from="left">');
   });
@@ -61,6 +61,7 @@ describe('friends feed', () => {
 
     expect(page).toContain('function FriendsFeedPostView');
     expect(page).toContain('styles.postImage');
+    expect(page).toContain('<ProfilePostActions');
     expect(page).toContain('borderBottomWidth: StyleSheet.hairlineWidth');
     expect(page).toContain('maxWidth: MAX_FEED_WIDTH');
     expect(page).not.toContain('styles.card');

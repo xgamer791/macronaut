@@ -4,10 +4,22 @@ import path from 'node:path';
 const appDir = path.resolve(__dirname, '..');
 
 describe('training schedule route', () => {
-  it('opens from the Today calendar and keeps a full calendar on the schedule', () => {
+  it('keeps the calendar and training schedule as separate destinations', () => {
     const today = fs.readFileSync(path.join(appDir, '(tabs)', 'index.tsx'), 'utf8');
+    const header = fs.readFileSync(
+      path.join(appDir, '..', 'ui', 'components', 'AppHeader.tsx'),
+      'utf8',
+    );
+    const calendar = fs.readFileSync(path.join(appDir, 'calendar.tsx'), 'utf8');
+    const layout = fs.readFileSync(path.join(appDir, '_layout.tsx'), 'utf8');
     const schedule = fs.readFileSync(path.join(appDir, 'training-schedule.tsx'), 'utf8');
-    expect(today).toContain("router.push('/training-schedule')");
+    expect(today).toContain('<AppHeader />');
+    expect(header).toContain("router.push('/calendar')");
+    expect(header).not.toContain("router.push('/training-schedule')");
+    expect(layout).toContain('name="calendar" options={SLIDE_OVER_OPTIONS}');
+    expect(calendar).toContain('<SlideScreen from="right">');
+    expect(calendar).toContain('presentation="screen"');
+    expect(calendar).toContain('dayDetail');
     expect(schedule).toContain('title="Training Schedule"');
     expect(schedule).toContain('collapseHeader={false}');
     expect(schedule).toContain('accessibilityLabel="Open full calendar"');
@@ -16,6 +28,24 @@ describe('training schedule route', () => {
     expect(schedule).toContain('width: ADD_ICON_SIZE');
     expect(schedule).toContain('height: ADD_ICON_SIZE');
     expect(schedule).toContain('styles.addIcon');
+  });
+
+  it('uses the same outlined calendar-days glyph everywhere', () => {
+    const files = [
+      path.join(appDir, '..', 'ui', 'components', 'AppHeader.tsx'),
+      path.join(appDir, 'training-schedule.tsx'),
+      path.join(appDir, '(tabs)', 'progress.tsx'),
+      path.join(appDir, 'fasting.tsx'),
+      path.join(appDir, '(tabs)', 'settings.tsx'),
+    ].map((file) => fs.readFileSync(file, 'utf8'));
+    const icon = fs.readFileSync(
+      path.join(appDir, '..', 'ui', 'components', 'CalendarIcon.tsx'),
+      'utf8',
+    );
+
+    expect(icon).toContain("import { CalendarDays } from 'lucide-react-native'");
+    for (const file of files) expect(file).toContain('CalendarIcon');
+    expect(files.join('\n')).not.toMatch(/calendar-(?:clear-)?outline|calendar-clock/);
   });
 
   it('offers free-form day, workout, macro-label, and sets fields', () => {

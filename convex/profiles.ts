@@ -2,7 +2,7 @@ import { getAuthUserId } from '@convex-dev/auth/server';
 import { ConvexError, v } from 'convex/values';
 import type { Doc, Id } from './_generated/dataModel';
 import { mutation, query, type MutationCtx, type QueryCtx } from './_generated/server';
-import { identity, matchesSearch, profileFor } from './chats';
+import { friendshipState, identity, matchesSearch, profileFor } from './chats';
 import { nowIso, requireOwned, requireUserId } from './lib/auth';
 import { firstFreeHandle, handleSeed, isValidHandle, normalizeHandle } from './lib/handles';
 import { homeGymFor } from './lib/gymMembership';
@@ -28,6 +28,8 @@ const LIMITS = {
 /** Posts returned for one profile page. Profiles are a page, not a feed, so
  * the whole page is one read rather than a cursor. */
 const POST_LIMIT = 200;
+const POST_COMMENT_MAX = 280;
+const POST_COMMENT_LIMIT = 80;
 /** Every friends-feed request is capped here, not merely in the UI. */
 export const FRIENDS_FEED_PAGE_SIZE = 10;
 /** How many people one followers / following / friends list hands back. */
@@ -122,13 +124,37 @@ async function profileView(
   };
 }
 
-async function postView(ctx: QueryCtx | MutationCtx, doc: Doc<'profilePosts'>) {
+async function postEngagement(
+  ctx: QueryCtx | MutationCtx,
+  doc: Doc<'profilePosts'>,
+  viewerId: Id<'users'> | null,
+) {
+  const mine = viewerId
+    ? await ctx.db
+        .query('profilePostLikes')
+        .withIndex('by_user_post', (q) => q.eq('userId', viewerId).eq('postId', doc._id))
+        .first()
+    : null;
+  return {
+    likeCount: doc.likeCount ?? 0,
+    likedByMe: mine !== null,
+    commentCount: doc.commentCount ?? 0,
+  };
+}
+
+async function postView(
+  ctx: QueryCtx | MutationCtx,
+  doc: Doc<'profilePosts'>,
+  viewerId: Id<'users'> | null,
+) {
+  const engagement = await postEngagement(ctx, doc, viewerId);
   return {
     id: doc._id as string,
     body: doc.body,
     imageUrl: await storageUrl(ctx, doc.imageId),
     createdAt: doc.createdAt,
     updatedAt: doc.updatedAt,
+    ...engagement,
   };
 }
 
@@ -139,13 +165,85 @@ export async function rowForUser(ctx: QueryCtx | MutationCtx, userId: Id<'users'
     .first();
 }
 
-async function postsForUser(ctx: QueryCtx | MutationCtx, userId: Id<'users'>) {
+async function postsForUser(
+  ctx: QueryCtx | MutationCtx,
+  userId: Id<'users'>,
+  viewerId: Id<'users'> | null,
+) {
   const rows = await ctx.db
     .query('profilePosts')
     .withIndex('by_user_created', (q) => q.eq('userId', userId))
     .order('desc')
     .take(POST_LIMIT);
-  return Promise.all(rows.map((row) => postView(ctx, row)));
+  return Promise.all(rows.map((row) => postView(ctx, row, viewerId)));
+}
+
+async function visiblePost(
+  ctx: QueryCtx | MutationCtx,
+  id: Id<'profilePosts'>,
+): Promise<{ doc: Doc<'profilePosts'>; viewerId: Id<'users'> | null } | null> {
+  const doc = await ctx.db.get(id);
+  if (!doc) return null;
+  const viewerId = await getAuthUserId(ctx);
+  if (viewerId === doc.userId) return { doc, viewerId };
+  const profile = await rowForUser(ctx, doc.userId);
+  if (profile?.isPublic) return { doc, viewerId };
+  if ((await friendshipState(ctx, viewerId, doc.userId)) === 'friends') {
+    return { doc, viewerId };
+  }
+  return null;
+}
+
+async function postCommentView(
+  ctx: QueryCtx | MutationCtx,
+  row: Doc<'profilePostComments'>,
+  viewerId: Id<'users'> | null,
+) {
+  const [profile, user] = await Promise.all([rowForUser(ctx, row.userId), ctx.db.get(row.userId)]);
+  return {
+    id: row._id as string,
+    body: row.body,
+    createdAt: row.createdAt,
+    authorName:
+      profile?.displayName?.trim() ||
+      user?.name?.trim() ||
+      (profile?.handle ? `@${profile.handle}` : 'Macronaut member'),
+    authorHandle: profile?.handle,
+    isMine: viewerId === row.userId,
+  };
+}
+
+async function postThreadView(
+  ctx: QueryCtx | MutationCtx,
+  doc: Doc<'profilePosts'>,
+  viewerId: Id<'users'> | null,
+) {
+  const rows = await ctx.db
+    .query('profilePostComments')
+    .withIndex('by_post_created', (q) => q.eq('postId', doc._id))
+    .order('asc')
+    .take(POST_COMMENT_LIMIT);
+  return {
+    ...(await postEngagement(ctx, doc, viewerId)),
+    comments: await Promise.all(rows.map((row) => postCommentView(ctx, row, viewerId))),
+  };
+}
+
+async function deletePostGraph(ctx: MutationCtx, doc: Doc<'profilePosts'>) {
+  const [likes, comments] = await Promise.all([
+    ctx.db
+      .query('profilePostLikes')
+      .withIndex('by_post', (q) => q.eq('postId', doc._id))
+      .collect(),
+    ctx.db
+      .query('profilePostComments')
+      .withIndex('by_post_created', (q) => q.eq('postId', doc._id))
+      .collect(),
+  ]);
+  for (const like of likes) await ctx.db.delete(like._id);
+  for (const comment of comments) await ctx.db.delete(comment._id);
+  if (doc.imageId) await ctx.storage.delete(doc.imageId);
+  await ctx.db.delete(doc._id);
 }
 
 async function handleTaken(
@@ -245,7 +343,7 @@ export const myPosts = query({
   args: {},
   handler: async (ctx) => {
     const userId = await requireUserId(ctx);
-    return postsForUser(ctx, userId);
+    return postsForUser(ctx, userId, userId);
   },
 });
 
@@ -294,7 +392,7 @@ export const friendsFeed = query({
         // for legacy rows rather than dropping a post mid-page.
         const handle = profile?.handle ?? handleSeed(account?.name, account?.email);
         return {
-          ...(await postView(ctx, post)),
+          ...(await postView(ctx, post, viewerId)),
           author: {
             id: post.userId as string,
             handle,
@@ -333,17 +431,13 @@ export const byHandle = query({
     const viewerId = await getAuthUserId(ctx);
     const isOwner = viewerId === row.userId;
     if (!row.isPublic && !isOwner) return null;
-    const posts = await postsForUser(ctx, row.userId);
+    const posts = await postsForUser(ctx, row.userId, viewerId);
     const profile = await profileView(ctx, row, { isOwner, viewerId });
     return { profile, posts };
   },
 });
 
-const connectionTab = v.union(
-  v.literal('followers'),
-  v.literal('following'),
-  v.literal('friends'),
-);
+const connectionTab = v.union(v.literal('followers'), v.literal('following'), v.literal('friends'));
 
 /**
  * The people around one profile: who follows it, who it follows, and the
@@ -538,9 +632,17 @@ export const addPost = mutation({
     // Posting is the first thing many people do, so it creates the profile too.
     await loadOrCreate(ctx, userId);
     const ts = nowIso();
-    const doc = { userId, body: trimmed ?? '', imageId, createdAt: ts, updatedAt: ts };
+    const doc = {
+      userId,
+      body: trimmed ?? '',
+      imageId,
+      likeCount: 0,
+      commentCount: 0,
+      createdAt: ts,
+      updatedAt: ts,
+    };
     const id = await ctx.db.insert('profilePosts', doc);
-    return postView(ctx, { _id: id, _creationTime: Date.now(), ...doc });
+    return postView(ctx, { _id: id, _creationTime: Date.now(), ...doc }, userId);
   },
 });
 
@@ -553,7 +655,83 @@ export const updatePost = mutation({
     if (!trimmed && !existing.imageId) throw new ConvexError('A post needs some words or a photo');
     const next = { ...existing, body: trimmed ?? '', updatedAt: nowIso() };
     await ctx.db.patch(id, { body: next.body, updatedAt: next.updatedAt });
-    return postView(ctx, next);
+    return postView(ctx, next, userId);
+  },
+});
+
+export const postThread = query({
+  args: { id: v.id('profilePosts') },
+  handler: async (ctx, { id }) => {
+    const found = await visiblePost(ctx, id);
+    if (!found) return null;
+    return postThreadView(ctx, found.doc, found.viewerId);
+  },
+});
+
+export const setPostLike = mutation({
+  args: { id: v.id('profilePosts'), liked: v.boolean() },
+  handler: async (ctx, { id, liked }) => {
+    const userId = await requireUserId(ctx);
+    const found = await visiblePost(ctx, id);
+    if (!found) throw new ConvexError('Post not available');
+    const existing = await ctx.db
+      .query('profilePostLikes')
+      .withIndex('by_user_post', (q) => q.eq('userId', userId).eq('postId', id))
+      .first();
+    let likeCount = found.doc.likeCount ?? 0;
+    if (liked && !existing) {
+      await ctx.db.insert('profilePostLikes', { userId, postId: id, createdAt: nowIso() });
+      likeCount += 1;
+    }
+    if (!liked && existing) {
+      await ctx.db.delete(existing._id);
+      likeCount = Math.max(0, likeCount - 1);
+    }
+    if (likeCount !== (found.doc.likeCount ?? 0)) await ctx.db.patch(id, { likeCount });
+    return postView(ctx, { ...found.doc, likeCount }, userId);
+  },
+});
+
+export const addPostComment = mutation({
+  args: { id: v.id('profilePosts'), body: v.string() },
+  handler: async (ctx, { id, body }) => {
+    const userId = await requireUserId(ctx);
+    const found = await visiblePost(ctx, id);
+    if (!found) throw new ConvexError('Post not available');
+    const text = body.trim().slice(0, POST_COMMENT_MAX);
+    if (!text) throw new ConvexError('Write a comment first.');
+    const createdAt = nowIso();
+    const commentId = await ctx.db.insert('profilePostComments', {
+      userId,
+      postId: id,
+      body: text,
+      createdAt,
+    });
+    await ctx.db.patch(id, { commentCount: (found.doc.commentCount ?? 0) + 1 });
+    return postCommentView(
+      ctx,
+      { _id: commentId, _creationTime: Date.now(), userId, postId: id, body: text, createdAt },
+      userId,
+    );
+  },
+});
+
+export const removePostComment = mutation({
+  args: { id: v.id('profilePostComments') },
+  handler: async (ctx, { id }) => {
+    const userId = await requireUserId(ctx);
+    const comment = await ctx.db.get(id);
+    if (!comment) return null;
+    const post = await ctx.db.get(comment.postId);
+    if (comment.userId === userId || post?.userId === userId) {
+      await ctx.db.delete(id);
+      if (post) {
+        await ctx.db.patch(post._id, {
+          commentCount: Math.max(0, (post.commentCount ?? 0) - 1),
+        });
+      }
+    }
+    return null;
   },
 });
 
@@ -563,8 +741,7 @@ export const removePost = mutation({
     const userId = await requireUserId(ctx);
     const doc = await ctx.db.get(id);
     if (doc && doc.userId === userId) {
-      if (doc.imageId) await ctx.storage.delete(doc.imageId);
-      await ctx.db.delete(id);
+      await deletePostGraph(ctx, doc);
     }
     return null;
   },

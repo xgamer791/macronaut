@@ -202,6 +202,9 @@ export const profileFields = {
 export const profilePostFields = {
   body: v.string(),
   imageId: v.optional(v.id('_storage')),
+  /** Optional for posts created before reactions and comments shipped. */
+  likeCount: v.optional(v.number()),
+  commentCount: v.optional(v.number()),
 };
 
 export const profilePhotoFields = {

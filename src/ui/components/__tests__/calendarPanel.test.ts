@@ -8,8 +8,8 @@ const panel = read('ui', 'components', 'CalendarPanel.tsx');
 const html = read('app', '+html.tsx');
 const index = read('ui', 'components', 'index.ts');
 
-/** The calendar is one component shared by Today, Progress, Fasting and the
- * training schedule. Layout it in source, since no logic-level test renders it. */
+/** The calendar is one component shared by its route, Progress, Fasting and
+ * the training schedule. Layout it in source, since no logic-level test renders it. */
 describe('calendar panel', () => {
   it('is the app’s only month calendar', () => {
     expect(index).toContain("export { CalendarPanel } from './CalendarPanel';");
@@ -17,6 +17,7 @@ describe('calendar panel', () => {
       false,
     );
     for (const page of [
+      read('app', 'calendar.tsx'),
       read('ui', 'components', 'DashboardHeader.tsx'),
       read('app', 'fasting.tsx'),
       read('app', 'training-schedule.tsx'),
@@ -27,12 +28,20 @@ describe('calendar panel', () => {
     }
   });
 
+  it('can fill its own route without a modal covering the persistent footer', () => {
+    const route = read('app', 'calendar.tsx');
+    expect(route).toContain('presentation="screen"');
+    expect(panel).toContain("presentation?: 'modal' | 'screen'");
+    expect(panel).toContain('<CalendarHost embedded={embedded}');
+    expect(panel).toContain('if (embedded) return <>{children}</>');
+  });
+
   it('fills the screen from the right edge on the shared slide curve', () => {
     expect(panel).toContain("import { usePushWhileOpen } from '@/ui/motion/SlidePush';");
     expect(panel).toContain(
       "import { SLIDE_DURATION_MS, SLIDE_EASING } from '@/ui/motion/slideTiming';",
     );
-    expect(panel).toContain('usePushWhileOpen(open, { x: -panelWidth });');
+    expect(panel).toContain('usePushWhileOpen(!embedded && open, { x: -panelWidth });');
     expect(panel).toContain('transform: [{ translateX: (1 - progress.value) * panelWidth }]');
     expect(panel).toContain('width: panelWidth');
     expect(panel).toContain('right: 0');

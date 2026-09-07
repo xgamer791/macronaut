@@ -4,7 +4,6 @@ import {
   HEADER_HIDE_COMMIT,
   HEADER_HIDE_DELTA,
   headerHideForScroll,
-  headerLayoutHidden,
 } from '../headerAutoHideLogic';
 
 const srcDir = path.join(__dirname, '..', '..', '..');
@@ -36,16 +35,6 @@ describe('headerHideForScroll', () => {
   });
 });
 
-describe('headerLayoutHidden', () => {
-  it('freezes in-flow collapse during rubber-band and follows once in the page', () => {
-    expect(headerLayoutHidden(0, false, true)).toBe(true);
-    expect(headerLayoutHidden(-8, false, true)).toBe(true);
-    expect(headerLayoutHidden(20, true, false)).toBe(false);
-    expect(headerLayoutHidden(80, true, false)).toBe(true);
-    expect(headerLayoutHidden(80, false, true)).toBe(false);
-  });
-});
-
 describe('header auto-hide wiring', () => {
   it('keeps the same bezier as the stack-page slide for header hide', () => {
     const hide = read('ui', 'motion', 'headerAutoHide.tsx');
@@ -55,13 +44,34 @@ describe('header auto-hide wiring', () => {
     expect(hide).toContain('SLIDE_DURATION_MS');
     expect(hide).toContain('SLIDE_EASING');
     expect(hide).toContain("dataSet: { headerhide: hidden ? 'out' : 'in' }");
-    expect(hide).toContain('marginBottom: collapsed ? -height : 0');
-    expect(hide).toContain('transform: [{ translateY: offset }]');
     expect(hide).toContain('if (y < HEADER_HIDE_TOP) return');
     expect(hide).not.toContain('settleAtTop');
     expect(hide).not.toContain('HEADER_LAYOUT_SETTLE_MS');
     expect(hide).not.toContain('styles.clip');
-    expect(hide).not.toContain("height: hidden ? 0 : height");
+    expect(hide).not.toContain('height: hidden ? 0 : height');
+  });
+
+  it('floats the slab over the page and only ever translates it', () => {
+    const hide = read('ui', 'motion', 'headerAutoHide.tsx');
+    expect(hide).toContain("position: 'absolute'");
+    expect(hide).toContain('transform: [{ translateY: -progress.value * (height || 0) }]');
+    // Nothing may resize the slab or the page as the header leaves.
+    expect(hide).not.toContain('marginBottom');
+    expect(hide).not.toContain('collapsed');
+  });
+
+  it('reserves the header band with padding that never changes on scroll', () => {
+    const screen = read('ui', 'components', 'Screen.tsx');
+    expect(screen).toContain('onHeight={setHeaderHeight}');
+    expect(screen).toContain('hideOnScroll ? { paddingTop: headerHeight } : null');
+    expect(screen).toContain('contentContainerStyle: [contentPad, style, headerPad]');
+    expect(screen).not.toContain('collapsed={hide.collapsed}');
+  });
+
+  it('only lifts the slab out of flow once its height is known', () => {
+    const screen = read('ui', 'components', 'Screen.tsx');
+    expect(screen).toContain('floating={headerHeight > 0}');
+    expect(screen).toContain('if (hideOnScroll && headerHeight > 0)');
   });
 
   it('drives Today and both profile headers from Screen scroll', () => {
@@ -69,9 +79,6 @@ describe('header auto-hide wiring', () => {
     expect(screen).toContain('useHeaderScrollHide');
     expect(screen).toContain('AutoHideHeader');
     expect(screen).toContain('onScroll: hideOnScroll ? hide.onScroll');
-    expect(screen).toContain('onMomentumScrollEnd: hideOnScroll ? hide.onScrollSettle');
-    expect(screen).toContain('onScrollEndDrag: hideOnScroll ? hide.onScrollSettle');
-    expect(screen).toContain('collapsed={hide.collapsed}');
     expect(screen).toContain('collapseHeader');
     expect(read('app', '(tabs)', 'index.tsx')).toContain('stickyHeader={');
     expect(read('app', 'profile.tsx')).toContain('stickyHeader={');

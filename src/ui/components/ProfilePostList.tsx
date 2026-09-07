@@ -8,9 +8,11 @@ import { useTheme } from '@/ui/theme/ThemeProvider';
 import { radius, spacing, touchTarget } from '@/ui/theme/tokens';
 import { AppText } from './AppText';
 import { EmptyState } from './EmptyState';
+import { ProfilePostActions } from './ProfilePostActions';
 
 export interface ProfilePostListProps {
   posts: ProfilePost[];
+  ownerHandle: string;
   /** Owner only. Given a post, open the edit / delete choice for it. */
   onManage?: (post: ProfilePost) => void;
   /** Shown when there is nothing to list. */
@@ -19,7 +21,13 @@ export interface ProfilePostListProps {
 }
 
 /** The posts on a profile page, newest first. Read-only unless `onManage`. */
-export function ProfilePostList({ posts, onManage, emptyTitle, emptyBody }: ProfilePostListProps) {
+export function ProfilePostList({
+  posts,
+  ownerHandle,
+  onManage,
+  emptyTitle,
+  emptyBody,
+}: ProfilePostListProps) {
   const { colors } = useTheme();
   const { width } = useWindowDimensions();
   const imageHeight = Math.round((width - spacing.lg * 2) * 0.62);
@@ -64,6 +72,8 @@ export function ProfilePostList({ posts, onManage, emptyTitle, emptyBody }: Prof
               accessibilityIgnoresInvertColors
             />
           ) : null}
+
+          <ProfilePostActions post={post} ownerHandle={ownerHandle} style={styles.actions} />
         </View>
       ))}
     </View>
@@ -92,6 +102,9 @@ const styles = StyleSheet.create({
   image: {
     width: '100%',
     borderRadius: radius.sm,
+    marginTop: spacing.xs,
+  },
+  actions: {
     marginTop: spacing.xs,
   },
 });

@@ -8,7 +8,7 @@ import type { ProfileView } from '@/repositories/profileRepo';
 import { followerLabel, followingLabel, postLabel, profileStatLine } from '@/utils/compactCount';
 import { useTheme } from '@/ui/theme/ThemeProvider';
 import { radius, spacing, touchTarget } from '@/ui/theme/tokens';
-import { HeaderAvatarButton, HeaderChatsButton, HeaderNotifyButton } from './AppHeader';
+import { HeaderNotifyButton } from './AppHeader';
 import { AppText } from './AppText';
 
 const AVATAR = 92;
@@ -238,18 +238,15 @@ function StatDot() {
 }
 
 /**
- * Back on the left; chats, notifications, then the same account picture as
- * Today on the right. Shared by the inline banner chrome and the sticky
- * header bar.
+ * Back on the left; notifications on the right. Chats and the account
+ * picture live in the tab bar.
  */
 export function ProfileHeaderChrome({ onBack }: { onBack: () => void }) {
   return (
     <View style={styles.chromeRow}>
       <GhostButton icon="chevron-back" label="Back" onPress={onBack} size={28} contrast />
       <View style={styles.menu}>
-        <HeaderChatsButton />
         <HeaderNotifyButton />
-        <HeaderAvatarButton />
       </View>
     </View>
   );

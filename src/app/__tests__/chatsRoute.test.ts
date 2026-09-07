@@ -16,6 +16,18 @@ describe('chat routes', () => {
     expect(fs.existsSync(path.join(appDir, 'chat', '[id].tsx'))).toBe(true);
   });
 
+  it('keeps the footer beneath signed-in pages except direct conversations', () => {
+    const layout = readApp('_layout.tsx');
+    expect(layout).toContain('shouldShowPersistentFooter(signedIn, pathname)');
+    expect(layout).toContain('<PersistentTabBar />');
+    expect(layout).toContain('if (!signedIn || isPrimaryTabPath(pathname)');
+    expect(layout).toContain("!pathname.startsWith('/chat/')");
+    expect(layout).not.toContain("pathname.startsWith('/chats')");
+    expect(layout.indexOf('<Stack screenOptions')).toBeLessThan(
+      layout.indexOf('<PersistentTabBar />'),
+    );
+  });
+
   it('opens chats from the tab bar, while notifications remain on profiles and the header', () => {
     const tabBar = fs.readFileSync(path.join(srcDir, 'ui', 'components', 'TabBar.tsx'), 'utf8');
     expect(tabBar).toContain("href: '/chats'");
@@ -36,9 +48,9 @@ describe('chat routes', () => {
       'utf8',
     );
     const profileMenu = profileHeader.slice(profileHeader.indexOf('styles.menu'));
-    expect(profileMenu.indexOf('<HeaderChatsButton')).toBeLessThan(
-      profileMenu.indexOf('<HeaderNotifyButton'),
-    );
+    expect(profileMenu).toContain('<HeaderNotifyButton');
+    expect(profileMenu).not.toContain('<HeaderChatsButton');
+    expect(profileMenu).not.toContain('<HeaderAvatarButton');
   });
 
   it('keeps a plus action and searches contacts and Macronaut people', () => {

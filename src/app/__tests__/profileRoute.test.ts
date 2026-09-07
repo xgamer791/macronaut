@@ -66,15 +66,14 @@ describe('profile routes', () => {
     expect(read(path.join('u', '[handle].tsx'))).toContain('Follow');
   });
 
-  it('puts notifications then the home avatar on the profile banner', () => {
+  it('puts notifications on the profile banner, not chats or the home avatar', () => {
     const header = fs.readFileSync(
       path.join(srcDir, 'ui', 'components', 'ProfileHeader.tsx'),
       'utf8',
     );
     expect(header).toContain('HeaderNotifyButton');
-    expect(header).toContain('HeaderAvatarButton');
-    const menu = header.slice(header.indexOf('styles.menu'));
-    expect(menu.indexOf('HeaderNotifyButton')).toBeLessThan(menu.indexOf('HeaderAvatarButton'));
+    expect(header).not.toContain('HeaderChatsButton');
+    expect(header).not.toContain('HeaderAvatarButton');
     const today = fs.readFileSync(path.join(srcDir, 'ui', 'components', 'AppHeader.tsx'), 'utf8');
     expect(today).toContain('export function HeaderAvatarButton');
     expect(today).toContain('export function HeaderNotifyButton');
@@ -148,7 +147,9 @@ describe('profile routes', () => {
     expect(viewer).toContain('Like photo');
     expect(viewer).toContain('Comment on photo');
     expect(viewer).toContain('Share photo');
-    expect(viewer).toContain('<Feather name="thumbs-up"');
+    expect(viewer).toContain('<ThumbsUp');
+    expect(viewer).toContain('<MessageSquare');
+    expect(viewer).toContain('<ShareFatIcon');
     expect(viewer).not.toContain('thumb-up-outline');
     expect(viewer).toContain('liked ? colors.accent : ON_PHOTO');
     // The reaction badges are bare glyphs now — colored, with no disc behind them.
@@ -161,6 +162,40 @@ describe('profile routes', () => {
     expect(viewer).toContain('ACTION_GAP = spacing.sm');
     expect(viewer).toContain('animationType="slide"');
     expect(viewer).toContain("backgroundColor: '#000000'");
+  });
+
+  it('puts working like, comment and share controls on every profile post', () => {
+    const list = fs.readFileSync(
+      path.join(srcDir, 'ui', 'components', 'ProfilePostList.tsx'),
+      'utf8',
+    );
+    const actions = fs.readFileSync(
+      path.join(srcDir, 'ui', 'components', 'ProfilePostActions.tsx'),
+      'utf8',
+    );
+    expect(list).toContain('<ProfilePostActions');
+    expect(actions).toContain('<ThumbsUp');
+    expect(actions).toContain('<MessageSquare');
+    expect(actions).toContain('<ShareFatIcon');
+    expect(actions).toContain('useSetProfilePostLike');
+    expect(actions).toContain('useAddProfilePostComment');
+    expect(actions).toContain('profilePostShareUrl');
+  });
+
+  it('draws the three post actions at one size, packed to the left', () => {
+    const actions = fs.readFileSync(
+      path.join(srcDir, 'ui', 'components', 'ProfilePostActions.tsx'),
+      'utf8',
+    );
+    expect(actions).toContain('const POST_ACTION_GLYPH = 18');
+    expect(actions).toContain('<ThumbsUp\n            size={POST_ACTION_GLYPH}');
+    expect(actions).toContain('<MessageSquare size={POST_ACTION_GLYPH}');
+    expect(actions).toContain('<ShareFatIcon size={POST_ACTION_GLYPH}');
+    // Each button hugs its glyph instead of taking a third of the card, which
+    // is what spread them across the full width.
+    const action = actions.slice(actions.indexOf('  action: {'));
+    expect(action).toContain('minWidth: touchTarget');
+    expect(action.slice(0, action.indexOf('},'))).not.toContain('flex: 1');
   });
 
   it('adds wall photos from a select-only picker in tap order', () => {

@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { MessageSquare } from 'lucide-react-native';
 import React, { useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 import type { AppNotification } from '@/repositories/notificationRepo';
@@ -222,11 +223,15 @@ function NotificationRow({
       <View style={styles.avatarWrap}>
         <ChatAvatar person={item.actor} size={42} />
         <View style={styles.kindBadge}>
-          <Ionicons
-            name={isMessage ? 'chatbubble' : accepted ? 'checkmark' : 'person-add'}
-            size={14}
-            color={colors.accent}
-          />
+          {isMessage ? (
+            <MessageSquare size={14} strokeWidth={2} color={colors.accent} />
+          ) : (
+            <Ionicons
+              name={accepted ? 'checkmark' : 'person-add'}
+              size={14}
+              color={colors.accent}
+            />
+          )}
         </View>
       </View>
       <View style={[styles.copy, { borderBottomColor: colors.border }]}>

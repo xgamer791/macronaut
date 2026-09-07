@@ -78,9 +78,10 @@ describe('web html shell', () => {
     expect(html).toContain('[data-headerhide]');
     expect(html).toContain('[data-headerhide="out"]');
     expect(html).toContain('translateY(-100%)');
-    expect(html).toContain(
-      'transform 294ms cubic-bezier(0.22, 1, 0.36, 1),\n    margin-bottom 294ms cubic-bezier(0.22, 1, 0.36, 1)',
-    );
+    // Only the transform moves. Animating the slab's box would relayout the
+    // page beneath it, which is what made the viewport jolt.
+    expect(html).toContain('will-change: transform;');
+    expect(html).not.toContain('margin-bottom');
     expect(html).not.toContain('[data-headerhide="out"] > *');
     expect(html).not.toContain('height 840ms');
     expect(html).not.toContain('840ms');

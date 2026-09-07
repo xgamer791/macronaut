@@ -3,6 +3,7 @@ import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
 import { usePathname, useRouter, type Href } from 'expo-router';
 import type { BottomTabBarProps } from 'expo-router/js-tabs';
+import { House, MessageSquare, UserGroup, Users, type LucideIcon } from 'lucide-react-native';
 import React, { useMemo } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -14,59 +15,121 @@ import { spacing } from '@/ui/theme/tokens';
 import { AppText } from './AppText';
 
 type IconName = keyof typeof Ionicons.glyphMap;
+type TabGlyphName = IconName | LucideIcon;
 
 type TabItem =
   | {
       kind: 'tab';
       name: string;
       label: string;
-      icon: IconName;
-      iconActive: IconName;
+      icon: TabGlyphName;
+      iconActive: TabGlyphName;
       comingSoon?: boolean;
     }
   | {
       kind: 'link';
       href: Href;
       label: string;
-      icon: IconName;
-      iconActive: IconName;
+      icon: TabGlyphName;
+      iconActive: TabGlyphName;
     }
   | { kind: 'profile' };
 
 /** Today, chats, friends, groups, then the account picture. Meals,
  * Progress and Settings stay registered as hidden tabs so existing links work. */
 const ITEMS: TabItem[] = [
-  { kind: 'tab', name: 'index', label: 'Today', icon: 'home-outline', iconActive: 'home' },
+  { kind: 'tab', name: 'index', label: 'Today', icon: House, iconActive: House },
   {
     kind: 'link',
     href: '/chats',
     label: 'Chats',
-    icon: 'chatbubbles-outline',
-    iconActive: 'chatbubbles',
+    icon: MessageSquare,
+    iconActive: MessageSquare,
   },
   {
     kind: 'link',
     href: '/friends',
     label: 'Friends',
-    icon: 'people-outline',
-    iconActive: 'people',
+    icon: Users,
+    iconActive: Users,
   },
   {
     kind: 'link',
     href: '/groups',
     label: 'Groups',
-    icon: 'people-circle-outline',
-    iconActive: 'people-circle',
+    icon: UserGroup,
+    iconActive: UserGroup,
   },
   { kind: 'profile' },
 ];
 
-const ICON = 27;
+/** What each tab glyph actually paints, edge to edge. */
+const ICON_INK = 23.5;
+/**
+ * Lucide draws on a 24-unit grid, and every glyph covers a different amount of
+ * it — a house is narrower than a group of people. One `size` for all four
+ * therefore paints four different marks, so each is scaled by the widest
+ * extent it really covers (geometry plus its 2-unit stroke, in grid units)
+ * and they come out the same size on screen.
+ */
+const GLYPH_EXTENT: [LucideIcon, number][] = [
+  [House, 21],
+  [MessageSquare, 22],
+  [Users, 22],
+  [UserGroup, 22],
+];
+/** Fallback matches Lucide's most common extent. */
+const DEFAULT_EXTENT = 22;
+
+function glyphSize(glyph: LucideIcon): number {
+  const found = GLYPH_EXTENT.find(([icon]) => icon === glyph);
+  return (ICON_INK * 24) / (found ? found[1] : DEFAULT_EXTENT);
+}
+
 /** Same circular picture the Today header used to show. */
 const AVATAR = 32;
+/**
+ * The picture fills the whole circle, so a fallback drawn at half its width
+ * reads far lighter than the glyphs beside it. Sized to sit in the same range
+ * of ink as the four tab glyphs instead.
+ */
+const AVATAR_GLYPH = 18;
+
+function TabGlyph({ name, color }: { name: TabGlyphName; color: string }) {
+  if (typeof name === 'string') {
+    // Ionicons is a font, so there is no grid to measure — this one is nominal.
+    return <Ionicons name={name} size={ICON_INK} color={color} />;
+  }
+  const Lucide = name;
+  return <Lucide size={glyphSize(name)} color={color} />;
+}
+
+const PRIMARY_TAB_PATHS = new Set(['/', '/meals', '/progress', '/settings']);
+
+export function isPrimaryTabPath(pathname: string) {
+  return PRIMARY_TAB_PATHS.has(pathname);
+}
 
 /** Bottom tab bar. Icons only — labels stay on the accessibility name. */
 export function TabBar({ state, navigation }: BottomTabBarProps) {
+  const pathname = usePathname();
+
+  // Stack pages get the copy mounted beside the root navigator so they cannot
+  // cover it. Hiding this copy also prevents the two bars from overlapping.
+  if (!isPrimaryTabPath(pathname)) return null;
+
+  return <TabBarItems state={state} navigation={navigation} />;
+}
+
+/** Footer used outside the tab navigator, beneath signed-in stack pages. */
+export function PersistentTabBar() {
+  return <TabBarItems />;
+}
+
+function TabBarItems({
+  state,
+  navigation,
+}: Partial<Pick<BottomTabBarProps, 'state' | 'navigation'>>) {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const router = useRouter();
@@ -95,6 +158,7 @@ export function TabBar({ state, navigation }: BottomTabBarProps) {
               key={item.label}
               accessibilityRole="tab"
               accessibilityLabel={item.label}
+              accessibilityState={{ selected: active }}
               onPress={() => {
                 void Haptics.selectionAsync();
                 router.push(item.href);
@@ -102,9 +166,8 @@ export function TabBar({ state, navigation }: BottomTabBarProps) {
               style={styles.tab}
             >
               <View>
-                <Ionicons
+                <TabGlyph
                   name={active ? item.iconActive : item.icon}
-                  size={ICON}
                   color={active ? colors.accent : colors.textMuted}
                 />
               </View>
@@ -112,19 +175,44 @@ export function TabBar({ state, navigation }: BottomTabBarProps) {
           );
         }
 
-        const route = state.routes.find((r) => r.name === item.name);
-        const routeIndex = route ? state.routes.findIndex((r) => r.key === route.key) : -1;
-        const focused = routeIndex >= 0 && state.index === routeIndex && !item.comingSoon;
+        const route = state?.routes.find((r) => r.name === item.name);
+        const routeIndex = route ? state?.routes.findIndex((r) => r.key === route.key) : -1;
+        const focused =
+          routeIndex !== undefined &&
+          routeIndex >= 0 &&
+          state?.index === routeIndex &&
+          !item.comingSoon;
 
         const icon = (
-          <Ionicons
+          <TabGlyph
             name={focused ? item.iconActive : item.icon}
-            size={ICON}
             color={focused ? colors.accent : colors.textMuted}
           />
         );
 
         if (item.comingSoon || !route) {
+          if (!item.comingSoon && !state && !navigation) {
+            const active = pathname === '/';
+            return (
+              <Pressable
+                key={item.name}
+                accessibilityRole="tab"
+                accessibilityLabel={item.label}
+                accessibilityState={{ selected: active }}
+                onPress={() => {
+                  void Haptics.selectionAsync();
+                  router.replace('/');
+                }}
+                style={styles.tab}
+              >
+                <TabGlyph
+                  name={active ? item.iconActive : item.icon}
+                  color={active ? colors.accent : colors.textMuted}
+                />
+              </Pressable>
+            );
+          }
+
           return (
             <View
               key={item.name}
@@ -145,13 +233,13 @@ export function TabBar({ state, navigation }: BottomTabBarProps) {
             accessibilityLabel={item.label}
             accessibilityState={{ selected: focused }}
             onPress={() => {
-              const event = navigation.emit({
+              const event = navigation!.emit({
                 type: 'tabPress',
                 target: route.key,
                 canPreventDefault: true,
               });
               if (!focused && !event.defaultPrevented) {
-                navigation.navigate(item.name);
+                navigation!.navigate(item.name);
               }
             }}
             style={styles.tab}
@@ -199,7 +287,7 @@ function ProfileTab() {
           {initials ? (
             <AppText style={styles.initials}>{initials}</AppText>
           ) : (
-            <Ionicons name="person" size={16} color={colors.textMuted} />
+            <Ionicons name="person" size={AVATAR_GLYPH} color={colors.textMuted} />
           )}
         </View>
       )}
@@ -248,8 +336,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   initials: {
-    fontSize: 11,
-    lineHeight: 13,
+    fontSize: 12,
+    lineHeight: 14,
     fontWeight: '700',
   },
 });

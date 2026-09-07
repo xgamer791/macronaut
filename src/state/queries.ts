@@ -42,6 +42,7 @@ export const keys = {
   emailTaken: (email: string) => ['email-taken', email] as const,
   profile: ['profile'] as const,
   profilePosts: ['profile-posts'] as const,
+  profilePostThread: (id: string) => ['profile-post-thread', id] as const,
   friendsFeed: ['friends-feed'] as const,
   publicProfile: (handle: string) => ['public-profile', handle] as const,
   connections: (handle: string, tab: ConnectionTab, search: string) =>
@@ -211,6 +212,7 @@ function useInvalidateProfile() {
   return () => {
     qc.invalidateQueries({ queryKey: keys.profile });
     qc.invalidateQueries({ queryKey: keys.profilePosts });
+    qc.invalidateQueries({ queryKey: ['profile-post-thread'] });
     qc.invalidateQueries({ queryKey: keys.friendsFeed });
     qc.invalidateQueries({ queryKey: ['public-profile'] });
     qc.invalidateQueries({ queryKey: ['connections'] });
@@ -266,6 +268,44 @@ export function useDeleteProfilePost() {
   const invalidate = useInvalidateProfile();
   return useMutation({
     mutationFn: (id: string) => profile.removePost(id),
+    onSuccess: invalidate,
+  });
+}
+
+export function useProfilePostThread(id: string, enabled = true) {
+  const { profile } = useRepos();
+  return useQuery({
+    queryKey: keys.profilePostThread(id),
+    queryFn: () => profile.postThread(id),
+    enabled: enabled && id.length > 0,
+  });
+}
+
+export function useSetProfilePostLike() {
+  const { profile } = useRepos();
+  const invalidate = useInvalidateProfile();
+  return useMutation({
+    mutationFn: (input: { id: string; liked: boolean }) =>
+      profile.setPostLike(input.id, input.liked),
+    onSuccess: invalidate,
+  });
+}
+
+export function useAddProfilePostComment() {
+  const { profile } = useRepos();
+  const invalidate = useInvalidateProfile();
+  return useMutation({
+    mutationFn: (input: { id: string; body: string }) =>
+      profile.addPostComment(input.id, input.body),
+    onSuccess: invalidate,
+  });
+}
+
+export function useRemoveProfilePostComment() {
+  const { profile } = useRepos();
+  const invalidate = useInvalidateProfile();
+  return useMutation({
+    mutationFn: (input: { postId: string; id: string }) => profile.removePostComment(input.id),
     onSuccess: invalidate,
   });
 }

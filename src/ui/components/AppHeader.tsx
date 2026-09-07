@@ -2,6 +2,8 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
 import { useRouter, type Href } from 'expo-router';
+import { Menu, MessageSquare } from 'lucide-react-native';
+import { BellIcon } from 'phosphor-react-native';
 import React, { useEffect, useLayoutEffect, useMemo, useState } from 'react';
 import { Modal, Platform, Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
@@ -14,25 +16,21 @@ import { SLIDE_DURATION_MS, SLIDE_EASING } from '@/ui/motion/SlideScreen';
 import { useTheme } from '@/ui/theme/ThemeProvider';
 import { palette, spacing, touchTarget } from '@/ui/theme/tokens';
 import { AppText } from './AppText';
+import { CalendarIcon } from './CalendarIcon';
 
 const ICON = '#FFFFFF';
 const NOTIFY_DOT = palette.accentDark;
 const GLYPH = 22;
 const GLYPH_INSET = (touchTarget - GLYPH) / 2;
-const MENU = 30;
+const MENU = 27;
 const PLUS = 30;
-const MENU_EDGE_GAP = 20;
-
-export interface AppHeaderProps {
-  /** Calendar icon in the right cluster, immediately before notifications. */
-  onCalendarPress?: () => void;
-}
+const MENU_EDGE_GAP = 45;
 
 /**
  * Garmin-style chrome: hamburger on the left, add / calendar / bell on the right.
  * Notifications stay reachable without spending a primary tab-bar slot.
  */
-export function AppHeader({ onCalendarPress }: AppHeaderProps) {
+export function AppHeader() {
   const router = useRouter();
   const { colors } = useTheme();
   const icon = colors.textPrimary;
@@ -48,7 +46,7 @@ export function AppHeader({ onCalendarPress }: AppHeaderProps) {
         }}
         slot={MENU}
       >
-        <Ionicons name="menu-outline" size={MENU} color={icon} />
+        <Menu size={MENU} color={icon} />
       </HeaderHit>
 
       <View style={styles.cluster}>
@@ -67,10 +65,10 @@ export function AppHeader({ onCalendarPress }: AppHeaderProps) {
           accessibilityLabel="Open calendar"
           onPress={() => {
             void Haptics.selectionAsync();
-            onCalendarPress?.();
+            router.push('/calendar');
           }}
         >
-          <Ionicons name="calendar-outline" size={GLYPH} color={icon} />
+          <CalendarIcon size={GLYPH} color={icon} />
         </HeaderHit>
 
         <HeaderNotifyButton iconColor={icon} />
@@ -270,7 +268,7 @@ export function HeaderAvatarButton() {
           {initials ? (
             <AppText style={styles.initials}>{initials}</AppText>
           ) : (
-            <Ionicons name="person" size={16} color={ICON} />
+            <Ionicons name="person" size={AVATAR_GLYPH} color={ICON} />
           )}
         </View>
       )}
@@ -300,11 +298,7 @@ export function HeaderNotifyButton({
       }}
       dot={active}
     >
-      <Ionicons
-        name={active ? 'notifications' : 'notifications-outline'}
-        size={GLYPH}
-        color={iconColor}
-      />
+      <BellIcon size={GLYPH} color={iconColor} weight={active ? 'fill' : 'regular'} />
     </HeaderHit>
   );
 }
@@ -322,7 +316,7 @@ export function HeaderChatsButton() {
         router.push(signedIn ? '/chats' : '/login');
       }}
     >
-      <Ionicons name="chatbubbles-outline" size={GLYPH + 1} color={ICON} />
+      <MessageSquare size={GLYPH + 1} color={ICON} />
     </HeaderHit>
   );
 }
@@ -388,6 +382,9 @@ function initialsFrom(name?: string | null, email?: string): string {
 }
 
 const AVATAR = 32;
+/** Matches the tab bar's fallback, so the same account reads the same weight
+ * in the header and the footer. */
+const AVATAR_GLYPH = 18;
 
 const styles = StyleSheet.create({
   row: {
