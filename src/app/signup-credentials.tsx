@@ -263,10 +263,7 @@ export default function SignupCredentialsScreen() {
           <View style={styles.headerSide} />
         </View>
 
-        <ScrollView
-          keyboardShouldPersistTaps="handled"
-          contentContainerStyle={styles.form}
-        >
+        <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.form}>
           <View>
             <FieldLabel>Name</FieldLabel>
             <OutlineInput
@@ -295,12 +292,8 @@ export default function SignupCredentialsScreen() {
               invalid={emailTaken}
             />
             {emailTaken ? (
-              <AppText
-                accessibilityRole="alert"
-                style={[fieldStyles.error, fieldStyles.fieldNote]}
-              >
-                An account already uses this email address. Sign in instead, or use another
-                address.
+              <AppText accessibilityRole="alert" style={[fieldStyles.error, fieldStyles.fieldNote]}>
+                An account already uses this email address. Sign in instead, or use another address.
               </AppText>
             ) : checkingEmail ? (
               <AppText style={fieldStyles.helper}>Checking this email address…</AppText>
@@ -323,10 +316,7 @@ export default function SignupCredentialsScreen() {
               invalid={emailMismatch}
             />
             {emailMismatch ? (
-              <AppText
-                accessibilityRole="alert"
-                style={[fieldStyles.error, fieldStyles.fieldNote]}
-              >
+              <AppText accessibilityRole="alert" style={[fieldStyles.error, fieldStyles.fieldNote]}>
                 Email addresses do not match.
               </AppText>
             ) : emailConfirmed ? (
@@ -382,7 +372,9 @@ export default function SignupCredentialsScreen() {
               trailing={
                 <Pressable
                   accessibilityRole="button"
-                  accessibilityLabel={showConfirm ? 'Hide confirm password' : 'Show confirm password'}
+                  accessibilityLabel={
+                    showConfirm ? 'Hide confirm password' : 'Show confirm password'
+                  }
                   hitSlop={8}
                   onPress={() => setShowConfirm((current) => !current)}
                 >
@@ -391,10 +383,7 @@ export default function SignupCredentialsScreen() {
               }
             />
             {passwordMismatch ? (
-              <AppText
-                accessibilityRole="alert"
-                style={[fieldStyles.error, fieldStyles.fieldNote]}
-              >
+              <AppText accessibilityRole="alert" style={[fieldStyles.error, fieldStyles.fieldNote]}>
                 Passwords do not match.
               </AppText>
             ) : passwordConfirmed ? (
@@ -499,7 +488,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     flex: 1,
-    fontFamily: fonts.display,
+    fontFamily: fonts.semibold,
     color: '#FFFFFF',
     fontSize: type.title.fontSize,
     lineHeight: type.title.lineHeight,

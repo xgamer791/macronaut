@@ -1,7 +1,7 @@
 import React from 'react';
 import { Platform, StyleSheet, TextInput, View } from 'react-native';
 import { AppText } from '@/ui/components';
-import { palette, radius, type } from '@/ui/theme/tokens';
+import { fonts, palette, radius, type } from '@/ui/theme/tokens';
 
 /** The outlined white-on-video fields the create-account and sign-in screens
  * share. Both sit on the welcome loop, so they need the same 50pt outline and
@@ -117,6 +117,7 @@ export const fieldStyles = StyleSheet.create({
     borderColor: palette.danger,
   },
   fieldInput: {
+    fontFamily: fonts.regular,
     flex: 1,
     height: FIELD_HEIGHT,
     color: '#FFFFFF',

@@ -26,7 +26,7 @@ describe('post-signup onboarding', () => {
   it('matches the premium signup visual language', () => {
     expect(onboarding).toContain('WelcomeBackground');
     expect(onboarding).toContain('WelcomeCta');
-    expect(onboarding).toContain('fonts.display');
+    expect(onboarding).toMatch(/fonts\.(semibold|medium)/);
     expect(onboarding).toContain('palette.accentDark');
     expect(onboarding).toContain('styles.progress');
     expect(onboarding).toContain('styles.panel');

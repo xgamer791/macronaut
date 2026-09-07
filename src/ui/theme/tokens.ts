@@ -110,21 +110,49 @@ export const radius = {
   full: 999,
 } as const;
 
-/** Space Grotesk carries display numerals + headings; body text uses the
- * platform face for maximum legibility. */
+/**
+ * Macronaut is set in one face: Inter, at four weights.
+ *
+ * Each weight is its own loaded family (expo-font registers them that way on
+ * native and on the web, and its web `@font-face` declares no font-weight),
+ * so weight is expressed by choosing a family — never through `fontWeight`,
+ * which on a loaded face means the platform synthesising a second, smeared
+ * bold on top of the real one. `fontFor` is the one place that mapping lives.
+ */
 export const fonts = {
-  display: 'SpaceGrotesk_600SemiBold',
-  displayMedium: 'SpaceGrotesk_500Medium',
-  body: undefined as string | undefined, // platform default
+  regular: 'Inter_400Regular',
+  medium: 'Inter_500Medium',
+  semibold: 'Inter_600SemiBold',
+  bold: 'Inter_700Bold',
 } as const;
 
+/** The Inter family for a weight. Anything at or above 700 is bold; the
+ * keywords and the unset case resolve the way CSS would. */
+export function fontFor(weight?: string | number | null): string {
+  const w = weight === undefined || weight === null ? 400 : weight;
+  const n =
+    typeof w === 'number'
+      ? w
+      : w === 'bold'
+        ? 700
+        : w === 'normal'
+          ? 400
+          : Number.parseInt(w, 10) || 400;
+  if (n >= 700) return fonts.bold;
+  if (n >= 600) return fonts.semibold;
+  if (n >= 500) return fonts.medium;
+  return fonts.regular;
+}
+
+/** Sizes carry the face, so an input that spreads `type.body` is set in
+ * Inter without knowing anything about fonts. */
 export const type = {
-  hero: { fontSize: 40, lineHeight: 46 },
-  title: { fontSize: 24, lineHeight: 30 },
-  heading: { fontSize: 18, lineHeight: 24 },
-  body: { fontSize: 15, lineHeight: 21 },
-  caption: { fontSize: 13, lineHeight: 18 },
-  micro: { fontSize: 11, lineHeight: 15 },
+  hero: { fontFamily: fonts.regular, fontSize: 40, lineHeight: 46 },
+  title: { fontFamily: fonts.regular, fontSize: 24, lineHeight: 30 },
+  heading: { fontFamily: fonts.regular, fontSize: 18, lineHeight: 24 },
+  body: { fontFamily: fonts.regular, fontSize: 15, lineHeight: 21 },
+  caption: { fontFamily: fonts.regular, fontSize: 13, lineHeight: 18 },
+  micro: { fontFamily: fonts.regular, fontSize: 11, lineHeight: 15 },
 } as const;
 
 /** Minimum accessible touch target. */

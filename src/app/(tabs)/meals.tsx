@@ -50,7 +50,7 @@ export default function MealsScreen() {
           variant="title"
           weight="700"
           display
-          style={{ fontFamily: fonts.display, fontSize: 34, lineHeight: 40 }}
+          style={{ fontFamily: fonts.semibold, fontSize: 34, lineHeight: 40 }}
         >
           Meals
         </AppText>
@@ -59,10 +59,7 @@ export default function MealsScreen() {
         </AppText>
 
         <View
-          style={[
-            styles.search,
-            { backgroundColor: colors.surface, borderColor: colors.border },
-          ]}
+          style={[styles.search, { backgroundColor: colors.surface, borderColor: colors.border }]}
         >
           <Ionicons name="search" size={18} color={colors.textMuted} />
           <TextInput
@@ -193,7 +190,11 @@ function MealCard({
         },
       ]}
     >
-      <Image source={meal.image} style={{ width: '100%', height: imageHeight }} contentFit="cover" />
+      <Image
+        source={meal.image}
+        style={{ width: '100%', height: imageHeight }}
+        contentFit="cover"
+      />
       <View style={styles.cardBody}>
         <View style={styles.cardTop}>
           <AppText variant="micro" tone="muted" weight="600">
@@ -237,6 +238,7 @@ const styles = StyleSheet.create({
     minHeight: touchTarget,
   },
   searchInput: {
+    fontFamily: fonts.regular,
     flex: 1,
     fontSize: 15,
     paddingVertical: 10,

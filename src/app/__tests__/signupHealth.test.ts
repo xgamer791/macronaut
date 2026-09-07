@@ -52,7 +52,7 @@ describe('signup apple health ask', () => {
     // The session already exists by now, so the Apple Health ask stays put
     // until the user chooses either path forward.
     expect(source).toContain('signupComplete');
-    expect(source).toContain('fonts.display');
+    expect(source).toMatch(/fonts\.(semibold|medium)/);
     expect(source).not.toContain('WatchConnectMark');
     expect(source).not.toContain('WelcomeBackground');
     expect(source).not.toContain('veilFilm');

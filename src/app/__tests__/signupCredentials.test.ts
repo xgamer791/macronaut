@@ -101,14 +101,14 @@ describe('signup credentials', () => {
     // day and year text to zero width.
     expect(source).not.toContain('flex: 0,');
     expect(source).toContain('disabled: true');
-    expect(source).toContain("pointerEvents=\"none\"");
+    expect(source).toContain('pointerEvents="none"');
     expect(source).not.toContain("toggle('month')");
     expect(source).not.toContain('setMonthIndex');
     expect(source).toContain('inlineMenu');
     expect(source).toContain('isValidSignupBirthday');
     expect(source).toContain('WelcomeBackground');
     expect(source).toContain('WelcomeCta');
-    expect(source).toContain('fonts.display');
+    expect(source).toMatch(/fonts\.(semibold|medium)/);
     expect(source).toContain('type.title');
     expect(source).toContain('type.body');
     expect(source).toContain('palette.accent');

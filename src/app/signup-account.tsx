@@ -144,10 +144,7 @@ export default function SignupAccountScreen() {
           <View style={styles.headerSide} />
         </View>
 
-        <ScrollView
-          keyboardShouldPersistTaps="handled"
-          contentContainerStyle={styles.form}
-        >
+        <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.form}>
           <View>
             <View style={styles.birthdayRow}>
               <View style={styles.monthCol}>
@@ -280,7 +277,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     flex: 1,
-    fontFamily: fonts.display,
+    fontFamily: fonts.semibold,
     color: '#FFFFFF',
     fontSize: type.title.fontSize,
     lineHeight: type.title.lineHeight,
@@ -325,6 +322,7 @@ const styles = StyleSheet.create({
     fontWeight: '400',
   },
   input: {
+    fontFamily: fonts.regular,
     height: FIELD_H,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.55)',

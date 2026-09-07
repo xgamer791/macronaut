@@ -5,7 +5,7 @@
   "dependencies": {
     "@auth/core": "^0.41.3",
     "@convex-dev/auth": "^0.0.95",
-    "@expo-google-fonts/space-grotesk": "^0.4.1",
+    "@expo-google-fonts/inter": "^0.4.2",
     "@expo/ui": "~57.0.4",
     "@expo/vector-icons": "^15.0.2",
     "@kingstinct/react-native-healthkit": "^14.1.0",

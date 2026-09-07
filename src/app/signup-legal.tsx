@@ -179,7 +179,7 @@ const styles = StyleSheet.create({
     marginLeft: -6,
   },
   title: {
-    fontFamily: fonts.displayMedium,
+    fontFamily: fonts.medium,
     color: '#FFFFFF',
     fontSize: type.hero.fontSize,
     lineHeight: type.hero.lineHeight,

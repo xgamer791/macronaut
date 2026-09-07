@@ -14,18 +14,14 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import {
-  ACTIVITY_CATEGORIES,
-  ACTIVITY_PRESETS,
-  estimateBurn,
-} from '@/domain/activity';
+import { ACTIVITY_CATEGORIES, ACTIVITY_PRESETS, estimateBurn } from '@/domain/activity';
 import { useAddActivityEntry } from '@/state/queries';
 import { useUiStore } from '@/state/uiStore';
 import { ActivityIntensity, ActivityType } from '@/repositories/types';
 import { goBackOrHome } from '@/utils/navigation';
 import { AppText, NumberField } from '@/ui/components';
 import { useTheme } from '@/ui/theme/ThemeProvider';
-import { radius, spacing, touchTarget } from '@/ui/theme/tokens';
+import { fonts, radius, spacing, touchTarget } from '@/ui/theme/tokens';
 
 const TYPE_IMAGES: Record<Exclude<ActivityType, 'other'>, ImageSource> = {
   cardio: require('../../assets/images/activity/activity-cardio.jpg'),
@@ -67,8 +63,7 @@ export default function ActivityScreen() {
     ? params.type
     : 'cardio';
   const initialPreset = ACTIVITY_PRESETS.find((p) => p.activityType === initialType);
-  const [activityType, setActivityType] =
-    useState<Exclude<ActivityType, 'other'>>(initialType);
+  const [activityType, setActivityType] = useState<Exclude<ActivityType, 'other'>>(initialType);
   const [name, setName] = useState(params.name ?? initialPreset?.name ?? '');
   const [durationMin, setDurationMin] = useState<number | undefined>(55);
   const [caloriesOverride, setCaloriesOverride] = useState<number | undefined>();
@@ -125,9 +120,7 @@ export default function ActivityScreen() {
   }
 
   // Fill the viewport: ~32% hero, fixed chips, panel grows to the bottom.
-  const heroHeight = Math.round(
-    Math.min(Math.max(windowHeight * 0.32, 200), width * 0.68),
-  );
+  const heroHeight = Math.round(Math.min(Math.max(windowHeight * 0.32, 200), width * 0.68));
 
   return (
     <View
@@ -224,57 +217,48 @@ export default function ActivityScreen() {
         style={styles.chipScroll}
         contentContainerStyle={styles.chipRow}
       >
-          {ACTIVITY_CATEGORIES.map((c) => {
-            const typeId = c.id as Exclude<ActivityType, 'other'>;
-            const selected = activityType === typeId;
-            return (
-              <Pressable
-                key={c.id}
-                accessibilityRole="button"
-                accessibilityState={{ selected }}
-                accessibilityLabel={c.name}
-                onPress={() => selectActivityType(typeId)}
+        {ACTIVITY_CATEGORIES.map((c) => {
+          const typeId = c.id as Exclude<ActivityType, 'other'>;
+          const selected = activityType === typeId;
+          return (
+            <Pressable
+              key={c.id}
+              accessibilityRole="button"
+              accessibilityState={{ selected }}
+              accessibilityLabel={c.name}
+              onPress={() => selectActivityType(typeId)}
+              style={[
+                styles.typeChip,
+                { width: chipWidth },
+                selected && { borderColor: colors.accent, borderWidth: 2 },
+              ]}
+            >
+              <Image
+                source={TYPE_IMAGES[typeId]}
+                style={StyleSheet.absoluteFill}
+                contentFit="cover"
+              />
+              <LinearGradient
+                colors={['rgba(0,0,0,0.15)', 'rgba(0,0,0,0.75)']}
+                style={StyleSheet.absoluteFill}
+              />
+              <View
                 style={[
-                  styles.typeChip,
-                  { width: chipWidth },
-                  selected && { borderColor: colors.accent, borderWidth: 2 },
+                  styles.chipIcon,
+                  {
+                    backgroundColor: selected ? colors.accent : 'rgba(20,24,28,0.75)',
+                  },
                 ]}
               >
-                <Image
-                  source={TYPE_IMAGES[typeId]}
-                  style={StyleSheet.absoluteFill}
-                  contentFit="cover"
-                />
-                <LinearGradient
-                  colors={['rgba(0,0,0,0.15)', 'rgba(0,0,0,0.75)']}
-                  style={StyleSheet.absoluteFill}
-                />
-                <View
-                  style={[
-                    styles.chipIcon,
-                    {
-                      backgroundColor: selected ? colors.accent : 'rgba(20,24,28,0.75)',
-                    },
-                  ]}
-                >
-                  <Ionicons
-                    name={c.icon}
-                    size={16}
-                    color={selected ? colors.onAccent : '#FFFFFF'}
-                  />
-                </View>
-                <AppText
-                  variant="caption"
-                  weight="600"
-                  style={styles.chipLabel}
-                  numberOfLines={1}
-                >
-                  {c.name}
-                </AppText>
-              </Pressable>
-            );
-          })}
-        </ScrollView>
+                <Ionicons name={c.icon} size={16} color={selected ? colors.onAccent : '#FFFFFF'} />
+              </View>
+              <AppText variant="caption" weight="600" style={styles.chipLabel} numberOfLines={1}>
+                {c.name}
+              </AppText>
+            </Pressable>
+          );
+        })}
+      </ScrollView>
 
       {/* —— Details panel (fills remaining viewport height) —— */}
       <View style={[styles.panel, { backgroundColor: colors.surface }]}>
@@ -564,6 +548,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.sm,
   },
   notes: {
+    fontFamily: fonts.regular,
     flex: 1,
     minHeight: 64,
     borderWidth: 1,

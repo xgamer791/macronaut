@@ -39,7 +39,11 @@ function mealShareMessage(meal: CuratedMeal, url: string): string {
 
 async function copyText(text: string): Promise<boolean> {
   try {
-    if (Platform.OS === 'web' && typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
+    if (
+      Platform.OS === 'web' &&
+      typeof navigator !== 'undefined' &&
+      navigator.clipboard?.writeText
+    ) {
       await navigator.clipboard.writeText(text);
       return true;
     }
@@ -209,7 +213,7 @@ function MealDetailScreen() {
               variant="title"
               weight="700"
               display
-              style={[styles.mealTitle, { fontFamily: fonts.display }]}
+              style={[styles.mealTitle, { fontFamily: fonts.semibold }]}
             >
               {recipe.name}
             </AppText>
@@ -237,12 +241,7 @@ function MealDetailScreen() {
                   <AppText variant="caption" tone="muted" weight="600">
                     {m.label}
                   </AppText>
-                  <AppText
-                    variant="heading"
-                    weight="700"
-                    display
-                    style={styles.macroValue}
-                  >
+                  <AppText variant="heading" weight="700" display style={styles.macroValue}>
                     {m.value}
                   </AppText>
                   <AppText variant="caption" tone="muted">
@@ -415,12 +414,7 @@ function IconActionButton({
         { width: ACTION_HIT, height: ACTION_HIT, opacity: pressed ? 0.7 : 1 },
       ]}
     >
-      <Ionicons
-        name={icon}
-        size={ACTION_ICON_SIZE}
-        color={color}
-        style={styles.actionIcon}
-      />
+      <Ionicons name={icon} size={ACTION_ICON_SIZE} color={color} style={styles.actionIcon} />
     </Pressable>
   );
 }
