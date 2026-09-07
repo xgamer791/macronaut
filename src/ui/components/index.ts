@@ -30,6 +30,7 @@ export { TargetEditor } from './TargetEditor';
 export { DatePickSheet } from './DatePickSheet';
 export { CalendarPanel } from './CalendarPanel';
 export { CalendarDayDetail } from './CalendarDayDetail';
+export { HomeGymPicker } from './HomeGymPicker';
 export { DashboardHeader } from './DashboardHeader';
 export { AppHeader, HeaderAvatarButton, HeaderChatsButton, HeaderNotifyButton } from './AppHeader';
 export { CircleButton, GhostButton, ProfileHeader, ProfileHeaderChrome } from './ProfileHeader';

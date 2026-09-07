@@ -52,6 +52,9 @@ export const keys = {
   groups: ['groups'] as const,
   groupDiscovery: ['group-discovery'] as const,
   publicGroups: (handle: string) => ['public-groups', handle] as const,
+  groupMembers: (id: string) => ['group-members', id] as const,
+  myGym: ['my-gym'] as const,
+  gymSearchAvailable: ['gym-search-available'] as const,
   chats: ['chats'] as const,
   chatPeople: (search: string) => ['chat-people', search] as const,
   chatThread: (id: string) => ['chat-thread', id] as const,
@@ -402,6 +405,8 @@ function useInvalidateGroups() {
     qc.invalidateQueries({ queryKey: keys.groups });
     qc.invalidateQueries({ queryKey: keys.groupDiscovery });
     qc.invalidateQueries({ queryKey: ['public-groups'] });
+    qc.invalidateQueries({ queryKey: ['group-members'] });
+    qc.invalidateQueries({ queryKey: keys.myGym });
   };
 }
 
@@ -432,6 +437,104 @@ export function usePublicGroups(handle: string) {
     queryFn: () => groups.forHandle(handle),
     enabled: handle.length > 0,
   });
+}
+
+/** Who is in a group. Only asked for once the sheet that shows it is open. */
+export function useGroupMembers(id: string, enabled = true) {
+  const { signedIn } = useAuth();
+  const { groups } = useRepos();
+  return useQuery({
+    queryKey: keys.groupMembers(id),
+    queryFn: () => groups.members(id),
+    enabled: signedIn && enabled && id.length > 0,
+  });
+}
+
+export function useVoteRemove() {
+  const { groups } = useRepos();
+  const invalidate = useInvalidateGroups();
+  return useMutation({
+    mutationFn: ({ id, targetUserId }: { id: string; targetUserId: string }) =>
+      groups.voteRemove(id, targetUserId),
+    onSuccess: invalidate,
+  });
+}
+
+export function useRetractVote() {
+  const { groups } = useRepos();
+  const invalidate = useInvalidateGroups();
+  return useMutation({
+    mutationFn: ({ id, targetUserId }: { id: string; targetUserId: string }) =>
+      groups.retractVote(id, targetUserId),
+    onSuccess: invalidate,
+  });
+}
+
+/* ---------------------------------------------------------------- home gym */
+
+/** Whether the deployment can search gyms at all (a places key is set). */
+export function useGymSearchAvailable() {
+  const { signedIn } = useAuth();
+  const { gyms } = useRepos();
+  return useQuery({
+    queryKey: keys.gymSearchAvailable,
+    queryFn: () => gyms.available(),
+    enabled: signedIn,
+    staleTime: 5 * 60_000,
+  });
+}
+
+export function useMyGym() {
+  const { signedIn } = useAuth();
+  const { gyms } = useRepos();
+  return useQuery({
+    queryKey: keys.myGym,
+    queryFn: () => gyms.mine(),
+    enabled: signedIn,
+  });
+}
+
+/** On demand, never as you type: each call is a paid request. */
+export function useGeocode() {
+  const { gyms } = useRepos();
+  return useMutation({ mutationFn: (address: string) => gyms.geocode(address) });
+}
+
+export function useSearchGyms() {
+  const { gyms } = useRepos();
+  return useMutation({
+    mutationFn: (input: { query: string; lat: number; lng: number }) => gyms.searchGyms(input),
+  });
+}
+
+function useInvalidateGym() {
+  const invalidateProfile = useInvalidateProfile();
+  const invalidateGroups = useInvalidateGroups();
+  return () => {
+    invalidateProfile();
+    invalidateGroups();
+  };
+}
+
+export function useClaimGym() {
+  const { gyms } = useRepos();
+  const invalidate = useInvalidateGym();
+  return useMutation({
+    mutationFn: (input: { gymId: string; joinGroup: boolean }) => gyms.claim(input),
+    onSuccess: invalidate,
+  });
+}
+
+export function useJoinGymGroup() {
+  const { gyms } = useRepos();
+  const invalidate = useInvalidateGym();
+  return useMutation({ mutationFn: () => gyms.joinGroup(), onSuccess: invalidate });
+}
+
+export function useClearGym() {
+  const { gyms } = useRepos();
+  const invalidate = useInvalidateGym();
+  return useMutation({ mutationFn: () => gyms.clear(), onSuccess: invalidate });
 }
 
 export function useCreateGroup() {

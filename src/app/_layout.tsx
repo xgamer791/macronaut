@@ -81,6 +81,7 @@ function ThemedApp() {
         <Stack.Screen name="profile" options={SLIDE_OVER_OPTIONS} />
         <Stack.Screen name="photos" options={SLIDE_OVER_OPTIONS} />
         <Stack.Screen name="groups" options={SLIDE_OVER_OPTIONS} />
+        <Stack.Screen name="home-gym" options={SLIDE_OVER_OPTIONS} />
         <Stack.Screen name="chats" options={SLIDE_OVER_OPTIONS} />
         <Stack.Screen name="friends" options={SLIDE_OVER_OPTIONS} />
         <Stack.Screen name="connections" options={SLIDE_OVER_OPTIONS} />

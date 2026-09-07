@@ -222,6 +222,14 @@ function OwnProfile() {
               }}
             />
             <Action
+              icon="barbell-outline"
+              label="Home gym"
+              onPress={() => {
+                void Haptics.selectionAsync();
+                router.push('/home-gym');
+              }}
+            />
+            <Action
               icon={data.isPublic ? 'globe-outline' : 'lock-closed-outline'}
               label={data.isPublic ? 'Public' : 'Private'}
               active={data.isPublic}

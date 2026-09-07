@@ -80,6 +80,13 @@ const config: ExpoConfig = {
       },
     ],
     [
+      'expo-location',
+      {
+        locationWhenInUsePermission:
+          'Macronaut uses your location only when you search for your home gym, to list gyms within seven miles.',
+      },
+    ],
+    [
       // Adds the `com.apple.developer.healthkit` entitlement, so the App ID
       // needs the HealthKit capability before a build can be signed — see
       // docs/ios-setup.md. iOS only; the web and Android builds never load the

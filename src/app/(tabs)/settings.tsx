@@ -11,7 +11,7 @@ import { loadDemoData } from '@/seed/demoData';
 import { OnboardingProfile } from '@/repositories/settingsRepo';
 import { useRepos } from '@/state/AppProvider';
 import { useAuth } from '@/state/AuthProvider';
-import { keys, useMealCategories, useSetting } from '@/state/queries';
+import { keys, useMealCategories, useMyGym, useSetting } from '@/state/queries';
 import { AppearanceMode, useTheme } from '@/ui/theme/ThemeProvider';
 import {
   AppText,
@@ -115,6 +115,7 @@ export default function SettingsScreen() {
   const waterGoal = useSetting<number>('waterGoalCups', 8);
   const stepGoal = useSetting<number>('stepGoal', 10000);
   const mealTimes = useSetting<Record<string, string>>('mealTimes', DEFAULT_MEAL_TIMES);
+  const homeGym = useMyGym();
 
   const [newMealOpen, setNewMealOpen] = useState(false);
   const [newMealName, setNewMealName] = useState('');
@@ -448,6 +449,18 @@ export default function SettingsScreen() {
           left={<Ionicons name="person-circle-outline" size={20} color={colors.accent} />}
           right={<Ionicons name="chevron-forward" size={16} color={colors.textMuted} />}
           onPress={() => router.push('/profile')}
+        />
+        <ListRow
+          title="Home gym"
+          subtitle={
+            homeGym.data
+              ? homeGym.data.gym.address
+              : 'Find your gym and join everyone who trains there'
+          }
+          value={homeGym.data?.gym.name ?? 'Not set'}
+          left={<Ionicons name="barbell-outline" size={20} color={colors.accent} />}
+          right={<Ionicons name="chevron-forward" size={16} color={colors.textMuted} />}
+          onPress={() => router.push('/home-gym')}
         />
         <ListRow
           title={user?.email ?? 'Signed in'}

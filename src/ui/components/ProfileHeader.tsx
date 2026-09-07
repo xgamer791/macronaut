@@ -187,6 +187,15 @@ export function ProfileHeader({
             {profile.bio}
           </AppText>
         ) : null}
+
+        {profile.homeGym ? (
+          <View style={styles.gymLine} accessibilityLabel={`Trains at ${profile.homeGym.name}`}>
+            <Ionicons name="fitness-outline" size={14} color={colors.textSecondary} />
+            <AppText variant="caption" tone="secondary" numberOfLines={1} style={styles.gymText}>
+              Trains at {profile.homeGym.name}
+            </AppText>
+          </View>
+        ) : null}
       </View>
     </View>
   );
@@ -376,6 +385,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     flexWrap: 'wrap',
     gap: spacing.xs,
+  },
+  gymLine: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: spacing.xs,
+  },
+  gymText: {
+    flexShrink: 1,
   },
   bio: {
     marginTop: 2,
