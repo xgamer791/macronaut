@@ -36,7 +36,7 @@ describe('signup legal gate', () => {
     expect(source).toContain('WelcomeCta');
     expect(source).toContain('veilFilm');
     expect(source).toContain('rgba(0,0,0,0.50)');
-    expect(source).toContain('fonts.display');
+    expect(source).toMatch(/fonts\.(semibold|medium)/);
     expect(source).toContain('type.hero');
     expect(source).toContain('type.body');
     expect(source).toContain('palette.accent');

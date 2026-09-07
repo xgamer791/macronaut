@@ -895,7 +895,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     flex: 1,
     color: '#FFFFFF',
-    fontFamily: fonts.display,
+    fontFamily: fonts.semibold,
     fontSize: type.heading.fontSize,
     lineHeight: type.heading.lineHeight,
     fontWeight: '600',
@@ -904,7 +904,7 @@ const styles = StyleSheet.create({
   stepCount: {
     width: 52,
     color: 'rgba(255,255,255,0.68)',
-    fontFamily: fonts.displayMedium,
+    fontFamily: fonts.medium,
     fontSize: type.caption.fontSize,
     lineHeight: type.caption.lineHeight,
     textAlign: 'right',
@@ -935,7 +935,7 @@ const styles = StyleSheet.create({
   },
   eyebrow: {
     color: palette.accentDark,
-    fontFamily: fonts.display,
+    fontFamily: fonts.semibold,
     fontSize: 12,
     lineHeight: 16,
     fontWeight: '700',
@@ -943,7 +943,7 @@ const styles = StyleSheet.create({
   },
   title: {
     color: '#FFFFFF',
-    fontFamily: fonts.display,
+    fontFamily: fonts.semibold,
     fontSize: 30,
     lineHeight: 36,
     fontWeight: '600',
@@ -981,7 +981,7 @@ const styles = StyleSheet.create({
   },
   panelTitle: {
     color: '#FFFFFF',
-    fontFamily: fonts.display,
+    fontFamily: fonts.semibold,
     fontSize: type.heading.fontSize,
     lineHeight: type.heading.lineHeight,
     fontWeight: '600',
@@ -1013,6 +1013,7 @@ const styles = StyleSheet.create({
     borderColor: '#F07B7B',
   },
   fieldInput: {
+    fontFamily: fonts.regular,
     flex: 1,
     minWidth: 0,
     height: 50,
@@ -1073,7 +1074,7 @@ const styles = StyleSheet.create({
   },
   segmentLabel: {
     color: 'rgba(255,255,255,0.66)',
-    fontFamily: fonts.displayMedium,
+    fontFamily: fonts.medium,
     fontSize: type.caption.fontSize,
     lineHeight: type.caption.lineHeight,
     fontWeight: '500',
@@ -1123,7 +1124,7 @@ const styles = StyleSheet.create({
   },
   optionLabel: {
     color: '#FFFFFF',
-    fontFamily: fonts.displayMedium,
+    fontFamily: fonts.medium,
     fontSize: type.body.fontSize,
     lineHeight: type.body.lineHeight,
     fontWeight: '600',
@@ -1200,7 +1201,7 @@ const styles = StyleSheet.create({
   },
   recommendationTitle: {
     color: '#FFFFFF',
-    fontFamily: fonts.displayMedium,
+    fontFamily: fonts.medium,
     fontSize: type.body.fontSize,
     lineHeight: type.body.lineHeight,
     fontWeight: '600',
@@ -1222,7 +1223,7 @@ const styles = StyleSheet.create({
   },
   targetHeroValue: {
     color: '#FFFFFF',
-    fontFamily: fonts.display,
+    fontFamily: fonts.semibold,
     fontSize: 46,
     lineHeight: 50,
     fontWeight: '600',
@@ -1251,7 +1252,7 @@ const styles = StyleSheet.create({
   },
   macroValue: {
     color: '#FFFFFF',
-    fontFamily: fonts.displayMedium,
+    fontFamily: fonts.medium,
     fontSize: type.heading.fontSize,
     lineHeight: type.heading.lineHeight,
     fontWeight: '600',
@@ -1263,7 +1264,7 @@ const styles = StyleSheet.create({
   },
   optionalLabel: {
     color: 'rgba(255,255,255,0.44)',
-    fontFamily: fonts.displayMedium,
+    fontFamily: fonts.medium,
     fontSize: 10,
     lineHeight: 14,
     fontWeight: '600',

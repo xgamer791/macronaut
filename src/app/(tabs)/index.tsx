@@ -193,9 +193,7 @@ function TodayBody() {
   }
 
   // Hero is tall enough that the athlete stays visible above the goals card.
-  const heroHeight = Math.round(
-    Math.min(Math.max(windowHeight * 0.42, width * 0.95), 420),
-  );
+  const heroHeight = Math.round(Math.min(Math.max(windowHeight * 0.42, width * 0.95), 420));
   const macros = [
     {
       key: 'protein' as const,
@@ -311,14 +309,12 @@ function TodayBody() {
         }
       >
         <AppText variant="caption" tone="secondary" style={{ marginBottom: spacing.md }}>
-          Each module uses a layout optimized for that metric — rings, bars, cups, and stride
-          meters are intentional, not required to match.
+          Each module uses a layout optimized for that metric — rings, bars, cups, and stride meters
+          are intentional, not required to match.
         </AppText>
         {HERO_METRICS.map((m) => {
-          const selected =
-            pickerSlot === 'left' ? m.id === leftMetric : m.id === rightMetric;
-          const usedElsewhere =
-            pickerSlot === 'left' ? m.id === rightMetric : m.id === leftMetric;
+          const selected = pickerSlot === 'left' ? m.id === leftMetric : m.id === rightMetric;
+          const usedElsewhere = pickerSlot === 'left' ? m.id === rightMetric : m.id === leftMetric;
           return (
             <ListRow
               key={m.id}
@@ -339,8 +335,7 @@ function TodayBody() {
         {/* —— Macro photo cards —— */}
         <View style={styles.macroRow}>
           {macros.map((m) => {
-            const pct =
-              m.target && m.target > 0 ? Math.min(m.consumed / m.target, 1) : 0;
+            const pct = m.target && m.target > 0 ? Math.min(m.consumed / m.target, 1) : 0;
             return (
               <View key={m.key} style={styles.macroTile}>
                 <Image
@@ -516,7 +511,7 @@ const styles = StyleSheet.create({
   },
   greetingLine: {
     color: 'rgba(242,244,247,0.92)',
-    fontFamily: fonts.displayMedium,
+    fontFamily: fonts.medium,
     fontSize: 26,
     lineHeight: 32,
     fontWeight: '500',
@@ -526,7 +521,7 @@ const styles = StyleSheet.create({
   },
   nameLine: {
     color: '#FFFFFF',
-    fontFamily: fonts.display,
+    fontFamily: fonts.semibold,
     fontSize: 30,
     lineHeight: 36,
     fontWeight: '700',

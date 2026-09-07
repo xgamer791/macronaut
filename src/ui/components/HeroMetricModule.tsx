@@ -47,11 +47,7 @@ export function HeroMetricModule({ metric, values, onPress, size }: HeroMetricMo
       accessibilityRole="button"
       accessibilityLabel={`${def.label} module. ${Math.round(values.value)} ${def.unit}. Tap to change.`}
       onPress={onPress}
-      style={({ pressed }) => [
-        styles.shell,
-        shell,
-        { opacity: pressed ? 0.92 : 1 },
-      ]}
+      style={({ pressed }) => [styles.shell, shell, { opacity: pressed ? 0.92 : 1 }]}
     >
       {def.kind === 'ring' ? (
         <RingInner
@@ -110,13 +106,7 @@ function RingInner({
         <AppText variant="micro" tone={values.over ? 'danger' : 'muted'} align="center">
           {values.over ? `${def.label} over` : `${def.label} left`}
         </AppText>
-        <AppText
-          variant="heading"
-          weight="700"
-          display
-          align="center"
-          style={styles.bigNumber}
-        >
+        <AppText variant="heading" weight="700" display align="center" style={styles.bigNumber}>
           {Math.round(Math.abs(remaining)).toLocaleString()}
         </AppText>
         <AppText variant="micro" tone="muted">
@@ -159,12 +149,7 @@ function MacroInner({ metric, values }: { metric: HeroMetricId; values: HeroMetr
         </AppText>
       </AppText>
       <View style={[styles.barTrack, { backgroundColor: colors.track }]}>
-        <View
-          style={[
-            styles.barFill,
-            { width: `${pct * 100}%`, backgroundColor: accent },
-          ]}
-        />
+        <View style={[styles.barFill, { width: `${pct * 100}%`, backgroundColor: accent }]} />
       </View>
       <AppText variant="micro" tone="muted">
         / {Math.round(target)} g goal
@@ -228,7 +213,11 @@ function WaterInner({ values }: { values: HeroMetricValues }) {
         {Array.from({ length: cupCount }, (_, i) => {
           const on = i < filled;
           return (
-            <View key={i} style={styles.cupGlyph} accessibilityLabel={on ? 'Cup filled' : 'Cup empty'}>
+            <View
+              key={i}
+              style={styles.cupGlyph}
+              accessibilityLabel={on ? 'Cup filled' : 'Cup empty'}
+            >
               <Ionicons
                 name={on ? 'cafe' : 'cafe-outline'}
                 size={20}
@@ -286,7 +275,7 @@ const styles = StyleSheet.create({
   bigNumber: {
     fontSize: 22,
     lineHeight: 26,
-    fontFamily: fonts.display,
+    fontFamily: fonts.semibold,
   },
   macroLayout: {
     flex: 1,
@@ -309,7 +298,7 @@ const styles = StyleSheet.create({
   macroValue: {
     fontSize: 28,
     lineHeight: 32,
-    fontFamily: fonts.display,
+    fontFamily: fonts.semibold,
   },
   barTrack: {
     height: 8,
@@ -331,7 +320,7 @@ const styles = StyleSheet.create({
   stepsValue: {
     fontSize: 26,
     lineHeight: 30,
-    fontFamily: fonts.display,
+    fontFamily: fonts.semibold,
   },
   strideTrack: {
     marginTop: 4,
@@ -360,7 +349,7 @@ const styles = StyleSheet.create({
   waterValue: {
     fontSize: 28,
     lineHeight: 32,
-    fontFamily: fonts.display,
+    fontFamily: fonts.semibold,
   },
   cupRow: {
     flexDirection: 'row',
@@ -386,6 +375,6 @@ const styles = StyleSheet.create({
   burnedValue: {
     fontSize: 28,
     lineHeight: 32,
-    fontFamily: fonts.display,
+    fontFamily: fonts.semibold,
   },
 });

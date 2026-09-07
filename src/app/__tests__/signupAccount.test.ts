@@ -26,7 +26,7 @@ describe('signup account setup', () => {
     expect(source).toContain('Country/Region');
     expect(source).toContain('WelcomeBackground');
     expect(source).toContain('WelcomeCta');
-    expect(source).toContain('fonts.display');
+    expect(source).toMatch(/fonts\.(semibold|medium)/);
     expect(source).toContain('type.title');
     expect(source).toContain('type.body');
     expect(source).toContain('palette.accent');

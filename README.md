@@ -30,19 +30,19 @@ Built with React Native + Expo so the same codebase ships to iOS.
 
 ## Tech stack
 
-| Layer | Choice |
-|---|---|
-| App | Expo SDK 57 (managed), React Native 0.86, TypeScript strict |
-| Navigation | expo-router (file-based), custom tab bar; add food from the Today header |
-| Data fetching | TanStack Query |
-| Ephemeral state | Zustand |
-| Backend | Convex — functions in `convex/`, every table scoped to the signed-in account on the server; the app reaches it through one repository layer |
-| Accounts | Convex Auth — Apple and Google OAuth with PKCE, native Sign in with Apple on iOS, six-digit email codes via Resend; every secret is a deployment variable, never in the bundle |
-| Session storage | expo-secure-store (native), localStorage (web) |
-| Charts | Custom SVG (react-native-svg) |
-| Camera | expo-camera (barcode scanning) |
-| Fonts | Space Grotesk (display) + platform body face |
-| Tests | Jest + ts-jest for the app; Vitest + convex-test for the backend functions |
+| Layer           | Choice                                                                                                                                                                         |
+| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| App             | Expo SDK 57 (managed), React Native 0.86, TypeScript strict                                                                                                                    |
+| Navigation      | expo-router (file-based), custom tab bar; add food from the Today header                                                                                                       |
+| Data fetching   | TanStack Query                                                                                                                                                                 |
+| Ephemeral state | Zustand                                                                                                                                                                        |
+| Backend         | Convex — functions in `convex/`, every table scoped to the signed-in account on the server; the app reaches it through one repository layer                                    |
+| Accounts        | Convex Auth — Apple and Google OAuth with PKCE, native Sign in with Apple on iOS, six-digit email codes via Resend; every secret is a deployment variable, never in the bundle |
+| Session storage | expo-secure-store (native), localStorage (web)                                                                                                                                 |
+| Charts          | Custom SVG (react-native-svg)                                                                                                                                                  |
+| Camera          | expo-camera (barcode scanning)                                                                                                                                                 |
+| Fonts           | Inter, the only face — four weights, loaded on every platform                                                                                                                  |
+| Tests           | Jest + ts-jest for the app; Vitest + convex-test for the backend functions                                                                                                     |
 
 ## Folder structure
 
@@ -81,17 +81,17 @@ secret, Resend key, session keys) — the walkthrough is in
 
 ### Environment variables
 
-| Variable | Required | Purpose |
-|---|---|---|
-| `EXPO_PUBLIC_USDA_API_KEY` | No | USDA FoodData Central key. Falls back to `DEMO_KEY` (heavily rate-limited — fine for a quick try). Get a free key at https://fdc.nal.usda.gov/api-key-signup |
-| `EXPO_PUBLIC_CONVEX_URL` | Yes | The Convex deployment the app talks to. `npx convex dev` writes it to `.env.local`; the deploy workflow sets it from `npx convex deploy`. |
-| `EXPO_PUBLIC_BASE_PATH` | No | Set by the Pages deploy workflow only. Leave empty locally. |
+| Variable                   | Required | Purpose                                                                                                                                                      |
+| -------------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `EXPO_PUBLIC_USDA_API_KEY` | No       | USDA FoodData Central key. Falls back to `DEMO_KEY` (heavily rate-limited — fine for a quick try). Get a free key at https://fdc.nal.usda.gov/api-key-signup |
+| `EXPO_PUBLIC_CONVEX_URL`   | Yes      | The Convex deployment the app talks to. `npx convex dev` writes it to `.env.local`; the deploy workflow sets it from `npx convex deploy`.                    |
+| `EXPO_PUBLIC_BASE_PATH`    | No       | Set by the Pages deploy workflow only. Leave empty locally.                                                                                                  |
 
 No secrets are committed. `.env` is gitignored.
 
 Every `EXPO_PUBLIC_*` value is compiled into the bundle every user downloads,
 so treat all of them as public. That is fine for the Convex URL, which is the
-address clients are meant to connect to; it is *not* fine for a provider
+address clients are meant to connect to; it is _not_ fine for a provider
 secret — see [docs/security.md](docs/security.md).
 
 ### Accounts and the backend

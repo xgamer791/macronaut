@@ -1,8 +1,4 @@
-import {
-  SpaceGrotesk_500Medium,
-  SpaceGrotesk_600SemiBold,
-  useFonts,
-} from '@expo-google-fonts/space-grotesk';
+import { useFonts } from 'expo-font';
 import { QueryClient, QueryClientProvider, useQueryClient } from '@tanstack/react-query';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
@@ -15,6 +11,7 @@ import { AuthProvider, useAuth } from '@/state/AuthProvider';
 import { keys, useSetting } from '@/state/queries';
 import { SLIDE_OVER_OPTIONS } from '@/ui/motion/SlideScreen';
 import { AppearanceMode, ThemeProvider } from '@/ui/theme/ThemeProvider';
+import { fonts } from '@/ui/theme/tokens';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -134,9 +131,16 @@ function NotConfigured({ message }: { message: string }) {
 }
 
 export default function RootLayout() {
+  // The one face, at the four weights the app uses, each loaded from its own
+  // file: the package's barrel would drag all eighteen faces into the bundle,
+  // italics and hairlines included, and Metro cannot shake assets out of a
+  // barrel. Nothing renders until all four are in, so no screen is ever seen
+  // in a fallback font.
   const [fontsLoaded] = useFonts({
-    SpaceGrotesk_500Medium,
-    SpaceGrotesk_600SemiBold,
+    Inter_400Regular: require('@expo-google-fonts/inter/400Regular/Inter_400Regular.ttf'),
+    Inter_500Medium: require('@expo-google-fonts/inter/500Medium/Inter_500Medium.ttf'),
+    Inter_600SemiBold: require('@expo-google-fonts/inter/600SemiBold/Inter_600SemiBold.ttf'),
+    Inter_700Bold: require('@expo-google-fonts/inter/700Bold/Inter_700Bold.ttf'),
   });
   // The Convex client opens a WebSocket when created. The static web export
   // renders this tree in Node at build time, where that must not happen, so
@@ -178,6 +182,17 @@ const styles = StyleSheet.create({
     backgroundColor: '#101418',
     gap: 12,
   },
-  notConfiguredTitle: { color: '#FFFFFF', fontSize: 18, fontWeight: '700', textAlign: 'center' },
-  notConfiguredBody: { color: '#B8C0CC', fontSize: 14, lineHeight: 20, textAlign: 'center' },
+  notConfiguredTitle: {
+    color: '#FFFFFF',
+    fontFamily: fonts.bold,
+    fontSize: 18,
+    textAlign: 'center',
+  },
+  notConfiguredBody: {
+    color: '#B8C0CC',
+    fontFamily: fonts.regular,
+    fontSize: 14,
+    lineHeight: 20,
+    textAlign: 'center',
+  },
 });

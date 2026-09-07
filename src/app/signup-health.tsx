@@ -128,7 +128,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     flex: 1,
-    fontFamily: fonts.display,
+    fontFamily: fonts.semibold,
     color: '#FFFFFF',
     fontSize: type.title.fontSize,
     lineHeight: type.title.lineHeight,
@@ -136,7 +136,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   headline: {
-    fontFamily: fonts.display,
+    fontFamily: fonts.semibold,
     color: '#FFFFFF',
     fontSize: type.heading.fontSize,
     lineHeight: type.heading.lineHeight,

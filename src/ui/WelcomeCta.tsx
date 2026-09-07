@@ -57,7 +57,7 @@ const styles = StyleSheet.create({
     opacity: 0.85,
   },
   ctaLabel: {
-    fontFamily: fonts.display,
+    fontFamily: fonts.semibold,
     color: '#FFFFFF',
     fontSize: 17,
     lineHeight: 22,

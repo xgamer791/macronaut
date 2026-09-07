@@ -115,7 +115,7 @@ describe('welcome splash', () => {
     const cta = fs.readFileSync(path.join(appDir, '../ui/WelcomeCta.tsx'), 'utf8');
     expect(cta).toContain('radius.md');
     expect(cta).toContain('palette.accent');
-    expect(cta).toContain('fonts.display');
+    expect(cta).toMatch(/fonts\.(semibold|medium)/);
     expect(cta).toContain('fontSize: 17');
     expect(cta).toContain('router.push(href)');
     expect(slideshow).toContain('Animated.timing');

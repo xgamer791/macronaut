@@ -77,7 +77,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   macro: {
-    fontFamily: fonts.display,
+    fontFamily: fonts.semibold,
     color: '#FFFFFF',
     fontSize: 46,
     lineHeight: 50,
@@ -86,7 +86,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   naut: {
-    fontFamily: fonts.displayMedium,
+    fontFamily: fonts.medium,
     color: '#FFFFFF',
     fontSize: 28,
     lineHeight: 32,
