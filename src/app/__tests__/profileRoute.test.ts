@@ -147,7 +147,9 @@ describe('profile routes', () => {
     expect(viewer).toContain('Like photo');
     expect(viewer).toContain('Comment on photo');
     expect(viewer).toContain('Share photo');
-    expect(viewer).toContain('<Feather name="thumbs-up"');
+    expect(viewer).toContain('<ThumbsUp');
+    expect(viewer).toContain('<MessageSquare');
+    expect(viewer).toContain('<ShareFatIcon');
     expect(viewer).not.toContain('thumb-up-outline');
     expect(viewer).toContain('liked ? colors.accent : ON_PHOTO');
     // The reaction badges are bare glyphs now — colored, with no disc behind them.
@@ -160,6 +162,24 @@ describe('profile routes', () => {
     expect(viewer).toContain('ACTION_GAP = spacing.sm');
     expect(viewer).toContain('animationType="slide"');
     expect(viewer).toContain("backgroundColor: '#000000'");
+  });
+
+  it('puts working like, comment and share controls on every profile post', () => {
+    const list = fs.readFileSync(
+      path.join(srcDir, 'ui', 'components', 'ProfilePostList.tsx'),
+      'utf8',
+    );
+    const actions = fs.readFileSync(
+      path.join(srcDir, 'ui', 'components', 'ProfilePostActions.tsx'),
+      'utf8',
+    );
+    expect(list).toContain('<ProfilePostActions');
+    expect(actions).toContain('<ThumbsUp');
+    expect(actions).toContain('<MessageSquare');
+    expect(actions).toContain('<ShareFatIcon');
+    expect(actions).toContain('useSetProfilePostLike');
+    expect(actions).toContain('useAddProfilePostComment');
+    expect(actions).toContain('profilePostShareUrl');
   });
 
   it('adds wall photos from a select-only picker in tap order', () => {

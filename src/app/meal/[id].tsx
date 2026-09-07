@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import * as Linking from 'expo-linking';
 import { useLocalSearchParams } from 'expo-router';
+import { ShareFatIcon } from 'phosphor-react-native';
 import React, { useMemo, useState } from 'react';
 import {
   Alert,
@@ -189,11 +190,16 @@ function MealDetailScreen() {
               </AppText>
               <View style={styles.actionRow}>
                 <IconActionButton
-                  icon="share-outline"
                   label="Share meal"
                   color={colors.textPrimary}
                   onPress={() => void shareMeal()}
-                />
+                >
+                  <ShareFatIcon
+                    size={ACTION_ICON_SIZE}
+                    weight="regular"
+                    color={colors.textPrimary}
+                  />
+                </IconActionButton>
                 <IconActionButton
                   icon={favorited ? 'heart' : 'heart-outline'}
                   label={favorited ? 'Remove from favorites' : 'Add to favorites'}
@@ -388,11 +394,13 @@ const ACTION_HIT = ACTION_ICON_SIZE + 4;
 
 function IconActionButton({
   icon,
+  children,
   label,
   color,
   onPress,
 }: {
-  icon: keyof typeof Ionicons.glyphMap;
+  icon?: keyof typeof Ionicons.glyphMap;
+  children?: React.ReactNode;
   label: string;
   color: string;
   onPress: () => void;
@@ -408,7 +416,9 @@ function IconActionButton({
         { width: ACTION_HIT, height: ACTION_HIT, opacity: pressed ? 0.7 : 1 },
       ]}
     >
-      <Ionicons name={icon} size={ACTION_ICON_SIZE} color={color} style={styles.actionIcon} />
+      {children ?? (
+        <Ionicons name={icon!} size={ACTION_ICON_SIZE} color={color} style={styles.actionIcon} />
+      )}
     </Pressable>
   );
 }

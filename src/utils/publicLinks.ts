@@ -12,6 +12,10 @@ export function profileShareUrl(handle: string): string {
   return `${publicSiteBase()}/u/${handle}`;
 }
 
+export function profilePostShareUrl(handle: string, postId: string): string {
+  return `${profileShareUrl(handle)}?post=${encodeURIComponent(postId)}`;
+}
+
 export function photoShareUrl(handle: string | undefined, photoId: string): string {
   const base = publicSiteBase();
   if (handle) {

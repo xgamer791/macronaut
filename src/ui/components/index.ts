@@ -35,6 +35,7 @@ export { DashboardHeader } from './DashboardHeader';
 export { AppHeader, HeaderAvatarButton, HeaderChatsButton, HeaderNotifyButton } from './AppHeader';
 export { CircleButton, GhostButton, ProfileHeader, ProfileHeaderChrome } from './ProfileHeader';
 export { ProfilePostList } from './ProfilePostList';
+export { ProfilePostActions } from './ProfilePostActions';
 export { ProfilePhotoBlock } from './ProfilePhotoBlock';
 export { FoodImage } from './FoodImage';
 export { BarChart } from './BarChart';

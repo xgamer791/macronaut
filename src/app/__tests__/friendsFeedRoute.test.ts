@@ -61,6 +61,7 @@ describe('friends feed', () => {
 
     expect(page).toContain('function FriendsFeedPostView');
     expect(page).toContain('styles.postImage');
+    expect(page).toContain('<ProfilePostActions');
     expect(page).toContain('borderBottomWidth: StyleSheet.hairlineWidth');
     expect(page).toContain('maxWidth: MAX_FEED_WIDTH');
     expect(page).not.toContain('styles.card');

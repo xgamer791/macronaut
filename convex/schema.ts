@@ -241,6 +241,26 @@ export default defineSchema({
     .index('by_user_created', ['userId', 'createdAt'])
     .index('by_created', ['createdAt']),
 
+  /** One account liking a profile post. */
+  profilePostLikes: defineTable({
+    userId: v.id('users'),
+    postId: v.id('profilePosts'),
+    createdAt: v.string(),
+  })
+    .index('by_user', ['userId'])
+    .index('by_post', ['postId'])
+    .index('by_user_post', ['userId', 'postId']),
+
+  /** A comment on a profile post. */
+  profilePostComments: defineTable({
+    userId: v.id('users'),
+    postId: v.id('profilePosts'),
+    body: v.string(),
+    createdAt: v.string(),
+  })
+    .index('by_user', ['userId'])
+    .index('by_post_created', ['postId', 'createdAt']),
+
   /** One account following another. `userId` is the follower — they own the
    * row — and `followeeId` is who they follow. Counts on a profile page are
    * just the two index scans; following a private profile is refused. */

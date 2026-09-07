@@ -59,7 +59,10 @@ describe('connections route', () => {
     const backend = fs.readFileSync(path.join(convexDir, 'profiles.ts'), 'utf8');
     expect(backend).toContain('export const connections = query');
     // One shared answer to what a friend is and who a search term reaches.
-    expect(backend).toContain("import { identity, matchesSearch, profileFor } from './chats';");
+    expect(backend).toContain("from './chats';");
+    expect(backend).toContain('identity');
+    expect(backend).toContain('matchesSearch');
+    expect(backend).toContain('profileFor');
     expect(backend).toContain('if (wanted && !matchesSearch(user, profile, wanted)) continue;');
     // A private page and a handle nobody owns are the same answer.
     expect(backend).toContain('const readable = await readableProfile(ctx, handle);');

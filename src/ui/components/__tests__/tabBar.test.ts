@@ -18,7 +18,7 @@ describe('tab bar', () => {
     expect(groups).toBeLessThan(profile);
     expect(tabBar).toContain('router.push(item.href)');
     expect(tabBar).toContain("router.push('/profile')");
-    expect(tabBar).toContain('MessagesSquare');
+    expect(tabBar).toContain('MessageSquare');
     expect(tabBar).not.toContain('chatbubbles-outline');
     expect(tabBar).toContain("label: 'Friends'");
     expect(tabBar).toContain('icon: Users');

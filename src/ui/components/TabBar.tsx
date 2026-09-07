@@ -3,7 +3,7 @@ import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
 import { usePathname, useRouter, type Href } from 'expo-router';
 import type { BottomTabBarProps } from 'expo-router/js-tabs';
-import { House, MessagesSquare, UserGroup, Users, type LucideIcon } from 'lucide-react-native';
+import { House, MessageSquare, UserGroup, Users, type LucideIcon } from 'lucide-react-native';
 import React, { useMemo } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -43,8 +43,8 @@ const ITEMS: TabItem[] = [
     kind: 'link',
     href: '/chats',
     label: 'Chats',
-    icon: MessagesSquare,
-    iconActive: MessagesSquare,
+    icon: MessageSquare,
+    iconActive: MessageSquare,
   },
   {
     kind: 'link',

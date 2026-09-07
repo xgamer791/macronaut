@@ -211,6 +211,7 @@ function PublicProfile() {
         <SectionHeader title="Posts" />
         <ProfilePostList
           posts={found.posts}
+          ownerHandle={found.profile.handle}
           emptyTitle="No posts yet"
           emptyBody={`${found.profile.displayName ?? `@${found.profile.handle}`} has not posted anything.`}
         />

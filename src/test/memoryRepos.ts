@@ -32,7 +32,9 @@ import { ProfilePhoto, PhotoComment, PhotoRepo, PhotoThread } from '@/repositori
 import {
   ConnectionPerson,
   ProfilePost,
+  ProfilePostComment,
   ProfileRepo,
+  ProfilePostThread,
   ProfileView,
 } from '@/repositories/profileRepo';
 import { AppearanceMode, OnboardingProfile, SettingsRepo } from '@/repositories/settingsRepo';
@@ -592,6 +594,8 @@ export const createMemoryRecipeRepo = (): RecipeRepo =>
 
 export function createMemoryProfileRepo(): ProfileRepo {
   const posts: ProfilePost[] = [];
+  const postLikes = new Map<string, Set<string>>();
+  const postComments: (ProfilePostComment & { postId: string })[] = [];
   /** Who follows this profile. A friend request from an account puts it in
    * here, which is all the counts and the connections lists read. */
   const followers: ConnectionPerson[] = [];
@@ -660,6 +664,9 @@ export function createMemoryProfileRepo(): ProfileRepo {
         imageUrl: imageId ? `memory://${imageId}` : undefined,
         createdAt: ts,
         updatedAt: ts,
+        likeCount: 0,
+        likedByMe: false,
+        commentCount: 0,
       };
       posts.unshift(post);
       return clone(post);
@@ -673,9 +680,61 @@ export function createMemoryProfileRepo(): ProfileRepo {
       post.updatedAt = nowIso();
       return clone(post);
     },
+    async postThread(id) {
+      const post = posts.find((row) => row.id === id);
+      if (!post) return null;
+      const likes = postLikes.get(id) ?? new Set<string>();
+      const comments = postComments.filter((row) => row.postId === id);
+      const thread: ProfilePostThread = {
+        likeCount: likes.size,
+        likedByMe: likes.has('me'),
+        commentCount: comments.length,
+        comments: comments.map(({ postId: _postId, ...row }) => clone(row)),
+      };
+      return thread;
+    },
+    async setPostLike(id, liked) {
+      const post = posts.find((row) => row.id === id);
+      if (!post) throw new Error('Post not found');
+      const likes = postLikes.get(id) ?? new Set<string>();
+      if (liked) likes.add('me');
+      else likes.delete('me');
+      postLikes.set(id, likes);
+      post.likeCount = likes.size;
+      post.likedByMe = likes.has('me');
+      return clone(post);
+    },
+    async addPostComment(id, body) {
+      const post = posts.find((row) => row.id === id);
+      if (!post) throw new Error('Post not found');
+      const comment = {
+        id: newId(),
+        postId: id,
+        body: body.trim(),
+        createdAt: nowIso(),
+        authorName: 'You',
+        authorHandle: 'you',
+        isMine: true,
+      };
+      postComments.push(comment);
+      post.commentCount = postComments.filter((row) => row.postId === id).length;
+      return clone(comment);
+    },
+    async removePostComment(id) {
+      const at = postComments.findIndex((row) => row.id === id);
+      if (at < 0) return;
+      const postId = postComments[at]!.postId;
+      postComments.splice(at, 1);
+      const post = posts.find((row) => row.id === postId);
+      if (post) post.commentCount = postComments.filter((row) => row.postId === postId).length;
+    },
     async removePost(id) {
       const i = posts.findIndex((p) => p.id === id);
       if (i >= 0) posts.splice(i, 1);
+      postLikes.delete(id);
+      for (let i = postComments.length - 1; i >= 0; i--) {
+        if (postComments[i]!.postId === id) postComments.splice(i, 1);
+      }
     },
     async setFollow(handle, follow) {
       if (handle.toLowerCase() !== profile.handle || !profile.isPublic) {

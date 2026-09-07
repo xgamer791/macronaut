@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
+import { ShareFatIcon } from 'phosphor-react-native';
 import React, { useState } from 'react';
 import {
   ActivityIndicator,
@@ -229,7 +230,13 @@ function OwnProfile() {
               onPress={() => void togglePublic()}
             />
             <Action
-              icon={shared ? 'checkmark' : 'share-outline'}
+              icon={
+                shared ? (
+                  'checkmark'
+                ) : (
+                  <ShareFatIcon size={24} weight="regular" color={colors.textPrimary} />
+                )
+              }
               label={shared ? 'Copied' : 'Share'}
               onPress={() => void share()}
             />
@@ -279,6 +286,7 @@ function OwnProfile() {
             ) : (
               <ProfilePostList
                 posts={posts.data ?? []}
+                ownerHandle={data.handle}
                 onManage={setManaged}
                 emptyTitle="Nothing posted yet"
                 emptyBody="Share a session, a personal best or a meal you are proud of. Posts show on your profile page."
@@ -382,7 +390,7 @@ function Action({
   active,
   busy,
 }: {
-  icon: keyof typeof Ionicons.glyphMap;
+  icon: keyof typeof Ionicons.glyphMap | React.ReactElement;
   label: string;
   onPress: () => void;
   active?: boolean;
@@ -400,8 +408,10 @@ function Action({
       <View style={styles.actionIcon}>
         {busy ? (
           <ActivityIndicator color={active ? colors.accent : colors.textPrimary} />
-        ) : (
+        ) : typeof icon === 'string' ? (
           <Ionicons name={icon} size={24} color={active ? colors.accent : colors.textPrimary} />
+        ) : (
+          icon
         )}
       </View>
       <AppText variant="micro" weight="600" align="center" numberOfLines={2}>

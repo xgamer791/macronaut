@@ -14,7 +14,15 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { FriendsFeedPost } from '@/repositories/profileRepo';
 import { useFriendsFeed } from '@/state/queries';
-import { AppText, Button, ErrorState, GlassHeaderBar, Screen, ScreenHeader } from '@/ui/components';
+import {
+  AppText,
+  Button,
+  ErrorState,
+  GlassHeaderBar,
+  ProfilePostActions,
+  Screen,
+  ScreenHeader,
+} from '@/ui/components';
 import { SlideScreen } from '@/ui/motion/SlideScreen';
 import { useTheme } from '@/ui/theme/ThemeProvider';
 import { radius, spacing, touchTarget } from '@/ui/theme/tokens';
@@ -201,6 +209,7 @@ function FriendsFeedPostView({
           accessibilityIgnoresInvertColors
         />
       ) : null}
+      <ProfilePostActions post={post} ownerHandle={post.author.handle} style={styles.postActions} />
     </View>
   );
 }
@@ -327,6 +336,9 @@ const styles = StyleSheet.create({
   },
   postImage: {
     width: '100%',
+  },
+  postActions: {
+    paddingHorizontal: spacing.sm,
   },
   pressed: {
     opacity: 0.65,

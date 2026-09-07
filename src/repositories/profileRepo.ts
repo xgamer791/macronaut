@@ -37,6 +37,25 @@ export interface ProfilePost {
   imageUrl?: string;
   createdAt: string;
   updatedAt: string;
+  likeCount: number;
+  likedByMe: boolean;
+  commentCount: number;
+}
+
+export interface ProfilePostComment {
+  id: string;
+  body: string;
+  createdAt: string;
+  authorName: string;
+  authorHandle?: string;
+  isMine: boolean;
+}
+
+export interface ProfilePostThread {
+  likeCount: number;
+  likedByMe: boolean;
+  commentCount: number;
+  comments: ProfilePostComment[];
 }
 
 export interface FriendsFeedPost extends ProfilePost {
@@ -108,6 +127,10 @@ export interface ProfileRepo {
   setImage(kind: ProfileImageKind, storageId: string | null): Promise<ProfileView>;
   addPost(body: string, imageId?: string): Promise<ProfilePost>;
   updatePost(id: string, body: string): Promise<ProfilePost>;
+  postThread(id: string): Promise<ProfilePostThread | null>;
+  setPostLike(id: string, liked: boolean): Promise<ProfilePost>;
+  addPostComment(id: string, body: string): Promise<ProfilePostComment>;
+  removePostComment(id: string): Promise<void>;
   removePost(id: string): Promise<void>;
   /** Follow or unfollow the profile at a handle. Returns that profile as it
    * looks afterwards, so the counts on the page update from the same round trip. */
@@ -127,6 +150,7 @@ export interface ProfileRepo {
 }
 
 const postId = (id: string) => id as Id<'profilePosts'>;
+const postCommentId = (id: string) => id as Id<'profilePostComments'>;
 const fileId = (id: string) => id as Id<'_storage'>;
 
 export function createProfileRepo(convex: ConvexCaller): ProfileRepo {
@@ -165,6 +189,14 @@ export function createProfileRepo(convex: ConvexCaller): ProfileRepo {
         clean({ body, imageId: imageId ? fileId(imageId) : undefined }),
       ),
     updatePost: (id, body) => convex.mutation(api.profiles.updatePost, { id: postId(id), body }),
+    postThread: (id) => convex.query(api.profiles.postThread, { id: postId(id) }),
+    setPostLike: (id, liked) =>
+      convex.mutation(api.profiles.setPostLike, { id: postId(id), liked }),
+    addPostComment: (id, body) =>
+      convex.mutation(api.profiles.addPostComment, { id: postId(id), body }),
+    async removePostComment(id) {
+      await convex.mutation(api.profiles.removePostComment, { id: postCommentId(id) });
+    },
     async removePost(id) {
       await convex.mutation(api.profiles.removePost, { id: postId(id) });
     },

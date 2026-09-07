@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
 import { useRouter, type Href } from 'expo-router';
-import { Menu, MessagesSquare } from 'lucide-react-native';
+import { Menu, MessageSquare } from 'lucide-react-native';
 import { BellIcon } from 'phosphor-react-native';
 import React, { useEffect, useLayoutEffect, useMemo, useState } from 'react';
 import { Modal, Platform, Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
@@ -316,7 +316,7 @@ export function HeaderChatsButton() {
         router.push(signedIn ? '/chats' : '/login');
       }}
     >
-      <MessagesSquare size={GLYPH + 1} color={ICON} />
+      <MessageSquare size={GLYPH + 1} color={ICON} />
     </HeaderHit>
   );
 }

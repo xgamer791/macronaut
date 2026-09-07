@@ -193,6 +193,47 @@ describe('profile posts', () => {
     const post = await repos.profile.addPost('x'.repeat(4000));
     expect(post.body).toHaveLength(1000);
   });
+
+  it('persists likes and comments and removes them with the post', async () => {
+    const t = backend();
+    const owner = await signIn(t, 'owner@example.com', 'Owner');
+    const reader = await signIn(t, 'reader@example.com', 'Reader');
+    await owner.repos.profile.update({ handle: 'owner', isPublic: true });
+    await reader.repos.profile.update({ handle: 'reader', isPublic: true });
+    const post = await owner.repos.profile.addPost('A public post');
+
+    expect(post).toMatchObject({ likeCount: 0, likedByMe: false, commentCount: 0 });
+    await reader.repos.profile.setPostLike(post.id, true);
+    await reader.repos.profile.setPostLike(post.id, true);
+    const comment = await reader.repos.profile.addPostComment(post.id, '  Great work  ');
+
+    expect(comment.body).toBe('Great work');
+    expect(await reader.repos.profile.postThread(post.id)).toMatchObject({
+      likeCount: 1,
+      likedByMe: true,
+      commentCount: 1,
+      comments: [{ body: 'Great work', authorName: 'Reader', isMine: true }],
+    });
+    expect((await owner.repos.profile.myPosts())[0]).toMatchObject({
+      likeCount: 1,
+      likedByMe: false,
+      commentCount: 1,
+    });
+
+    await reader.repos.account.deleteAllData();
+    expect((await owner.repos.profile.myPosts())[0]).toMatchObject({
+      likeCount: 0,
+      commentCount: 0,
+    });
+
+    await reader.repos.profile.setPostLike(post.id, true);
+    const secondComment = await reader.repos.profile.addPostComment(post.id, 'Still great');
+    await owner.repos.profile.removePostComment(secondComment.id);
+    expect(await owner.repos.profile.postThread(post.id)).toMatchObject({ commentCount: 0 });
+    await owner.repos.profile.removePost(post.id);
+    expect(await t.run(async (ctx) => ctx.db.query('profilePostLikes').collect())).toEqual([]);
+    expect(await t.run(async (ctx) => ctx.db.query('profilePostComments').collect())).toEqual([]);
+  });
 });
 
 describe('friends feed', () => {
@@ -519,8 +560,9 @@ describe('profile connections', () => {
 
   it('answers a private page the same way a handle nobody owns is answered', async () => {
     const { t, a, b } = await graph();
-    expect((await b.repos.profile.connections({ handle: 'alice', tab: 'followers' }))?.counts)
-      .toEqual({ followers: 2, following: 2, friends: 1 });
+    expect(
+      (await b.repos.profile.connections({ handle: 'alice', tab: 'followers' }))?.counts,
+    ).toEqual({ followers: 2, following: 2, friends: 1 });
 
     await a.repos.profile.update({ isPublic: false });
     expect(await b.repos.profile.connections({ handle: 'alice', tab: 'followers' })).toBeNull();

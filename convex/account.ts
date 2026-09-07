@@ -99,13 +99,57 @@ async function purgeUserData(ctx: MutationCtx, userId: Id<'users'>, budget: numb
   let remaining = budget;
   type PurgeRow = { _id: Id<any>; files?: (Id<'_storage'> | undefined)[] };
   const steps: (() => Promise<PurgeRow[]>)[] = [
-    async () =>
-      (
-        await ctx.db
-          .query('profilePosts')
-          .withIndex('by_user_created', (q) => q.eq('userId', userId))
-          .take(remaining)
-      ).map((row) => ({ _id: row._id, files: [row.imageId] })),
+    async () => {
+      const owned = await ctx.db
+        .query('profilePosts')
+        .withIndex('by_user_created', (q) => q.eq('userId', userId))
+        .take(remaining);
+      const rows: PurgeRow[] = [];
+      for (const post of owned) {
+        const [likes, comments] = await Promise.all([
+          ctx.db
+            .query('profilePostLikes')
+            .withIndex('by_post', (q) => q.eq('postId', post._id))
+            .collect(),
+          ctx.db
+            .query('profilePostComments')
+            .withIndex('by_post_created', (q) => q.eq('postId', post._id))
+            .collect(),
+        ]);
+        for (const like of likes) rows.push({ _id: like._id });
+        for (const comment of comments) rows.push({ _id: comment._id });
+        rows.push({ _id: post._id, files: [post.imageId] });
+      }
+      return rows;
+    },
+    async () => {
+      const likes = await ctx.db
+        .query('profilePostLikes')
+        .withIndex('by_user', (q) => q.eq('userId', userId))
+        .take(remaining);
+      for (const like of likes) {
+        const post = await ctx.db.get(like.postId);
+        if (post) {
+          await ctx.db.patch(post._id, { likeCount: Math.max(0, (post.likeCount ?? 0) - 1) });
+        }
+      }
+      return likes;
+    },
+    async () => {
+      const comments = await ctx.db
+        .query('profilePostComments')
+        .withIndex('by_user', (q) => q.eq('userId', userId))
+        .take(remaining);
+      for (const comment of comments) {
+        const post = await ctx.db.get(comment.postId);
+        if (post) {
+          await ctx.db.patch(post._id, {
+            commentCount: Math.max(0, (post.commentCount ?? 0) - 1),
+          });
+        }
+      }
+      return comments;
+    },
     async () => {
       const [received, caused] = await Promise.all([
         ctx.db
