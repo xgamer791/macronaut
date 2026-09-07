@@ -20,8 +20,7 @@ describe('sticky chrome headers', () => {
   it('paints the bar with the tab-bar chrome instead of overlay glass', () => {
     expect(tokens).toContain("chrome: '#101418'");
     expect(bar).toContain('backgroundColor: colors.chrome');
-    expect(bar).not.toContain('borderBottomColor');
-    expect(bar).not.toContain('borderBottomWidth');
+    expect(bar).toContain('borderBottomColor: colors.border');
     expect(tabBar).toContain('backgroundColor: colors.chrome');
     expect(tabBar).toContain('borderTopColor: colors.border');
     expect(bar).not.toContain("position: 'absolute'");
