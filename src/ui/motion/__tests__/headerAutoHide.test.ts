@@ -76,11 +76,11 @@ describe('header auto-hide wiring', () => {
     expect(screen).toContain('if (hideOnScroll && (overlay || headerHeight > 0))');
   });
 
-  it('lets Today skip the reserved band so the hero tucks under the slab', () => {
+  it('keeps overlayHeader available but Today uses the reserved band', () => {
     const screen = read('ui', 'components', 'Screen.tsx');
     expect(screen).toContain('overlayHeader');
     expect(screen).toContain('overlay = Boolean(hideOnScroll && overlayHeader)');
-    expect(read('app', '(tabs)', 'index.tsx')).toContain('overlayHeader');
+    expect(read('app', '(tabs)', 'index.tsx')).not.toContain('overlayHeader');
   });
 
   it('drives Today and both profile headers from Screen scroll', () => {

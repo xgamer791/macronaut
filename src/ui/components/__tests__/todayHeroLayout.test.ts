@@ -5,7 +5,6 @@ import {
   HERO_GAP_BELOW_HEADER,
   TODAY_SECTION_GAP,
   glassHeaderHeight,
-  todayHeroHeight,
 } from '../todayHeroLayout';
 import { spacing, touchTarget } from '@/ui/theme/tokens';
 
@@ -23,11 +22,6 @@ describe('today hero layout', () => {
     expect(TODAY_SECTION_GAP).toBe(spacing.xl);
     expect(HERO_GAP_BELOW_HEADER).toBe(TODAY_SECTION_GAP);
     expect(HERO_GAP_ABOVE_MACROS).toBe(TODAY_SECTION_GAP);
-    const header = glassHeaderHeight(0, 1);
-    const moduleSize = 173;
-    expect(todayHeroHeight(moduleSize, header)).toBe(
-      header + TODAY_SECTION_GAP + moduleSize + TODAY_SECTION_GAP,
-    );
   });
 
   it('is the height both chrome files paint', () => {
@@ -35,16 +29,18 @@ describe('today hero layout', () => {
       'paddingTop: insets.top + HEADER_PAD_TOP',
     );
     expect(read('ui', 'components', 'AppHeader.tsx')).toContain('marginTop: HEADER_ROW_LIFT');
-    expect(read('app', '(tabs)', 'index.tsx')).toContain('todayHeroHeight(');
-    expect(read('app', '(tabs)', 'index.tsx')).toContain('overlayHeader');
   });
 
-  it('does not stack a second body pad on the hero inset', () => {
+  it('lets Screen reserve the header so the first gap cannot collapse', () => {
     const today = read('app', '(tabs)', 'index.tsx');
+    expect(today).toContain('paddingTop: TODAY_SECTION_GAP');
     expect(today).toContain('paddingBottom: TODAY_SECTION_GAP');
     expect(today).toContain('gap: TODAY_SECTION_GAP');
     expect(today).toContain('paddingTop: 0');
     expect(today).toContain('flush');
+    expect(today).not.toContain('overlayHeader');
+    expect(today).not.toContain('todayHeroHeight');
+    expect(today).not.toContain('glassHeaderHeight');
     expect(today).not.toContain('spacing.md + 15');
     expect(read('ui', 'components', 'SectionHeader.tsx')).toContain('flush = false');
   });

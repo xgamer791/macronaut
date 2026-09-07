@@ -5,7 +5,6 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import { Pressable, StyleSheet, View, useWindowDimensions } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRepos } from '@/state/AppProvider';
 import {
   keys,
@@ -38,11 +37,7 @@ import {
 import type { HeroMetricValues } from '@/ui/components/HeroMetricModule';
 import { useTheme } from '@/ui/theme/ThemeProvider';
 import { radius, spacing } from '@/ui/theme/tokens';
-import {
-  TODAY_SECTION_GAP,
-  todayHeroHeight,
-  glassHeaderHeight,
-} from '@/ui/components/todayHeroLayout';
+import { TODAY_SECTION_GAP } from '@/ui/components/todayHeroLayout';
 
 const HERO_IMAGE = require('../../../assets/images/today/hero-gym.jpg');
 
@@ -80,7 +75,6 @@ function TodayBody() {
   const qc = useQueryClient();
   const { settings } = useRepos();
   const { colors } = useTheme();
-  const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const date = useUiStore((s) => s.selectedDate);
   const setSelectedDate = useUiStore((s) => s.setSelectedDate);
@@ -183,12 +177,6 @@ function TodayBody() {
     burnedByType.set(a.activityType, (burnedByType.get(a.activityType) ?? 0) + a.caloriesBurned);
   }
 
-  // Hero is only the overlay chrome, a tight gap, and the modules — not a
-  // tall plate that leaves a dark void under the hairline.
-  const heroHeight = todayHeroHeight(
-    moduleSize,
-    Math.round(glassHeaderHeight(insets.top, StyleSheet.hairlineWidth)),
-  );
   const macros = [
     {
       key: 'protein' as const,
@@ -215,7 +203,6 @@ function TodayBody() {
       tabBarSpace
       padded={false}
       safeTop={false}
-      overlayHeader
       stickyHeader={
         <GlassHeaderBar>
           <AppHeader />
@@ -224,7 +211,7 @@ function TodayBody() {
       floatingOverlay={<ToolLauncher />}
     >
       {/* —— Hero —— */}
-      <View style={[styles.hero, { height: heroHeight }]}>
+      <View style={styles.hero}>
         <Image
           source={HERO_IMAGE}
           style={StyleSheet.absoluteFill}
@@ -429,10 +416,10 @@ const styles = StyleSheet.create({
   hero: {
     width: '100%',
     overflow: 'hidden',
-    justifyContent: 'flex-end',
   },
   heroBottom: {
     paddingHorizontal: spacing.lg,
+    paddingTop: TODAY_SECTION_GAP,
     paddingBottom: TODAY_SECTION_GAP,
     zIndex: 3,
     gap: spacing.md,

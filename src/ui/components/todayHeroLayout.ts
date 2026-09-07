@@ -10,6 +10,10 @@ export const HEADER_ROW_LIFT = 3;
  * section after that. 8px under the hairline read as no gap on the dark
  * plate; 16px is the old body gap and still looked tight there. 24px is
  * the next token and is visible in every slot.
+ *
+ * Today does not overlay the header. `Screen` reserves the painted bar,
+ * and the hero applies this gap as padding above the modules so the
+ * header→cards space cannot collapse when chrome height is guessed wrong.
  */
 export const TODAY_SECTION_GAP = spacing.xl;
 
@@ -23,8 +27,3 @@ export const HERO_GAP_BELOW_HEADER = TODAY_SECTION_GAP;
 
 /** Inset under the modules, above the macros section. */
 export const HERO_GAP_ABOVE_MACROS = TODAY_SECTION_GAP;
-
-/** Hero is the overlay chrome, equal insets, and the modules. */
-export function todayHeroHeight(moduleSize: number, headerHeight: number) {
-  return headerHeight + HERO_GAP_BELOW_HEADER + moduleSize + HERO_GAP_ABOVE_MACROS;
-}
