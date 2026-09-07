@@ -5,9 +5,12 @@ every write against it and rejects a document that does not match. Schema
 changes are ordinary code changes: edit the file, and `npx convex dev` /
 `npx convex deploy` push it with the functions.
 
-Every table below carries a `userId` (`Id<'users'>`) and is only ever read
-through an index that starts with it. See [security.md](security.md) for why
-that is the whole isolation story.
+Every table below carries a `userId` (`Id<'users'>`) and is read through an
+index that starts with it. The one exception is `profiles.by_handle`, which
+exists so a public profile can be looked up by someone who is not its owner;
+`convex/profiles.ts` is the only caller and it refuses a row that is not
+public. See [security.md](security.md) for why that is the whole isolation
+story.
 
 ## Tables
 
@@ -28,6 +31,8 @@ that is the whole isolation story.
 | `searchHistory` | recent searches (deduped) | query, searchedAt | `by_user_query` (query), `by_user_time` (searchedAt) |
 | `activityEntries` | workouts | date, name, nameLower, activityType, durationMin, distanceKm, caloriesBurned, intensity | `by_user_date` (date), `by_user_name_date` (nameLower, date) |
 | `dayNotes` | per-day journal notes, many per day | date, body | `by_user_date` (date) |
+| `profiles` | one profile page per account | handle, handleLower, displayName, bio, location, primarySport, avatarId, bannerId, isPublic | `by_user`, `by_handle` (handleLower) |
+| `profilePosts` | posts on your own profile page | body, imageId | `by_user_created` (createdAt) |
 | `aiScanRoster`, `aiScanRosterMeta` | frozen set of accounts allowed to use AI food scan until Pro | userId; frozenAt | `by_user`; `by_key` |
 
 ## Conventions
@@ -47,6 +52,16 @@ that is the whole isolation story.
   resolving. "Delete all data" and "Delete account" remove rows outright.
 - **Undefined never reaches the server.** Optional fields are simply absent;
   the client repositories strip `undefined` before every call.
+- **Uploaded images are storage ids, not URLs.** `profiles.avatarId` /
+  `bannerId` and `profilePosts.imageId` are `Id<'_storage'>`; the functions
+  resolve them with `ctx.storage.getUrl` on the way out. Holding the id rather
+  than the URL is what lets replacing a picture delete the file it replaced,
+  and lets `purgeUserData` delete the files with the rows. Every other
+  `imageUrl` in the schema is an external address from a food provider.
+- **One row per user.** `profiles` has no unique constraint — Convex has none
+  — so `convex/profiles.ts` is the only writer and creates the row lazily
+  through `loadOrCreate`. Handles are kept unique the same way, by checking
+  `by_handle` before writing.
 
 ## Shared vs. per-account data
 

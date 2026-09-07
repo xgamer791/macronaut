@@ -42,6 +42,17 @@ WebSocket.
   through indexes that start with that `userId`, and checks the owner before
   touching an existing row. The client never sends a user id, so it cannot
   send the wrong one. `tests/convex/isolation.test.ts` pins this down.
+  `profiles.byHandle` is the single, deliberate exception, so that a shared
+  public profile link opens for someone with no account; it returns a
+  projected view rather than the row, and only when the owner published it.
+  See [security.md](security.md#the-one-read-that-crosses-accounts).
+- **Uploaded images live in Convex storage, referenced by id.** Profile
+  pictures, banners and post photos upload straight to a one-shot upload URL,
+  and the tables hold the storage id rather than the resolved URL. That is
+  what makes replacing an image delete the old file and lets account deletion
+  take every file with it. Picking is split by platform
+  (`pickImage.ts` / `pickImage.web.ts`) so the native picker never reaches the
+  web bundle; the web path downscales through a canvas before uploading.
 - **Auth is not a local flag.** Route guards read Convex Auth's verified
   session state, never a value the device can edit. There is no signed-out
   mode with data in it: without a session nothing loads.
