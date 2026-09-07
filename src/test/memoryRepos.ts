@@ -599,6 +599,10 @@ export function createMemoryProfileRepo(): ProfileRepo {
     profile = { ...profile, id: profile.id ?? newId(), updatedAt: nowIso() };
   };
   const repo: ProfileRepo = {
+    async ensure() {
+      touch();
+      return { handle: profile.handle };
+    },
     async me() {
       return view();
     },

@@ -138,17 +138,16 @@ export const list = query({
 });
 
 /**
- * Who a search may surface.
+ * Who a search may surface: anyone, by any part of their handle or their
+ * display name. You have to be able to find someone by their first name to
+ * send them a friend request, so `isPublic` deliberately has no say here — it
+ * governs who may read a profile *page*, which is a different question.
  *
- * A public profile is browsable: any part of its handle or display name
- * matches. A private one is findable only by someone who already knows
- * exactly who they are looking for, so it answers to its whole handle and
- * nothing else — nobody can walk the user list by typing a letter. Either
- * way the caller only ever learns the identity card `people` returns: handle,
- * name, picture. The profile page behind it stays as private as it was.
+ * What a search hands back is only the identity card `people` returns:
+ * handle, name, picture. The page behind it stays exactly as private as its
+ * owner left it, and messaging still waits on a mutual friendship.
  */
 function matchesSearch(profile: Doc<'profiles'>, wanted: string): boolean {
-  if (!profile.isPublic) return profile.handleLower === wanted;
   return (
     profile.handleLower.includes(wanted) ||
     (profile.displayName ?? '').toLowerCase().includes(wanted)

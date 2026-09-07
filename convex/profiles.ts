@@ -169,6 +169,24 @@ async function loadOrCreate(ctx: MutationCtx, userId: Id<'users'>): Promise<Doc<
   return { _id: id, _creationTime: Date.now(), ...doc };
 }
 
+/**
+ * Claim this account's profile row and handle if it has none yet.
+ *
+ * A row was only ever written the first time somebody edited their profile,
+ * so an account that just signed up and started logging food did not exist in
+ * the `profiles` table — which is the table people search. That made a real,
+ * active account unfindable and therefore impossible to befriend. The app
+ * calls this once per signed-in session, so opening Macronaut is enough.
+ */
+export const ensure = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const userId = await requireUserId(ctx);
+    const row = await loadOrCreate(ctx, userId);
+    return { handle: row.handle };
+  },
+});
+
 /** The signed-in user's own profile. Returns an unsaved placeholder rather
  * than null when nothing has been written yet, so the page renders the same
  * way before and after the first edit. */
