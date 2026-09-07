@@ -216,6 +216,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     height: touchTarget,
+    marginTop: 3,
   },
   cluster: {
     flexDirection: 'row',
