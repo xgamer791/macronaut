@@ -10,22 +10,29 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import type { FitnessGroup, NewGroup } from '@/repositories/groupRepo';
+import type { FitnessGroup, GroupMember, NewGroup } from '@/repositories/groupRepo';
+import type { MyGym } from '@/repositories/gymRepo';
 import { useAuth } from '@/state/AuthProvider';
 import {
   useCreateGroup,
   useDeleteGroup,
   useGroupDiscovery,
+  useGroupMembers,
   useJoinGroup,
+  useJoinGymGroup,
   useLeaveGroup,
   useMyGroups,
+  useMyGym,
   usePublicGroups,
+  useRetractVote,
   useUpdateGroup,
+  useVoteRemove,
 } from '@/state/queries';
 import {
   AppText,
   Button,
   Card,
+  ChatAvatar,
   EmptyState,
   Screen,
   ScreenHeader,
@@ -35,6 +42,7 @@ import {
 import { SlideScreen } from '@/ui/motion/SlideScreen';
 import { useTheme } from '@/ui/theme/ThemeProvider';
 import { radius, spacing, touchTarget, type } from '@/ui/theme/tokens';
+import { GYM_VOTE_RULES, nextThreshold, untilLabel } from '../../convex/lib/gymVotes';
 
 type GroupsPage = 'for-you' | 'yours' | 'discover' | 'manage';
 
@@ -77,6 +85,8 @@ function GroupsList() {
   const joinGroup = useJoinGroup();
   const leaveGroup = useLeaveGroup();
   const deleteGroup = useDeleteGroup();
+  const myGym = useMyGym();
+  const joinGymGroup = useJoinGymGroup();
 
   const [page, setPage] = useState<GroupsPage>('for-you');
   const [query, setQuery] = useState('');
@@ -144,6 +154,15 @@ function GroupsList() {
       setOpen(null);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : 'Could not leave this group.');
+    }
+  }
+
+  async function joinGym() {
+    setError(null);
+    try {
+      setOpen(await joinGymGroup.mutateAsync());
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : 'Could not join your gym’s group.');
     }
   }
 
@@ -244,6 +263,8 @@ function GroupsList() {
       ) : page === 'for-you' ? (
         <ForYouPage
           mine={mine}
+          gym={myGym.data ?? null}
+          joiningGym={joinGymGroup.isPending}
           recommended={recommended}
           nearby={nearby}
           viewerLocation={viewerLocation}
@@ -252,6 +273,8 @@ function GroupsList() {
           onCreate={() => setCreateOpen(true)}
           onOpen={setOpen}
           onJoin={(group) => void join(group)}
+          onJoinGym={() => void joinGym()}
+          onSetGym={() => router.push('/home-gym')}
         />
       ) : page === 'yours' ? (
         <YourGroupsPage groups={mine} onCreate={() => setCreateOpen(true)} onOpen={setOpen} />
@@ -313,6 +336,10 @@ function GroupsList() {
         }}
         onJoin={(group) => void join(group)}
         onLeave={(group) => void leave(group)}
+        onSetHomeGym={() => {
+          setOpen(null);
+          router.push('/home-gym');
+        }}
       />
     </Screen>
   );
@@ -320,6 +347,8 @@ function GroupsList() {
 
 function ForYouPage({
   mine,
+  gym,
+  joiningGym,
   recommended,
   nearby,
   viewerLocation,
@@ -328,8 +357,12 @@ function ForYouPage({
   onCreate,
   onOpen,
   onJoin,
+  onJoinGym,
+  onSetGym,
 }: {
   mine: FitnessGroup[];
+  gym: MyGym | null;
+  joiningGym: boolean;
   recommended: FitnessGroup[];
   nearby: FitnessGroup[];
   viewerLocation?: string;
@@ -338,9 +371,37 @@ function ForYouPage({
   onCreate: () => void;
   onOpen: (group: FitnessGroup) => void;
   onJoin: (group: FitnessGroup) => void;
+  onJoinGym: () => void;
+  onSetGym: () => void;
 }) {
   return (
     <View style={styles.content}>
+      <SectionHeading
+        title="Your gym"
+        subtitle={gym ? gym.gym.address : 'One group with everyone who trains where you do'}
+        action={gym ? 'Change' : undefined}
+        onAction={onSetGym}
+      />
+      {gym ? (
+        <YourGymCard
+          gym={gym}
+          joining={joiningGym}
+          onOpen={() => gym.group && onOpen(gym.group)}
+          onJoin={onJoinGym}
+          onManage={onSetGym}
+        />
+      ) : (
+        <Card style={styles.startCard}>
+          <View style={styles.startCopy}>
+            <AppText weight="600">Set your home gym</AppText>
+            <AppText variant="caption" tone="secondary">
+              You’ll be placed in one group with everyone on Macronaut who trains there.
+            </AppText>
+          </View>
+          <Button compact title="Set up" onPress={onSetGym} />
+        </Card>
+      )}
+
       <SectionHeading
         title="Your groups"
         subtitle={mine.length ? `${mine.length} communities` : 'Your team starts here'}
@@ -442,7 +503,7 @@ function YourGroupsPage({
             <GroupRow
               key={group.id}
               group={group}
-              badge={group.isOwner ? 'Owner' : 'Member'}
+              badge={group.kind === 'gym' ? 'Home gym' : group.isOwner ? 'Owner' : 'Member'}
               onOpen={() => onOpen(group)}
             />
           ))}
@@ -666,6 +727,53 @@ function ProfileGroups({
   );
 }
 
+/** The home gym on the For-you page: its group, and where you stand with it. */
+function YourGymCard({
+  gym,
+  joining,
+  onOpen,
+  onJoin,
+  onManage,
+}: {
+  gym: MyGym;
+  joining: boolean;
+  onOpen: () => void;
+  onJoin: () => void;
+  onManage: () => void;
+}) {
+  const { colors } = useTheme();
+  const { group, restriction } = gym;
+  const line = restriction
+    ? restriction.kind === 'ban'
+      ? `Removed by its members until ${untilLabel(restriction.until)}`
+      : `Suspended until ${untilLabel(restriction.until)}`
+    : group
+      ? `${group.memberCount} ${group.memberCount === 1 ? 'member' : 'members'}${group.isMember ? ' · you’re in' : ''}`
+      : 'Nobody in its group yet — you’d be the first';
+  return (
+    <Card style={styles.startCard}>
+      <View style={[styles.gymIcon, { backgroundColor: `${colors.accent}1F` }]}>
+        <Ionicons name="barbell-outline" size={22} color={colors.accent} />
+      </View>
+      <View style={styles.startCopy}>
+        <AppText weight="600" numberOfLines={1}>
+          {gym.gym.name}
+        </AppText>
+        <AppText variant="caption" tone="secondary" numberOfLines={1}>
+          {line}
+        </AppText>
+      </View>
+      {group?.isMember ? (
+        <Button compact title="Open" variant="secondary" onPress={onOpen} />
+      ) : restriction ? (
+        <Button compact title="Manage" variant="secondary" onPress={onManage} />
+      ) : (
+        <Button compact title="Join" loading={joining} onPress={onJoin} />
+      )}
+    </Card>
+  );
+}
+
 function SectionHeading({
   title,
   subtitle,
@@ -880,13 +988,19 @@ function GroupDetailsSheet({
   onEdit,
   onJoin,
   onLeave,
+  onSetHomeGym,
 }: {
   group: FitnessGroup | null;
   onClose: () => void;
   onEdit?: (group: FitnessGroup) => void;
   onJoin: (group: FitnessGroup) => void;
   onLeave?: (group: FitnessGroup) => void;
+  /** A gym group is joined by making the gym home, not by a join button. */
+  onSetHomeGym?: () => void;
 }) {
+  const isGym = group?.kind === 'gym';
+  // Only members may see who else is in; the query refuses everyone else.
+  const members = useGroupMembers(group?.id ?? '', Boolean(group?.isMember));
   return (
     <Sheet visible={group !== null} onClose={onClose} title={group?.name}>
       {group ? (
@@ -898,6 +1012,7 @@ function GroupDetailsSheet({
                 {groupMeta(group)}
               </AppText>
               <View style={styles.detailTags}>
+                {isGym ? <DetailTag icon="fitness-outline" label="Home gym group" /> : null}
                 <DetailTag icon="earth-outline" label={group.isPublic ? 'Public' : 'Private'} />
                 {group.location ? (
                   <DetailTag icon="location-outline" label={group.location} />
@@ -908,16 +1023,199 @@ function GroupDetailsSheet({
           <AppText>
             {group.description || 'This community has not added a description yet.'}
           </AppText>
-          {group.isOwner ? (
+          {isGym ? (
+            group.isMember ? (
+              <Button title="Leave group" variant="secondary" onPress={() => onLeave?.(group)} />
+            ) : (
+              <Button title="Set as my home gym" onPress={() => onSetHomeGym?.()} />
+            )
+          ) : group.isOwner ? (
             <Button title="Edit group" onPress={() => onEdit?.(group)} />
           ) : group.isMember ? (
             <Button title="Leave group" variant="secondary" onPress={() => onLeave?.(group)} />
           ) : (
             <Button title="Join group" onPress={() => onJoin(group)} />
           )}
+          {group.isMember ? (
+            <MembersSection
+              group={group}
+              data={members.data}
+              loading={members.isLoading}
+              onClose={onClose}
+            />
+          ) : null}
         </>
       ) : null}
     </Sheet>
+  );
+}
+
+/**
+ * Who is in the group. Public profiles only — everyone is counted. In a gym
+ * group each row carries the quiet vote that keeps the group in shape; the
+ * numbers come from convex/lib/gymVotes.ts so the copy never drifts.
+ */
+function MembersSection({
+  group,
+  data,
+  loading,
+  onClose,
+}: {
+  group: FitnessGroup;
+  data: { total: number; listed: number; members: GroupMember[] } | undefined;
+  loading: boolean;
+  onClose: () => void;
+}) {
+  const { colors } = useTheme();
+  const router = useRouter();
+  const vote = useVoteRemove();
+  const retract = useRetractVote();
+  const [confirming, setConfirming] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const isGym = group.kind === 'gym';
+
+  async function castVote(member: GroupMember) {
+    setError(null);
+    setConfirming(null);
+    try {
+      await vote.mutateAsync({ id: group.id, targetUserId: member.id });
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : 'Could not record your vote.');
+    }
+  }
+
+  async function takeBack(member: GroupMember) {
+    setError(null);
+    try {
+      await retract.mutateAsync({ id: group.id, targetUserId: member.id });
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : 'Could not take your vote back.');
+    }
+  }
+
+  return (
+    <View style={styles.members}>
+      <View style={styles.membersHead}>
+        <AppText variant="heading" weight="700">
+          Members
+        </AppText>
+        {data ? (
+          <AppText variant="caption" tone="secondary">
+            {data.total} {data.total === 1 ? 'member' : 'members'} · {data.listed} public
+          </AppText>
+        ) : null}
+      </View>
+      {loading ? (
+        <ActivityIndicator color={colors.accent} />
+      ) : data?.members.length ? (
+        data.members.map((member) => (
+          <MemberRow
+            key={member.id}
+            member={member}
+            confirming={confirming === member.id}
+            busy={vote.isPending || retract.isPending}
+            onOpen={() => {
+              if (!member.handle) return;
+              onClose();
+              router.push({ pathname: '/u/[handle]', params: { handle: member.handle } });
+            }}
+            onVote={() => (member.myVote ? void takeBack(member) : setConfirming(member.id))}
+            onConfirm={() => void castVote(member)}
+            onCancel={() => setConfirming(null)}
+          />
+        ))
+      ) : (
+        <AppText variant="caption" tone="muted">
+          Nobody with a public profile yet.
+        </AppText>
+      )}
+      {error ? (
+        <AppText variant="caption" tone="danger" accessibilityLiveRegion="polite">
+          {error}
+        </AppText>
+      ) : null}
+      {isGym ? (
+        <AppText variant="micro" tone="muted">
+          This group has no owner. {GYM_VOTE_RULES.SUSPEND_VOTES} members voting in a week suspend
+          someone for {GYM_VOTE_RULES.SUSPENSION_DAYS} days; {GYM_VOTE_RULES.BAN_VOTES} remove them
+          for {GYM_VOTE_RULES.BAN_DAYS}. Votes are anonymous.
+        </AppText>
+      ) : null}
+    </View>
+  );
+}
+
+function MemberRow({
+  member,
+  confirming,
+  busy,
+  onOpen,
+  onVote,
+  onConfirm,
+  onCancel,
+}: {
+  member: GroupMember;
+  confirming: boolean;
+  busy: boolean;
+  onOpen: () => void;
+  onVote: () => void;
+  onConfirm: () => void;
+  onCancel: () => void;
+}) {
+  const { colors } = useTheme();
+  const target = nextThreshold(member.status);
+  const tally = member.votes > 0 ? ` · ${member.votes} of ${target}` : '';
+  const voteLabel = member.myVote ? `Voted${tally}` : `Vote to remove${tally}`;
+  return (
+    <View style={[styles.memberRow, { borderBottomColor: colors.border }]}>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={`${member.displayName}${member.isYou ? ', you' : ''}`}
+        onPress={onOpen}
+        disabled={!member.handle}
+        style={styles.memberIdentity}
+      >
+        <ChatAvatar person={member} size={40} />
+        <View style={styles.memberCopy}>
+          <AppText weight="600" numberOfLines={1}>
+            {member.displayName}
+            {member.isYou ? ' (you)' : ''}
+          </AppText>
+          <AppText variant="caption" tone="muted" numberOfLines={1}>
+            {member.status === 'suspended'
+              ? 'Suspended'
+              : [member.handle ? `@${member.handle}` : null, member.primarySport]
+                  .filter(Boolean)
+                  .join(' · ')}
+          </AppText>
+        </View>
+      </Pressable>
+      {member.canVote ? (
+        confirming ? (
+          <View style={styles.voteConfirm}>
+            <Button compact title="Confirm" variant="danger" onPress={onConfirm} disabled={busy} />
+            <Button compact title="Cancel" variant="ghost" onPress={onCancel} disabled={busy} />
+          </View>
+        ) : (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={
+              member.myVote
+                ? `Take back your vote to remove ${member.displayName}`
+                : `Vote to remove ${member.displayName}`
+            }
+            onPress={onVote}
+            disabled={busy}
+            hitSlop={6}
+            style={styles.voteAction}
+          >
+            <AppText variant="micro" tone={member.myVote ? 'secondary' : 'muted'} weight="600">
+              {voteLabel}
+            </AppText>
+          </Pressable>
+        )
+      ) : null}
+    </View>
   );
 }
 
@@ -1180,6 +1478,31 @@ const styles = StyleSheet.create({
   rowList: { gap: spacing.sm },
   startCard: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   startCopy: { flex: 1, gap: spacing.xs },
+  gymIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  members: { gap: spacing.sm, marginTop: spacing.sm },
+  membersHead: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
+  },
+  memberRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing.sm,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  memberIdentity: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  memberCopy: { flex: 1, gap: 2 },
+  voteAction: { minHeight: touchTarget, justifyContent: 'center', paddingHorizontal: spacing.xs },
+  voteConfirm: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
   cardRail: { gap: spacing.md, paddingRight: spacing.lg },
   discoveryGrid: { gap: spacing.md },
   groupRow: {

@@ -32,4 +32,25 @@ describe('groups experience', () => {
     expect(groups).toContain('useDeleteGroup');
     expect(groups).toContain('Delete this group for every member?');
   });
+
+  it('carries the home gym: a card, its one group, the member list, and the vote', () => {
+    expect(groups).toContain('title="Your gym"');
+    expect(groups).toContain('useMyGym');
+    expect(groups).toContain('useJoinGymGroup');
+    expect(groups).toContain("group.kind === 'gym' ? 'Home gym'");
+    expect(groups).toContain('Set as my home gym');
+    // Members are listed only to members; the vote is quiet text, no danger colour on the row.
+    expect(groups).toContain('useGroupMembers');
+    expect(groups).toContain('Vote to remove');
+    expect(groups).toContain('useVoteRemove');
+    expect(groups).toContain('useRetractVote');
+    expect(groups).toContain('Votes are anonymous');
+    // A gym group is never edited, never joined by button, and never discovered.
+    expect(backend).toContain("group.kind !== 'gym'");
+    expect(backend).toContain('export const members');
+    expect(backend).toContain('export const voteRemove');
+    expect(backend).toContain(
+      "throw new ConvexError('Gym groups have no owner and cannot be edited')",
+    );
+  });
 });
