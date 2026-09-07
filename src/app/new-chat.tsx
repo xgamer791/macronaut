@@ -1,19 +1,15 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, TextInput, View } from 'react-native';
+import { ActivityIndicator, Platform, Pressable, StyleSheet, TextInput, View } from 'react-native';
 import type { ChatPerson } from '@/repositories/chatRepo';
 import { useChatPeople, useOpenChat } from '@/state/queries';
 import { AppText, ChatAvatar, EmptyState, Screen, ScreenHeader } from '@/ui/components';
-import { ThemeProvider, useTheme } from '@/ui/theme/ThemeProvider';
+import { useTheme } from '@/ui/theme/ThemeProvider';
 import { radius, spacing, touchTarget, type } from '@/ui/theme/tokens';
 
 export default function NewChatScreen() {
-  return (
-    <ThemeProvider initialMode="light">
-      <PeopleList />
-    </ThemeProvider>
-  );
+  return <PeopleList />;
 }
 
 function PeopleList() {
@@ -145,6 +141,10 @@ const styles = StyleSheet.create({
     ...type.body,
     flex: 1,
     paddingVertical: 0,
+    ...Platform.select({
+      web: { outlineStyle: 'none', outlineWidth: 0 } as object,
+      default: {},
+    }),
   },
   sectionLabel: {
     paddingHorizontal: spacing.lg,

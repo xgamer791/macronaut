@@ -41,12 +41,19 @@ describe('chat routes', () => {
   it('keeps a plus action and searches contacts and Macronaut people', () => {
     const chats = readApp('chats.tsx');
     const picker = readApp('new-chat.tsx');
+    const thread = readApp(path.join('chat', '[id].tsx'));
     expect(chats).toContain('Start a new chat');
     expect(chats).toContain('name="add"');
     expect(picker).toContain('Search people on Macronaut');
     expect(picker).toContain('CONTACTS');
     expect(picker).toContain('PEOPLE ON MACRONAUT');
     expect(picker).toContain("pathname: '/chat/[id]'");
+    expect(chats).not.toContain('initialMode="light"');
+    expect(picker).not.toContain('initialMode="light"');
+    expect(thread).not.toContain('initialMode="light"');
+    expect(chats).toContain("outlineStyle: 'none'");
+    expect(picker).toContain("outlineStyle: 'none'");
+    expect(thread).toContain("outlineStyle: 'none'");
   });
 
   it('uses database-backed chat repositories and message routes', () => {

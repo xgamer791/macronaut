@@ -1,19 +1,15 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useMemo, useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, TextInput, View } from 'react-native';
+import { ActivityIndicator, Platform, Pressable, StyleSheet, TextInput, View } from 'react-native';
 import type { ChatSummary } from '@/repositories/chatRepo';
 import { useChats } from '@/state/queries';
 import { AppText, ChatAvatar, EmptyState, Screen, ScreenHeader } from '@/ui/components';
-import { ThemeProvider, useTheme } from '@/ui/theme/ThemeProvider';
+import { useTheme } from '@/ui/theme/ThemeProvider';
 import { radius, spacing, touchTarget, type } from '@/ui/theme/tokens';
 
 export default function ChatsScreen() {
-  return (
-    <ThemeProvider initialMode="light">
-      <ChatList />
-    </ThemeProvider>
-  );
+  return <ChatList />;
 }
 
 function ChatList() {
@@ -194,6 +190,10 @@ const styles = StyleSheet.create({
     ...type.body,
     flex: 1,
     paddingVertical: 0,
+    ...Platform.select({
+      web: { outlineStyle: 'none', outlineWidth: 0 } as object,
+      default: {},
+    }),
   },
   loading: {
     paddingVertical: spacing.xxl * 2,
