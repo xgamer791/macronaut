@@ -46,8 +46,8 @@ const ITEMS: TabItem[] = [
     iconActive: 'chatbubbles',
   },
   {
-    kind: 'tab',
-    name: 'friends',
+    kind: 'link',
+    href: '/friends',
     label: 'Friends',
     icon: 'people-outline',
     iconActive: 'people',

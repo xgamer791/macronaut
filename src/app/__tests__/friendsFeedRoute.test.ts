@@ -5,24 +5,28 @@ const appDir = path.join(__dirname, '..');
 const srcDir = path.join(appDir, '..');
 
 describe('friends feed', () => {
-  it('opens the people tab as Friends instead of a disabled placeholder', () => {
-    const page = path.join(appDir, '(tabs)', 'friends.tsx');
-    const layout = fs.readFileSync(path.join(appDir, '(tabs)', '_layout.tsx'), 'utf8');
+  it('opens from the tab bar as a left-sliding stack page', () => {
+    const page = path.join(appDir, 'friends.tsx');
+    const root = fs.readFileSync(path.join(appDir, '_layout.tsx'), 'utf8');
+    const tabs = fs.readFileSync(path.join(appDir, '(tabs)', '_layout.tsx'), 'utf8');
     const tabBar = fs.readFileSync(path.join(srcDir, 'ui', 'components', 'TabBar.tsx'), 'utf8');
     const friendsItem = tabBar.slice(
-      tabBar.indexOf("name: 'friends'"),
+      tabBar.indexOf("href: '/friends'"),
       tabBar.indexOf("href: '/notifications'"),
     );
 
     expect(fs.existsSync(page)).toBe(true);
-    expect(layout).toContain('<Tabs.Screen name="friends" />');
+    expect(fs.existsSync(path.join(appDir, '(tabs)', 'friends.tsx'))).toBe(false);
+    expect(root).toContain('name="friends" options={SLIDE_OVER_OPTIONS}');
+    expect(tabs).not.toContain('name="friends"');
     expect(friendsItem).toContain("label: 'Friends'");
     expect(friendsItem).toContain("icon: 'people-outline'");
     expect(friendsItem).not.toContain('comingSoon: true');
+    expect(fs.readFileSync(page, 'utf8')).toContain('<SlideScreen from="left">');
   });
 
   it('loads the database feed ten at a time as the list reaches the bottom', () => {
-    const page = fs.readFileSync(path.join(appDir, '(tabs)', 'friends.tsx'), 'utf8');
+    const page = fs.readFileSync(path.join(appDir, 'friends.tsx'), 'utf8');
     const query = fs.readFileSync(path.join(srcDir, 'state', 'queries.ts'), 'utf8');
     const repo = fs.readFileSync(path.join(srcDir, 'repositories', 'profileRepo.ts'), 'utf8');
     const backend = fs.readFileSync(path.join(appDir, '..', '..', 'convex', 'profiles.ts'), 'utf8');
@@ -39,7 +43,7 @@ describe('friends feed', () => {
   });
 
   it('uses mutual friends only and keeps the feed in the app theme', () => {
-    const page = fs.readFileSync(path.join(appDir, '(tabs)', 'friends.tsx'), 'utf8');
+    const page = fs.readFileSync(path.join(appDir, 'friends.tsx'), 'utf8');
     const backend = fs.readFileSync(path.join(appDir, '..', '..', 'convex', 'profiles.ts'), 'utf8');
 
     expect(backend).toContain("withIndex('by_user'");
