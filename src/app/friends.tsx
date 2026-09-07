@@ -50,14 +50,7 @@ function FriendsScreen() {
               accessibilityHint="Search for people on Macronaut"
               onPress={() => router.push('/new-chat')}
               hitSlop={8}
-              style={({ pressed }) => [
-                styles.findFriends,
-                {
-                  backgroundColor: colors.surfaceRaised,
-                  borderColor: colors.border,
-                  opacity: pressed ? 0.7 : 1,
-                },
-              ]}
+              style={({ pressed }) => [styles.findFriends, { opacity: pressed ? 0.7 : 1 }]}
             >
               <Ionicons name="person-add-outline" size={22} color={colors.accent} />
             </Pressable>
@@ -101,7 +94,7 @@ function FriendsScreen() {
             />
           ) : (
             <View style={styles.emptyWrap}>
-              <View style={[styles.emptyIcon, { backgroundColor: colors.surfaceRaised }]}>
+              <View style={styles.emptyIcon}>
                 <Ionicons name="people" size={30} color={colors.accent} />
               </View>
               <EmptyState
@@ -289,8 +282,6 @@ const styles = StyleSheet.create({
   findFriends: {
     width: touchTarget,
     height: touchTarget,
-    borderRadius: touchTarget / 2,
-    borderWidth: StyleSheet.hairlineWidth,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -353,7 +344,6 @@ const styles = StyleSheet.create({
   emptyIcon: {
     width: 64,
     height: 64,
-    borderRadius: 32,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: -spacing.sm,

@@ -139,8 +139,8 @@ export function ProfileHeader({
               ) : null}
             </View>
             {onPickAvatar ? (
-              <View style={[styles.cameraBadge, { backgroundColor: colors.accent }]}>
-                <Ionicons name="camera" size={14} color={colors.onAccent} />
+              <View style={styles.cameraBadge}>
+                <Ionicons name="camera" size={18} color={colors.accent} />
               </View>
             ) : null}
           </Pressable>
@@ -300,7 +300,6 @@ const styles = StyleSheet.create({
     bottom: -4,
     width: 26,
     height: 26,
-    borderRadius: 13,
     alignItems: 'center',
     justifyContent: 'center',
   },

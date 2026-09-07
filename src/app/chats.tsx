@@ -53,7 +53,7 @@ function ChatList() {
               accessibilityLabel="Start a new chat"
               onPress={() => router.push('/new-chat')}
               hitSlop={8}
-              style={[styles.add, { backgroundColor: colors.surfaceRaised }]}
+              style={styles.add}
             >
               <Ionicons name="add" size={27} color={colors.textPrimary} />
             </Pressable>
@@ -202,7 +202,6 @@ const styles = StyleSheet.create({
   add: {
     width: 38,
     height: 38,
-    borderRadius: 19,
     alignItems: 'center',
     justifyContent: 'center',
   },

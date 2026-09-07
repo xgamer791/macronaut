@@ -441,7 +441,7 @@ function TrainingScheduleScreen() {
                       hitSlop={8}
                       style={({ pressed }) => [
                         styles.removeWorkout,
-                        { backgroundColor: colors.surfaceRaised, opacity: pressed ? 0.7 : 1 },
+                        { opacity: pressed ? 0.7 : 1 },
                       ]}
                     >
                       <Ionicons name="trash-outline" size={17} color={colors.danger} />
@@ -485,7 +485,7 @@ function TrainingScheduleScreen() {
 
               {!draftWorkouts.length ? (
                 <View style={styles.noWorkouts}>
-                  <View style={[styles.emptyIcon, { backgroundColor: `${colors.accent}14` }]}>
+                  <View style={styles.emptyIcon}>
                     <Ionicons name="barbell-outline" size={20} color={colors.accent} />
                   </View>
                   <View style={{ flex: 1, gap: 2 }}>
@@ -723,10 +723,7 @@ function RightEditorPanel({
           accessibilityLabel={`Close ${longWeekday(date)} training editor`}
           onPress={onClose}
           hitSlop={6}
-          style={({ pressed }) => [
-            styles.closeEditor,
-            { backgroundColor: colors.surfaceRaised, opacity: pressed ? 0.7 : 1 },
-          ]}
+          style={({ pressed }) => [styles.closeEditor, { opacity: pressed ? 0.7 : 1 }]}
         >
           <Ionicons name="close" size={23} color={colors.textPrimary} />
         </Pressable>
@@ -830,17 +827,8 @@ function ScheduleDayRow({
       {plan ? (
         <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
       ) : (
-        <View
-          style={[
-            styles.addIcon,
-            {
-              width: ADD_ICON_SIZE,
-              height: ADD_ICON_SIZE,
-              borderColor: colors.accent,
-            },
-          ]}
-        >
-          <Ionicons name="add" size={20} color={colors.accent} />
+        <View style={[styles.addIcon, { width: ADD_ICON_SIZE, height: ADD_ICON_SIZE }]}>
+          <Ionicons name="add" size={22} color={colors.accent} />
         </View>
       )}
     </Pressable>
@@ -979,8 +967,6 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   addIcon: {
-    borderRadius: radius.full,
-    borderWidth: 1.5,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1008,7 +994,6 @@ const styles = StyleSheet.create({
   closeEditor: {
     width: touchTarget,
     height: touchTarget,
-    borderRadius: touchTarget / 2,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1061,7 +1046,6 @@ const styles = StyleSheet.create({
   removeWorkout: {
     width: 36,
     height: 36,
-    borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1083,7 +1067,6 @@ const styles = StyleSheet.create({
   emptyIcon: {
     width: 40,
     height: 40,
-    borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
   },

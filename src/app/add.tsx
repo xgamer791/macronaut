@@ -81,7 +81,7 @@ function FoodPickRow({
           </AppText>
         ) : null}
       </View>
-      <View style={[styles.addCircle, { backgroundColor: colors.accent + '22' }]}>
+      <View style={styles.addGlyph}>
         <Ionicons name="add" size={22} color={colors.accent} />
       </View>
     </Pressable>
@@ -260,16 +260,13 @@ export default function AddScreen() {
 
   return (
     <Screen>
-      {/* Header: circular back + meal selector (MFP-style, teal polish) */}
+      {/* Header: back + meal selector (MFP-style, teal polish) */}
       <View style={styles.header}>
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Back"
           onPress={() => goBackOrHome(router)}
-          style={[
-            styles.backCircle,
-            { backgroundColor: colors.surfaceRaised, borderColor: colors.border },
-          ]}
+          style={styles.backBtn}
         >
           <Ionicons name="arrow-back" size={20} color={colors.textPrimary} />
         </Pressable>
@@ -585,7 +582,11 @@ export default function AddScreen() {
         </>
       ) : null}
 
-      <Sheet visible={mealPickerOpen} onClose={() => setMealPickerOpen(false)} title="Select a meal">
+      <Sheet
+        visible={mealPickerOpen}
+        onClose={() => setMealPickerOpen(false)}
+        title="Select a meal"
+      >
         {(categories.data ?? []).map((cat) => (
           <Pressable
             key={cat.id}
@@ -623,11 +624,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     minHeight: touchTarget,
   },
-  backCircle: {
+  backBtn: {
     width: 40,
     height: 40,
-    borderRadius: 20,
-    borderWidth: StyleSheet.hairlineWidth,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -728,10 +727,9 @@ const styles = StyleSheet.create({
     minWidth: 0,
     gap: 2,
   },
-  addCircle: {
+  addGlyph: {
     width: 36,
     height: 36,
-    borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
   },

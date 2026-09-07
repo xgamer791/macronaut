@@ -53,7 +53,7 @@ export function MacroSummary({ macros, unit = 'g' }: MacroSummaryProps) {
         accessibilityLabel={showRemaining ? 'Show consumed amounts' : 'Show remaining amounts'}
         onPress={() => setShowRemaining((v) => !v)}
         hitSlop={8}
-        style={[styles.swap, { backgroundColor: colors.track }]}
+        style={styles.swap}
       >
         <Ionicons name="swap-horizontal" size={16} color={colors.textSecondary} />
       </Pressable>
@@ -77,12 +77,7 @@ export function MacroSummary({ macros, unit = 'g' }: MacroSummaryProps) {
                 {macro.label}
               </AppText>
               <View style={styles.valueRow}>
-                <AppText
-                  variant="heading"
-                  weight="600"
-                  display
-                  tone={over ? 'danger' : 'primary'}
-                >
+                <AppText variant="heading" weight="600" display tone={over ? 'danger' : 'primary'}>
                   {showRemaining && over ? '−' : ''}
                   {primaryLabel} {unit}
                 </AppText>
@@ -94,10 +89,7 @@ export function MacroSummary({ macros, unit = 'g' }: MacroSummaryProps) {
                 ) : null}
               </View>
               <View
-                style={[
-                  styles.track,
-                  { backgroundColor: colors.track, height: TRACK_HEIGHT },
-                ]}
+                style={[styles.track, { backgroundColor: colors.track, height: TRACK_HEIGHT }]}
                 accessible
                 accessibilityRole="progressbar"
                 accessibilityLabel={`${macro.label}: ${roundForDisplay(consumed)}${unit}${
@@ -138,7 +130,6 @@ const styles = StyleSheet.create({
     right: spacing.sm,
     width: 28,
     height: 28,
-    borderRadius: radius.full,
     alignItems: 'center',
     justifyContent: 'center',
     zIndex: 1,

@@ -205,18 +205,12 @@ function Conversation() {
             accessibilityLabel="Send message"
             disabled={!draft.trim() || send.isPending}
             onPress={() => void sendMessage()}
-            style={[
-              styles.send,
-              {
-                backgroundColor: colors.accent,
-                opacity: draft.trim() && !send.isPending ? 1 : 0.4,
-              },
-            ]}
+            style={[styles.send, { opacity: draft.trim() && !send.isPending ? 1 : 0.4 }]}
           >
             {send.isPending ? (
-              <ActivityIndicator size="small" color={colors.onAccent} />
+              <ActivityIndicator size="small" color={colors.accent} />
             ) : (
-              <Ionicons name="arrow-up" size={20} color={colors.onAccent} />
+              <Ionicons name="arrow-up" size={24} color={colors.accent} />
             )}
           </Pressable>
         </View>
@@ -414,7 +408,6 @@ const styles = StyleSheet.create({
   send: {
     width: touchTarget,
     height: touchTarget,
-    borderRadius: touchTarget / 2,
     alignItems: 'center',
     justifyContent: 'center',
   },

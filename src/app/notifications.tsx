@@ -121,7 +121,7 @@ function NotificationsScreen() {
         />
       ) : !feed.data?.items.length ? (
         <View style={styles.emptyWrap}>
-          <View style={[styles.emptyIcon, { backgroundColor: colors.surfaceRaised }]}>
+          <View style={styles.emptyIcon}>
             <Ionicons name="notifications-outline" size={30} color={colors.accent} />
           </View>
           <EmptyState
@@ -226,11 +226,11 @@ function NotificationRow({
     >
       <View style={styles.avatarWrap}>
         <ChatAvatar person={item.actor} size={50} />
-        <View style={[styles.kindBadge, { backgroundColor: colors.accent }]}>
+        <View style={styles.kindBadge}>
           <Ionicons
             name={isMessage ? 'chatbubble' : accepted ? 'checkmark' : 'person-add'}
-            size={12}
-            color={colors.onAccent}
+            size={14}
+            color={colors.accent}
           />
         </View>
       </View>
@@ -295,7 +295,6 @@ const styles = StyleSheet.create({
   emptyIcon: {
     width: 58,
     height: 58,
-    borderRadius: 29,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: -spacing.sm,
@@ -337,7 +336,6 @@ const styles = StyleSheet.create({
     bottom: -2,
     width: 22,
     height: 22,
-    borderRadius: 11,
     alignItems: 'center',
     justifyContent: 'center',
   },

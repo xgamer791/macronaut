@@ -347,12 +347,9 @@ export default function AiScanScreen() {
                   accessibilityLabel="Capture food photo"
                   disabled={busy}
                   onPress={() => void captureNative()}
-                  style={[
-                    styles.shutter,
-                    { backgroundColor: colors.accent, opacity: busy ? 0.5 : 1 },
-                  ]}
+                  style={[styles.shutter, { opacity: busy ? 0.5 : 1 }]}
                 >
-                  <Ionicons name="camera" size={28} color={colors.onAccent} />
+                  <Ionicons name="camera" size={34} color={colors.accent} />
                 </Pressable>
               </View>
             </>
@@ -458,7 +455,11 @@ function WebLiveCamera({
 
   return (
     <View style={styles.cameraWrap}>
-      <View ref={hostRef} style={[styles.camera, { backgroundColor: colors.surface }]} collapsable={false} />
+      <View
+        ref={hostRef}
+        style={[styles.camera, { backgroundColor: colors.surface }]}
+        collapsable={false}
+      />
       {description}
       <View style={styles.webShutterRow}>
         <Button title="Cancel" variant="ghost" onPress={onCancel} disabled={busy} compact />
@@ -467,9 +468,9 @@ function WebLiveCamera({
           accessibilityLabel="Capture food photo"
           disabled={busy}
           onPress={snap}
-          style={[styles.shutter, { backgroundColor: colors.accent, opacity: busy ? 0.5 : 1 }]}
+          style={[styles.shutter, { opacity: busy ? 0.5 : 1 }]}
         >
-          <Ionicons name="camera" size={28} color={colors.onAccent} />
+          <Ionicons name="camera" size={34} color={colors.accent} />
         </Pressable>
         <View style={{ width: 72 }} />
       </View>
@@ -520,7 +521,6 @@ const styles = StyleSheet.create({
   shutter: {
     width: touchTarget + 12,
     height: touchTarget + 12,
-    borderRadius: (touchTarget + 12) / 2,
     alignItems: 'center',
     justifyContent: 'center',
   },

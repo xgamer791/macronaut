@@ -134,8 +134,8 @@ function MacroInner({ metric, values }: { metric: HeroMetricId; values: HeroMetr
   return (
     <View style={styles.macroLayout}>
       <View style={styles.macroTop}>
-        <View style={[styles.iconBadge, { backgroundColor: accent + '33' }]}>
-          <Ionicons name={def.icon} size={16} color={accent} />
+        <View style={styles.iconBadge}>
+          <Ionicons name={def.icon} size={18} color={accent} />
         </View>
         <AppText variant="caption" weight="600" tone="secondary">
           {def.label}
@@ -238,8 +238,8 @@ function BurnedInner({ values }: { values: HeroMetricValues }) {
   const { colors } = useTheme();
   return (
     <View style={styles.burnedLayout}>
-      <View style={[styles.iconBadge, { backgroundColor: colors.warning + '33' }]}>
-        <Ionicons name="flash" size={18} color={colors.warning} />
+      <View style={styles.iconBadge}>
+        <Ionicons name="flash" size={20} color={colors.warning} />
       </View>
       <AppText variant="micro" tone="muted" weight="600">
         Burned
@@ -291,7 +291,6 @@ const styles = StyleSheet.create({
   iconBadge: {
     width: 28,
     height: 28,
-    borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
   },

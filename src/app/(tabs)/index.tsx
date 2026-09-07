@@ -346,7 +346,12 @@ function TodayBody() {
                   style={StyleSheet.absoluteFill}
                 />
                 <View style={styles.macroIcon}>
-                  <Ionicons name={MACRO_ICONS[m.key]} size={14} color="#FFFFFF" />
+                  <Ionicons
+                    name={MACRO_ICONS[m.key]}
+                    size={18}
+                    color="#FFFFFF"
+                    style={styles.macroIconGlyph}
+                  />
                 </View>
                 <AppText variant="caption" style={{ color: 'rgba(255,255,255,0.85)' }}>
                   {m.label}
@@ -547,13 +552,15 @@ const styles = StyleSheet.create({
   macroIcon: {
     width: 28,
     height: 28,
-    borderRadius: 14,
-    borderWidth: 1.5,
-    borderColor: 'rgba(255,255,255,0.85)',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(0,0,0,0.25)',
     marginBottom: 4,
+  },
+  // The glyph sits straight on the hero photo, so it carries its own shadow.
+  macroIconGlyph: {
+    textShadowColor: 'rgba(0,0,0,0.7)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
   },
   macroTrack: {
     height: 5,

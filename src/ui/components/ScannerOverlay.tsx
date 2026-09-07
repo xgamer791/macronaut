@@ -7,6 +7,14 @@ import { AppText } from './AppText';
 
 const FRAME_RATIO = 0.72;
 
+/** The camera controls are bare glyphs over a live preview, so each one
+ * carries its own shadow instead of a scrim disc. */
+const ON_CAMERA_GLYPH = {
+  textShadowColor: 'rgba(0,0,0,0.75)',
+  textShadowOffset: { width: 0, height: 1 },
+  textShadowRadius: 4,
+} as const;
+
 export interface ScannerOverlayProps {
   /** 'scanning' shows the animated line; 'detected' shows the loader;
    * 'success' plays the confirmation before navigation. */
@@ -90,13 +98,11 @@ export function ScannerOverlay({
           style={{
             width: touchTarget,
             height: touchTarget,
-            borderRadius: touchTarget / 2,
-            backgroundColor: 'rgba(0,0,0,0.55)',
             alignItems: 'center',
             justifyContent: 'center',
           }}
         >
-          <Ionicons name="arrow-back" size={24} color="#fff" />
+          <Ionicons name="arrow-back" size={26} color="#fff" style={ON_CAMERA_GLYPH} />
         </Pressable>
         {torchSupported ? (
           <Pressable
@@ -107,13 +113,16 @@ export function ScannerOverlay({
             style={{
               width: touchTarget,
               height: touchTarget,
-              borderRadius: touchTarget / 2,
-              backgroundColor: torchOn ? accent : 'rgba(0,0,0,0.55)',
               alignItems: 'center',
               justifyContent: 'center',
             }}
           >
-            <Ionicons name={torchOn ? 'flash' : 'flash-outline'} size={22} color="#fff" />
+            <Ionicons
+              name={torchOn ? 'flash' : 'flash-outline'}
+              size={24}
+              color={torchOn ? accent : '#fff'}
+              style={ON_CAMERA_GLYPH}
+            />
           </Pressable>
         ) : (
           <View style={{ width: touchTarget }} />
@@ -182,13 +191,11 @@ export function ScannerOverlay({
                     style={{
                       width: 64,
                       height: 64,
-                      borderRadius: 32,
-                      backgroundColor: accent,
                       alignItems: 'center',
                       justifyContent: 'center',
                     }}
                   >
-                    <Ionicons name="checkmark" size={40} color="#08130E" />
+                    <Ionicons name="checkmark" size={56} color={accent} />
                   </View>
                 </Animated.View>
               )}

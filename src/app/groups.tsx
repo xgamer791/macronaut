@@ -127,7 +127,7 @@ function GroupsList() {
               onPress={() => setOpen(group)}
             >
               <Card style={styles.card}>
-                <View style={[styles.mark, { backgroundColor: colors.surfaceRaised }]}>
+                <View style={styles.mark}>
                   <Ionicons name="people" size={22} color={colors.textPrimary} />
                 </View>
                 <View style={{ flex: 1, gap: 2 }}>
@@ -222,7 +222,12 @@ function CreateGroupSheet({
 }: {
   visible: boolean;
   onClose: () => void;
-  onCreate: (input: { name: string; sport?: string; description?: string; isPublic: boolean }) => Promise<void>;
+  onCreate: (input: {
+    name: string;
+    sport?: string;
+    description?: string;
+    isPublic: boolean;
+  }) => Promise<void>;
 }) {
   const [name, setName] = useState('');
   const [sport, setSport] = useState('');
@@ -248,8 +253,20 @@ function CreateGroupSheet({
       }}
       title="New group"
     >
-      <TextField label="Name" value={name} onChangeText={setName} placeholder="Morning miles" maxLength={60} />
-      <TextField label="Sport (optional)" value={sport} onChangeText={setSport} placeholder="Running" maxLength={40} />
+      <TextField
+        label="Name"
+        value={name}
+        onChangeText={setName}
+        placeholder="Morning miles"
+        maxLength={60}
+      />
+      <TextField
+        label="Sport (optional)"
+        value={sport}
+        onChangeText={setSport}
+        placeholder="Running"
+        maxLength={40}
+      />
       <TextField
         label="About (optional)"
         value={description}
@@ -309,7 +326,6 @@ const styles = StyleSheet.create({
   mark: {
     width: 44,
     height: 44,
-    borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
   },

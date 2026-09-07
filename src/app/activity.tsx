@@ -184,8 +184,8 @@ export default function ActivityScreen() {
 
         {/* Hero copy */}
         <View style={styles.heroCopy}>
-          <View style={[styles.heroIconRing, { borderColor: colors.accent }]}>
-            <Ionicons name={category.icon} size={20} color={colors.accent} />
+          <View style={styles.heroIcon}>
+            <Ionicons name={category.icon} size={22} color={colors.accent} />
           </View>
           <AppText variant="title" weight="700" display style={{ color: '#FFFFFF' }}>
             {category.name}
@@ -242,15 +242,13 @@ export default function ActivityScreen() {
                 colors={['rgba(0,0,0,0.15)', 'rgba(0,0,0,0.75)']}
                 style={StyleSheet.absoluteFill}
               />
-              <View
-                style={[
-                  styles.chipIcon,
-                  {
-                    backgroundColor: selected ? colors.accent : 'rgba(20,24,28,0.75)',
-                  },
-                ]}
-              >
-                <Ionicons name={c.icon} size={16} color={selected ? colors.onAccent : '#FFFFFF'} />
+              <View style={styles.chipIcon}>
+                <Ionicons
+                  name={c.icon}
+                  size={18}
+                  color={selected ? colors.accent : '#FFFFFF'}
+                  style={styles.chipIconGlyph}
+                />
               </View>
               <AppText variant="caption" weight="600" style={styles.chipLabel} numberOfLines={1}>
                 {c.name}
@@ -444,11 +442,9 @@ const styles = StyleSheet.create({
     lineHeight: 16,
     width: '100%',
   },
-  heroIconRing: {
+  heroIcon: {
     width: 34,
     height: 34,
-    borderRadius: 17,
-    borderWidth: 2,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 2,
@@ -477,10 +473,16 @@ const styles = StyleSheet.create({
   chipIcon: {
     width: 26,
     height: 26,
-    borderRadius: 13,
     alignItems: 'center',
     justifyContent: 'center',
     alignSelf: 'flex-start',
+  },
+  // The chip icon sits straight on the photo now, so it carries its own
+  // shadow instead of a disc behind it.
+  chipIconGlyph: {
+    textShadowColor: 'rgba(0,0,0,0.65)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
   },
   chipLabel: {
     color: '#FFFFFF',

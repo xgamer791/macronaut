@@ -388,19 +388,11 @@ function Action({
       disabled={busy}
       style={({ pressed }) => [styles.action, pressed && { opacity: 0.7 }]}
     >
-      <View
-        style={[
-          styles.actionCircle,
-          {
-            backgroundColor: active ? colors.accent : colors.surfaceRaised,
-            borderColor: active ? colors.accent : colors.border,
-          },
-        ]}
-      >
+      <View style={styles.actionIcon}>
         {busy ? (
-          <ActivityIndicator color={active ? colors.onAccent : colors.textPrimary} />
+          <ActivityIndicator color={active ? colors.accent : colors.textPrimary} />
         ) : (
-          <Ionicons name={icon} size={22} color={active ? colors.onAccent : colors.textPrimary} />
+          <Ionicons name={icon} size={24} color={active ? colors.accent : colors.textPrimary} />
         )}
       </View>
       <AppText variant="micro" weight="600" align="center" numberOfLines={2}>
@@ -681,11 +673,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.xs,
   },
-  actionCircle: {
+  actionIcon: {
     width: 56,
     height: 56,
-    borderRadius: 28,
-    borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
   },

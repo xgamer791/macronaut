@@ -266,8 +266,8 @@ function OptionCard({
         pressed ? styles.pressed : null,
       ]}
     >
-      <View style={[styles.optionIcon, selected ? styles.optionIconSelected : null]}>
-        <Ionicons name={icon} size={20} color={selected ? '#07140F' : '#FFFFFF'} />
+      <View style={styles.optionIcon}>
+        <Ionicons name={icon} size={22} color={selected ? palette.accentDark : '#FFFFFF'} />
       </View>
       <View style={styles.optionCopy}>
         <AppText style={styles.optionLabel}>{label}</AppText>
@@ -737,7 +737,7 @@ export default function Onboarding() {
 
               <View style={styles.recommendationCard}>
                 <View style={styles.recommendationIcon}>
-                  <Ionicons name="sparkles" size={20} color="#07140F" />
+                  <Ionicons name="sparkles" size={22} color={palette.accentDark} />
                 </View>
                 <View style={styles.recommendationCopy}>
                   <AppText style={styles.recommendationTitle}>Personalized baseline</AppText>
@@ -1110,13 +1110,8 @@ const styles = StyleSheet.create({
   optionIcon: {
     width: 42,
     height: 42,
-    borderRadius: 21,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.10)',
-  },
-  optionIconSelected: {
-    backgroundColor: palette.accentDark,
   },
   optionCopy: {
     flex: 1,
@@ -1190,10 +1185,8 @@ const styles = StyleSheet.create({
   recommendationIcon: {
     width: 40,
     height: 40,
-    borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: palette.accentDark,
   },
   recommendationCopy: {
     flex: 1,

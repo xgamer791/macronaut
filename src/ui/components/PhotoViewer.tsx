@@ -198,12 +198,17 @@ export function PhotoViewer({
             </View>
             {likeCount > 0 ? (
               <View style={styles.badges} accessibilityLabel={`${compactCount(likeCount)} likes`}>
-                <View style={[styles.badge, { backgroundColor: colors.accent, zIndex: 2 }]}>
-                  <MaterialCommunityIcons name="thumb-up" size={10} color={ON_PHOTO} />
+                <View style={[styles.badge, { zIndex: 2 }]}>
+                  <MaterialCommunityIcons
+                    name="thumb-up"
+                    size={14}
+                    color={colors.accent}
+                    style={styles.badgeGlyph}
+                  />
                 </View>
                 {likeCount > 1 ? (
-                  <View style={[styles.badge, styles.badgeOverlap, { backgroundColor: LOVE_RED }]}>
-                    <Ionicons name="heart" size={10} color={ON_PHOTO} />
+                  <View style={[styles.badge, styles.badgeOverlap]}>
+                    <Ionicons name="heart" size={14} color={LOVE_RED} style={styles.badgeGlyph} />
                   </View>
                 ) : null}
               </View>
@@ -470,12 +475,17 @@ const styles = StyleSheet.create({
   badge: {
     width: 18,
     height: 18,
-    borderRadius: 9,
     alignItems: 'center',
     justifyContent: 'center',
   },
+  // Bare glyphs on the photo, so each carries its own shadow.
+  badgeGlyph: {
+    textShadowColor: 'rgba(0,0,0,0.8)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
+  },
   badgeOverlap: {
-    marginLeft: -6,
+    marginLeft: -2,
   },
   onPhoto: {
     color: ON_PHOTO,

@@ -72,7 +72,12 @@ export function ProfilePhotoBlock({
                 )}
                 {canSeePrivate && !photo.isPublic ? (
                   <View style={styles.privateBadge}>
-                    <Ionicons name="lock-closed" size={11} color="#FFFFFF" />
+                    <Ionicons
+                      name="lock-closed"
+                      size={12}
+                      color="#FFFFFF"
+                      style={styles.badgeGlyph}
+                    />
                   </View>
                 ) : null}
               </Pressable>
@@ -123,9 +128,13 @@ const styles = StyleSheet.create({
     right: 6,
     width: 20,
     height: 20,
-    borderRadius: 10,
-    backgroundColor: 'rgba(6,9,12,0.76)',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  // No disc behind the glyph, so it carries its own shadow over the photo.
+  badgeGlyph: {
+    textShadowColor: 'rgba(0,0,0,0.8)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
   },
 });

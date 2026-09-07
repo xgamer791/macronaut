@@ -175,15 +175,9 @@ function MealDetailScreen() {
             accessibilityRole="button"
             accessibilityLabel="Back"
             onPress={onBack}
-            style={[
-              styles.backBtn,
-              {
-                top: insets.top + 8,
-                backgroundColor: 'rgba(255,255,255,0.92)',
-              },
-            ]}
+            style={[styles.backBtn, { top: insets.top + 8 }]}
           >
-            <Ionicons name="chevron-back" size={22} color="#14181D" />
+            <Ionicons name="chevron-back" size={26} color="#FFFFFF" style={styles.backGlyph} />
           </Pressable>
         </View>
 
@@ -426,9 +420,14 @@ const styles = StyleSheet.create({
     left: spacing.md,
     width: 36,
     height: 36,
-    borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  // The arrow sits straight on the hero photo, so it carries its own shadow.
+  backGlyph: {
+    textShadowColor: 'rgba(0,0,0,0.75)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 4,
   },
   body: {
     paddingHorizontal: spacing.lg,

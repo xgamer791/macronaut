@@ -151,7 +151,9 @@ describe('profile routes', () => {
     expect(viewer).toContain('<Feather name="thumbs-up"');
     expect(viewer).not.toContain('thumb-up-outline');
     expect(viewer).toContain('liked ? colors.accent : ON_PHOTO');
-    expect(viewer).toContain('backgroundColor: colors.accent');
+    // The reaction badges are bare glyphs now — colored, with no disc behind them.
+    expect(viewer).toContain('color={colors.accent}');
+    expect(viewer).not.toContain('backgroundColor: colors.accent');
     expect(viewer).not.toContain('focusColor');
     expect(viewer).not.toContain('engageFocused');
     expect(viewer).toContain("outlineStyle: 'none'");

@@ -85,11 +85,7 @@ function PublicProfile() {
         </GlassHeaderBar>
       }
     >
-      <ProfileHeader
-        profile={found.profile}
-        onBack={onBack}
-        showChrome={false}
-      />
+      <ProfileHeader profile={found.profile} onBack={onBack} showChrome={false} />
       <View style={styles.actions}>
         <PublicAction
           icon="images-outline"
@@ -172,13 +168,8 @@ function PublicAction({
       onPress={onPress}
       style={({ pressed }) => [styles.action, pressed && { opacity: 0.7 }]}
     >
-      <View
-        style={[
-          styles.actionCircle,
-          { backgroundColor: colors.surfaceRaised, borderColor: colors.border },
-        ]}
-      >
-        <Ionicons name={icon} size={22} color={colors.textPrimary} />
+      <View style={styles.actionIcon}>
+        <Ionicons name={icon} size={24} color={colors.textPrimary} />
       </View>
       <AppText variant="micro" weight="600" align="center">
         {label}
@@ -203,11 +194,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 4,
   },
-  actionCircle: {
+  actionIcon: {
     width: 56,
     height: 56,
-    borderRadius: 28,
-    borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
   },

@@ -200,7 +200,7 @@ function PhotoWall() {
               ) : null}
               {canEdit && !row.isPublic ? (
                 <View style={styles.lock}>
-                  <Ionicons name="lock-closed" size={12} color="#FFFFFF" />
+                  <Ionicons name="lock-closed" size={13} color="#FFFFFF" style={styles.lockGlyph} />
                 </View>
               ) : null}
             </Pressable>
@@ -264,9 +264,13 @@ const styles = StyleSheet.create({
     right: 6,
     width: 20,
     height: 20,
-    borderRadius: 10,
-    backgroundColor: 'rgba(6,9,12,0.7)',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  // The glyph sits straight on the photo now, so it carries its own shadow.
+  lockGlyph: {
+    textShadowColor: 'rgba(0,0,0,0.8)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
   },
 });

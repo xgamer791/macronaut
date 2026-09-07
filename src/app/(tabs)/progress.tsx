@@ -14,22 +14,8 @@ import {
   useWeekStart,
 } from '@/state/queries';
 import { ActivityEntry, DiaryEntry } from '@/repositories/types';
-import {
-  addDays,
-  DayKey,
-  rangeDays,
-  shortWeekdayLabel,
-  todayKey,
-  weekDays,
-} from '@/utils/date';
-import {
-  AppText,
-  Card,
-  EmptyState,
-  LineChart,
-  MonthCalendarPopup,
-  Screen,
-} from '@/ui/components';
+import { addDays, DayKey, rangeDays, shortWeekdayLabel, todayKey, weekDays } from '@/utils/date';
+import { AppText, Card, EmptyState, LineChart, MonthCalendarPopup, Screen } from '@/ui/components';
 import { useTheme } from '@/ui/theme/ThemeProvider';
 import { radius, spacing, touchTarget } from '@/ui/theme/tokens';
 
@@ -96,10 +82,7 @@ function ProgressBody() {
   const [calendarOpen, setCalendarOpen] = useState(false);
 
   const today = todayKey();
-  const from =
-    range === 'all'
-      ? addDays(today, -729)
-      : addDays(today, -(Number(range) - 1));
+  const from = range === 'all' ? addDays(today, -729) : addDays(today, -(Number(range) - 1));
   const to = today;
 
   const entries = useDiaryRange(from, to);
@@ -108,7 +91,13 @@ function ProgressBody() {
   const marks = useDayTypeMarks();
 
   const stats = useMemo(() => {
-    if (!entries.data || !activities.data || !configs.data || configs.data.length === 0 || !marks.data)
+    if (
+      !entries.data ||
+      !activities.data ||
+      !configs.data ||
+      configs.data.length === 0 ||
+      !marks.data
+    )
       return null;
     return computeProgress(
       rangeDays(from, to),
@@ -198,7 +187,12 @@ function ProgressBody() {
                     style={StyleSheet.absoluteFill}
                   />
                   <View style={styles.mosaicIcon}>
-                    <Ionicons name={tile.icon} size={16} color="#FFFFFF" />
+                    <Ionicons
+                      name={tile.icon}
+                      size={20}
+                      color="#FFFFFF"
+                      style={styles.mosaicIconGlyph}
+                    />
                   </View>
                   <View style={styles.mosaicCopy}>
                     <AppText variant="body" weight="600" style={{ color: '#FFFFFF' }}>
@@ -279,9 +273,7 @@ function ProgressBody() {
                 key={row.key}
                 accessibilityRole="button"
                 accessibilityLabel={`${row.label}, ${Math.round(row.net)} kcal`}
-                onPress={() =>
-                  router.push({ pathname: '/day-detail', params: { date: row.key } })
-                }
+                onPress={() => router.push({ pathname: '/day-detail', params: { date: row.key } })}
                 style={[
                   styles.weekRow,
                   idx < stats.weekRows.length - 1 && {
@@ -412,8 +404,7 @@ function computeProgress(
     return out;
   };
 
-  const foodKcal = (list: DiaryEntry[]) =>
-    list.reduce((sum, e) => sum + e.nutrition.calories, 0);
+  const foodKcal = (list: DiaryEntry[]) => list.reduce((sum, e) => sum + e.nutrition.calories, 0);
 
   const macroTotals = { protein: 0, carbs: 0, fat: 0, fiber: 0 };
   let netSum = 0;
@@ -454,38 +445,34 @@ function computeProgress(
   }
 
   const week = weekDays(today, weekStart);
-  const weekRows: DayRow[] = [...week]
-    .reverse()
-    .map((d) => {
-      const list = byDay.get(d) ?? [];
-      const burned = burnByDay.get(d) ?? 0;
-      const food = foodKcal(list);
-      const net = food - burned;
-      const m = macrosFor(list);
-      const target = resolveTargetForDate(d, configFor(d), marks);
-      const goal = target.calories > 0 ? target.calories : undefined;
-      const over = goal !== undefined && (list.length > 0 || burned > 0) && net > goal;
-      return {
-        key: d,
-        label: d === today ? 'Today' : shortWeekdayLabel(d),
-        net,
-        protein: m.protein,
-        carbs: m.carbs,
-        fat: m.fat,
-        fiber: m.fiber,
-        goal,
-        over,
-      };
-    });
+  const weekRows: DayRow[] = [...week].reverse().map((d) => {
+    const list = byDay.get(d) ?? [];
+    const burned = burnByDay.get(d) ?? 0;
+    const food = foodKcal(list);
+    const net = food - burned;
+    const m = macrosFor(list);
+    const target = resolveTargetForDate(d, configFor(d), marks);
+    const goal = target.calories > 0 ? target.calories : undefined;
+    const over = goal !== undefined && (list.length > 0 || burned > 0) && net > goal;
+    return {
+      key: d,
+      label: d === today ? 'Today' : shortWeekdayLabel(d),
+      net,
+      protein: m.protein,
+      carbs: m.carbs,
+      fat: m.fat,
+      fiber: m.fiber,
+      goal,
+      over,
+    };
+  });
 
   const weekLogged = weekRows.filter((r) => {
     const list = byDay.get(r.key) ?? [];
     return list.length > 0 || (burnByDay.get(r.key) ?? 0) > 0;
   });
   const weekAverageNet =
-    weekLogged.length > 0
-      ? weekLogged.reduce((s, r) => s + r.net, 0) / weekLogged.length
-      : 0;
+    weekLogged.length > 0 ? weekLogged.reduce((s, r) => s + r.net, 0) / weekLogged.length : 0;
 
   return {
     daysLogged: logged,
@@ -540,12 +527,14 @@ const styles = StyleSheet.create({
   mosaicIcon: {
     width: 30,
     height: 30,
-    borderRadius: 15,
-    borderWidth: 1.5,
-    borderColor: 'rgba(255,255,255,0.85)',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(0,0,0,0.25)',
+  },
+  // The glyph sits straight on the tile photo, so it carries its own shadow.
+  mosaicIconGlyph: {
+    textShadowColor: 'rgba(0,0,0,0.7)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
   },
   mosaicCopy: {
     gap: 2,
