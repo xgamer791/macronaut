@@ -9,5 +9,6 @@ describe('tab bar', () => {
     expect(tabBar).toContain('accessibilityLabel={`${meta.label}, coming soon`}');
     expect(tabBar).not.toContain('AppText');
     expect(tabBar).not.toContain('{meta.label}');
+    expect(tabBar).toContain('size={23}');
   });
 });
