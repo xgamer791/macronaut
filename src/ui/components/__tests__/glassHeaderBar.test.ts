@@ -4,6 +4,7 @@ import path from 'node:path';
 const srcDir = path.join(__dirname, '..', '..', '..');
 const read = (...parts: string[]) => fs.readFileSync(path.join(srcDir, ...parts), 'utf8');
 
+const tokens = read('ui', 'theme', 'tokens.ts');
 const bar = read('ui', 'components', 'GlassHeaderBar.tsx');
 const screen = read('ui', 'components', 'Screen.tsx');
 const tabBar = read('ui', 'components', 'TabBar.tsx');
@@ -13,13 +14,14 @@ const publicProfile = read('app', 'u', '[handle].tsx');
 const profileHeader = read('ui', 'components', 'ProfileHeader.tsx');
 
 /** Home and both profile pages keep chrome above the page, in flow, painted
- * with the same surface as the tab bar. Source tests pin layout that no
+ * with the same chrome as the tab bar. Source tests pin layout that no
  * logic-level test can reach. */
 describe('sticky chrome headers', () => {
-  it('paints the bar with the tab-bar surface instead of overlay glass', () => {
-    expect(bar).toContain('backgroundColor: colors.surface');
+  it('paints the bar with the tab-bar chrome instead of overlay glass', () => {
+    expect(tokens).toContain("chrome: '#101418'");
+    expect(bar).toContain('backgroundColor: colors.chrome');
     expect(bar).toContain('borderBottomColor: colors.border');
-    expect(tabBar).toContain('backgroundColor: colors.surface');
+    expect(tabBar).toContain('backgroundColor: colors.chrome');
     expect(tabBar).toContain('borderTopColor: colors.border');
     expect(bar).not.toContain("position: 'absolute'");
     expect(bar).not.toContain("className: 'glass'");

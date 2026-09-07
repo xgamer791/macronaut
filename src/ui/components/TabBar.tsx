@@ -80,7 +80,7 @@ export function TabBar({ state, navigation }: BottomTabBarProps) {
       style={[
         styles.bar,
         {
-          backgroundColor: colors.surface,
+          backgroundColor: colors.chrome,
           borderTopColor: colors.border,
           paddingBottom: insets.bottom,
         },

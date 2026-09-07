@@ -25,6 +25,8 @@ export const palette = {
 
 export interface ThemeColors {
   background: string;
+  /** Header and tab-bar chrome. Cards keep `surface`. */
+  chrome: string;
   surface: string;
   surfaceRaised: string;
   border: string;
@@ -47,6 +49,7 @@ export interface ThemeColors {
 
 export const lightColors: ThemeColors = {
   background: '#F6F7F9',
+  chrome: '#FFFFFF',
   surface: '#FFFFFF',
   surfaceRaised: '#FFFFFF',
   border: '#E3E7EE',
@@ -69,6 +72,7 @@ export const lightColors: ThemeColors = {
 
 export const darkColors: ThemeColors = {
   background: '#0E1114',
+  chrome: '#101418',
   surface: '#171B20',
   surfaceRaised: '#1E242B',
   border: '#262C34',
