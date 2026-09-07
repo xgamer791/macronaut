@@ -244,7 +244,13 @@ export function ConversationView({
   const insets = useSafeAreaInsets();
   const { colors } = useTheme();
   const scroll = useRef<ScrollView>(null);
-  const composer = useComposerKeyboardGap(Math.max(insets.bottom, spacing.sm));
+  const {
+    wrapRef: composerWrapRef,
+    paddingBottom: composerPad,
+    shift: composerShift,
+    onFocus: onComposerFocus,
+    onBlur: onComposerBlur,
+  } = useComposerKeyboardGap(Math.max(insets.bottom, spacing.sm));
   const [menuProgress] = useState(() => new Animated.Value(0));
   const [attachmentMenuOpen, setAttachmentMenuOpen] = useState(false);
   const [listening, setListening] = useState(false);
@@ -423,13 +429,13 @@ export function ConversationView({
 
       {data.peer.friendship === 'friends' ? (
         <View
-          ref={composer.wrapRef}
+          ref={composerWrapRef}
           style={[
             styles.composerWrap,
             {
               backgroundColor: colors.background,
-              paddingBottom: composer.paddingBottom,
-              transform: [{ translateY: composer.shift }],
+              paddingBottom: composerPad,
+              transform: [{ translateY: composerShift }],
             },
           ]}
         >
@@ -521,8 +527,8 @@ export function ConversationView({
                 placeholderTextColor={colors.textMuted}
                 maxLength={2000}
                 returnKeyType="send"
-                onFocus={composer.onFocus}
-                onBlur={composer.onBlur}
+                onFocus={onComposerFocus}
+                onBlur={onComposerBlur}
                 onSubmitEditing={() => {
                   if (canSend) submitMessage();
                 }}
