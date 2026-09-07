@@ -66,9 +66,24 @@ describe('notification center', () => {
       path.join(appDir, '..', '..', 'scripts', 'patch-pages-cachebust.py'),
       'utf8',
     );
+    const deploy = fs.readFileSync(
+      path.join(appDir, '..', '..', '.github', 'workflows', 'deploy.yml'),
+      'utf8',
+    );
+    const http = fs.readFileSync(path.join(appDir, '..', '..', 'convex', 'http.ts'), 'utf8');
+    // Pages caches version.json for ten minutes. The live build id lives on
+    // Convex, which can send Cache-Control: no-store.
+    expect(http).toContain("path: '/web-build'");
+    expect(http).toContain('PUBLIC_WEB_BUILD');
+    expect(http).toContain("'Cache-Control': 'no-store, no-cache, must-revalidate'");
+    expect(deploy).toContain('npx convex env set PUBLIC_WEB_BUILD');
+    expect(deploy).toContain('cancel-in-progress: false');
+    expect(cachebust).toContain('/web-build');
+    expect(cachebust).toContain("u.searchParams.set('_t', String(Date.now()))");
     // A tab left open never reloaded, so the build check has to run again
     // when it comes back to the front, not only on first paint.
     expect(cachebust).toContain("document.addEventListener('visibilitychange'");
     expect(cachebust).toContain("document.visibilityState==='visible'");
+    expect(cachebust).toContain("window.addEventListener('pageshow'");
   });
 });

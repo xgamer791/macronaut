@@ -3,15 +3,19 @@
 
 Two jobs.
 
-**Cache busting.** GitHub Pages serves HTML with Cache-Control: max-age=600.
-Meta no-cache tags do not override that, so phones can keep an old entry-*.js
-for up to 10 minutes after a deploy. This script:
+**Cache busting.** GitHub Pages serves every file with Cache-Control: max-age=600,
+including version.json. Meta no-cache tags do not override that, and a fetch
+of version.json with cache:'no-store' still hits the Fastly copy for up to
+ten minutes — so a stale tab never learns a new deploy shipped.
+
+This script:
 
 1. Writes dist/version.json with the git SHA
 2. Appends ?v=<sha> to bundled script/link URLs in HTML
-3. Injects a small head script that compares localStorage / version.json
-   (fetched with cache: 'no-store') and, on mismatch, navigates to
-   ?_build=<sha> — a fresh URL that bypasses the cached HTML.
+3. Injects a head script that asks Convex /web-build (Cache-Control: no-store,
+   not on the Pages CDN). On mismatch it navigates to ?_build=<sha>&_t=<now>
+   — a unique URL, so Fastly cannot reuse a poisoned cache entry. It keeps
+   checking for two minutes and whenever the tab is shown again.
 
 **Deep links into dynamic routes.** Expo writes a dynamic route out under its
 literal name — `u/[handle].html`, `meal/[id].html` — so a real URL like
@@ -45,12 +49,31 @@ def resolve_build_id() -> str:
         sys.exit(1)
 
 
+def resolve_convex_site() -> str | None:
+    for key in ("CONVEX_CLOUD_URL", "EXPO_PUBLIC_CONVEX_URL"):
+        val = os.environ.get(key, "").strip()
+        if val:
+            return val.replace(".convex.cloud", ".convex.site").rstrip("/")
+    js = pathlib.Path("dist/_expo/static/js/web")
+    if js.is_dir():
+        for path in js.rglob("*"):
+            if not path.is_file():
+                continue
+            try:
+                text = path.read_text(encoding="utf-8", errors="ignore")
+            except OSError:
+                continue
+            match = re.search(r"https://[a-z0-9-]+\.convex\.cloud", text)
+            if match:
+                return match.group(0).replace(".convex.cloud", ".convex.site")
+    return None
+
+
 def bust_asset_urls(text: str, build: str) -> str:
     def repl(match: re.Match[str]) -> str:
         attr, url = match.group(1), match.group(2)
         if url.startswith("data:"):
             return match.group(0)
-        sep = "&" if "?" in url else "?"
         # Drop a previous bust query then append the current build.
         url = re.sub(r"([?&])v=[^&\"']*", r"\1", url).rstrip("?&")
         sep = "&" if "?" in url else "?"
@@ -59,37 +82,59 @@ def bust_asset_urls(text: str, build: str) -> str:
     return re.sub(r'(src|href)="([^"]+)"', repl, text)
 
 
-def build_inject(build: str, base: str) -> str:
+def build_inject(build: str, base: str, convex_site: str | None) -> str:
+    probes = []
+    if convex_site:
+        probes.append(convex_site + "/web-build")
+    probes.append(base + "/version.json")
     script = f"""<script>(function(){{
 var KEY='macronaut-build';
 var BUILD={json.dumps(build)};
-var prev=localStorage.getItem(KEY);
-localStorage.setItem(KEY, BUILD);
-if(prev && prev!==BUILD){{
+var PROBES={json.dumps(probes)};
+var reloading=false;
+function reload(sha){{
+  if(reloading) return;
+  var last=sessionStorage.getItem('macronaut-bust');
+  if(last && Date.now()-Number(last)<8000) return;
+  reloading=true;
+  sessionStorage.setItem('macronaut-bust', String(Date.now()));
   var u=new URL(location.href);
-  u.searchParams.set('_build', BUILD);
+  u.searchParams.set('_build', sha);
+  u.searchParams.set('_t', String(Date.now()));
   location.replace(u.toString());
-  return;
+}}
+function consider(sha){{
+  if(!sha || sha===BUILD){{
+    localStorage.setItem(KEY, BUILD);
+    return;
+  }}
+  reload(sha);
 }}
 function check(){{
-  fetch({json.dumps(base + "/version.json")} + '?_=' + Date.now(), {{cache:'no-store'}})
-    .then(function(r){{return r.json();}})
-    .then(function(v){{
-      if(v && v.build && v.build!==BUILD){{
-        localStorage.setItem(KEY, v.build);
-        var u=new URL(location.href);
-        u.searchParams.set('_build', v.build);
-        location.replace(u.toString());
-      }}
-    }}).catch(function(){{}});
+  var i=0;
+  function next(){{
+    if(i>=PROBES.length) return;
+    var url=PROBES[i++]+(PROBES[i-1].indexOf('?')>=0?'&':'?')+'_='+Date.now();
+    fetch(url,{{cache:'no-store'}})
+      .then(function(r){{return r.ok?r.json():Promise.reject();}})
+      .then(function(v){{if(v&&v.build) consider(v.build); else next();}})
+      .catch(next);
+  }}
+  next();
 }}
 check();
-// A tab left open keeps its old bundle for as long as it stays open, and an
-// old bundle talking to a freshly deployed backend is the worst kind of
-// broken: it half works. Re-check whenever the tab comes back to the front.
 document.addEventListener('visibilitychange', function(){{
   if(document.visibilityState==='visible') check();
 }});
+window.addEventListener('pageshow', function(e){{
+  if(e.persisted) check();
+}});
+window.addEventListener('focus', check);
+var n=0;
+var iv=setInterval(function(){{
+  check();
+  if(++n>=15) clearInterval(iv);
+}}, 8000);
 }})();</script>"""
     return (
         MARKER_START
@@ -109,8 +154,9 @@ def main() -> None:
 
     build = resolve_build_id()
     base = "/macronaut"
+    convex_site = resolve_convex_site()
     (dist / "version.json").write_text(json.dumps({"build": build}) + "\n", encoding="utf-8")
-    inject = build_inject(build, base)
+    inject = build_inject(build, base, convex_site)
 
     # Written before the patch loop so the fallback gets the same treatment as
     # every other page. index.html is the shell to copy: its asset URLs are
@@ -122,6 +168,10 @@ def main() -> None:
         sys.exit(1)
     (dist / "404.html").write_text(index.read_text(encoding="utf-8"), encoding="utf-8")
     print("wrote dist/404.html (SPA fallback for dynamic routes)")
+    if convex_site:
+        print(f"convex_probe={convex_site}/web-build")
+    else:
+        print("convex_probe=missing — falling back to version.json only", file=sys.stderr)
 
     patched = 0
     for path in dist.rglob("*.html"):

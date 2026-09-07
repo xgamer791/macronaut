@@ -12,7 +12,9 @@ permissions:
 
 concurrency:
   group: pages
-  cancel-in-progress: true
+  # Queue the next push instead of aborting a deploy that is already uploading.
+  # Cancelling left Pages on an older SHA while main had already moved on.
+  cancel-in-progress: false
 
 jobs:
   build:
@@ -77,19 +79,25 @@ jobs:
       # an app that cannot sign in or load anything. Fail instead of shipping it.
       - name: Verify the bundle points at a Convex deployment
         run: |
-          if grep -rqoE 'https://[a-z0-9-]+\.convex\.cloud' dist/_expo/static/js/web/; then
-            echo "backend=$(grep -rhoE 'https://[a-z0-9-]+\.convex\.cloud' dist/_expo/static/js/web/ | head -1)" >> "$GITHUB_STEP_SUMMARY"
-          else
+          BACKEND=$(grep -rhoE 'https://[a-z0-9-]+\.convex\.cloud' dist/_expo/static/js/web/ | head -1)
+          if [ -z "$BACKEND" ]; then
             echo "::error::No Convex deployment URL in the exported bundle; the deploy would ship an app with no backend."
             exit 1
           fi
+          echo "backend=$BACKEND" >> "$GITHUB_STEP_SUMMARY"
+          echo "CONVEX_CLOUD_URL=$BACKEND" >> "$GITHUB_ENV"
 
-      # GitHub Pages CDN caches HTML for ~10 minutes; meta tags do not override
-      # that. Write version.json and inject a tiny client script that detects a
-      # new build and navigates with ?_build=… so stale tabs pick up the new
-      # bundle immediately.
+      # GitHub Pages CDN caches HTML and version.json for ~10 minutes; meta
+      # tags do not override that. Write version.json, publish the SHA on
+      # Convex (uncached), and inject a client that asks Convex for the live
+      # build and reloads with a unique ?_build=&_t= URL on mismatch.
       - name: Publish build version + force-refresh stale clients
-        run: python3 scripts/patch-pages-cachebust.py
+        env:
+          CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_DEPLOY_KEY }}
+          CONVEX_CLOUD_URL: ${{ env.CONVEX_CLOUD_URL }}
+        run: |
+          npx convex env set PUBLIC_WEB_BUILD "${{ github.sha }}"
+          python3 scripts/patch-pages-cachebust.py
 
       - name: Disable Jekyll so _expo assets are served
         run: touch dist/.nojekyll
