@@ -204,6 +204,7 @@ function TodayBody() {
       tabBarSpace
       padded={false}
       safeTop={false}
+      overlayHeader
       stickyHeader={
         <GlassHeaderBar>
           <AppHeader />
