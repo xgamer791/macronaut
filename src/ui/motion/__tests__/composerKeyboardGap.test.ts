@@ -25,24 +25,26 @@ describe('composer keyboard gap', () => {
     expect(composerPad(false, 8)).toBe(8);
   });
 
-  it('docks the chat composer on that gap without translating it', () => {
-    const chat = read('app', 'chat', '[id].tsx');
+  it('docks the shared composer on that gap without translating it', () => {
+    const composer = read('ui', 'chat', 'MessageComposer.tsx');
     const hook = read('ui', 'motion', 'useComposerKeyboardGap.ts');
-    expect(chat).toContain('useComposerKeyboardGap');
-    expect(chat).toContain('onFocus={onComposerFocus}');
-    expect(chat).toContain('onBlur={onComposerBlur}');
-    expect(chat).toContain('paddingBottom: composerPad');
+    expect(composer).toContain('useComposerKeyboardGap');
+    expect(composer).toContain('onFocus={onComposerFocus}');
+    expect(composer).toContain('onBlur={onComposerBlur}');
+    expect(composer).toContain('paddingBottom: composerPad');
     expect(hook).toContain('composerPad(keyboardOpen, restingPad)');
+    // Both conversations sit on that one composer rather than their own.
+    expect(read('app', 'chat', '[id].tsx')).toContain('<MessageComposer');
   });
 
   it('never measures the viewport to place the composer', () => {
     const hook = read('ui', 'motion', 'useComposerKeyboardGap.ts');
-    const chat = read('app', 'chat', '[id].tsx');
+    const composer = read('ui', 'chat', 'MessageComposer.tsx');
     // Reading the gap back and translating by it compounded on every keyboard
     // resize and walked the composer off the bottom of the screen.
     expect(hook).not.toContain('visualViewport');
     expect(hook).not.toContain('getBoundingClientRect');
-    expect(chat).not.toContain('composerShift');
-    expect(chat).not.toContain('composerWrapRef');
+    expect(composer).not.toContain('composerShift');
+    expect(composer).not.toContain('composerWrapRef');
   });
 });

@@ -72,7 +72,13 @@ describe('chat routes', () => {
     expect(thread).not.toContain('initialMode="light"');
     expect(chats).toContain("outlineStyle: 'none'");
     expect(picker).toContain("outlineStyle: 'none'");
-    expect(thread).toContain("outlineStyle: 'none'");
+    const composer = fs.readFileSync(
+      path.join(srcDir, 'ui', 'chat', 'MessageComposer.tsx'),
+      'utf8',
+    );
+    expect(composer).toContain("outlineStyle: 'none'");
+    expect(thread).toContain('<MessageComposer');
+    expect(thread).toContain('<MessageList');
   });
 
   it('uses database-backed chat repositories and message routes', () => {

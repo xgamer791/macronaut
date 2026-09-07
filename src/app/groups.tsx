@@ -34,10 +34,13 @@ import {
   Card,
   ChatAvatar,
   EmptyState,
+  GroupIdentity,
   Screen,
   ScreenHeader,
   Sheet,
   TextField,
+  gradientFor,
+  groupMeta,
 } from '@/ui/components';
 import { SlideScreen } from '@/ui/motion/SlideScreen';
 import { useTheme } from '@/ui/theme/ThemeProvider';
@@ -52,15 +55,6 @@ const PAGES: { id: GroupsPage; label: string }[] = [
   { id: 'discover', label: 'Discover' },
   { id: 'manage', label: 'Manage' },
 ];
-
-const GROUP_GRADIENTS = [
-  ['#0D8B68', '#103B3B'],
-  ['#4263EB', '#242C5B'],
-  ['#DD7A23', '#71351D'],
-  ['#8C5BD6', '#41275F'],
-  ['#C44867', '#5C273B'],
-  ['#1885A5', '#193F54'],
-] as const;
 
 /** The Groups destination replaces the old notification tab and enters along
  * the same right-to-left path that tab used. */
@@ -954,34 +948,6 @@ function DiscoveryEmpty({ onCreate }: { onCreate: () => void }) {
   );
 }
 
-function GroupIdentity({
-  group,
-  size,
-  elevated = false,
-}: {
-  group: FitnessGroup;
-  size: number;
-  elevated?: boolean;
-}) {
-  const gradient = gradientFor(group);
-  return (
-    <LinearGradient
-      colors={gradient}
-      style={[
-        styles.identity,
-        {
-          width: size,
-          height: size,
-          borderRadius: Math.max(radius.md, size * 0.28),
-        },
-        elevated && styles.identityElevated,
-      ]}
-    >
-      <Ionicons name={iconFor(group.sport)} size={size * 0.48} color="#FFFFFF" />
-    </LinearGradient>
-  );
-}
-
 function GroupDetailsSheet({
   group,
   onClose,
@@ -1360,16 +1326,6 @@ function GroupEditorSheet({
   );
 }
 
-function groupMeta(group: FitnessGroup) {
-  return [
-    group.sport,
-    group.location,
-    `${group.memberCount} ${group.memberCount === 1 ? 'member' : 'members'}`,
-  ]
-    .filter(Boolean)
-    .join(' · ');
-}
-
 function isNearby(groupLocation?: string, viewerLocation?: string) {
   if (!groupLocation || !viewerLocation) return false;
   const first = (value: string) =>
@@ -1379,24 +1335,6 @@ function isNearby(groupLocation?: string, viewerLocation?: string) {
       ?.replace(/[^a-z0-9]+/g, ' ')
       .trim();
   return first(groupLocation) === first(viewerLocation);
-}
-
-function gradientFor(group: FitnessGroup): readonly [string, string] {
-  let hash = 0;
-  for (const char of group.name) hash = (hash * 31 + char.charCodeAt(0)) | 0;
-  return GROUP_GRADIENTS[Math.abs(hash) % GROUP_GRADIENTS.length] ?? GROUP_GRADIENTS[0];
-}
-
-function iconFor(sport?: string): keyof typeof Ionicons.glyphMap {
-  const value = sport?.toLocaleLowerCase() ?? '';
-  if (/run|walk|hike|trail/.test(value)) return 'walk';
-  if (/strength|lift|gym|crossfit/.test(value)) return 'barbell';
-  if (/cycle|bike|spin/.test(value)) return 'bicycle';
-  if (/swim|water/.test(value)) return 'water';
-  if (/football|soccer/.test(value)) return 'football';
-  if (/basketball/.test(value)) return 'basketball';
-  if (/tennis/.test(value)) return 'tennisball';
-  return 'fitness';
 }
 
 const styles = StyleSheet.create({
@@ -1524,16 +1462,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  identity: { alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
-  identityElevated: {
-    borderWidth: 2,
-    borderColor: 'rgba(255,255,255,0.82)',
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 5 },
-    shadowOpacity: 0.22,
-    shadowRadius: 8,
-    elevation: 5,
   },
   discoveryCard: { width: 258, overflow: 'hidden' },
   discoveryCardWide: { width: '100%' },

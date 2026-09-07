@@ -3,9 +3,14 @@ import type { ChatMessage } from '@/repositories/chatRepo';
 /** Messages from one person inside this window read as a single turn. */
 export const GROUP_WINDOW_MS = 5 * 60 * 1000;
 
+/** A message that may name its own sender. A direct message never does — its
+ * other person is the one peer — while a group message must, since a group
+ * has many. */
+export type AuthoredMessage = ChatMessage & { sender?: { id: string } };
+
 /** One message plus what the layout needs to know about its neighbours. */
-export interface ChatTurn {
-  message: ChatMessage;
+export interface ChatTurn<M extends ChatMessage = ChatMessage> {
+  message: M;
   /** First of a run by one person — carries the extra top gutter. */
   first: boolean;
   /** Last of a run — carries the tail corner, the avatar and the time. */
@@ -22,7 +27,10 @@ export interface ChatTurn {
  * `messages` must be in ascending time order, which is the order the thread
  * query returns.
  */
-export function groupMessages(messages: ChatMessage[], now: Date = new Date()): ChatTurn[] {
+export function groupMessages<M extends AuthoredMessage>(
+  messages: M[],
+  now: Date = new Date(),
+): ChatTurn<M>[] {
   return messages.map((message, index) => {
     const previous = messages[index - 1];
     const next = messages[index + 1];
@@ -36,10 +44,20 @@ export function groupMessages(messages: ChatMessage[], now: Date = new Date()): 
   });
 }
 
+/** Who a message is from, as far as a run cares: the viewer, a named sender,
+ * or the one peer of a direct chat. */
+function senderKey(message: AuthoredMessage): string {
+  if (message.isMine) return 'me';
+  return message.sender ? `sender:${message.sender.id}` : 'peer';
+}
+
 /** Whether `b` belongs to the run `a` started. */
-export function continues(a: ChatMessage | undefined, b: ChatMessage | undefined): boolean {
+export function continues(
+  a: AuthoredMessage | undefined,
+  b: AuthoredMessage | undefined,
+): boolean {
   if (!a || !b) return false;
-  if (a.isMine !== b.isMine) return false;
+  if (senderKey(a) !== senderKey(b)) return false;
   if (!sameDay(a.createdAt, b.createdAt)) return false;
   const gap = new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
   return Number.isFinite(gap) && gap >= 0 && gap <= GROUP_WINDOW_MS;

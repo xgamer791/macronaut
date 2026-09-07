@@ -32,6 +32,7 @@ export { CalendarPanel } from './CalendarPanel';
 export { CalendarIcon } from './CalendarIcon';
 export { CalendarDayDetail } from './CalendarDayDetail';
 export { HomeGymPicker } from './HomeGymPicker';
+export { GroupIdentity, gradientFor, groupMeta, iconFor } from './GroupIdentity';
 export { DashboardHeader } from './DashboardHeader';
 export { AppHeader, HeaderAvatarButton, HeaderChatsButton, HeaderNotifyButton } from './AppHeader';
 export { CircleButton, GhostButton, ProfileHeader, ProfileHeaderChrome } from './ProfileHeader';

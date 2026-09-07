@@ -48,6 +48,41 @@ describe('chat thread shape', () => {
     expect(continues(lateLastNight, earlyToday)).toBe(false);
   });
 
+  it('keys a run by its sender, so two group members never share a bubble run', () => {
+    const from = (id: string, at: Date, sender: string) => ({
+      ...message(id, at, false),
+      sender: { id: sender },
+    });
+    // Two people inside the window: two runs. The same person: one run.
+    expect(continues(from('a', at(12, 9, 0), 'ana'), from('b', at(12, 9, 1), 'ben'))).toBe(false);
+    expect(continues(from('a', at(12, 9, 0), 'ana'), from('b', at(12, 9, 1), 'ana'))).toBe(true);
+    // A direct chat names no sender: the one peer is a single run, as before.
+    expect(continues(message('a', at(12, 9, 0), false), message('b', at(12, 9, 1), false))).toBe(
+      true,
+    );
+    // The viewer's own messages run together whether or not they carry a sender.
+    expect(
+      continues(message('a', at(12, 9, 0), true), {
+        ...message('b', at(12, 9, 1), true),
+        sender: { id: 'me' },
+      }),
+    ).toBe(true);
+
+    const turns = groupMessages(
+      [
+        from('a1', at(12, 9, 0), 'ana'),
+        from('b1', at(12, 9, 1), 'ben'),
+        from('b2', at(12, 9, 2), 'ben'),
+        from('a2', at(12, 9, 3), 'ana'),
+      ],
+      NOW,
+    );
+    expect(turns.map((turn) => turn.first)).toEqual([true, true, false, true]);
+    expect(turns.map((turn) => turn.last)).toEqual([true, false, true, true]);
+    // The message keeps its own shape through the turn.
+    expect(turns[1]?.message.sender.id).toBe('ben');
+  });
+
   it('heads each new day once, and only when the date changes', () => {
     const turns = groupMessages(
       [
