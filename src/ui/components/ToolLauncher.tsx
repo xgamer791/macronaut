@@ -32,9 +32,10 @@ const TOOLS: { title: string; subtitle: string; icon: IconName; href: Href }[] =
 ];
 
 const MENU_HEIGHT = 248;
-/** The tab bar already owns the home-indicator inset, so the FAB only
- * needs a tight gap above that chrome. */
-const FAB_ABOVE_FOOTER = spacing.sm;
+/** Exact gap between the tools button and the top of the tab bar. The
+ * tab scene already sits above that chrome, so this is not compounded
+ * with the home-indicator inset. */
+const FAB_ABOVE_FOOTER = 10;
 
 /** Expandable home utility tray. It is intentionally data-driven so future
  * Macronaut tools only need another item in `TOOLS`. */

@@ -22,7 +22,7 @@ describe('home tools and fasting route', () => {
     expect(launcher).toContain("href: '/add'");
     expect(launcher).toContain("href: '/activity'");
     expect(launcher).toContain('accessibilityState={{ expanded: open }}');
-    expect(launcher).toContain('FAB_ABOVE_FOOTER = spacing.sm');
+    expect(launcher).toContain('FAB_ABOVE_FOOTER = 10');
     expect(launcher).toContain('bottom: FAB_ABOVE_FOOTER');
     expect(launcher).not.toContain('insets.bottom');
     expect(launcher).toContain('width: 48');
