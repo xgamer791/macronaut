@@ -1,7 +1,7 @@
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { DayKey, weekdayOf, weekDays } from '@/utils/date';
 import { DayProgress, WeekProgress, dayProgress, weekProgress } from '@/domain/aggregation';
-import { GoalConfig } from '@/domain/goals';
+import { DayType, GoalConfig, classifyDay } from '@/domain/goals';
 import { WeekStart } from '@/domain/types';
 import { NewActivityEntry } from '@/repositories/activityRepo';
 import { NewDiaryEntry } from '@/repositories/diaryRepo';
@@ -881,6 +881,16 @@ export function useDayProgress(date: DayKey): DayProgress | null {
     marks.data,
     burned,
   );
+}
+
+/** Training or rest for a date, under the goal config in effect then. */
+export function useDayType(date: DayKey): DayType | null {
+  const configs = useGoalConfigs();
+  const marks = useDayTypeMarks();
+  if (!configs.data || !marks.data) return null;
+  const config = pickConfig(date, configs.data);
+  if (!config) return null;
+  return classifyDay(date, config, marks.data);
 }
 
 /** Compute weekly progress for the week containing `date`. */

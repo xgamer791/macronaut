@@ -34,6 +34,7 @@ import { SLIDE_DURATION_MS, SLIDE_EASING } from '@/ui/motion/slideTiming';
 import { useTheme } from '@/ui/theme/ThemeProvider';
 import { radius, spacing, touchTarget } from '@/ui/theme/tokens';
 import { AppText } from './AppText';
+import { CalendarDayDetail } from './CalendarDayDetail';
 
 /** Gap from the screen edge to the first day circle. */
 const EDGE = 20;
@@ -49,6 +50,12 @@ export interface CalendarPanelProps {
   selected: DayKey;
   /** Panel heading. Defaults to `Calendar`. */
   title?: string;
+  /**
+   * Show everything recorded against the selected day beneath the calendar.
+   * A host that turns this on must leave the panel open on a pick, so days can
+   * be stepped through and read; a plain date picker leaves it off.
+   */
+  dayDetail?: boolean;
   onClose: () => void;
   onSelect: (date: DayKey) => void;
 }
@@ -64,6 +71,7 @@ export function CalendarPanel({
   visible,
   selected,
   title = 'Calendar',
+  dayDetail = false,
   onClose,
   onSelect,
 }: CalendarPanelProps) {
@@ -210,152 +218,167 @@ export function CalendarPanel({
             </Pressable>
           </View>
 
-          <View style={styles.body}>
-            {menu ? (
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="Close picker"
-                onPress={() => setMenu(null)}
-                style={[StyleSheet.absoluteFill, styles.menuScrim]}
-              />
-            ) : null}
+          <ScrollView
+            style={styles.scroll}
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+          >
+            <View style={styles.body}>
+              {menu ? (
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Close picker"
+                  onPress={() => setMenu(null)}
+                  style={[StyleSheet.absoluteFill, styles.menuScrim]}
+                />
+              ) : null}
 
-            <View style={styles.grid}>
-              {cells.map(({ key, inMonth }) => {
-                const isSelected = key === selected;
-                const isToday = key === today;
-                const tracked = inMonth && trackedDays.has(key);
-                const ring = isSelected
-                  ? colors.accent
-                  : tracked
+              <View style={styles.grid}>
+                {cells.map(({ key, inMonth }) => {
+                  const isSelected = key === selected;
+                  const isToday = key === today;
+                  const tracked = inMonth && trackedDays.has(key);
+                  const ring = isSelected
                     ? colors.accent
-                    : inMonth
-                      ? colors.borderStrong
-                      : 'transparent';
-                const text = isSelected
-                  ? colors.onAccent
-                  : tracked
-                    ? colors.accent
-                    : inMonth
-                      ? colors.textPrimary
-                      : colors.textMuted;
-                return (
-                  <Pressable
-                    key={key}
-                    accessibilityRole="button"
-                    accessibilityLabel={`${formatDayKey(key)}${tracked ? ', tracked' : ''}`}
-                    accessibilityState={{ selected: isSelected }}
-                    onPress={() => pick(key)}
-                    style={[styles.cell, { height: cellWidth }]}
-                  >
-                    <View
-                      style={[
-                        styles.circle,
-                        {
-                          width: circle,
-                          height: circle,
-                          borderRadius: circle / 2,
-                          borderColor: ring,
-                          borderWidth: tracked || isSelected ? 1.5 : 1,
-                          backgroundColor: isSelected ? colors.accent : 'transparent',
-                        },
-                      ]}
+                    : tracked
+                      ? colors.accent
+                      : inMonth
+                        ? colors.borderStrong
+                        : 'transparent';
+                  const text = isSelected
+                    ? colors.onAccent
+                    : tracked
+                      ? colors.accent
+                      : inMonth
+                        ? colors.textPrimary
+                        : colors.textMuted;
+                  return (
+                    <Pressable
+                      key={key}
+                      accessibilityRole="button"
+                      accessibilityLabel={`${formatDayKey(key)}${tracked ? ', tracked' : ''}`}
+                      accessibilityState={{ selected: isSelected }}
+                      onPress={() => pick(key)}
+                      style={[styles.cell, { height: cellWidth }]}
                     >
-                      <AppText
-                        variant="caption"
-                        weight={isSelected || tracked ? '600' : '400'}
-                        style={{ color: text }}
+                      <View
+                        style={[
+                          styles.circle,
+                          {
+                            width: circle,
+                            height: circle,
+                            borderRadius: circle / 2,
+                            borderColor: ring,
+                            borderWidth: tracked || isSelected ? 1.5 : 1,
+                            backgroundColor: isSelected ? colors.accent : 'transparent',
+                          },
+                        ]}
                       >
-                        {Number(key.slice(8))}
-                      </AppText>
-                      {isToday && !isSelected ? (
-                        <View style={[styles.todayDot, { backgroundColor: colors.accent }]} />
-                      ) : null}
-                    </View>
-                  </Pressable>
-                );
-              })}
-            </View>
-
-            <View style={styles.weekdayRow}>
-              {labels.map((label, i) => (
-                <View key={`${label}-${i}`} style={styles.weekdayCell}>
-                  <AppText variant="caption" style={{ color: colors.textSecondary }}>
-                    {label}
-                  </AppText>
-                </View>
-              ))}
-            </View>
-
-            <View style={styles.controls}>
-              <View style={[styles.stepper, { backgroundColor: colors.surfaceRaised }]}>
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel="Previous month"
-                  onPress={() => step(-1)}
-                  style={styles.stepperHit}
-                >
-                  <Ionicons name="chevron-back" size={18} color={colors.textPrimary} />
-                </Pressable>
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel="Next month"
-                  onPress={() => step(1)}
-                  style={styles.stepperHit}
-                >
-                  <Ionicons name="chevron-forward" size={18} color={colors.textPrimary} />
-                </Pressable>
+                        <AppText
+                          variant="caption"
+                          weight={isSelected || tracked ? '600' : '400'}
+                          style={{ color: text }}
+                        >
+                          {Number(key.slice(8))}
+                        </AppText>
+                        {isToday && !isSelected ? (
+                          <View style={[styles.todayDot, { backgroundColor: colors.accent }]} />
+                        ) : null}
+                      </View>
+                    </Pressable>
+                  );
+                })}
               </View>
 
-              <Dropdown
-                label={monthLabel(month)}
-                accessibilityLabel={`Month, ${monthLabel(month)}`}
-                wide
-                open={menu === 'month'}
-                onToggle={() => setMenu((m) => (m === 'month' ? null : 'month'))}
-                options={monthNames.map((name, i) => ({
-                  key: String(i),
-                  label: name,
-                  active: i === monthOf(month),
-                }))}
-                onPick={(key) => {
-                  setMenu(null);
-                  setMonth((m) => withMonth(m, Number(key)));
-                }}
-              />
+              <View style={styles.weekdayRow}>
+                {labels.map((label, i) => (
+                  <View key={`${label}-${i}`} style={styles.weekdayCell}>
+                    <AppText variant="caption" style={{ color: colors.textSecondary }}>
+                      {label}
+                    </AppText>
+                  </View>
+                ))}
+              </View>
 
-              <Dropdown
-                label={String(yearOf(month))}
-                accessibilityLabel={`Year, ${yearOf(month)}`}
-                open={menu === 'year'}
-                onToggle={() => setMenu((m) => (m === 'year' ? null : 'year'))}
-                options={years.map((year) => ({
-                  key: String(year),
-                  label: String(year),
-                  active: year === yearOf(month),
-                }))}
-                onPick={(key) => {
-                  setMenu(null);
-                  setMonth((m) => withYear(m, Number(key)));
-                }}
-              />
-            </View>
-          </View>
+              <View style={styles.controls}>
+                <View style={[styles.stepper, { backgroundColor: colors.surfaceRaised }]}>
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel="Previous month"
+                    onPress={() => step(-1)}
+                    style={styles.stepperHit}
+                  >
+                    <Ionicons name="chevron-back" size={18} color={colors.textPrimary} />
+                  </Pressable>
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel="Next month"
+                    onPress={() => step(1)}
+                    style={styles.stepperHit}
+                  >
+                    <Ionicons name="chevron-forward" size={18} color={colors.textPrimary} />
+                  </Pressable>
+                </View>
 
-          <View style={[styles.legend, { backgroundColor: colors.surface }]}>
-            <View style={styles.legendItem}>
-              <View style={[styles.legendRing, { borderColor: colors.accent, borderWidth: 1.5 }]} />
-              <AppText variant="caption" tone="secondary">
-                Tracked
-              </AppText>
+                <Dropdown
+                  label={monthLabel(month)}
+                  accessibilityLabel={`Month, ${monthLabel(month)}`}
+                  wide
+                  open={menu === 'month'}
+                  onToggle={() => setMenu((m) => (m === 'month' ? null : 'month'))}
+                  options={monthNames.map((name, i) => ({
+                    key: String(i),
+                    label: name,
+                    active: i === monthOf(month),
+                  }))}
+                  onPick={(key) => {
+                    setMenu(null);
+                    setMonth((m) => withMonth(m, Number(key)));
+                  }}
+                />
+
+                <Dropdown
+                  label={String(yearOf(month))}
+                  accessibilityLabel={`Year, ${yearOf(month)}`}
+                  open={menu === 'year'}
+                  onToggle={() => setMenu((m) => (m === 'year' ? null : 'year'))}
+                  options={years.map((year) => ({
+                    key: String(year),
+                    label: String(year),
+                    active: year === yearOf(month),
+                  }))}
+                  onPick={(key) => {
+                    setMenu(null);
+                    setMonth((m) => withYear(m, Number(key)));
+                  }}
+                />
+              </View>
             </View>
-            <View style={styles.legendItem}>
-              <View style={[styles.legendRing, { borderColor: colors.borderStrong }]} />
-              <AppText variant="caption" tone="secondary">
-                Untracked
-              </AppText>
+
+            <View style={[styles.legend, { backgroundColor: colors.surface }]}>
+              <View style={styles.legendItem}>
+                <View
+                  style={[styles.legendRing, { borderColor: colors.accent, borderWidth: 1.5 }]}
+                />
+                <AppText variant="caption" tone="secondary">
+                  Tracked
+                </AppText>
+              </View>
+              <View style={styles.legendItem}>
+                <View style={[styles.legendRing, { borderColor: colors.borderStrong }]} />
+                <AppText variant="caption" tone="secondary">
+                  Untracked
+                </AppText>
+              </View>
             </View>
-          </View>
+
+            {dayDetail ? (
+              <View style={styles.detail}>
+                <CalendarDayDetail date={selected} />
+              </View>
+            ) : null}
+          </ScrollView>
         </Animated.View>
       </View>
     </Modal>
@@ -509,9 +532,19 @@ const styles = StyleSheet.create({
     flex: 1,
     textAlign: 'center',
   },
+  scroll: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingBottom: spacing.xxl,
+  },
   body: {
     paddingHorizontal: EDGE,
     paddingTop: spacing.lg,
+  },
+  detail: {
+    paddingHorizontal: EDGE,
+    paddingTop: spacing.xl,
   },
   menuScrim: {
     zIndex: 1,

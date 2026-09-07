@@ -77,3 +77,82 @@ describe('calendar panel', () => {
     expect(panel).not.toMatch(/#[0-9a-fA-F]{6}'/);
   });
 });
+
+const detail = read('ui', 'components', 'CalendarDayDetail.tsx');
+const dashboard = read('ui', 'components', 'DashboardHeader.tsx');
+const schedule = read('app', 'training-schedule.tsx');
+const queries = read('state', 'queries.ts');
+
+/** The day section under the calendar. Its numbers all come from hooks that
+ * already exist, so the checks here are that it reads them rather than
+ * inventing any. */
+describe('calendar day detail', () => {
+  it('opens under the calendar for the screens that browse days, not the pickers', () => {
+    expect(schedule).toContain('dayDetail');
+    expect(dashboard).toContain('dayDetail');
+    // A date picker has no business carrying a day report.
+    expect(read('app', 'fasting.tsx')).not.toContain('dayDetail');
+    expect(read('app', '(tabs)', 'progress.tsx')).not.toContain('dayDetail');
+  });
+
+  it('keeps the panel open on a pick so days can be stepped through', () => {
+    expect(schedule).toContain('onSelect={setAnchor}');
+    expect(schedule).not.toMatch(/onSelect=\{\(date\) => \{[^}]*setCalendarOpen\(false\)/);
+    expect(dashboard).toContain('const selectDay = useCallback((next: DayKey) => changeDate(next)');
+  });
+
+  it('replaces the glass day summary it supersedes', () => {
+    expect(fs.existsSync(path.join(srcDir, 'ui', 'components', 'DayInfoPopup.tsx'))).toBe(false);
+    expect(dashboard).not.toContain('DayInfoPopup');
+    expect(index).not.toContain('DayInfoPopup');
+  });
+
+  it('scrolls the calendar and the day together', () => {
+    expect(panel).toContain('<ScrollView');
+    expect(panel).toContain('<CalendarDayDetail date={selected} />');
+  });
+
+  it('lays the day out in four tabs', () => {
+    expect(detail).toContain("{ value: 'macros', label: 'Macros' }");
+    expect(detail).toContain("{ value: 'meals', label: 'Meals' }");
+    expect(detail).toContain("{ value: 'training', label: 'Training' }");
+    expect(detail).toContain("{ value: 'recovery', label: 'Recovery' }");
+    expect(detail).toContain('accessibilityRole="tablist"');
+    expect(detail).toContain('accessibilityRole="tab"');
+  });
+
+  it('cross-fades rather than swapping the numbers under the reader', () => {
+    // Double-buffered: what is read is `shown`, never the incoming prop.
+    expect(detail).toContain('const [pending, setPending] = useState<DayView | null>(null);');
+    expect(detail).toContain('<DayTab date={shown.date} tab={shown.tab} />');
+    expect(detail).toContain('runOnJS(setShown)(pending);');
+    expect(detail).toContain('opacity: fade.value');
+    expect(detail).toContain('FADE_OUT_MS');
+    expect(detail).toContain('FADE_IN_MS');
+  });
+
+  it('reads every number from a real query rather than inventing one', () => {
+    for (const hook of [
+      'useDayProgress',
+      'useDiaryEntries',
+      'useActivityEntries',
+      'useTrainingSchedule',
+      'useDayNotes',
+      'useMealCategories',
+      'useDayType',
+    ]) {
+      expect(detail).toContain(hook);
+      expect(queries).toContain(`export function ${hook}(`);
+    }
+  });
+
+  it('says sleep is not connected instead of drawing a number for it', () => {
+    expect(detail).toContain('Apple Health');
+    expect(detail).not.toMatch(/sleepHours|hoursSlept|Math\.random/);
+  });
+
+  it('refills the rings and bars per day rather than once per screen', () => {
+    expect(detail).toContain('BarEntranceProvider');
+    expect(detail).toContain('pageKey={`calendar-day:${shown.date}:${shown.tab}`}');
+  });
+});

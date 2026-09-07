@@ -528,11 +528,9 @@ function TrainingScheduleScreen() {
         visible={calendarOpen}
         selected={anchor}
         title="Training Schedule"
+        dayDetail
         onClose={() => setCalendarOpen(false)}
-        onSelect={(date) => {
-          setAnchor(date);
-          setCalendarOpen(false);
-        }}
+        onSelect={setAnchor}
       />
     </Screen>
   );

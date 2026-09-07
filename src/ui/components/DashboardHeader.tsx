@@ -27,7 +27,6 @@ import {
 import { useTheme } from '@/ui/theme/ThemeProvider';
 import { spacing, touchTarget } from '@/ui/theme/tokens';
 import { AppText } from './AppText';
-import { DayInfoPopup } from './DayInfoPopup';
 import { DayNotesPopup } from './DayNotesPopup';
 import { CalendarPanel } from './CalendarPanel';
 
@@ -54,7 +53,6 @@ export function DashboardHeader({ date, onDateChange, right }: DashboardHeaderPr
   const week = useWeekProgress(date);
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [notesOpen, setNotesOpen] = useState(false);
-  const [dayInfoOpen, setDayInfoOpen] = useState(false);
 
   const weekKeys = useMemo(() => weekDays(date, weekStart), [date, weekStart]);
   const notesWeek = useDayNotesRange(weekKeys[0], weekKeys[weekKeys.length - 1]);
@@ -73,7 +71,6 @@ export function DashboardHeader({ date, onDateChange, right }: DashboardHeaderPr
 
   const title = formatDayKey(date);
   const isToday = date === todayKey();
-  const today = todayKey();
 
   const closeCalendar = useCallback(() => setCalendarOpen(false), []);
 
@@ -99,17 +96,9 @@ export function DashboardHeader({ date, onDateChange, right }: DashboardHeaderPr
     [onDateChange],
   );
 
-  /** Select a day; past days also open the day-info glass popup. */
-  const selectDay = useCallback(
-    (next: DayKey) => {
-      changeDate(next);
-      if (next < today) {
-        closeCalendar();
-        setDayInfoOpen(true);
-      }
-    },
-    [changeDate, today, closeCalendar],
-  );
+  /** Select a day. The calendar stays open on its own day summary, so a run of
+   * past days can be read without reopening it for each one. */
+  const selectDay = useCallback((next: DayKey) => changeDate(next), [changeDate]);
 
   return (
     <View style={styles.root}>
@@ -190,20 +179,12 @@ export function DashboardHeader({ date, onDateChange, right }: DashboardHeaderPr
       <CalendarPanel
         visible={calendarOpen}
         selected={date}
+        dayDetail
         onClose={closeCalendar}
         onSelect={selectDay}
       />
 
       <DayNotesPopup visible={notesOpen} date={date} onClose={() => setNotesOpen(false)} />
-      <DayInfoPopup
-        visible={dayInfoOpen}
-        date={date}
-        onClose={() => setDayInfoOpen(false)}
-        onEditNotes={() => {
-          setDayInfoOpen(false);
-          setNotesOpen(true);
-        }}
-      />
     </View>
   );
 }
