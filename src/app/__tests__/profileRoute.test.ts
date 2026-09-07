@@ -17,10 +17,7 @@ describe('profile routes', () => {
   });
 
   it('opens from the header avatar rather than settings', () => {
-    const header = fs.readFileSync(
-      path.join(srcDir, 'ui', 'components', 'AppHeader.tsx'),
-      'utf8',
-    );
+    const header = fs.readFileSync(path.join(srcDir, 'ui', 'components', 'AppHeader.tsx'), 'utf8');
     expect(header).toContain("router.push('/profile')");
     expect(header).toContain('Open your profile');
     expect(read('profile.tsx')).not.toContain("router.push('/settings')");
@@ -92,7 +89,7 @@ describe('profile routes', () => {
     expect(own).not.toContain('VisibilityCard');
     expect(own).not.toContain('Your profile is public');
     expect(own).not.toContain('Make private');
-    expect(own).toContain('label={data.isPublic ? \'Public\' : \'Private\'}');
+    expect(own).toContain("label={data.isPublic ? 'Public' : 'Private'}");
   });
 
   it('opens Photos and Groups from the profile action row', () => {
@@ -110,6 +107,27 @@ describe('profile routes', () => {
     expect(layout).toContain('name="groups"');
   });
 
+  it('shows a six-photo preview above posts on both profile pages', () => {
+    const own = read('profile.tsx');
+    const publicPage = read(path.join('u', '[handle].tsx'));
+    const block = fs.readFileSync(
+      path.join(srcDir, 'ui', 'components', 'ProfilePhotoBlock.tsx'),
+      'utf8',
+    );
+
+    expect(block).toContain('PHOTO_PREVIEW_LIMIT = 6');
+    expect(block).toContain('photos.slice(0, PHOTO_PREVIEW_LIMIT)');
+    expect(block).toContain('title="See all photos"');
+    expect(block).toContain("flexWrap: 'wrap'");
+    expect(own).toContain('useMyPhotos');
+    expect(publicPage).toContain('usePublicPhotos');
+
+    for (const page of [own, publicPage]) {
+      expect(page).toContain('<ProfilePhotoBlock');
+      expect(page.indexOf('<ProfilePhotoBlock')).toBeLessThan(page.indexOf('title="Posts"'));
+    }
+  });
+
   it('opens a full-screen viewer with like, comment and share', () => {
     const wall = read('photos.tsx');
     expect(wall).toContain('PhotoViewer');
@@ -117,7 +135,10 @@ describe('profile routes', () => {
     expect(wall).toContain('useAddPhotoComment');
     expect(wall).toContain('photoShareUrl');
     expect(wall).not.toContain('<Sheet');
-    const viewer = fs.readFileSync(path.join(srcDir, 'ui', 'components', 'PhotoViewer.tsx'), 'utf8');
+    const viewer = fs.readFileSync(
+      path.join(srcDir, 'ui', 'components', 'PhotoViewer.tsx'),
+      'utf8',
+    );
     expect(viewer).toContain('contentFit="contain"');
     expect(viewer).toContain('contentPosition="center"');
     expect(viewer).toContain("justifyContent: 'center'");
@@ -131,7 +152,7 @@ describe('profile routes', () => {
     expect(viewer).toContain('focusColor={colors.accent}');
     expect(viewer).not.toContain('LIKE_BLUE');
     expect(viewer).toContain('ACTION_GAP = spacing.sm');
-    expect(viewer).toContain("animationType=\"slide\"");
+    expect(viewer).toContain('animationType="slide"');
     expect(viewer).toContain("backgroundColor: '#000000'");
   });
 

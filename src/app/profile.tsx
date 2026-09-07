@@ -21,6 +21,7 @@ import {
   ListRow,
   ProfileHeader,
   ProfileHeaderChrome,
+  ProfilePhotoBlock,
   ProfilePostList,
   Screen,
   SectionHeader,
@@ -32,6 +33,7 @@ import { pickImage } from '@/services/media/pickImage';
 import {
   useAddProfilePost,
   useDeleteProfilePost,
+  useMyPhotos,
   useMyProfile,
   useMyProfilePosts,
   useSetProfileImage,
@@ -72,6 +74,7 @@ function OwnProfile() {
   const router = useRouter();
   const { colors } = useTheme();
   const profile = useMyProfile();
+  const photos = useMyPhotos();
   const posts = useMyProfilePosts();
 
   const setImage = useSetProfileImage();
@@ -223,6 +226,16 @@ function OwnProfile() {
           ) : null}
 
           <View style={styles.body}>
+            <ProfilePhotoBlock
+              photos={photos.data ?? []}
+              loading={photos.isLoading}
+              canSeePrivate
+              onOpenPhoto={(photo) =>
+                router.push({ pathname: '/photos', params: { photo: photo.id } })
+              }
+              onSeeAll={() => router.push('/photos')}
+            />
+
             <SectionHeader
               title="Posts"
               right={
