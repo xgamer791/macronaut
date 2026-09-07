@@ -6,6 +6,7 @@ import { WeekStart } from '@/domain/types';
 import { NewActivityEntry } from '@/repositories/activityRepo';
 import { NewDiaryEntry } from '@/repositories/diaryRepo';
 import { ProfileImageKind, ProfilePatch } from '@/repositories/profileRepo';
+import type { PickedAttachment } from '@/services/media/pickedAttachment';
 import { TrainingScheduleDayInput } from '@/repositories/trainingScheduleRepo';
 import { DiaryEntry, MealCategory } from '@/repositories/types';
 import { useRepos } from './AppProvider';
@@ -491,7 +492,19 @@ export function useSendChatMessage() {
   const { chats } = useRepos();
   const invalidate = useInvalidateChats();
   return useMutation({
-    mutationFn: (input: { id: string; body: string }) => chats.send(input.id, input.body),
+    mutationFn: async (input: { id: string; body: string; attachment?: PickedAttachment }) => {
+      const picked = input.attachment;
+      if (!picked) return chats.send(input.id, input.body);
+      // Upload first: the message row is only written once its file exists,
+      // so a failed upload never leaves an attachment-shaped hole in the thread.
+      const mediaId = await chats.upload(picked.blob);
+      return chats.send(input.id, input.body, {
+        mediaId,
+        kind: picked.kind,
+        width: picked.width,
+        height: picked.height,
+      });
+    },
     onSuccess: (_message, input) => invalidate(input.id),
   });
 }

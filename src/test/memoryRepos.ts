@@ -4,7 +4,13 @@
  * functions; these fakes only need the interface contract. */
 import { sumNutrition, scaleNutrition } from '@/domain/nutrition';
 import { AccountRepo } from '@/repositories/accountRepo';
-import { ChatMessage, ChatRepo, ChatSummary, ChatThread } from '@/repositories/chatRepo';
+import {
+  ChatMessage,
+  ChatPerson,
+  ChatRepo,
+  ChatSummary,
+  ChatThread,
+} from '@/repositories/chatRepo';
 import { DayType, DayTypeMarks, GoalConfig, configForDate } from '@/domain/goals';
 import { Nutrition, UnitSystem, WeekStart } from '@/domain/types';
 import { ActivityRepo, NewActivityEntry } from '@/repositories/activityRepo';
@@ -829,6 +835,14 @@ export function createMemoryGroupRepo(): GroupRepo {
 export function createMemoryChatRepo(): ChatRepo {
   const chats: ChatSummary[] = [];
   const messages = new Map<string, ChatMessage[]>();
+  /** Stand-in storage: an upload just hands back an id the send can quote. */
+  const uploads = new Map<string, Blob>();
+  const me: ChatPerson = {
+    id: 'me',
+    handle: null,
+    displayName: 'You',
+    friendship: 'friends',
+  };
 
   return {
     async list() {
@@ -856,10 +870,19 @@ export function createMemoryChatRepo(): ChatRepo {
     async thread(id) {
       const chat = chats.find((row) => row.id === id);
       if (!chat) return null;
-      const thread: ChatThread = { ...clone(chat), messages: clone(messages.get(id) ?? []) };
+      const thread: ChatThread = {
+        ...clone(chat),
+        me: clone(me),
+        messages: clone(messages.get(id) ?? []),
+      };
       return thread;
     },
-    async send(id, body) {
+    async upload(file) {
+      const id = newId();
+      uploads.set(id, file);
+      return id;
+    },
+    async send(id, body, attachment) {
       const chat = chats.find((row) => row.id === id);
       if (!chat) throw new Error('Chat not available');
       const message: ChatMessage = {
@@ -867,6 +890,16 @@ export function createMemoryChatRepo(): ChatRepo {
         body: body.trim(),
         createdAt: nowIso(),
         isMine: true,
+        ...(attachment
+          ? {
+              media: {
+                url: `memory://${attachment.mediaId}`,
+                kind: attachment.kind,
+                width: attachment.width,
+                height: attachment.height,
+              },
+            }
+          : {}),
       };
       messages.get(id)?.push(message);
       chat.lastMessage = message;

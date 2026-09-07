@@ -267,12 +267,20 @@ export default defineSchema({
     .index('by_user_one_updated', ['userOneId', 'updatedAt'])
     .index('by_user_two_updated', ['userTwoId', 'updatedAt']),
 
-  /** Messages belong to a direct chat and survive logout with the account. */
+  /** Messages belong to a direct chat and survive logout with the account.
+   * A message carries text, one attachment, or both; `media*` is unset on
+   * every message sent before attachments existed. */
   chatMessages: defineTable({
     chatId: v.id('directChats'),
     senderId: v.id('users'),
     body: v.string(),
     createdAt: v.string(),
+    mediaId: v.optional(v.id('_storage')),
+    mediaKind: v.optional(v.union(v.literal('image'), v.literal('video'))),
+    /** Pixel size of the original, so a bubble reserves the right shape
+     * before the file loads and the thread does not jump. */
+    mediaWidth: v.optional(v.number()),
+    mediaHeight: v.optional(v.number()),
   })
     .index('by_chat_created', ['chatId', 'createdAt'])
     .index('by_sender', ['senderId']),

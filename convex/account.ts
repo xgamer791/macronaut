@@ -143,7 +143,9 @@ async function purgeUserData(ctx: MutationCtx, userId: Id<'users'>, budget: numb
           .query('chatMessages')
           .withIndex('by_chat_created', (q) => q.eq('chatId', chat._id))
           .collect();
-        for (const message of messages) rows.push({ _id: message._id });
+        // A message's attachment is deleted with it, so clearing an account
+        // never leaves its photos and clips behind in storage.
+        for (const message of messages) rows.push({ _id: message._id, files: [message.mediaId] });
         rows.push({ _id: chat._id });
       }
       return rows;

@@ -9,6 +9,38 @@ const CHAT_LIMIT = 100;
 const PEOPLE_LIMIT = 40;
 const MAX_MESSAGE_LENGTH = 2000;
 
+const mediaKind = v.union(v.literal('image'), v.literal('video'));
+
+/** What a chat row shows for a message that is only an attachment. */
+function mediaPreview(kind: 'image' | 'video'): string {
+  return kind === 'video' ? 'Video' : 'Photo';
+}
+
+/** The client shape of one message. `media.url` is a signed storage URL, so
+ * it is resolved per read rather than stored. */
+async function messageView(
+  ctx: QueryCtx | MutationCtx,
+  message: Doc<'chatMessages'>,
+  viewerId: Id<'users'>,
+) {
+  const url = message.mediaId ? await ctx.storage.getUrl(message.mediaId) : null;
+  return {
+    id: message._id as string,
+    body: message.body,
+    createdAt: message.createdAt,
+    isMine: message.senderId === viewerId,
+    media:
+      url && message.mediaKind
+        ? {
+            url,
+            kind: message.mediaKind,
+            width: message.mediaWidth,
+            height: message.mediaHeight,
+          }
+        : undefined,
+  };
+}
+
 function pairKey(a: Id<'users'>, b: Id<'users'>): string {
   return [a as string, b as string].sort().join(':');
 }
@@ -148,14 +180,7 @@ async function summary(ctx: QueryCtx | MutationCtx, chat: Doc<'directChats'>, us
   return {
     id: chat._id as string,
     peer,
-    lastMessage: last
-      ? {
-          id: last._id as string,
-          body: last.body,
-          createdAt: last.createdAt,
-          isMine: last.senderId === userId,
-        }
-      : null,
+    lastMessage: last ? await messageView(ctx, last, userId) : null,
     unreadCount: await unreadCount(ctx, chat, userId),
     createdAt: chat.createdAt,
     updatedAt: chat.updatedAt,
@@ -289,15 +314,16 @@ export const thread = query({
       .withIndex('by_chat_created', (q) => q.eq('chatId', id))
       .order('desc')
       .take(MESSAGE_LIMIT);
-    const messages = newest.reverse().map((message) => ({
-      id: message._id as string,
-      body: message.body,
-      createdAt: message.createdAt,
-      isMine: message.senderId === userId,
-    }));
+    const messages = await Promise.all(
+      newest.reverse().map((message) => messageView(ctx, message, userId)),
+    );
+    // The thread draws the viewer's own picture beside their messages, so it
+    // ships their identity rather than making the screen fetch it again.
+    const me = await personView(ctx, userId, userId);
     return {
       id: chat._id as string,
       peer,
+      me,
       messages,
       unreadCount: await unreadCount(ctx, chat, userId),
       createdAt: chat.createdAt,
@@ -306,32 +332,74 @@ export const thread = query({
   },
 });
 
+/** Where a picked photo or clip is PUT before `send` references it. */
+export const generateUploadUrl = mutation({
+  args: {},
+  handler: async (ctx) => {
+    await requireUserId(ctx);
+    return ctx.storage.generateUploadUrl();
+  },
+});
+
 export const send = mutation({
-  args: { id: v.id('directChats'), body: v.string() },
-  handler: async (ctx, { id, body }) => {
+  args: {
+    id: v.id('directChats'),
+    body: v.string(),
+    mediaId: v.optional(v.id('_storage')),
+    mediaKind: v.optional(mediaKind),
+    mediaWidth: v.optional(v.number()),
+    mediaHeight: v.optional(v.number()),
+  },
+  handler: async (ctx, { id, body, mediaId, mediaKind: kind, mediaWidth, mediaHeight }) => {
     const userId = await requireUserId(ctx);
     const chat = await ctx.db.get(id);
     if (!chat || !isParticipant(chat, userId)) throw new ConvexError('Chat not available');
     if ((await friendshipState(ctx, userId, peerId(chat, userId))) !== 'friends') {
       throw new ConvexError('You must be friends before sending a message');
     }
+    // An attachment carries the message on its own, so text is only required
+    // when there is nothing else to send.
+    const attached = mediaId && kind ? { mediaId, kind } : null;
     const trimmed = body.trim().slice(0, MAX_MESSAGE_LENGTH);
-    if (!trimmed) throw new ConvexError('Write a message first');
+    if (!trimmed && !attached) throw new ConvexError('Write a message first');
     const ts = nowIso();
-    const messageId = await ctx.db.insert('chatMessages', {
+    const doc = {
       chatId: id,
       senderId: userId,
       body: trimmed,
       createdAt: ts,
-    });
+      ...(attached
+        ? {
+            mediaId: attached.mediaId,
+            mediaKind: attached.kind,
+            mediaWidth: positive(mediaWidth),
+            mediaHeight: positive(mediaHeight),
+          }
+        : {}),
+    };
+    const messageId = await ctx.db.insert('chatMessages', doc);
     await ctx.db.patch(id, {
       updatedAt: ts,
       ...(chat.userOneId === userId ? { userOneReadAt: ts } : { userTwoReadAt: ts }),
     });
-    await addChatNotification(ctx, peerId(chat, userId), userId, id, trimmed, ts);
-    return { id: messageId as string, body: trimmed, createdAt: ts, isMine: true };
+    await addChatNotification(
+      ctx,
+      peerId(chat, userId),
+      userId,
+      id,
+      trimmed || mediaPreview(attached!.kind),
+      ts,
+    );
+    return messageView(ctx, { _id: messageId, _creationTime: Date.now(), ...doc }, userId);
   },
 });
+
+/** A pixel dimension worth storing, or nothing. */
+function positive(value: number | undefined): number | undefined {
+  return typeof value === 'number' && Number.isFinite(value) && value > 0
+    ? Math.round(value)
+    : undefined;
+}
 
 export const markRead = mutation({
   args: { id: v.id('directChats') },

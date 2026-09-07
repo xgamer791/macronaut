@@ -1,7 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import type { ConvexCaller } from '../../src/repositories/convexCall';
 import { createRepos } from '../../src/state/AppProvider';
-import { backend, signIn } from './helpers';
+import { backend, signIn, tick } from './helpers';
+
+/** A file already in storage, standing in for a completed upload. */
+function storedFile(t: ReturnType<typeof backend>, type: string) {
+  return t.run(async (ctx) => ctx.storage.store(new Blob(['bytes'], { type })));
+}
 
 describe('direct chats', () => {
   it('lists contacts, searches public profiles and persists messages between sessions', async () => {
@@ -203,6 +208,69 @@ describe('direct chats', () => {
     await expect(alice.repos.chats.send(chat.id, 'No longer friends')).rejects.toThrow(/friends/i);
   });
 
+  it('sends a photo or a clip, and shows an attachment-only message in the chat list', async () => {
+    const t = backend();
+    const alice = await signIn(t, 'alice@example.com');
+    const bob = await signIn(t, 'bob@example.com');
+    await alice.repos.profile.update({ handle: 'alice_runner', isPublic: true });
+    await bob.repos.profile.update({ handle: 'bob_lifts', isPublic: true });
+    await alice.repos.profile.setFollow('bob_lifts', true);
+    await bob.repos.profile.setFollow('alice_runner', true);
+    const chat = await alice.repos.chats.open(bob.userId);
+
+    const imageId = await storedFile(t, 'image/jpeg');
+    const videoId = await storedFile(t, 'video/mp4');
+
+    // A picture with a caption, then a clip on its own.
+    await alice.repos.chats.send(chat.id, 'Post-run', {
+      mediaId: imageId,
+      kind: 'image',
+      width: 1200,
+      height: 900,
+    });
+    await tick();
+    await alice.repos.chats.send(chat.id, '', { mediaId: videoId, kind: 'video' });
+
+    const thread = await bob.repos.chats.thread(chat.id);
+    expect(thread?.messages).toHaveLength(2);
+    expect(thread?.messages[0]).toMatchObject({
+      body: 'Post-run',
+      media: { kind: 'image', width: 1200, height: 900 },
+    });
+    expect(thread?.messages[0]?.media?.url).toEqual(expect.any(String));
+    expect(thread?.messages[1]).toMatchObject({ body: '', media: { kind: 'video' } });
+
+    // The thread names the viewer too, so their own picture sits beside
+    // their messages.
+    expect(thread?.me).toMatchObject({ id: bob.userId, handle: 'bob_lifts' });
+
+    // A message that is only an attachment still reads as something in the
+    // chat list and in the bell.
+    const list = await bob.repos.chats.list();
+    expect(list[0]?.lastMessage).toMatchObject({ body: '', media: { kind: 'video' } });
+    const bell = await bob.repos.notifications.list();
+    expect(bell.items[0]).toMatchObject({ body: 'Video' });
+  });
+
+  it('refuses an empty message, and keeps attachments inside the friendship rule', async () => {
+    const t = backend();
+    const alice = await signIn(t, 'alice@example.com');
+    const bob = await signIn(t, 'bob@example.com');
+    await alice.repos.profile.update({ handle: 'alice_runner', isPublic: true });
+    await bob.repos.profile.update({ handle: 'bob_lifts', isPublic: true });
+    await alice.repos.profile.setFollow('bob_lifts', true);
+    await bob.repos.profile.setFollow('alice_runner', true);
+    const chat = await alice.repos.chats.open(bob.userId);
+
+    await expect(alice.repos.chats.send(chat.id, '   ')).rejects.toThrow(/write a message/i);
+
+    const imageId = await storedFile(t, 'image/jpeg');
+    await alice.repos.profile.setFollow('bob_lifts', false);
+    await expect(
+      alice.repos.chats.send(chat.id, '', { mediaId: imageId, kind: 'image' }),
+    ).rejects.toThrow(/friends/i);
+  });
+
   it('removes the conversation and its messages when either account clears its data', async () => {
     const t = backend();
     const alice = await signIn(t, 'alice@example.com');
@@ -214,9 +282,14 @@ describe('direct chats', () => {
     const chat = await alice.repos.chats.open(bob.userId);
     await alice.repos.chats.send(chat.id, 'Stored in Convex');
 
+    // An attachment goes with the message, rather than being left in storage.
+    const imageId = await storedFile(t, 'image/jpeg');
+    await alice.repos.chats.send(chat.id, '', { mediaId: imageId, kind: 'image' });
+
     await alice.repos.account.deleteAllData();
     expect(await t.run(async (ctx) => ctx.db.query('directChats').collect())).toEqual([]);
     expect(await t.run(async (ctx) => ctx.db.query('chatMessages').collect())).toEqual([]);
+    expect(await t.run(async (ctx) => ctx.db.system.query('_storage').collect())).toEqual([]);
     expect(await bob.repos.chats.list()).toEqual([]);
   });
 });

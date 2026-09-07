@@ -132,11 +132,17 @@ function ChatList() {
   );
 }
 
+/** What a row shows for the last message. An attachment sent on its own has
+ * no text, so it is named instead of leaving the row blank. */
+function previewOf(last: ChatSummary['lastMessage']): string {
+  if (!last) return 'Conversation started';
+  const body = last.body || (last.media?.kind === 'video' ? 'Video' : last.media ? 'Photo' : '');
+  return `${last.isMine ? 'You: ' : ''}${body}`;
+}
+
 function ChatRow({ chat, onPress }: { chat: ChatSummary; onPress: () => void }) {
   const { colors } = useTheme();
-  const preview = chat.lastMessage
-    ? `${chat.lastMessage.isMine ? 'You: ' : ''}${chat.lastMessage.body}`
-    : 'Conversation started';
+  const preview = previewOf(chat.lastMessage);
 
   return (
     <Pressable
