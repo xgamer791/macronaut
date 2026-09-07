@@ -21,7 +21,6 @@ const GLYPH_INSET = (touchTarget - GLYPH) / 2;
 /** The watch is a photo, not a line glyph, so it needs a slightly wider
  * circle to stay legible at the same optical weight. */
 const WATCH_CIRCLE = 28;
-const WATCH_RING = WATCH_CIRCLE + 8;
 const PLUS = 30;
 
 export interface AppHeaderProps {
@@ -125,14 +124,14 @@ function useBreathing(active: boolean) {
       Animated.sequence([
         Animated.timing(pulse, {
           toValue: 1,
-          duration: 850,
-          easing: Easing.inOut(Easing.quad),
+          duration: 1400,
+          easing: Easing.inOut(Easing.sin),
           useNativeDriver: true,
         }),
         Animated.timing(pulse, {
           toValue: 0,
-          duration: 850,
-          easing: Easing.inOut(Easing.quad),
+          duration: 1400,
+          easing: Easing.inOut(Easing.sin),
           useNativeDriver: true,
         }),
       ]),
@@ -143,13 +142,13 @@ function useBreathing(active: boolean) {
   return pulse;
 }
 
-/** Header Watch — opens the Apple Health page. Pulses red while disconnected. */
+/** Header Watch — opens the Apple Health page. The red LED breathes while
+ * disconnected; there is no ring around the watch itself. */
 function WatchButton() {
   const router = useRouter();
   const connected = isAppleWatchConnected();
   const pulse = useBreathing(!connected);
   const inset = (touchTarget - WATCH_CIRCLE) / 2;
-  const ringInset = (touchTarget - WATCH_RING) / 2;
   const dotOffset = inset + (WATCH_CIRCLE / 2) * (1 - Math.SQRT1_2);
 
   return (
@@ -167,20 +166,6 @@ function WatchButton() {
       hitSlop={4}
       style={styles.hit}
     >
-      {!connected ? (
-        <Animated.View
-          pointerEvents="none"
-          style={[
-            styles.watchRing,
-            {
-              top: ringInset,
-              left: ringInset,
-              opacity: pulse.interpolate({ inputRange: [0, 1], outputRange: [0.22, 0.92] }),
-              transform: [{ scale: pulse.interpolate({ inputRange: [0, 1], outputRange: [1, 1.16] }) }],
-            },
-          ]}
-        />
-      ) : null}
       <View
         style={[styles.glyphSlot, { top: inset, left: inset, width: WATCH_CIRCLE, height: WATCH_CIRCLE }]}
         pointerEvents="none"
@@ -192,32 +177,19 @@ function WatchButton() {
       {connected ? (
         <View style={[styles.dot, { top: dotOffset, right: dotOffset, backgroundColor: NOTIFY_DOT }]} />
       ) : (
-        <>
-          <Animated.View
-            pointerEvents="none"
-            style={[
-              styles.dotHalo,
-              {
-                top: dotOffset,
-                right: dotOffset,
-                opacity: pulse.interpolate({ inputRange: [0, 1], outputRange: [0.55, 0] }),
-                transform: [{ scale: pulse.interpolate({ inputRange: [0, 1], outputRange: [1, 2.6] }) }],
-              },
-            ]}
-          />
-          <Animated.View
-            pointerEvents="none"
-            style={[
-              styles.dot,
-              {
-                top: dotOffset,
-                right: dotOffset,
-                backgroundColor: WATCH_DOT,
-                transform: [{ scale: pulse.interpolate({ inputRange: [0, 1], outputRange: [1, 1.22] }) }],
-              },
-            ]}
-          />
-        </>
+        <Animated.View
+          pointerEvents="none"
+          style={[
+            styles.dot,
+            {
+              top: dotOffset,
+              right: dotOffset,
+              backgroundColor: WATCH_DOT,
+              opacity: pulse.interpolate({ inputRange: [0, 1], outputRange: [0.55, 1] }),
+              transform: [{ scale: pulse.interpolate({ inputRange: [0, 1], outputRange: [0.92, 1.08] }) }],
+            },
+          ]}
+        />
       )}
     </Pressable>
   );
@@ -344,25 +316,6 @@ const styles = StyleSheet.create({
   watchImg: {
     width: WATCH_CIRCLE,
     height: WATCH_CIRCLE,
-  },
-  watchRing: {
-    position: 'absolute',
-    width: WATCH_RING,
-    height: WATCH_RING,
-    borderRadius: WATCH_RING / 2,
-    borderWidth: 2,
-    borderColor: WATCH_DOT,
-    zIndex: 0,
-  },
-  dotHalo: {
-    position: 'absolute',
-    width: 7,
-    height: 7,
-    borderRadius: 3.5,
-    marginTop: -3.5,
-    marginRight: -3.5,
-    backgroundColor: WATCH_DOT,
-    zIndex: 1,
   },
   dot: {
     position: 'absolute',
