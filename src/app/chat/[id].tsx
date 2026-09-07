@@ -245,9 +245,7 @@ export function ConversationView({
   const { colors } = useTheme();
   const scroll = useRef<ScrollView>(null);
   const {
-    wrapRef: composerWrapRef,
     paddingBottom: composerPad,
-    shift: composerShift,
     onFocus: onComposerFocus,
     onBlur: onComposerBlur,
   } = useComposerKeyboardGap(Math.max(insets.bottom, spacing.sm));
@@ -429,13 +427,11 @@ export function ConversationView({
 
       {data.peer.friendship === 'friends' ? (
         <View
-          ref={composerWrapRef}
           style={[
             styles.composerWrap,
             {
               backgroundColor: colors.background,
               paddingBottom: composerPad,
-              transform: [{ translateY: composerShift }],
             },
           ]}
         >
