@@ -122,8 +122,9 @@ export function PhotoViewer({
             {photo.imageUrl ? (
               <Image
                 source={{ uri: photo.imageUrl }}
-                style={StyleSheet.absoluteFill}
+                style={styles.photo}
                 contentFit="contain"
+                contentPosition="center"
                 accessibilityIgnoresInvertColors
               />
             ) : null}
@@ -379,6 +380,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  photo: {
+    width: '100%',
+    height: '100%',
+  },
   top: {
     position: 'absolute',
     top: 0,
@@ -458,6 +463,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.md,
     gap: spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: '#262C34',
   },
   menuRow: {
     minHeight: touchTarget,

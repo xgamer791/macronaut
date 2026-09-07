@@ -81,6 +81,7 @@ describe('profile routes', () => {
     expect(wall).not.toContain('<Sheet');
     const viewer = fs.readFileSync(path.join(srcDir, 'ui', 'components', 'PhotoViewer.tsx'), 'utf8');
     expect(viewer).toContain('contentFit="contain"');
+    expect(viewer).toContain('contentPosition="center"');
     expect(viewer).toContain("justifyContent: 'center'");
     expect(viewer).toContain('Like photo');
     expect(viewer).toContain('Comment on photo');
