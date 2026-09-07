@@ -22,6 +22,9 @@ describe('home tools and fasting route', () => {
     expect(launcher).toContain("href: '/add'");
     expect(launcher).toContain("href: '/activity'");
     expect(launcher).toContain('accessibilityState={{ expanded: open }}');
+    expect(launcher).toContain('bottom: insets.bottom + 53');
+    expect(launcher).toContain('width: 48');
+    expect(launcher).toContain('height: 48');
   });
 
   it('registers a themed fasting screen with exact dates, times, and the requested presets', () => {
