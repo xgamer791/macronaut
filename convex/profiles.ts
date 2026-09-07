@@ -382,10 +382,14 @@ async function followRow(
 }
 
 /**
- * Follow or unfollow a public profile by handle. The follow row is owned by
- * the caller (`userId` is them), so this is not a write to someone else's
- * data — it is a write about them. Private profiles and your own page both
- * refuse, and those two answers look the same to the client.
+ * Follow or unfollow a profile by handle — the friend request Macronaut is
+ * built on. The follow row is owned by the caller (`userId` is them), so this
+ * is not a write to someone else's data, it is a write about them.
+ *
+ * A private page is still a person you can befriend: naming their exact
+ * handle is the request, and what comes back is only the identity the request
+ * was made against. Their page contents stay private until they make the page
+ * public, exactly as before. Your own page refuses.
  */
 export const setFollow = mutation({
   args: { handle: v.string(), follow: v.boolean() },
@@ -398,7 +402,7 @@ export const setFollow = mutation({
           .withIndex('by_handle', (q) => q.eq('handleLower', wanted))
           .first()
       : null;
-    if (!row || row.userId === userId || !row.isPublic) {
+    if (!row || row.userId === userId) {
       throw new ConvexError('Profile not available');
     }
 
@@ -422,6 +426,17 @@ export const setFollow = mutation({
       await removeFriendRequestNotification(ctx, row.userId, userId);
     }
 
-    return profileView(ctx, row, { isOwner: false, viewerId: userId });
+    const view = await profileView(ctx, row, { isOwner: false, viewerId: userId });
+    // Following a private page does not open it. The follower gets the counts
+    // their own action changed and the identity card, never the contents.
+    return row.isPublic
+      ? view
+      : {
+          ...view,
+          bio: undefined,
+          location: undefined,
+          primarySport: undefined,
+          bannerUrl: undefined,
+        };
   },
 });

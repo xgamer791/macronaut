@@ -1,10 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
-import { ActivityIndicator, Platform, Pressable, StyleSheet, TextInput, View } from 'react-native';
-import type { ChatPerson } from '@/repositories/chatRepo';
-import { useChatPeople, useOpenChat, useSetProfileFollow } from '@/state/queries';
-import { AppText, ChatPersonRow, EmptyState, Screen, ScreenHeader } from '@/ui/components';
+import { Platform, Pressable, StyleSheet, TextInput, View } from 'react-native';
+import { AppText, ChatPeopleList, EmptyState, Screen, ScreenHeader } from '@/ui/components';
 import { useTheme } from '@/ui/theme/ThemeProvider';
 import { radius, spacing, touchTarget, type } from '@/ui/theme/tokens';
 
@@ -13,41 +10,9 @@ export default function NewChatScreen() {
 }
 
 function PeopleList() {
-  const router = useRouter();
   const { colors } = useTheme();
   const [search, setSearch] = useState('');
-  const [opening, setOpening] = useState<string | null>(null);
-  const [friending, setFriending] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const people = useChatPeople(search);
-  const openChat = useOpenChat();
-  const setFriend = useSetProfileFollow();
   const searching = Boolean(search.trim());
-
-  async function select(person: ChatPerson) {
-    if (person.friendship !== 'friends') return;
-    setOpening(person.handle);
-    setError(null);
-    try {
-      const chat = await openChat.mutateAsync(person.handle);
-      router.replace({ pathname: '/chat/[id]', params: { id: chat.id } });
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Could not start that chat.');
-      setOpening(null);
-    }
-  }
-
-  async function addFriend(person: ChatPerson) {
-    setFriending(person.handle);
-    setError(null);
-    try {
-      await setFriend.mutateAsync({ handle: person.handle, follow: true });
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Could not update that friend request.');
-    } finally {
-      setFriending(null);
-    }
-  }
 
   return (
     <Screen padded={false}>
@@ -77,44 +42,26 @@ function PeopleList() {
         </View>
       </View>
 
-      <AppText variant="caption" weight="700" tone="secondary" style={styles.sectionLabel}>
-        {searching ? 'PEOPLE ON MACRONAUT' : 'CONTACTS'}
-      </AppText>
+      <ChatPeopleList
+        search={search}
+        navigate="replace"
+        label={searching ? 'PEOPLE ON MACRONAUT' : 'CONTACTS'}
+        empty={
+          <EmptyState
+            title={searching ? 'No people found' : 'No contacts yet'}
+            body={
+              searching
+                ? 'Search the whole @handle to find someone whose profile page is private.'
+                : 'Search for someone on Macronaut to start your first conversation.'
+            }
+          />
+        }
+      />
 
-      {error ? (
-        <AppText variant="caption" tone="danger" style={styles.error}>
-          {error}
+      {searching ? null : (
+        <AppText variant="caption" tone="muted" style={styles.hint}>
+          Add someone as a friend, and message them once they accept.
         </AppText>
-      ) : null}
-
-      {people.isLoading ? (
-        <View style={styles.loading}>
-          <ActivityIndicator color={colors.accent} />
-        </View>
-      ) : !people.data?.length ? (
-        <EmptyState
-          title={searching ? 'No people found' : 'No contacts yet'}
-          body={
-            searching
-              ? 'Try a different name or @handle.'
-              : 'Search for someone on Macronaut to start your first conversation.'
-          }
-        />
-      ) : (
-        <View>
-          {people.data.map((person) => (
-            <ChatPersonRow
-              key={person.handle}
-              person={person}
-              busy={opening === person.handle || friending === person.handle}
-              disabled={opening !== null || friending !== null}
-              onProfile={() => router.push(`/u/${person.handle}`)}
-              onAddFriend={() => void addFriend(person)}
-              onAcceptFriend={() => void addFriend(person)}
-              onMessage={() => void select(person)}
-            />
-          ))}
-        </View>
       )}
     </Screen>
   );
@@ -146,18 +93,9 @@ const styles = StyleSheet.create({
       default: {},
     }),
   },
-  sectionLabel: {
+  hint: {
     paddingHorizontal: spacing.lg,
-    paddingTop: spacing.sm,
-    paddingBottom: spacing.sm,
-    letterSpacing: 0.5,
-  },
-  loading: {
-    paddingVertical: spacing.xxl * 2,
-    alignItems: 'center',
-  },
-  error: {
-    paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.sm,
+    paddingTop: spacing.md,
+    textAlign: 'center',
   },
 });

@@ -315,21 +315,44 @@ describe('profile follows', () => {
     expect((await b.repos.profile.byHandle('alice'))?.profile.isFollowing).toBe(false);
   });
 
-  it('refuses a private profile, a missing handle and following yourself', async () => {
+  it('refuses a missing handle and following yourself', async () => {
     const t = backend();
-    const a = await signIn(t, 'a@example.com');
     const b = await signIn(t, 'b@example.com');
-    await a.repos.profile.update({ handle: 'alice', isPublic: false });
     await b.repos.profile.update({ handle: 'bob', isPublic: true });
 
-    await expect(b.repos.profile.setFollow('alice', true)).rejects.toThrow(/not available/i);
     await expect(b.repos.profile.setFollow('nobody', true)).rejects.toThrow(/not available/i);
     await expect(b.repos.profile.setFollow('bob', true)).rejects.toThrow(/not available/i);
 
     expect(await t.run(async (ctx) => ctx.db.query('profileFollows').collect())).toEqual([]);
   });
 
-  it('cannot be written on someone else\'s behalf, and is erased with the account', async () => {
+  /** Every account starts private, so refusing to friend a private page would
+   * leave the whole friend-then-message flow unusable by default. Naming the
+   * exact handle is the request; it still does not open the page. */
+  it('accepts a friend request to a private profile without revealing the page', async () => {
+    const t = backend();
+    const a = await signIn(t, 'a@example.com');
+    const b = await signIn(t, 'b@example.com');
+    await a.repos.profile.update({
+      handle: 'alice',
+      displayName: 'Alice Runner',
+      bio: 'Marathon training block',
+      location: 'Austin',
+      isPublic: false,
+    });
+    await b.repos.profile.update({ handle: 'bob', isPublic: true });
+
+    const after = await b.repos.profile.setFollow('alice', true);
+    expect(after).toMatchObject({ handle: 'alice', isFollowing: true, followerCount: 1 });
+    expect(after.bio).toBeUndefined();
+    expect(after.location).toBeUndefined();
+    expect(after.bannerUrl).toBeUndefined();
+
+    // The page itself is no more readable than it was before the follow.
+    expect(await b.repos.profile.byHandle('alice')).toBeNull();
+  });
+
+  it("cannot be written on someone else's behalf, and is erased with the account", async () => {
     const t = backend();
     const a = await signIn(t, 'a@example.com');
     const b = await signIn(t, 'b@example.com');
@@ -344,7 +367,7 @@ describe('profile follows', () => {
     await a.repos.account.deleteAllData();
     const remaining = await t.run(async (ctx) => ctx.db.query('profileFollows').collect());
     expect(remaining).toHaveLength(0);
-    expect((await b.repos.profile.byHandle('alice'))).toBeNull();
+    expect(await b.repos.profile.byHandle('alice')).toBeNull();
     expect((await c.repos.profile.me()).followerCount).toBe(0);
   });
 });

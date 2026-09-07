@@ -137,22 +137,38 @@ export const list = query({
   },
 });
 
+/**
+ * Who a search may surface.
+ *
+ * A public profile is browsable: any part of its handle or display name
+ * matches. A private one is findable only by someone who already knows
+ * exactly who they are looking for, so it answers to its whole handle and
+ * nothing else — nobody can walk the user list by typing a letter. Either
+ * way the caller only ever learns the identity card `people` returns: handle,
+ * name, picture. The profile page behind it stays as private as it was.
+ */
+function matchesSearch(profile: Doc<'profiles'>, wanted: string): boolean {
+  if (!profile.isPublic) return profile.handleLower === wanted;
+  return (
+    profile.handleLower.includes(wanted) ||
+    (profile.displayName ?? '').toLowerCase().includes(wanted)
+  );
+}
+
 /** Contacts are friend requests, friends, and existing chat peers. Typing
- * searches public profile rows in the Macronaut database instead. */
+ * searches profile rows in the Macronaut database instead. */
 export const people = query({
   args: { search: v.optional(v.string()) },
   handler: async (ctx, { search }) => {
     const userId = await requireUserId(ctx);
-    const wanted = search?.trim().toLowerCase() ?? '';
+    // People type the @ shown beside a handle. It is decoration, never part
+    // of the stored handle, so strip it before matching.
+    const wanted = (search?.trim().toLowerCase() ?? '').replace(/^@+/, '');
     let profiles: Doc<'profiles'>[];
 
     if (wanted) {
       profiles = (await ctx.db.query('profiles').collect()).filter(
-        (profile) =>
-          profile.userId !== userId &&
-          profile.isPublic &&
-          (profile.handleLower.includes(wanted) ||
-            (profile.displayName ?? '').toLowerCase().includes(wanted)),
+        (profile) => profile.userId !== userId && matchesSearch(profile, wanted),
       );
     } else {
       const [following, followers, chats] = await Promise.all([
@@ -179,9 +195,9 @@ export const people = query({
             .first(),
         ),
       );
-      profiles = rows.filter(
-        (profile): profile is Doc<'profiles'> => profile !== null && profile.isPublic,
-      );
+      // These are people you already follow, who follow you, or who you have
+      // a conversation with — a private page never hides them from you.
+      profiles = rows.filter((profile): profile is Doc<'profiles'> => profile !== null);
     }
 
     profiles.sort((a, b) => (a.displayName ?? a.handle).localeCompare(b.displayName ?? b.handle));
@@ -207,7 +223,7 @@ export const open = mutation({
           .withIndex('by_handle', (q) => q.eq('handleLower', wanted))
           .first()
       : null;
-    if (!profile || !profile.isPublic || profile.userId === userId) {
+    if (!profile || profile.userId === userId) {
       throw new ConvexError('Person not available');
     }
     if ((await friendshipState(ctx, userId, profile.userId)) !== 'friends') {

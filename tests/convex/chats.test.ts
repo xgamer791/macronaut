@@ -67,6 +67,68 @@ describe('direct chats', () => {
     expect((await again.chats.list())[0]?.unreadCount).toBe(0);
   });
 
+  /** The case the app actually ships: nobody has touched the privacy toggle,
+   * because every profile is created private. Search has to work anyway, or
+   * there is no one to befriend and nothing to message. */
+  it('finds a default private account by its exact handle, and messages it once friends', async () => {
+    const t = backend();
+    const alice = await signIn(t, 'alice@example.com');
+    const bob = await signIn(t, 'bob@example.com');
+
+    // No isPublic anywhere: both accounts are left exactly as created.
+    await alice.repos.profile.update({ handle: 'alice_runner', displayName: 'Alice Runner' });
+    await bob.repos.profile.update({ handle: 'bob_lifts', displayName: 'Bob Lifts' });
+
+    expect(await bob.repos.chats.people('alice_runner')).toEqual([
+      expect.objectContaining({ handle: 'alice_runner', friendship: 'none' }),
+    ]);
+    // The @ people type beside a handle is decoration, not part of it.
+    expect(await bob.repos.chats.people('@alice_runner')).toEqual([
+      expect.objectContaining({ handle: 'alice_runner' }),
+    ]);
+    // A private page is not browsable: no partial handle, no display name.
+    expect(await bob.repos.chats.people('alice')).toEqual([]);
+    expect(await bob.repos.chats.people('Alice Runner')).toEqual([]);
+
+    // Friendship, not page visibility, is the gate on a conversation.
+    await expect(bob.repos.chats.open('alice_runner')).rejects.toThrow(/friends/i);
+    await bob.repos.profile.setFollow('alice_runner', true);
+    await expect(bob.repos.chats.open('alice_runner')).rejects.toThrow(/friends/i);
+    expect(await alice.repos.chats.people()).toEqual([
+      expect.objectContaining({ handle: 'bob_lifts', friendship: 'incoming' }),
+    ]);
+
+    await alice.repos.profile.setFollow('bob_lifts', true);
+    const chat = await bob.repos.chats.open('alice_runner');
+    await bob.repos.chats.send(chat.id, 'Morning run tomorrow?');
+    expect(await alice.repos.chats.list()).toEqual([
+      expect.objectContaining({
+        peer: expect.objectContaining({ handle: 'bob_lifts', friendship: 'friends' }),
+        unreadCount: 1,
+      }),
+    ]);
+  });
+
+  it('browses a public profile by any part of its handle or name', async () => {
+    const t = backend();
+    const alice = await signIn(t, 'alice@example.com');
+    const bob = await signIn(t, 'bob@example.com');
+    await alice.repos.profile.update({
+      handle: 'alice_runner',
+      displayName: 'Alice Runner',
+      isPublic: true,
+    });
+    await bob.repos.profile.update({ handle: 'bob_lifts' });
+
+    for (const term of ['alice', 'runner', 'Alice Run', '@alice']) {
+      expect(await bob.repos.chats.people(term)).toEqual([
+        expect.objectContaining({ handle: 'alice_runner' }),
+      ]);
+    }
+    // Searching never returns you to yourself.
+    expect(await alice.repos.chats.people('alice')).toEqual([]);
+  });
+
   it('requires accepted friendship and keeps a conversation private to its participants', async () => {
     const t = backend();
     const alice = await signIn(t, 'alice@example.com');
