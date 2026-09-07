@@ -28,6 +28,12 @@ import { GoalRepo } from '@/repositories/goalRepo';
 import { FrequentFood, HistoryRepo, RecentFood } from '@/repositories/historyRepo';
 import { AppNotification, NotificationRepo } from '@/repositories/notificationRepo';
 import { FitnessGroup, GroupRepo } from '@/repositories/groupRepo';
+import {
+  GroupChatRepo,
+  GroupChatSummary,
+  GroupChatThread,
+  GroupMessage,
+} from '@/repositories/groupChatRepo';
 import { GymCandidate, GymRepo, MyGym } from '@/repositories/gymRepo';
 import { ProfilePhoto, PhotoComment, PhotoRepo, PhotoThread } from '@/repositories/photoRepo';
 import {
@@ -1265,6 +1271,107 @@ export function createMemoryAccountRepo(): AccountRepo {
   };
 }
 
+/** Group chats the stub knows about: one thread per group id the screen
+ * asks for, with the caller as the only sender. */
+export function createMemoryGroupChatRepo(): GroupChatRepo {
+  const threads = new Map<string, GroupChatThread>();
+  const me: ChatPerson = {
+    id: 'me',
+    handle: null,
+    displayName: 'You',
+    friendship: 'friends',
+  };
+  const groupFor = (id: string): FitnessGroup => {
+    const ts = nowIso();
+    return {
+      id,
+      name: 'Your group',
+      handle: 'your_group',
+      isPublic: true,
+      memberCount: 1,
+      isOwner: false,
+      isMember: true,
+      createdAt: ts,
+      updatedAt: ts,
+    };
+  };
+  const threadFor = (id: string): GroupChatThread => {
+    const existing = threads.get(id);
+    if (existing) return existing;
+    const thread: GroupChatThread = {
+      group: groupFor(id),
+      me: clone(me),
+      messages: [],
+      unreadCount: 0,
+      lastMessageAt: null,
+    };
+    threads.set(id, thread);
+    return thread;
+  };
+
+  return {
+    async list() {
+      const rows: GroupChatSummary[] = [];
+      for (const thread of threads.values()) {
+        const last = thread.messages[thread.messages.length - 1];
+        if (!last || !thread.lastMessageAt) continue;
+        rows.push({
+          group: clone(thread.group),
+          lastMessage: {
+            id: last.id,
+            body: last.body,
+            createdAt: last.createdAt,
+            isMine: last.isMine,
+            senderName: last.sender.displayName,
+            mediaKind: last.media?.kind,
+          },
+          unreadCount: thread.unreadCount,
+          lastMessageAt: thread.lastMessageAt,
+        });
+      }
+      return rows.sort((a, b) => b.lastMessageAt.localeCompare(a.lastMessageAt));
+    },
+    async thread(id) {
+      return clone(threadFor(id));
+    },
+    async send(id, body, attachment) {
+      const thread = threadFor(id);
+      const message: GroupMessage = {
+        id: newId(),
+        body: body.trim(),
+        createdAt: nowIso(),
+        isMine: true,
+        sender: clone(me),
+        canDelete: true,
+        ...(attachment
+          ? {
+              media: {
+                url: `memory://${attachment.mediaId}`,
+                kind: attachment.kind,
+                width: attachment.width,
+                height: attachment.height,
+              },
+            }
+          : {}),
+      };
+      thread.messages.push(message);
+      thread.lastMessageAt = message.createdAt;
+      return clone(message);
+    },
+    async markRead(id) {
+      threadFor(id).unreadCount = 0;
+    },
+    async remove(messageId) {
+      for (const thread of threads.values()) {
+        const at = thread.messages.findIndex((message) => message.id === messageId);
+        if (at < 0) continue;
+        thread.messages.splice(at, 1);
+        thread.lastMessageAt = thread.messages[thread.messages.length - 1]?.createdAt ?? null;
+      }
+    },
+  };
+}
+
 export function createMemoryRepos(): Repos {
   return {
     account: createMemoryAccountRepo(),
@@ -1282,6 +1389,7 @@ export function createMemoryRepos(): Repos {
     groups: createMemoryGroupRepo(),
     gyms: createMemoryGymRepo(),
     chats: createMemoryChatRepo(),
+    groupChats: createMemoryGroupChatRepo(),
     notifications: createMemoryNotificationRepo(),
     fasting: createMemoryFastingRepo(),
     trainingSchedule: createMemoryTrainingScheduleRepo(),

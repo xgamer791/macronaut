@@ -48,6 +48,8 @@ async function friendshipWith(
 async function notificationView(ctx: QueryCtx, viewerId: Id<'users'>, event: Doc<'notifications'>) {
   const actor = await ctx.db.get(event.actorId);
   if (!actor) return null;
+  const group = event.groupId ? await ctx.db.get(event.groupId) : null;
+  const count = Math.max(1, event.count ?? 1);
   const profile = await ctx.db
     .query('profiles')
     .withIndex('by_user', (q) => q.eq('userId', event.actorId))
@@ -76,7 +78,9 @@ async function notificationView(ctx: QueryCtx, viewerId: Id<'users'>, event: Doc
           ? 'New friend request'
           : event.kind === 'friend_accepted'
             ? 'Friend request accepted'
-            : `Message from ${displayName}`,
+            : event.kind === 'group_message'
+              ? `New messages in ${group?.name ?? 'your group'}`
+              : `Message from ${displayName}`,
     body:
       event.kind === 'calorie_goal'
         ? `You closed your calorie ring${event.goalDate ? ` for ${goalDateLabel(event.goalDate)}` : ''}. Another awesome day!`
@@ -84,8 +88,12 @@ async function notificationView(ctx: QueryCtx, viewerId: Id<'users'>, event: Doc
           ? `${displayName} wants to connect with you.`
           : event.kind === 'friend_accepted'
             ? `${displayName} accepted your friend request. You can message each other now.`
-            : (event.body ?? 'Sent you a message.'),
+            : event.kind === 'group_message'
+              ? `${count} new ${count === 1 ? 'message' : 'messages'} · ${displayName}: ${event.body ?? ''}`
+              : (event.body ?? 'Sent you a message.'),
     chatId: event.chatId ? (event.chatId as string) : undefined,
+    groupId: event.groupId ? (event.groupId as string) : undefined,
+    count: event.kind === 'group_message' ? count : undefined,
     goalDate: event.goalDate,
     read: event.readAt !== undefined,
     createdAt: event.createdAt,
@@ -274,6 +282,72 @@ export async function addChatNotification(
     body,
     createdAt,
   });
+}
+
+/**
+ * One bell row per group per recipient. A new message bumps the count and
+ * moves the row to the top while it is unread; once read, the next message
+ * starts it over at one. Never a row per message: a gym group can have
+ * hundreds of members, and a bell that scrolls forever tells nobody anything.
+ */
+export async function upsertGroupMessageNotification(
+  ctx: MutationCtx,
+  recipientId: Id<'users'>,
+  actorId: Id<'users'>,
+  groupId: Id<'fitnessGroups'>,
+  body: string,
+  createdAt: string,
+) {
+  const existing = await ctx.db
+    .query('notifications')
+    .withIndex('by_recipient_group', (q) => q.eq('recipientId', recipientId).eq('groupId', groupId))
+    .first();
+  if (!existing) {
+    await ctx.db.insert('notifications', {
+      recipientId,
+      actorId,
+      kind: 'group_message',
+      groupId,
+      count: 1,
+      body,
+      createdAt,
+    });
+    return;
+  }
+  const unread = existing.readAt === undefined;
+  await ctx.db.patch(existing._id, {
+    actorId,
+    body,
+    createdAt,
+    count: unread ? (existing.count ?? 1) + 1 : 1,
+    readAt: undefined,
+  });
+}
+
+/** Opening a group's chat clears its bell row along with the unread count. */
+export async function markGroupNotificationsRead(
+  ctx: MutationCtx,
+  recipientId: Id<'users'>,
+  groupId: Id<'fitnessGroups'>,
+  readAt: string,
+) {
+  const events = await ctx.db
+    .query('notifications')
+    .withIndex('by_recipient_group', (q) => q.eq('recipientId', recipientId).eq('groupId', groupId))
+    .collect();
+  await Promise.all(
+    events.filter((event) => !event.readAt).map((event) => ctx.db.patch(event._id, { readAt })),
+  );
+}
+
+/** A deleted group takes its bell rows with it, so nobody's unread count
+ * keeps a row the bell can no longer name. */
+export async function deleteGroupNotifications(ctx: MutationCtx, groupId: Id<'fitnessGroups'>) {
+  const events = await ctx.db
+    .query('notifications')
+    .withIndex('by_group', (q) => q.eq('groupId', groupId))
+    .collect();
+  for (const event of events) await ctx.db.delete(event._id);
 }
 
 /** Opening a conversation clears its bell events as well as its chat unread count. */

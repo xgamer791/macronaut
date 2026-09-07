@@ -5,6 +5,7 @@ import { identity, profileFor } from './chats';
 import { nowIso, requireUserId } from './lib/auth';
 import { firstFreeHandle, handleSeed } from './lib/handles';
 import { deleteVotesAgainst, restrictionFor, unseat } from './lib/gymMembership';
+import { deleteGroupNotifications } from './notifications';
 import {
   GYM_VOTE_RULES,
   distinctActiveVoters,
@@ -311,6 +312,17 @@ export const remove = mutation({
       .withIndex('by_group', (q) => q.eq('groupId', id))
       .collect();
     for (const seat of seats) await ctx.db.delete(seat._id);
+    // The group's chat goes with it: every message, its attachments, and the
+    // bell rows that pointed at the thread.
+    const messages = await ctx.db
+      .query('groupMessages')
+      .withIndex('by_group_created', (q) => q.eq('groupId', id))
+      .collect();
+    for (const message of messages) {
+      if (message.mediaId) await ctx.storage.delete(message.mediaId);
+      await ctx.db.delete(message._id);
+    }
+    await deleteGroupNotifications(ctx, id);
     await ctx.db.delete(id);
     return null;
   },

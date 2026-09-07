@@ -4,7 +4,11 @@ import type { ChatPerson } from './chatRepo';
 import type { ConvexCaller } from './convexCall';
 
 export type NotificationKind =
-  'friend_request' | 'friend_accepted' | 'chat_message' | 'calorie_goal';
+  | 'friend_request'
+  | 'friend_accepted'
+  | 'chat_message'
+  | 'calorie_goal'
+  | 'group_message';
 
 export interface AppNotification {
   id: string;
@@ -14,6 +18,10 @@ export interface AppNotification {
   title: string;
   body: string;
   chatId?: string;
+  /** The group whose chat this one row stands for, with how many new
+   * messages it has gathered since it was last read. */
+  groupId?: string;
+  count?: number;
   goalDate?: string;
   read: boolean;
   createdAt: string;

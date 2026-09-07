@@ -13,6 +13,7 @@ import {
   profileFields,
   profilePhotoFields,
   profilePostFields,
+  attachmentFields,
   scheduledWorkoutValidator,
 } from './lib/validators';
 
@@ -295,15 +296,31 @@ export default defineSchema({
     senderId: v.id('users'),
     body: v.string(),
     createdAt: v.string(),
-    mediaId: v.optional(v.id('_storage')),
-    mediaKind: v.optional(v.union(v.literal('image'), v.literal('video'))),
-    /** Pixel size of the original, so a bubble reserves the right shape
-     * before the file loads and the thread does not jump. */
-    mediaWidth: v.optional(v.number()),
-    mediaHeight: v.optional(v.number()),
+    ...attachmentFields,
   })
     .index('by_chat_created', ['chatId', 'createdAt'])
     .index('by_sender', ['senderId']),
+
+  /** Messages in a fitness group's one chat. The group is the thread: there
+   * is no separate conversation row. Members only, and a message outlives a
+   * member leaving — only deleting the account removes what they wrote. */
+  groupMessages: defineTable({
+    groupId: v.id('fitnessGroups'),
+    senderId: v.id('users'),
+    body: v.string(),
+    createdAt: v.string(),
+    ...attachmentFields,
+  })
+    .index('by_group_created', ['groupId', 'createdAt'])
+    .index('by_sender', ['senderId']),
+
+  /** Group chat sends per account per minute, so one scripted client cannot
+   * flood a thread that fans out to every member. */
+  groupSendUsage: defineTable({
+    userId: v.id('users'),
+    minute: v.string(),
+    count: v.number(),
+  }).index('by_user_minute', ['userId', 'minute']),
 
   /** Durable in-app events shown by the header bell. The recipient owns read
    * state; the actor is the account that caused the event. */
@@ -315,8 +332,13 @@ export default defineSchema({
       v.literal('friend_accepted'),
       v.literal('chat_message'),
       v.literal('calorie_goal'),
+      v.literal('group_message'),
     ),
     chatId: v.optional(v.id('directChats')),
+    /** A group chat keeps one bell row per recipient, updated in place, so a
+     * busy group of hundreds never writes hundreds of rows per message. */
+    groupId: v.optional(v.id('fitnessGroups')),
+    count: v.optional(v.number()),
     /** Calendar day whose calorie ring was first completed. */
     goalDate: v.optional(v.string()),
     body: v.optional(v.string()),
@@ -325,6 +347,8 @@ export default defineSchema({
   })
     .index('by_recipient_created', ['recipientId', 'createdAt'])
     .index('by_recipient_chat', ['recipientId', 'chatId'])
+    .index('by_recipient_group', ['recipientId', 'groupId'])
+    .index('by_group', ['groupId'])
     .index('by_recipient_kind_actor', ['recipientId', 'kind', 'actorId'])
     .index('by_recipient_kind_date', ['recipientId', 'kind', 'goalDate'])
     .index('by_actor', ['actorId']),
@@ -378,6 +402,8 @@ export default defineSchema({
     groupId: v.id('fitnessGroups'),
     role: v.union(v.literal('owner'), v.literal('member')),
     createdAt: v.string(),
+    /** How far into the group's chat this member has read. */
+    lastReadAt: v.optional(v.string()),
   })
     .index('by_user', ['userId'])
     .index('by_group', ['groupId'])

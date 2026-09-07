@@ -251,6 +251,17 @@ async function purgeUserData(ctx: MutationCtx, userId: Id<'users'>, budget: numb
           .withIndex('by_group', (q) => q.eq('groupId', group._id))
           .collect();
         for (const seat of seats) rows.push({ _id: seat._id });
+        // The group's chat goes with the group, whoever wrote in it.
+        const messages = await ctx.db
+          .query('groupMessages')
+          .withIndex('by_group_created', (q) => q.eq('groupId', group._id))
+          .collect();
+        for (const message of messages) rows.push({ _id: message._id, files: [message.mediaId] });
+        const bells = await ctx.db
+          .query('notifications')
+          .withIndex('by_group', (q) => q.eq('groupId', group._id))
+          .collect();
+        for (const bell of bells) rows.push({ _id: bell._id });
         rows.push({ _id: group._id });
       }
       return rows;
@@ -259,6 +270,20 @@ async function purgeUserData(ctx: MutationCtx, userId: Id<'users'>, budget: numb
       ctx.db
         .query('groupMembers')
         .withIndex('by_user', (q) => q.eq('userId', userId))
+        .take(remaining),
+    // A group's chat outlives any one member; only what this account wrote
+    // goes, with its attachments.
+    async () =>
+      (
+        await ctx.db
+          .query('groupMessages')
+          .withIndex('by_sender', (q) => q.eq('senderId', userId))
+          .take(remaining)
+      ).map((message) => ({ _id: message._id, files: [message.mediaId] })),
+    () =>
+      ctx.db
+        .query('groupSendUsage')
+        .withIndex('by_user_minute', (q) => q.eq('userId', userId))
         .take(remaining),
     () =>
       ctx.db

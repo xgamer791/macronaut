@@ -20,6 +20,7 @@ import type * as foods from '../foods.js';
 import type * as foodScan from '../foodScan.js';
 import type * as fasting from '../fasting.js';
 import type * as goals from '../goals.js';
+import type * as groupChats from '../groupChats.js';
 import type * as groups from '../groups.js';
 import type * as gyms from '../gyms.js';
 import type * as history from '../history.js';
@@ -65,6 +66,7 @@ declare const fullApi: ApiFromModules<{
   foodScan: typeof foodScan;
   fasting: typeof fasting;
   goals: typeof goals;
+  groupChats: typeof groupChats;
   groups: typeof groups;
   gyms: typeof gyms;
   history: typeof history;

@@ -213,6 +213,19 @@ export const profilePhotoFields = {
   isPublic: v.boolean(),
 };
 
+/** A photo or clip on a message. The file is a storage id, never a URL, so
+ * deleting the message can delete the file; the pixel size lets a bubble
+ * reserve the right shape before the file loads. Shared by direct chats and
+ * group chats so the two never drift. */
+export const mediaKindValidator = v.union(v.literal('image'), v.literal('video'));
+
+export const attachmentFields = {
+  mediaId: v.optional(v.id('_storage')),
+  mediaKind: v.optional(mediaKindValidator),
+  mediaWidth: v.optional(v.number()),
+  mediaHeight: v.optional(v.number()),
+};
+
 export const fitnessGroupFields = {
   name: v.string(),
   handle: v.string(),
@@ -227,4 +240,6 @@ export const fitnessGroupFields = {
    * `userId` merely records which claim inserted the row. */
   kind: v.optional(v.literal('gym')),
   gymId: v.optional(v.id('gyms')),
+  /** When the group's chat last had a message; sorts the conversation list. */
+  lastMessageAt: v.optional(v.string()),
 };

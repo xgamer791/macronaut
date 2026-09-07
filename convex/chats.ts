@@ -3,25 +3,30 @@ import type { Doc, Id } from './_generated/dataModel';
 import { mutation, query, type MutationCtx, type QueryCtx } from './_generated/server';
 import { nowIso, requireUserId } from './lib/auth';
 import { normalizeHandle } from './lib/handles';
+import { attachmentFields } from './lib/validators';
 import { addChatNotification, markChatNotificationsRead } from './notifications';
 
-const MESSAGE_LIMIT = 200;
-const CHAT_LIMIT = 100;
+export const MESSAGE_LIMIT = 200;
+export const CHAT_LIMIT = 100;
 const PEOPLE_LIMIT = 40;
-const MAX_MESSAGE_LENGTH = 2000;
-
-const mediaKind = v.union(v.literal('image'), v.literal('video'));
+export const MAX_MESSAGE_LENGTH = 2000;
 
 /** What a chat row shows for a message that is only an attachment. */
-function mediaPreview(kind: 'image' | 'video'): string {
+export function mediaPreview(kind: 'image' | 'video'): string {
   return kind === 'video' ? 'Video' : 'Photo';
 }
 
+/** A direct or group message: the same fields either way. */
+export type MessageLike = Pick<
+  Doc<'chatMessages'>,
+  'senderId' | 'body' | 'createdAt' | 'mediaId' | 'mediaKind' | 'mediaWidth' | 'mediaHeight'
+> & { _id: Id<'chatMessages'> | Id<'groupMessages'> };
+
 /** The client shape of one message. `media.url` is a signed storage URL, so
  * it is resolved per read rather than stored. */
-async function messageView(
+export async function messageView(
   ctx: QueryCtx | MutationCtx,
-  message: Doc<'chatMessages'>,
+  message: MessageLike,
   viewerId: Id<'users'>,
 ) {
   const url = message.mediaId ? await ctx.storage.getUrl(message.mediaId) : null;
@@ -144,7 +149,11 @@ async function userForHandle(ctx: QueryCtx | MutationCtx, handle: string | undef
   return profile ? ctx.db.get(profile.userId) : null;
 }
 
-async function personView(ctx: QueryCtx | MutationCtx, viewerId: Id<'users'>, userId: Id<'users'>) {
+export async function personView(
+  ctx: QueryCtx | MutationCtx,
+  viewerId: Id<'users'>,
+  userId: Id<'users'>,
+) {
   const user = await ctx.db.get(userId);
   if (!user) return null;
   return identity(ctx, viewerId, user, await profileFor(ctx, userId));
@@ -380,10 +389,7 @@ export const send = mutation({
   args: {
     id: v.id('directChats'),
     body: v.string(),
-    mediaId: v.optional(v.id('_storage')),
-    mediaKind: v.optional(mediaKind),
-    mediaWidth: v.optional(v.number()),
-    mediaHeight: v.optional(v.number()),
+    ...attachmentFields,
   },
   handler: async (ctx, { id, body, mediaId, mediaKind: kind, mediaWidth, mediaHeight }) => {
     const userId = await requireUserId(ctx);
@@ -425,12 +431,12 @@ export const send = mutation({
       trimmed || mediaPreview(attached!.kind),
       ts,
     );
-    return messageView(ctx, { _id: messageId, _creationTime: Date.now(), ...doc }, userId);
+    return messageView(ctx, { _id: messageId, ...doc }, userId);
   },
 });
 
 /** A pixel dimension worth storing, or nothing. */
-function positive(value: number | undefined): number | undefined {
+export function positive(value: number | undefined): number | undefined {
   return typeof value === 'number' && Number.isFinite(value) && value > 0
     ? Math.round(value)
     : undefined;
