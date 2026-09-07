@@ -21,6 +21,7 @@ const GLYPH = 22;
 const GLYPH_INSET = (touchTarget - GLYPH) / 2;
 const MENU = 30;
 const PLUS = 30;
+const MENU_EDGE_GAP = 20;
 
 export interface AppHeaderProps {
   /** Calendar icon on the right cluster. */
@@ -98,7 +99,7 @@ function HeaderMenu({ visible, onClose }: { visible: boolean; onClose: () => voi
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
-  const panelWidth = width || 390;
+  const panelWidth = Math.max((width || 390) - MENU_EDGE_GAP, 0);
   const [mounted, setMounted] = useState(visible);
   const [prevVisible, setPrevVisible] = useState(visible);
   const [webOpen, setWebOpen] = useState(false);
@@ -142,7 +143,7 @@ function HeaderMenu({ visible, onClose }: { visible: boolean; onClose: () => voi
 
   // The drawer is a Modal, so it is portalled clear of the page and is never
   // pushed itself. `open` is what actually drives it on each platform, so the
-  // page steps aside on the same frame by the full-width drawer's width.
+  // page steps aside on the same frame by the near-full-width drawer's width.
   const open = Platform.OS === 'web' ? webOpen : visible;
   usePushWhileOpen(open, { x: panelWidth });
 

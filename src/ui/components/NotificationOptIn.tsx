@@ -14,10 +14,12 @@ import { AppText } from './AppText';
  *
  * Written as a control rather than a promotion: one row in the app's own list
  * language, so it reads as the setting it is and never has to be dismissed.
- * The status line underneath is the whole honesty budget — push cannot work on
- * a website, since there is no app to hold a token, so the switch records what
- * someone wants and says as much rather than claiming to have turned anything
- * on. The native iOS build reads the stored answer (docs/native-ios.md).
+ * The status line names what would actually reach someone — the two events
+ * that already exist — and, once the switch is on, the one caveat that has to
+ * be said: push cannot work on a website, since there is no app to hold a
+ * token, so this records what someone wants rather than claiming to have
+ * turned anything on. The native iOS build reads the stored answer
+ * (docs/native-ios.md).
  */
 export function NotificationOptIn() {
   const { colors } = useTheme();
@@ -49,10 +51,8 @@ export function NotificationOptIn() {
         <AppText variant="body" weight="600">
           Push notifications
         </AppText>
-        <AppText variant="micro" tone="muted" numberOfLines={2}>
-          {on
-            ? 'Saved — your phone will ask once the iOS app is out.'
-            : 'Get messages and friend requests on your phone.'}
+        <AppText variant="micro" tone="muted" numberOfLines={1}>
+          {on ? 'Messages and friend requests. Starts on iOS.' : 'Messages and friend requests.'}
         </AppText>
       </View>
 
