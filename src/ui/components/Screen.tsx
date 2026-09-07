@@ -16,8 +16,7 @@ export interface ScreenProps {
   safeTop?: boolean;
   /**
    * Chrome above the scrolling layer. Occupies layout space so the page
-   * starts below it. Scrolls away on the way down and back in on the way up,
-   * at the same speed as the stack-page slide.
+   * starts below it. Scrolls away on the way down and back in on the way up.
    */
   stickyHeader?: React.ReactNode;
 }

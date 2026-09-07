@@ -13,10 +13,11 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 
-import { SLIDE_DURATION_MS, SLIDE_EASING } from './SlideScreen';
+import { SLIDE_EASING } from './SlideScreen';
 import { headerHideForScroll } from './headerAutoHideLogic';
 
-export { SLIDE_DURATION_MS };
+/** Header hide stays on the slower curve; stack pages use SLIDE_DURATION_MS. */
+export const HEADER_HIDE_DURATION_MS = 840;
 export { HEADER_HIDE_DELTA, HEADER_HIDE_TOP, headerHideForScroll } from './headerAutoHideLogic';
 
 export function useHeaderScrollHide(enabled: boolean) {
@@ -101,7 +102,7 @@ function AutoHideHeaderNative({
 
   useEffect(() => {
     progress.value = withTiming(hidden ? 1 : 0, {
-      duration: SLIDE_DURATION_MS,
+      duration: HEADER_HIDE_DURATION_MS,
       easing: SLIDE_EASING,
       reduceMotion: ReduceMotion.System,
     });
