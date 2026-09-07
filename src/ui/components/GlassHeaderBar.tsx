@@ -47,12 +47,7 @@ function GlassMaterial() {
     });
   }
 
-  return (
-    <View style={[StyleSheet.absoluteFill, styles.nativeGlass]}>
-      <View pointerEvents="none" style={styles.sheen} />
-      <View pointerEvents="none" style={styles.rim} />
-    </View>
-  );
+  return <View style={[StyleSheet.absoluteFill, styles.nativeGlass]} />;
 }
 
 const styles = StyleSheet.create({
@@ -71,19 +66,9 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.xs,
   },
   nativeGlass: {
+    borderWidth: 0,
     borderRadius: 0,
     overflow: 'hidden',
     backgroundColor: 'rgba(0, 0, 0, 0.55)',
-  },
-  sheen: {
-    ...StyleSheet.absoluteFill,
-    opacity: 0,
-  },
-  rim: {
-    ...StyleSheet.absoluteFill,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'transparent',
-    borderBottomColor: 'rgba(255, 255, 255, 0.05)',
-    borderRadius: 0,
   },
 });

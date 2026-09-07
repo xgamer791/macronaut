@@ -41,10 +41,14 @@ describe('sticky glass headers', () => {
     expect(html).toContain('[data-headerglass]');
     expect(html).toContain('blur(39px) saturate(135%)');
     expect(html).toContain('border-radius: 0');
+    expect(html).toContain('border: none');
+    expect(html).toContain('outline: none');
+    expect(html).toContain('content: none');
     expect(html).toContain('rgba(0, 0, 0, 0.630)');
-    expect(html).toContain('opacity: 0.00');
-    expect(html).toContain('inset 0 -1px 0 rgba(255, 255, 255, 0.050)');
+    expect(html).not.toContain('inset 0 0 0 1px');
+    expect(html).not.toContain('inset 0 -1px 0');
     expect(html).toContain('background: rgba(0, 0, 0, 1.000)');
+    expect(bar).not.toContain('styles.rim');
   });
 
   it('hands Today its header instead of drawing one inside the hero', () => {
