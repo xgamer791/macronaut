@@ -1,4 +1,4 @@
-import React, { createContext, useCallback, useContext, useLayoutEffect, useRef } from 'react';
+import React, { createContext, useCallback, useContext, useLayoutEffect, useRef, useState } from 'react';
 import { Platform, StyleSheet, useWindowDimensions, View } from 'react-native';
 import Animated, {
   Easing,
@@ -32,7 +32,7 @@ export function useSlideBack() {
 }
 
 const EASE = Easing.bezier(0.22, 1, 0.36, 1);
-const DURATION = 420;
+export const SLIDE_DURATION_MS = 420;
 
 export const SLIDE_OVER_OPTIONS = {
   headerShown: false,
@@ -42,6 +42,13 @@ export const SLIDE_OVER_OPTIONS = {
   gestureEnabled: false,
 } as const;
 
+function useSlideWidth() {
+  const { width } = useWindowDimensions();
+  if (width > 0) return width;
+  if (typeof window !== 'undefined') return window.innerWidth;
+  return 390;
+}
+
 export function SlideScreen({
   from,
   children,
@@ -49,7 +56,64 @@ export function SlideScreen({
   from: Side;
   children: React.ReactNode;
 }) {
-  const { width } = useWindowDimensions();
+  if (Platform.OS === 'web') {
+    return <SlideScreenWeb from={from}>{children}</SlideScreenWeb>;
+  }
+  return <SlideScreenNative from={from}>{children}</SlideScreenNative>;
+}
+
+function SlideScreenWeb({ from, children }: { from: Side; children: React.ReactNode }) {
+  const width = useSlideWidth();
+  const router = useRouter();
+  const { colors } = useTheme();
+  const [open, setOpen] = useState(false);
+  const leaving = useRef(false);
+
+  useLayoutEffect(() => {
+    let second = 0;
+    const first = requestAnimationFrame(() => {
+      second = requestAnimationFrame(() => setOpen(true));
+    });
+    return () => {
+      cancelAnimationFrame(first);
+      cancelAnimationFrame(second);
+    };
+  }, []);
+
+  const leave = useCallback(() => {
+    if (leaving.current) return;
+    leaving.current = true;
+    setOpen(false);
+    const reduce =
+      typeof window !== 'undefined' &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    window.setTimeout(() => goBackOrHome(router), reduce ? 0 : SLIDE_DURATION_MS);
+  }, [router]);
+
+  const dir = from === 'right' ? 1 : -1;
+  const translateX = open ? 0 : dir * width;
+
+  return (
+    <SlideDismissContext.Provider value={leave}>
+      <View style={styles.clip}>
+        <View
+          // RN-web turns dataSet into data-* attributes for the CSS transition.
+          {...{ dataSet: { slidescreen: from } }}
+          style={[
+            styles.panel,
+            { backgroundColor: colors.background, transform: [{ translateX }] },
+            from === 'right' ? styles.fromRight : styles.fromLeft,
+          ]}
+        >
+          {children}
+        </View>
+      </View>
+    </SlideDismissContext.Provider>
+  );
+}
+
+function SlideScreenNative({ from, children }: { from: Side; children: React.ReactNode }) {
+  const width = useSlideWidth();
   const router = useRouter();
   const { colors } = useTheme();
   const progress = useSharedValue(0);
@@ -57,7 +121,7 @@ export function SlideScreen({
 
   useLayoutEffect(() => {
     progress.value = withTiming(1, {
-      duration: DURATION,
+      duration: SLIDE_DURATION_MS,
       easing: EASE,
       reduceMotion: ReduceMotion.System,
     });
@@ -72,7 +136,7 @@ export function SlideScreen({
     leaving.current = true;
     progress.value = withTiming(
       0,
-      { duration: DURATION, easing: EASE, reduceMotion: ReduceMotion.System },
+      { duration: SLIDE_DURATION_MS, easing: EASE, reduceMotion: ReduceMotion.System },
       (finished) => {
         if (finished) runOnJS(finish)();
       },
@@ -114,25 +178,27 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   fromRight: {
-    shadowColor: '#000',
-    shadowOffset: { width: -10, height: 0 },
-    shadowOpacity: 0.38,
-    shadowRadius: 18,
-    elevation: 16,
     ...Platform.select({
       web: { boxShadow: '-12px 0 28px rgba(0,0,0,0.35)' } as object,
-      default: {},
+      default: {
+        shadowColor: '#000',
+        shadowOffset: { width: -10, height: 0 },
+        shadowOpacity: 0.38,
+        shadowRadius: 18,
+        elevation: 16,
+      },
     }),
   },
   fromLeft: {
-    shadowColor: '#000',
-    shadowOffset: { width: 10, height: 0 },
-    shadowOpacity: 0.38,
-    shadowRadius: 18,
-    elevation: 16,
     ...Platform.select({
       web: { boxShadow: '12px 0 28px rgba(0,0,0,0.35)' } as object,
-      default: {},
+      default: {
+        shadowColor: '#000',
+        shadowOffset: { width: 10, height: 0 },
+        shadowOpacity: 0.38,
+        shadowRadius: 18,
+        elevation: 16,
+      },
     }),
   },
 });

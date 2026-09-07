@@ -12,6 +12,9 @@ describe('directional slide navigation', () => {
     expect(slide).toContain("from === 'right' ? 1 : -1");
     expect(slide).toContain('useSlideBack');
     expect(slide).toContain("presentation: 'transparentModal'");
+    expect(slide).toContain('SLIDE_DURATION_MS = 420');
+    expect(slide).toContain("dataSet: { slidescreen: from }");
+    expect(slide).toContain("Platform.OS === 'web'");
 
     expect(read(appDir, 'notifications.tsx')).toContain('<SlideScreen from="right">');
     expect(read(appDir, 'profile.tsx')).toContain('<SlideScreen from="right">');
