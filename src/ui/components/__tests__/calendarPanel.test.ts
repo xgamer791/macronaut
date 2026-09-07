@@ -36,6 +36,16 @@ describe('calendar panel', () => {
     expect(panel).toContain('if (embedded) return <>{children}</>');
   });
 
+  it('lets the calendar route replace Today with its schedule action', () => {
+    const route = read('app', 'calendar.tsx');
+    expect(route).toContain('headerAction={{');
+    expect(panel).toContain('headerAction ? (');
+    expect(panel).toContain('accessibilityLabel={headerAction.accessibilityLabel}');
+    expect(panel).toContain('headerAction.onPress()');
+    // Date-picker versions keep the familiar fallback.
+    expect(panel).toContain('accessibilityLabel="Jump to today"');
+  });
+
   it('fills the screen from the right edge on the shared slide curve', () => {
     expect(panel).toContain("import { usePushWhileOpen } from '@/ui/motion/SlidePush';");
     expect(panel).toContain(
