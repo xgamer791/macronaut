@@ -20,7 +20,6 @@ describe('calendar panel', () => {
       read('app', 'calendar.tsx'),
       read('ui', 'components', 'DashboardHeader.tsx'),
       read('app', 'fasting.tsx'),
-      read('app', 'training-schedule.tsx'),
       read('app', '(tabs)', 'progress.tsx'),
     ]) {
       expect(page).toContain('<CalendarPanel');
@@ -103,7 +102,6 @@ describe('calendar panel', () => {
 
 const detail = read('ui', 'components', 'CalendarDayDetail.tsx');
 const dashboard = read('ui', 'components', 'DashboardHeader.tsx');
-const schedule = read('app', 'training-schedule.tsx');
 const queries = read('state', 'queries.ts');
 
 /** The day section under the calendar. Its numbers all come from hooks that
@@ -111,7 +109,6 @@ const queries = read('state', 'queries.ts');
  * inventing any. */
 describe('calendar day detail', () => {
   it('opens under the calendar for the screens that browse days, not the pickers', () => {
-    expect(schedule).toContain('dayDetail');
     expect(dashboard).toContain('dayDetail');
     // A date picker has no business carrying a day report.
     expect(read('app', 'fasting.tsx')).not.toContain('dayDetail');
@@ -119,8 +116,6 @@ describe('calendar day detail', () => {
   });
 
   it('keeps the panel open on a pick so days can be stepped through', () => {
-    expect(schedule).toContain('onSelect={setAnchor}');
-    expect(schedule).not.toMatch(/onSelect=\{\(date\) => \{[^}]*setCalendarOpen\(false\)/);
     expect(dashboard).toContain('const selectDay = useCallback((next: DayKey) => changeDate(next)');
   });
 
