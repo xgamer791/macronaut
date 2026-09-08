@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { api } from '../../convex/_generated/api';
 import { DAILY_SEARCH_CAP } from '../../convex/places';
-import { TEXT_SEARCH_FIELD_MASK } from '../../convex/lib/googlePlaces';
+import { ADDRESS_SEARCH_FIELD_MASK, TEXT_SEARCH_FIELD_MASK } from '../../convex/lib/googlePlaces';
 import { backend, signIn } from './helpers';
 
 const VENICE = { lat: 33.9946, lng: -118.4747 };
@@ -144,28 +144,37 @@ describe('gym search', () => {
 
   it('geocodes an address to one point', async () => {
     process.env.GOOGLE_PLACES_API_KEY = 'test-places-key';
-    installFetch(
-      fakeFetch({
-        status: 'OK',
-        results: [
-          {
-            formatted_address: 'Venice, Los Angeles, CA, USA',
-            geometry: { location: { lat: 33.985, lng: -118.4695 } },
-          },
-        ],
-      }),
-    );
+    const fetchMock = fakeFetch({
+      places: [
+        {
+          formattedAddress: 'Venice, Los Angeles, CA, USA',
+          location: { latitude: 33.985, longitude: -118.4695 },
+        },
+      ],
+    });
+    installFetch(fetchMock);
     const t = backend();
     const person = await signIn(t);
-    expect(await person.repos.gyms.geocode('venice ca')).toEqual({
+    expect(await person.repos.gyms.geocode('venice ca', VENICE)).toEqual({
       lat: 33.985,
       lng: -118.4695,
       label: 'Venice, Los Angeles, CA, USA',
     });
+    const [url, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
+    expect(url).toContain('places:searchText');
+    const headers = init.headers as Record<string, string>;
+    expect(headers['X-Goog-FieldMask']).toBe(ADDRESS_SEARCH_FIELD_MASK);
+    expect(JSON.parse(String(init.body))).toMatchObject({
+      textQuery: 'venice ca',
+      pageSize: 1,
+      locationBias: {
+        circle: { center: { latitude: VENICE.lat, longitude: VENICE.lng } },
+      },
+    });
 
-    installFetch(fakeFetch({ status: 'ZERO_RESULTS', results: [] }));
+    installFetch(fakeFetch({}));
     await expect(person.repos.gyms.geocode('nowhere at all')).rejects.toThrow(
-      /could not find that address/i,
+      /could not find that location/i,
     );
   });
 

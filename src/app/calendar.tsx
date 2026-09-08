@@ -1,9 +1,13 @@
-import { Redirect } from 'expo-router';
+import { Redirect, useRouter } from 'expo-router';
+import { CalendarPlus } from 'lucide-react-native';
 import React from 'react';
 import { useAuth } from '@/state/AuthProvider';
 import { useUiStore } from '@/state/uiStore';
 import { CalendarPanel } from '@/ui/components';
 import { SlideScreen, useSlideBack } from '@/ui/motion/SlideScreen';
+import { useTheme } from '@/ui/theme/ThemeProvider';
+
+const HEADER_ICON_SIZE = 22;
 
 export default function CalendarRoute() {
   const { loading, signedIn } = useAuth();
@@ -17,7 +21,9 @@ export default function CalendarRoute() {
 }
 
 function CalendarScreen() {
+  const router = useRouter();
   const close = useSlideBack();
+  const { colors } = useTheme();
   const date = useUiStore((state) => state.selectedDate);
   const setSelectedDate = useUiStore((state) => state.setSelectedDate);
 
@@ -27,6 +33,11 @@ function CalendarScreen() {
       presentation="screen"
       selected={date}
       dayDetail
+      headerAction={{
+        accessibilityLabel: 'Open training schedule',
+        icon: <CalendarPlus size={HEADER_ICON_SIZE} color={colors.accent} />,
+        onPress: () => router.push('/training-schedule'),
+      }}
       onClose={close}
       onSelect={setSelectedDate}
     />

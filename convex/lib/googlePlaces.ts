@@ -1,9 +1,9 @@
 import { boundingBox, haversineM, type GeoPoint } from './geo';
 
-/** Google Places (New) Text Search and the Geocoding API, called with a
- * server key. Callers must never send the key to a client, and no error
- * message built here ever contains it. `fetchImpl` is injectable so the
- * request shape is unit-tested without the network. */
+/** Google Places (New) Text Search, called with a server key. Callers must
+ * never send the key to a client, and no error message built here ever
+ * contains it. `fetchImpl` is injectable so the request shape is unit-tested
+ * without the network. */
 
 export type FetchLike = typeof fetch;
 
@@ -21,10 +21,10 @@ export interface FoundGym extends PlaceGym {
 }
 
 export const TEXT_SEARCH_URL = 'https://places.googleapis.com/v1/places:searchText';
-export const GEOCODE_URL = 'https://maps.googleapis.com/maps/api/geocode/json';
 /** Only what the app shows. Every extra field is a pricier SKU. */
 export const TEXT_SEARCH_FIELD_MASK =
   'places.id,places.displayName,places.formattedAddress,places.location,places.businessStatus';
+export const ADDRESS_SEARCH_FIELD_MASK = 'places.formattedAddress,places.location';
 
 const DEFAULT_TIMEOUT_MS = 10_000;
 const PAGE_SIZE = 20;
@@ -47,6 +47,26 @@ export function buildTextSearchBody(opts: {
       },
     },
   };
+}
+
+export function buildAddressSearchBody(opts: {
+  address: string;
+  bias?: GeoPoint;
+  radiusM?: number;
+}): Record<string, unknown> {
+  const body: Record<string, unknown> = {
+    textQuery: opts.address,
+    pageSize: 1,
+  };
+  if (opts.bias) {
+    body.locationBias = {
+      circle: {
+        center: { latitude: opts.bias.lat, longitude: opts.bias.lng },
+        radius: opts.radiusM ?? 50_000,
+      },
+    };
+  }
+  return body;
 }
 
 /** Tolerates the empty response, which omits `places` entirely. */
@@ -78,8 +98,7 @@ export function parseTextSearchResponse(data: unknown): PlaceGym[] {
       address: typeof place.formattedAddress === 'string' ? place.formattedAddress : '',
       lat,
       lng,
-      businessStatus:
-        typeof place.businessStatus === 'string' ? place.businessStatus : undefined,
+      businessStatus: typeof place.businessStatus === 'string' ? place.businessStatus : undefined,
     });
   }
   return out;
@@ -129,11 +148,13 @@ export async function searchGymsNearby(opts: {
   }
 }
 
-/** A rough address → one point, for people who would rather type than share
- * their location. */
+/** A rough address or place name → one point, for people who would rather
+ * type than share their location. This deliberately uses Places Text Search
+ * too, so one configured API supports the entire home-gym flow. */
 export async function geocodeAddress(opts: {
   apiKey: string;
   address: string;
+  bias?: GeoPoint;
   fetchImpl?: FetchLike;
   timeoutMs?: number;
 }): Promise<{ lat: number; lng: number; label: string }> {
@@ -143,38 +164,36 @@ export async function geocodeAddress(opts: {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), opts.timeoutMs ?? DEFAULT_TIMEOUT_MS);
   try {
-    const url = `${GEOCODE_URL}?address=${encodeURIComponent(opts.address)}&key=${encodeURIComponent(key)}`;
-    const res = await doFetch(url, { method: 'GET', signal: controller.signal });
+    const res = await doFetch(TEXT_SEARCH_URL, {
+      method: 'POST',
+      signal: controller.signal,
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Goog-Api-Key': key,
+        'X-Goog-FieldMask': ADDRESS_SEARCH_FIELD_MASK,
+      },
+      body: JSON.stringify(buildAddressSearchBody({ address: opts.address, bias: opts.bias })),
+    });
     if (!res.ok) {
       const text = await res.text().catch(() => '');
       throw new Error(parseApiError(res.status, text));
     }
     const data = (await res.json()) as {
-      status?: string;
-      error_message?: string;
-      results?: { formatted_address?: string; geometry?: { location?: { lat?: number; lng?: number } } }[];
+      places?: {
+        formattedAddress?: string;
+        location?: { latitude?: number; longitude?: number };
+      }[];
     };
-    const first = data.results?.[0];
-    const lat = first?.geometry?.location?.lat;
-    const lng = first?.geometry?.location?.lng;
-    if (data.status === 'ZERO_RESULTS' || typeof lat !== 'number' || typeof lng !== 'number') {
-      if (data.status && data.status !== 'OK' && data.status !== 'ZERO_RESULTS') {
-        throw new Error(statusMessage(data.status));
-      }
-      throw new Error('Could not find that address');
+    const first = data.places?.[0];
+    const lat = first?.location?.latitude;
+    const lng = first?.location?.longitude;
+    if (typeof lat !== 'number' || typeof lng !== 'number') {
+      throw new Error('Could not find that location');
     }
-    return { lat, lng, label: first?.formatted_address || opts.address };
+    return { lat, lng, label: first?.formattedAddress || opts.address };
   } finally {
     clearTimeout(timer);
   }
-}
-
-function statusMessage(status: string): string {
-  if (status === 'REQUEST_DENIED') return 'Gym search is not configured correctly';
-  if (status === 'OVER_QUERY_LIMIT' || status === 'OVER_DAILY_LIMIT') {
-    return 'Gym search is busy — try again in a moment';
-  }
-  return 'Gym search failed';
 }
 
 /** Never echoes the response body: Google's error text can quote the request,
@@ -189,5 +208,7 @@ function parseApiError(status: number, body: string): string {
   } catch {
     detail = '';
   }
-  return detail ? `Gym search failed (${status}): ${detail.slice(0, 120)}` : `Gym search failed (${status})`;
+  return detail
+    ? `Gym search failed (${status}): ${detail.slice(0, 120)}`
+    : `Gym search failed (${status})`;
 }

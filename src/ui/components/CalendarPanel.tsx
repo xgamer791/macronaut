@@ -54,6 +54,12 @@ export interface CalendarPanelProps {
   title?: string;
   /** Use `screen` when the calendar owns a route instead of opening a modal. */
   presentation?: 'modal' | 'screen';
+  /** Optional action that replaces the default `Today` header control. */
+  headerAction?: {
+    accessibilityLabel: string;
+    icon: React.ReactNode;
+    onPress: () => void;
+  };
   /**
    * Show everything recorded against the selected day beneath the calendar.
    * A host that turns this on must leave the panel open on a pick, so days can
@@ -75,6 +81,7 @@ export function CalendarPanel({
   selected,
   title = 'Calendar',
   presentation = 'modal',
+  headerAction,
   dayDetail = false,
   onClose,
   onSelect,
@@ -227,17 +234,34 @@ export function CalendarPanel({
             <AppText variant="heading" weight="700" numberOfLines={1} style={styles.headerTitle}>
               {title}
             </AppText>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Jump to today"
-              onPress={() => pick(today)}
-              hitSlop={8}
-              style={[styles.headerSide, styles.headerRight]}
-            >
-              <AppText variant="caption" tone="accent" weight="600">
-                Today
-              </AppText>
-            </Pressable>
+            {headerAction ? (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={headerAction.accessibilityLabel}
+                onPress={() => {
+                  void Haptics.selectionAsync();
+                  headerAction.onPress();
+                }}
+                hitSlop={8}
+                style={[styles.headerSide, styles.headerRight]}
+              >
+                <View style={styles.headerActionSlot} pointerEvents="none">
+                  {headerAction.icon}
+                </View>
+              </Pressable>
+            ) : (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Jump to today"
+                onPress={() => pick(today)}
+                hitSlop={8}
+                style={[styles.headerSide, styles.headerRight]}
+              >
+                <AppText variant="caption" tone="accent" weight="600">
+                  Today
+                </AppText>
+              </Pressable>
+            )}
           </View>
 
           <ScrollView
@@ -616,6 +640,12 @@ const styles = StyleSheet.create({
   },
   headerRight: {
     alignItems: 'flex-end',
+  },
+  headerActionSlot: {
+    width: touchTarget,
+    height: touchTarget,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   headerTitle: {
     flex: 1,

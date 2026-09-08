@@ -44,6 +44,8 @@ describe('home gym', () => {
     expect(picker).toContain('accessibilityLabel="Use my location"');
     expect(picker).toContain('A rough address or city');
     expect(picker).toContain('within 7 miles');
+    expect(picker).toContain("anchor?.label === 'Your location'");
+    expect(picker).toContain('friendlyActionError');
     // Paid requests fire from a button or the keyboard's search key, never per keystroke.
     expect(picker).toContain('onSubmitEditing={() => void runSearch()}');
     expect(picker).not.toContain('useDebounced');

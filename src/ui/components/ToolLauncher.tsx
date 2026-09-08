@@ -17,21 +17,9 @@ const TOOLS: { title: string; subtitle: string; icon: IconName; href: Href }[] =
     icon: 'timer-outline',
     href: '/fasting',
   },
-  {
-    title: 'Log food',
-    subtitle: 'Add a meal or scan food',
-    icon: 'restaurant-outline',
-    href: '/add',
-  },
-  {
-    title: 'Log activity',
-    subtitle: 'Record a workout or movement',
-    icon: 'barbell-outline',
-    href: '/activity',
-  },
 ];
 
-const MENU_HEIGHT = 248;
+const MENU_HEIGHT = 132;
 /** Exact gap between the tools button and the top of the tab bar. The
  * tab scene already sits above that chrome, so this is not compounded
  * with the home-indicator inset. */

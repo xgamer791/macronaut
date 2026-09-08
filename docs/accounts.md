@@ -13,7 +13,7 @@ method:
 | ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------- |
 | Email and password | `convex/PasswordAccount.ts`. Create Account sends the address, the password, the name, the date of birth and the country in one call; Convex Auth hashes the password with Scrypt and stores only the hash on the account row. Signing in sends the address and the password. Forgot password emails a reset link to the live site (`SITE_URL/forgot-password`) and then accepts the token from that link plus a new password. | `AUTH_RESEND_KEY`, `AUTH_EMAIL_FROM`, `SITE_URL` (reset email) |
 | AI food scan       | A Convex action calls xAI with a shared key. The client never sees it. Until Pro exists, accounts that already existed when the roster froze (plus Holly Ky and the two preview emails) can invoke the action. Later sign-ups cannot.                                                                                                                                                                                          | `XAI_API_KEY`                                                  |
-| Home gym search    | Convex actions (`convex/places.ts`) call Google Places (New) and the Geocoding API with a shared key to find gyms within seven miles of a point. The client only ever sees a gym's id, name, address, coordinates and distance. Capped per account per day.                                                                                                                                                                    | `GOOGLE_PLACES_API_KEY`                                        |
+| Home gym search    | Convex actions (`convex/places.ts`) call Google Places (New) with a shared key to resolve a typed location and find gyms within seven miles of it. The client only ever sees a gym's id, name, address, coordinates and distance. Capped per account per day.                                                                                                                                                                      | `GOOGLE_PLACES_API_KEY`                                        |
 
 No third-party sign-in is offered, so Sign in with Apple is not required: the
 App Store asks for it only in apps that offer another third-party sign-in.
@@ -205,8 +205,8 @@ see “AI food scan is not configured”.
 The home-gym picker (onboarding's last step, Settings → Home gym) finds real
 gyms through Google. On the Google Cloud project already used for OAuth:
 
-1. Enable **Places API (New)** and **Geocoding API**.
-2. Create an API key restricted **by API** to those two. Do not restrict it by
+1. Enable **Places API (New)**.
+2. Create an API key restricted **by API** to Places API (New). Do not restrict it by
    HTTP referrer or IP — it is called from Convex, not a browser.
 3. Set it on the deployment:
 

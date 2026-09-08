@@ -41,7 +41,7 @@ export interface GeocodedPoint {
 export interface GymRepo {
   /** Whether the deployment has a places key. */
   available(): Promise<boolean>;
-  geocode(address: string): Promise<GeocodedPoint>;
+  geocode(address: string, near?: { lat: number; lng: number }): Promise<GeocodedPoint>;
   searchGyms(input: { query: string; lat: number; lng: number }): Promise<GymCandidate[]>;
   mine(): Promise<MyGym | null>;
   claim(input: { gymId: string; joinGroup: boolean }): Promise<MyGym>;
@@ -57,7 +57,7 @@ export function createGymRepo(convex: ConvexCaller): GymRepo {
       const row = await convex.query(api.places.available, {});
       return row.configured;
     },
-    geocode: (address) => convex.action(api.places.geocode, { address }),
+    geocode: (address, near) => convex.action(api.places.geocode, { address, near }),
     searchGyms: (input) => convex.action(api.places.searchGyms, input),
     mine: () => convex.query(api.gyms.mine, {}),
     claim: ({ gymId: id, joinGroup }) =>

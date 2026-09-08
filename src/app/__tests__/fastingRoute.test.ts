@@ -19,8 +19,11 @@ describe('home tools and fasting route', () => {
     expect(screen).toContain('floatingOverlay?: React.ReactNode');
     expect(launcher).toContain('Animated.timing');
     expect(launcher).toContain("href: '/fasting'");
-    expect(launcher).toContain("href: '/add'");
-    expect(launcher).toContain("href: '/activity'");
+    expect(launcher).not.toContain("href: '/add'");
+    expect(launcher).not.toContain("href: '/activity'");
+    expect(launcher).not.toContain("title: 'Log food'");
+    expect(launcher).not.toContain("title: 'Log activity'");
+    expect(launcher).toContain('const MENU_HEIGHT = 132');
     expect(launcher).toContain('accessibilityState={{ expanded: open }}');
     expect(launcher).toContain('FAB_ABOVE_FOOTER = 20');
     expect(launcher).toContain('bottom: FAB_ABOVE_FOOTER');

@@ -19,7 +19,6 @@ import { ActivityType } from '@/repositories/types';
 import {
   DEFAULT_HERO_LEFT,
   DEFAULT_HERO_RIGHT,
-  HERO_METRICS,
   isHeroMetricId,
   type HeroMetricId,
 } from '@/data/heroMetrics';
@@ -30,15 +29,15 @@ import {
   BarEntranceProvider,
   GlassHeaderBar,
   HeroMetricModule,
-  ListRow,
+  HeroMetricPicker,
   Screen,
   SectionHeader,
-  Sheet,
   ToolLauncher,
 } from '@/ui/components';
 import type { HeroMetricValues } from '@/ui/components/HeroMetricModule';
 import { useTheme } from '@/ui/theme/ThemeProvider';
 import { radius, spacing } from '@/ui/theme/tokens';
+import { TODAY_SECTION_GAP } from '@/ui/components/todayHeroLayout';
 
 const HERO_IMAGE = require('../../../assets/images/today/hero-gym.jpg');
 
@@ -76,7 +75,7 @@ function TodayBody() {
   const qc = useQueryClient();
   const { settings } = useRepos();
   const { colors } = useTheme();
-  const { width, height: windowHeight } = useWindowDimensions();
+  const { width } = useWindowDimensions();
   const date = useUiStore((s) => s.selectedDate);
   const setSelectedDate = useUiStore((s) => s.setSelectedDate);
   const setTargetMeal = useUiStore((s) => s.setTargetMeal);
@@ -152,10 +151,12 @@ function TodayBody() {
   }
 
   async function setModuleMetric(slot: 'left' | 'right', id: HeroMetricId) {
+    const current = slot === 'left' ? leftMetric : rightMetric;
+    setPickerSlot(null);
+    if (id === current) return;
     const key = slot === 'left' ? 'heroModuleLeft' : 'heroModuleRight';
     await settings.set(key, id);
     qc.invalidateQueries({ queryKey: keys.setting(key) });
-    setPickerSlot(null);
   }
 
   const mealTotals = new Map<string, number>();
@@ -176,8 +177,6 @@ function TodayBody() {
     burnedByType.set(a.activityType, (burnedByType.get(a.activityType) ?? 0) + a.caloriesBurned);
   }
 
-  // Hero is tall enough that the athlete stays visible above the goals card.
-  const heroHeight = Math.round(Math.min(Math.max(windowHeight * 0.42, width * 0.95), 420));
   const macros = [
     {
       key: 'protein' as const,
@@ -212,7 +211,7 @@ function TodayBody() {
       floatingOverlay={<ToolLauncher />}
     >
       {/* —— Hero —— */}
-      <View style={[styles.hero, { height: heroHeight }]}>
+      <View style={styles.hero}>
         <Image
           source={HERO_IMAGE}
           style={StyleSheet.absoluteFill}
@@ -243,37 +242,16 @@ function TodayBody() {
         </View>
       </View>
 
-      <Sheet
-        visible={pickerSlot !== null}
+      <HeroMetricPicker
+        slot={pickerSlot}
+        selected={pickerSlot === 'left' ? leftMetric : rightMetric}
+        other={pickerSlot === 'left' ? rightMetric : leftMetric}
         onClose={() => setPickerSlot(null)}
-        title={
-          pickerSlot
-            ? `Show on ${pickerSlot === 'left' ? 'left' : 'right'} module`
-            : 'Choose metric'
-        }
-      >
-        <AppText variant="caption" tone="secondary" style={{ marginBottom: spacing.md }}>
-          Each module uses a layout optimized for that metric — rings, bars, cups, and stride meters
-          are intentional, not required to match.
-        </AppText>
-        {HERO_METRICS.map((m) => {
-          const selected = pickerSlot === 'left' ? m.id === leftMetric : m.id === rightMetric;
-          const usedElsewhere = pickerSlot === 'left' ? m.id === rightMetric : m.id === leftMetric;
-          return (
-            <ListRow
-              key={m.id}
-              title={m.label}
-              subtitle={usedElsewhere ? `${m.subtitle} · on other module` : m.subtitle}
-              selected={selected}
-              left={<Ionicons name={m.icon} size={20} color={colors.textSecondary} />}
-              onPress={() => {
-                if (!pickerSlot) return;
-                void setModuleMetric(pickerSlot, m.id);
-              }}
-            />
-          );
-        })}
-      </Sheet>
+        onSelect={(metric) => {
+          if (!pickerSlot) return;
+          void setModuleMetric(pickerSlot, metric);
+        }}
+      />
 
       <View style={styles.body}>
         {/* —— Macro photo cards —— */}
@@ -322,7 +300,9 @@ function TodayBody() {
         </View>
 
         {/* —— Meals —— */}
+        <View style={styles.section}>
         <SectionHeader
+          flush
           title="Meals"
           right={
             <Pressable
@@ -389,9 +369,12 @@ function TodayBody() {
             );
           })}
         </View>
+        </View>
 
         {/* —— Activity (below fold; keeps logging entry points) —— */}
+        <View style={styles.section}>
         <SectionHeader
+          flush
           title="Activity"
           right={
             <Pressable
@@ -417,6 +400,7 @@ function TodayBody() {
             router.push({ pathname: '/activity', params: { type } });
           }}
         />
+        </View>
       </View>
     </Screen>
   );
@@ -432,11 +416,11 @@ const styles = StyleSheet.create({
   hero: {
     width: '100%',
     overflow: 'hidden',
-    justifyContent: 'flex-end',
   },
   heroBottom: {
     paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.md + 15,
+    paddingTop: TODAY_SECTION_GAP,
+    paddingBottom: TODAY_SECTION_GAP,
     zIndex: 3,
     gap: spacing.md,
   },
@@ -448,8 +432,11 @@ const styles = StyleSheet.create({
   },
   body: {
     paddingHorizontal: spacing.lg,
-    paddingTop: spacing.lg,
-    gap: spacing.lg,
+    paddingTop: 0,
+    gap: TODAY_SECTION_GAP,
+  },
+  section: {
+    gap: spacing.sm,
   },
   macroRow: {
     flexDirection: 'row',
