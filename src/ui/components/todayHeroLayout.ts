@@ -6,13 +6,12 @@ export const HEADER_PAD_TOP = 2;
 export const HEADER_ROW_LIFT = 3;
 
 /**
- * One vertical rhythm for Today: header→cards, cards→macros, and every
- * section after that. 8px under the hairline read as no gap on the dark
- * plate; 16px is the old body gap and still looked tight there. 24px is
- * the next token and is visible in every slot.
+ * Vertical rhythm for Today after the hero cards. 8px under the hairline
+ * read as no gap; 16px still looked tight there. 24px is the section
+ * token for cards→macros and every section after that.
  *
  * Today does not overlay the header. `Screen` reserves the painted bar,
- * and the hero applies this gap as padding above the modules so the
+ * and the hero applies `HERO_GAP_BELOW_HEADER` above the modules so the
  * header→cards space cannot collapse when chrome height is guessed wrong.
  */
 export const TODAY_SECTION_GAP = spacing.xl;
@@ -23,7 +22,7 @@ export function glassHeaderHeight(topInset: number, hairlineWidth: number) {
 }
 
 /** Inset between the hairline and the metric modules. */
-export const HERO_GAP_BELOW_HEADER = TODAY_SECTION_GAP;
+export const HERO_GAP_BELOW_HEADER = 30;
 
 /** Inset under the modules, above the macros section. */
 export const HERO_GAP_ABOVE_MACROS = TODAY_SECTION_GAP;
