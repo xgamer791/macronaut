@@ -301,25 +301,7 @@ function TodayBody() {
 
         {/* —— Meals —— */}
         <View style={styles.section}>
-        <SectionHeader
-          flush
-          title="Meals"
-          right={
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Browse curated meals"
-              onPress={() => {
-                setSelectedDate(date);
-                router.push('/meals');
-              }}
-              style={{ minHeight: 44, justifyContent: 'center' }}
-            >
-              <AppText variant="caption" weight="600" style={{ color: colors.accent }}>
-                View all ›
-              </AppText>
-            </Pressable>
-          }
-        />
+        <SectionHeader flush title="Meals" />
 
         <View
           style={[
@@ -364,7 +346,7 @@ function TodayBody() {
                     {time}
                   </AppText>
                 ) : null}
-                <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+                <Ionicons name="add" size={22} color={colors.accent} />
               </Pressable>
             );
           })}

@@ -11,6 +11,7 @@ import { radius, spacing, touchTarget } from '@/ui/theme/tokens';
 import { metersToMiles } from '../../../convex/lib/geo';
 import { AppText } from './AppText';
 import { Button } from './Button';
+import { GlassPopup } from './GlassPopup';
 import { TextField } from './TextField';
 
 const QUERY_MAX = 60;
@@ -20,6 +21,11 @@ interface Anchor {
   lat: number;
   lng: number;
   label: string;
+}
+
+interface SaveConfirmation {
+  result: MyGym;
+  joinedGroup: boolean;
 }
 
 export interface HomeGymPickerProps {
@@ -54,6 +60,7 @@ export function HomeGymPicker({ confirmLabel, onDone, onSkip, busy = false }: Ho
   const [joinGroup, setJoinGroup] = useState(true);
   const [locating, setLocating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [confirmation, setConfirmation] = useState<SaveConfirmation | null>(null);
 
   const pending = busy || locating || geocode.isPending || search.isPending || claim.isPending;
 
@@ -124,10 +131,19 @@ export function HomeGymPicker({ confirmLabel, onDone, onSkip, busy = false }: Ho
     try {
       const result = await claim.mutateAsync({ gymId: selected.id, joinGroup });
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      onDone?.(result);
+      setConfirmation({ result, joinedGroup: result.group?.isMember === true });
     } catch (e) {
       setError(friendlyActionError(e, 'We couldn’t save your home gym. Please try again.'));
     }
+  }
+
+  function finishConfirmation() {
+    const result = confirmation?.result;
+    setConfirmation(null);
+    setQuery('');
+    setResults(null);
+    setSelected(null);
+    if (result) onDone?.(result);
   }
 
   if (available.data === false) {
@@ -378,6 +394,31 @@ export function HomeGymPicker({ confirmLabel, onDone, onSkip, busy = false }: Ho
           </AppText>
         </Pressable>
       ) : null}
+
+      <GlassPopup
+        visible={confirmation !== null}
+        onClose={finishConfirmation}
+        accessibilityLabel="Close home gym confirmation"
+      >
+        {confirmation ? (
+          <View style={styles.confirmation} accessibilityLiveRegion="polite">
+            <View style={[styles.successIcon, { backgroundColor: colors.success }]}>
+              <Ionicons name="checkmark" size={28} color={colors.onAccent} />
+            </View>
+            <View style={styles.confirmationCopy}>
+              <AppText variant="heading" weight="700" display>
+                {confirmation.joinedGroup ? 'Welcome to the group' : 'Home gym saved'}
+              </AppText>
+              <AppText variant="body" tone="secondary" style={styles.confirmationBody}>
+                {confirmation.joinedGroup
+                  ? `${confirmation.result.gym.name} is now your home gym, and you’re officially a member of its Macronaut group.`
+                  : `${confirmation.result.gym.name} is now your home gym. You can join its Macronaut group anytime.`}
+              </AppText>
+            </View>
+            <Button title="Got it" onPress={finishConfirmation} style={styles.confirmationButton} />
+          </View>
+        ) : null}
+      </GlassPopup>
     </View>
   );
 }
@@ -535,6 +576,30 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     padding: spacing.md,
     borderRadius: radius.md,
+  },
+  confirmation: {
+    alignItems: 'center',
+    gap: spacing.lg,
+    paddingHorizontal: spacing.sm,
+    paddingTop: spacing.md,
+  },
+  successIcon: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  confirmationCopy: {
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  confirmationBody: {
+    textAlign: 'center',
+    lineHeight: 22,
+  },
+  confirmationButton: {
+    alignSelf: 'stretch',
   },
   skip: {
     alignSelf: 'center',

@@ -61,6 +61,17 @@ describe('home gym', () => {
     expect(picker).toContain('Skip for now');
   });
 
+  it('confirms the saved gym and actual group membership before leaving', () => {
+    expect(picker).toContain('<GlassPopup');
+    expect(picker).toContain('joinedGroup: result.group?.isMember === true');
+    expect(picker).toContain("'Welcome to the group'");
+    expect(picker).toContain('you’re officially a member of its Macronaut group');
+    expect(picker).toContain('You can join its Macronaut group anytime');
+    expect(picker).toContain('title="Got it"');
+    expect(picker).toContain('onPress={finishConfirmation}');
+    expect(picker).toContain('style={styles.confirmationButton}');
+  });
+
   it('asks for location only when in use, and only for this', () => {
     expect(config).toContain("'expo-location'");
     expect(config).toContain('locationWhenInUsePermission');
