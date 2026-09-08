@@ -53,8 +53,8 @@ describe('sticky chrome headers', () => {
     expect(today).not.toContain('greetingBlock');
   });
 
-  it('gives the schedule the full-screen calendar rather than one tucked under the bar', () => {
-    expect(trainingSchedule).toContain('<CalendarPanel');
+  it('seats the schedule header in the bar rather than offsetting it by hand', () => {
+    expect(trainingSchedule).toContain('<GlassHeaderBar inset={spacing.lg}>');
     expect(trainingSchedule).not.toContain('top={insets.top');
   });
 

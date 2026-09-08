@@ -27,8 +27,10 @@ describe('training schedule route', () => {
     expect(calendar).toContain("onPress: () => router.push('/training-schedule')");
     expect(schedule).toContain('title="Training Schedule"');
     expect(schedule).toContain('collapseHeader={false}');
-    expect(schedule).toContain('accessibilityLabel="Open full calendar"');
-    expect(schedule).toContain('<CalendarPanel');
+    // The schedule is reached from the calendar, not the other way round, so its
+    // header carries no calendar control and no panel to open.
+    expect(schedule).not.toContain('Open full calendar');
+    expect(schedule).not.toContain('CalendarPanel');
     expect(schedule).toContain('const ADD_ICON_SIZE = 27');
     expect(schedule).toContain('width: ADD_ICON_SIZE');
     expect(schedule).toContain('height: ADD_ICON_SIZE');
@@ -38,7 +40,6 @@ describe('training schedule route', () => {
   it('uses the same outlined calendar-days glyph everywhere', () => {
     const files = [
       path.join(appDir, '..', 'ui', 'components', 'AppHeader.tsx'),
-      path.join(appDir, 'training-schedule.tsx'),
       path.join(appDir, '(tabs)', 'progress.tsx'),
       path.join(appDir, 'fasting.tsx'),
       path.join(appDir, '(tabs)', 'settings.tsx'),

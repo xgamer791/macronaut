@@ -38,10 +38,8 @@ import {
 import {
   AppText,
   Button,
-  CalendarIcon,
   ErrorState,
   GlassHeaderBar,
-  CalendarPanel,
   Screen,
   ScreenHeader,
   TextField,
@@ -77,7 +75,6 @@ function TrainingScheduleScreen() {
   const { colors } = useTheme();
   const weekStart = useWeekStart();
   const [anchor, setAnchor] = useState<DayKey>(() => todayKey());
-  const [calendarOpen, setCalendarOpen] = useState(false);
   const start = weekStartOf(anchor, weekStart);
   const days = useMemo(() => weekDays(start, weekStart), [start, weekStart]);
   const schedule = useTrainingSchedule(days[0], days[6]);
@@ -213,20 +210,7 @@ function TrainingScheduleScreen() {
       collapseHeader={false}
       stickyHeader={
         <GlassHeaderBar inset={spacing.lg}>
-          <ScreenHeader
-            title="Training Schedule"
-            right={
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="Open full calendar"
-                onPress={() => setCalendarOpen(true)}
-                hitSlop={8}
-                style={styles.headerButton}
-              >
-                <CalendarIcon size={22} color={colors.accent} />
-              </Pressable>
-            }
-          />
+          <ScreenHeader title="Training Schedule" />
         </GlassHeaderBar>
       }
     >
@@ -524,15 +508,6 @@ function TrainingScheduleScreen() {
           </RightEditorPanel>
         ) : null}
       </View>
-
-      <CalendarPanel
-        visible={calendarOpen}
-        selected={anchor}
-        title="Training Schedule"
-        dayDetail
-        onClose={() => setCalendarOpen(false)}
-        onSelect={setAnchor}
-      />
     </Screen>
   );
 }
@@ -885,12 +860,6 @@ function editorDate(date: DayKey): string {
 }
 
 const styles = StyleSheet.create({
-  headerButton: {
-    width: touchTarget,
-    height: touchTarget,
-    alignItems: 'flex-end',
-    justifyContent: 'center',
-  },
   workspace: {
     flex: 1,
     position: 'relative',
