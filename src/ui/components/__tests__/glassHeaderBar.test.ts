@@ -44,7 +44,7 @@ describe('sticky chrome headers', () => {
     expect(today).toContain('<AppHeader />');
     expect(today).not.toContain('headerWrap');
     expect(today).not.toContain('heroHeight');
-    expect(today).toContain('paddingTop: TODAY_SECTION_GAP');
+    expect(today).toContain('paddingTop: HERO_GAP_BELOW_HEADER');
     expect(today).toContain('TODAY_SECTION_GAP');
     expect(today).not.toContain('windowHeight * 0.42');
     expect(today).not.toContain('heroHeight + insets.top');

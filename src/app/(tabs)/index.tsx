@@ -37,7 +37,7 @@ import {
 import type { HeroMetricValues } from '@/ui/components/HeroMetricModule';
 import { useTheme } from '@/ui/theme/ThemeProvider';
 import { radius, spacing } from '@/ui/theme/tokens';
-import { TODAY_SECTION_GAP } from '@/ui/components/todayHeroLayout';
+import { HERO_GAP_BELOW_HEADER, TODAY_SECTION_GAP } from '@/ui/components/todayHeroLayout';
 
 const HERO_IMAGE = require('../../../assets/images/today/hero-gym.jpg');
 
@@ -419,7 +419,7 @@ const styles = StyleSheet.create({
   },
   heroBottom: {
     paddingHorizontal: spacing.lg,
-    paddingTop: TODAY_SECTION_GAP,
+    paddingTop: HERO_GAP_BELOW_HEADER,
     paddingBottom: TODAY_SECTION_GAP,
     zIndex: 3,
     gap: spacing.md,

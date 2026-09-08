@@ -17,10 +17,10 @@ describe('today hero layout', () => {
     expect(glassHeaderHeight(47, 1)).toBe(47 + 2 + 3 + touchTarget + spacing.xs + 1);
   });
 
-  it('uses one 24px section gap above the cards, below them, and between sections', () => {
+  it('uses 30px under the header and 24px between the later sections', () => {
+    expect(HERO_GAP_BELOW_HEADER).toBe(30);
     expect(TODAY_SECTION_GAP).toBe(24);
     expect(TODAY_SECTION_GAP).toBe(spacing.xl);
-    expect(HERO_GAP_BELOW_HEADER).toBe(TODAY_SECTION_GAP);
     expect(HERO_GAP_ABOVE_MACROS).toBe(TODAY_SECTION_GAP);
   });
 
@@ -33,7 +33,7 @@ describe('today hero layout', () => {
 
   it('lets Screen reserve the header so the first gap cannot collapse', () => {
     const today = read('app', '(tabs)', 'index.tsx');
-    expect(today).toContain('paddingTop: TODAY_SECTION_GAP');
+    expect(today).toContain('paddingTop: HERO_GAP_BELOW_HEADER');
     expect(today).toContain('paddingBottom: TODAY_SECTION_GAP');
     expect(today).toContain('gap: TODAY_SECTION_GAP');
     expect(today).toContain('paddingTop: 0');
