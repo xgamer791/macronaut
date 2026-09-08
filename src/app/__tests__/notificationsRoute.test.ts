@@ -104,6 +104,10 @@ describe('notification center', () => {
     expect(http).toContain("'Cache-Control': 'no-store, no-cache, must-revalidate'");
     expect(deploy).toContain('npx convex env set PUBLIC_WEB_BUILD');
     expect(deploy).toContain('cancel-in-progress: false');
+    expect(deploy).toContain('> .convex-production-url');
+    expect(deploy).toContain('BACKEND=$(tr -d');
+    expect(deploy).toContain('grep -RqsF "$BACKEND" dist/_expo/static/js/web/');
+    expect(deploy).not.toContain("grep -rhoE 'https://[a-z0-9-]+\\.convex\\.cloud'");
     expect(cachebust).toContain('/web-build');
     expect(cachebust).toContain("u.searchParams.set('_t', String(Date.now()))");
     // A tab left open never reloaded, so the build check has to run again

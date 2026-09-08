@@ -87,19 +87,28 @@ jobs:
         env:
           CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_DEPLOY_KEY }}
           EXPO_PUBLIC_BASE_PATH: /macronaut
-        run: npx convex deploy --cmd 'npm run export:web' --cmd-url-env-var-name EXPO_PUBLIC_CONVEX_URL
+        run: |
+          npx convex deploy \
+            --cmd 'npm run export:web && printf "%s\n" "$EXPO_PUBLIC_CONVEX_URL" > .convex-production-url' \
+            --cmd-url-env-var-name EXPO_PUBLIC_CONVEX_URL
 
-      # The deployment URL is inlined at build time, so a bundle without it is
-      # an app that cannot sign in or load anything. Fail instead of shipping it.
+      # Capture the exact URL Convex supplied to the export command. Searching
+      # the minified bundle is unsafe: the Convex client itself contains an
+      # example happy-otter-123.convex.cloud URL before the app's real URL.
       - name: Verify the bundle points at a Convex deployment
         run: |
-          BACKEND=$(grep -rhoE 'https://[a-z0-9-]+\.convex\.cloud' dist/_expo/static/js/web/ | head -1)
-          if [ -z "$BACKEND" ]; then
-            echo "::error::No Convex deployment URL in the exported bundle; the deploy would ship an app with no backend."
+          BACKEND=$(tr -d '\r\n' < .convex-production-url)
+          if ! printf '%s' "$BACKEND" | grep -Eq '^https://[a-z0-9-]+\.convex\.cloud$'; then
+            echo "::error::Convex did not provide a valid deployment URL to the web export."
+            exit 1
+          fi
+          if ! grep -RqsF "$BACKEND" dist/_expo/static/js/web/; then
+            echo "::error::The exported bundle does not contain the Convex deployment URL it was built against."
             exit 1
           fi
           echo "backend=$BACKEND" >> "$GITHUB_STEP_SUMMARY"
           echo "CONVEX_CLOUD_URL=$BACKEND" >> "$GITHUB_ENV"
+          rm -f .convex-production-url
 
       # GitHub Pages CDN caches HTML and version.json for ~10 minutes; meta
       # tags do not override that. Write version.json, publish the SHA on
