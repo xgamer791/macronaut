@@ -130,18 +130,8 @@ function QuickTile({
   );
 }
 
-/** Keep incomplete rows the same tile width as a full 3-up quick row. */
 function QuickTileRow({ children }: { children: React.ReactNode }) {
-  const items = React.Children.toArray(children);
-  const pads = Math.max(0, 3 - items.length);
-  return (
-    <View style={styles.quickRow}>
-      {items}
-      {Array.from({ length: pads }, (_, i) => (
-        <View key={`pad-${i}`} style={styles.quickTilePad} />
-      ))}
-    </View>
-  );
+  return <View style={styles.quickRow}>{children}</View>;
 }
 
 function SearchResultSections({
@@ -286,44 +276,34 @@ export default function AddScreen() {
         <View style={styles.headerSpacer} />
       </View>
 
-      {/* Pill search + barcode */}
-      <View style={styles.searchRow}>
-        <View
-          style={[
-            styles.searchPill,
-            { backgroundColor: colors.surface, borderColor: colors.borderStrong, flex: 1 },
-          ]}
-        >
-          <Ionicons name="search" size={18} color={colors.textMuted} />
-          <TextInput
-            accessibilityLabel="Search foods"
-            value={query}
-            onChangeText={setQuery}
-            placeholder="Search foods, brands, flavors…"
-            placeholderTextColor={colors.textMuted}
-            autoFocus={false}
-            returnKeyType="search"
-            style={[type.body, styles.searchInput, { color: colors.textPrimary }]}
-          />
-          {query.length > 0 ? (
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Clear search"
-              onPress={() => setQuery('')}
-              hitSlop={8}
-            >
-              <Ionicons name="close-circle" size={18} color={colors.textMuted} />
-            </Pressable>
-          ) : null}
-        </View>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Scan barcode"
-          onPress={() => router.push('/scan')}
-          style={styles.barcodeBtn}
-        >
-          <Ionicons name="barcode-outline" size={26} color={colors.textPrimary} />
-        </Pressable>
+      {/* Full-width food search */}
+      <View
+        style={[
+          styles.searchPill,
+          { backgroundColor: colors.surface, borderColor: colors.borderStrong },
+        ]}
+      >
+        <Ionicons name="search" size={18} color={colors.textMuted} />
+        <TextInput
+          accessibilityLabel="Search foods"
+          value={query}
+          onChangeText={setQuery}
+          placeholder="Search foods, brands, flavors…"
+          placeholderTextColor={colors.textMuted}
+          autoFocus={false}
+          returnKeyType="search"
+          style={[type.body, styles.searchInput, { color: colors.textPrimary }]}
+        />
+        {query.length > 0 ? (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Clear search"
+            onPress={() => setQuery('')}
+            hitSlop={8}
+          >
+            <Ionicons name="close-circle" size={18} color={colors.textMuted} />
+          </Pressable>
+        ) : null}
       </View>
 
       {/* Underline tabs */}
@@ -362,6 +342,12 @@ export default function AddScreen() {
             <>
               <QuickTileRow>
                 <QuickTile
+                  icon="barcode-outline"
+                  label="Barcode scanner"
+                  onPress={() => router.push('/scan')}
+                />
+                <QuickTile icon="mic-outline" label="Voice log" disabled onPress={() => undefined} />
+                <QuickTile
                   icon="sparkles-outline"
                   label="AI food scan"
                   disabled={!aiScanAllowed}
@@ -371,11 +357,6 @@ export default function AddScreen() {
                   icon="flash-outline"
                   label="Quick add"
                   onPress={() => router.push('/manual-entry')}
-                />
-                <QuickTile
-                  icon="nutrition-outline"
-                  label="Custom food"
-                  onPress={() => router.push('/custom-food')}
                 />
               </QuickTileRow>
 
@@ -639,12 +620,8 @@ const styles = StyleSheet.create({
   headerSpacer: {
     width: 40,
   },
-  searchRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
   searchPill: {
+    width: '100%',
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
@@ -652,12 +629,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     borderRadius: radius.full,
     borderWidth: StyleSheet.hairlineWidth,
-  },
-  barcodeBtn: {
-    width: 48,
-    height: 48,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   searchInput: {
     flex: 1,
@@ -695,9 +666,6 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg,
     borderWidth: StyleSheet.hairlineWidth,
     minHeight: 88,
-  },
-  quickTilePad: {
-    flex: 1,
   },
   stack: {
     gap: spacing.sm,
