@@ -1,4 +1,5 @@
 import { Redirect } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
 import React from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -7,11 +8,11 @@ import { useSetting } from '@/state/queries';
 import { AppText } from '@/ui/components';
 import { WelcomeBackground } from '@/ui/WelcomeBackground';
 import { WelcomeCta } from '@/ui/WelcomeCta';
-import { fonts } from '@/ui/theme/tokens';
+import { fonts, lightColors } from '@/ui/theme/tokens';
 
-/** Poster splash: full-bleed photo, mid-canvas stacked wordmark, two identical
- * CTAs, then a text link. Create Account opens the legal gate, Sign In the
- * email and password form; More options stays inert until that pass. */
+/** Poster splash: photo band, stacked wordmark, two identical CTAs, then a
+ * text link. Create Account opens the legal gate, Sign In the email and
+ * password form; More options stays inert until that pass. */
 export default function WelcomeScreen() {
   const { loading, signedIn } = useAuth();
   const onboarded = useSetting<boolean>('onboardingComplete', false, signedIn);
@@ -22,10 +23,9 @@ export default function WelcomeScreen() {
 
   return (
     <View style={styles.root}>
-      <WelcomeBackground />
-      {/* Flat 50% film so white type stays readable. No extra gradient. */}
-      <View pointerEvents="none" style={styles.veil}>
-        <View style={styles.veilFilm} />
+      <StatusBar style="dark" />
+      <View style={styles.hero}>
+        <WelcomeBackground />
       </View>
 
       <View style={styles.frame}>
@@ -58,18 +58,15 @@ export default function WelcomeScreen() {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: '#101418',
+    backgroundColor: lightColors.background,
   },
-  veil: {
-    ...StyleSheet.absoluteFill,
-  },
-  veilFilm: {
-    ...StyleSheet.absoluteFill,
-    backgroundColor: 'rgba(0,0,0,0.50)',
+  hero: {
+    height: '38%',
+    overflow: 'hidden',
+    backgroundColor: lightColors.track,
   },
   frame: {
     flex: 1,
-    zIndex: 1,
   },
   wordmarkWrap: {
     flex: 1,
@@ -78,7 +75,7 @@ const styles = StyleSheet.create({
   },
   macro: {
     fontFamily: fonts.semibold,
-    color: '#FFFFFF',
+    color: lightColors.textPrimary,
     fontSize: 46,
     lineHeight: 50,
     fontWeight: '700',
@@ -87,7 +84,7 @@ const styles = StyleSheet.create({
   },
   naut: {
     fontFamily: fonts.medium,
-    color: '#FFFFFF',
+    color: lightColors.textPrimary,
     fontSize: 28,
     lineHeight: 32,
     fontWeight: '500',
@@ -108,7 +105,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   footerLabel: {
-    color: '#FFFFFF',
+    color: lightColors.textSecondary,
     fontSize: 15,
     lineHeight: 20,
     fontWeight: '400',

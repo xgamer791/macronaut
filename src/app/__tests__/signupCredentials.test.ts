@@ -106,7 +106,8 @@ describe('signup credentials', () => {
     expect(source).not.toContain('setMonthIndex');
     expect(source).toContain('inlineMenu');
     expect(source).toContain('isValidSignupBirthday');
-    expect(source).toContain('WelcomeBackground');
+    expect(source).not.toContain('WelcomeBackground');
+    expect(source).toContain('lightColors.background');
     expect(source).toContain('WelcomeCta');
     expect(source).toMatch(/fonts\.(semibold|medium)/);
     expect(source).toContain('type.title');
@@ -116,8 +117,8 @@ describe('signup credentials', () => {
     expect(source).toContain('disabled={!ready || auth.busy}');
     expect(source).not.toContain('/create-account');
     expect(fields).toContain("outlineStyle: 'none'");
-    expect(fields).toContain("dataSet: { darkfield: 'true' }");
-    expect(fields).toContain("WebkitTextFillColor: '#FFFFFF'");
+    expect(fields).toContain("dataSet: { authfield: 'true' }");
+    expect(fields).toContain('WebkitTextFillColor: lightColors.textPrimary');
     expect(fields).toContain('palette.danger');
     expect(source).not.toContain('Modal');
     expect(source).not.toContain('animationType');

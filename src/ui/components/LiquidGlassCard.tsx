@@ -5,7 +5,7 @@ import { spacing } from '@/ui/theme/tokens';
 
 const GLASS_RADIUS = 24;
 
-/** Black translucent liquid-glass surface — native GlassView on iOS 26+, CSS blur elsewhere. */
+/** Light frosted surface — native GlassView on iOS 26+, CSS blur elsewhere. */
 export function LiquidGlassCard({
   children,
   contentStyle,
@@ -19,8 +19,8 @@ export function LiquidGlassCard({
     return (
       <GlassView
         glassEffectStyle="regular"
-        tintColor="rgba(0, 0, 0, 0.55)"
-        colorScheme="dark"
+        tintColor="rgba(255, 255, 255, 0.72)"
+        colorScheme="light"
         style={styles.glassNative}
       >
         <View style={[styles.inner, contentStyle]}>{children}</View>
@@ -51,27 +51,27 @@ const styles = StyleSheet.create({
     borderRadius: GLASS_RADIUS,
     overflow: 'hidden',
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(255, 255, 255, 0.18)',
+    borderColor: 'rgba(20, 24, 29, 0.08)',
   },
   glassWeb: {
     borderRadius: GLASS_RADIUS,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.16)',
-    backgroundColor: 'rgba(8, 10, 14, 0.78)',
-    shadowColor: '#000',
-    shadowOpacity: 0.5,
-    shadowRadius: 32,
-    shadowOffset: { width: 0, height: 18 },
-    elevation: 24,
+    borderColor: 'rgba(20, 24, 29, 0.08)',
+    backgroundColor: 'rgba(255, 255, 255, 0.88)',
+    shadowColor: '#14181D',
+    shadowOpacity: 0.08,
+    shadowRadius: 24,
+    shadowOffset: { width: 0, height: 10 },
+    elevation: 8,
   },
   glassFill: {
     ...StyleSheet.absoluteFill,
-    backgroundColor: 'rgba(0, 0, 0, 0.22)',
+    backgroundColor: 'rgba(255, 255, 255, 0.55)',
   },
   glassSheen: {
     ...StyleSheet.absoluteFill,
-    backgroundColor: 'rgba(255, 255, 255, 0.03)',
+    backgroundColor: 'rgba(255, 255, 255, 0.12)',
   },
   glassHighlight: {
     position: 'absolute',
@@ -79,7 +79,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     height: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.28)',
+    backgroundColor: 'rgba(255, 255, 255, 0.72)',
   },
   inner: {
     paddingHorizontal: spacing.md,

@@ -33,9 +33,8 @@ import { useAccountAuth } from '@/state/useAccountAuth';
 import { useEmailAvailability } from '@/state/useEmailAvailability';
 import { AppText } from '@/ui/components';
 import { fieldStyles, FieldLabel, OutlineInput } from '@/ui/DarkField';
-import { WelcomeBackground } from '@/ui/WelcomeBackground';
 import { WelcomeCta } from '@/ui/WelcomeCta';
-import { fonts, palette, radius, type } from '@/ui/theme/tokens';
+import { fonts, lightColors, palette, radius, type } from '@/ui/theme/tokens';
 
 function LockedField({
   value,
@@ -89,7 +88,7 @@ function SelectTrigger({
       <AppText style={styles.fieldValue} numberOfLines={1}>
         {value}
       </AppText>
-      <Ionicons name={open ? 'chevron-up' : 'chevron-down'} size={16} color="#FFFFFF" />
+      <Ionicons name={open ? 'chevron-up' : 'chevron-down'} size={16} color={lightColors.textSecondary} />
     </Pressable>
   );
 }
@@ -237,11 +236,7 @@ export default function SignupCredentialsScreen() {
 
   return (
     <View style={styles.root}>
-      <StatusBar style="light" />
-      <WelcomeBackground />
-      <View pointerEvents="none" style={styles.veil}>
-        <View style={styles.veilFilm} />
-      </View>
+      <StatusBar style="dark" />
 
       <KeyboardAvoidingView
         style={styles.frame}
@@ -255,7 +250,7 @@ export default function SignupCredentialsScreen() {
             onPress={goBack}
             style={styles.headerSide}
           >
-            <Ionicons name="chevron-back" size={28} color="#FFFFFF" />
+            <Ionicons name="chevron-back" size={28} color={lightColors.textPrimary} />
           </Pressable>
           <AppText accessibilityRole="header" style={styles.headerTitle}>
             Create An Account
@@ -345,7 +340,11 @@ export default function SignupCredentialsScreen() {
                   hitSlop={8}
                   onPress={() => setShowPassword((current) => !current)}
                 >
-                  <Ionicons name={showPassword ? 'eye-off' : 'eye'} size={20} color="#FFFFFF" />
+                  <Ionicons
+                    name={showPassword ? 'eye-off' : 'eye'}
+                    size={20}
+                    color={lightColors.textSecondary}
+                  />
                 </Pressable>
               }
             />
@@ -378,7 +377,11 @@ export default function SignupCredentialsScreen() {
                   hitSlop={8}
                   onPress={() => setShowConfirm((current) => !current)}
                 >
-                  <Ionicons name={showConfirm ? 'eye-off' : 'eye'} size={20} color="#FFFFFF" />
+                  <Ionicons
+                    name={showConfirm ? 'eye-off' : 'eye'}
+                    size={20}
+                    color={lightColors.textSecondary}
+                  />
                 </Pressable>
               }
             />
@@ -461,18 +464,10 @@ const FIELD_H = 50;
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: '#101418',
-  },
-  veil: {
-    ...StyleSheet.absoluteFill,
-  },
-  veilFilm: {
-    ...StyleSheet.absoluteFill,
-    backgroundColor: 'rgba(0,0,0,0.50)',
+    backgroundColor: lightColors.background,
   },
   frame: {
     flex: 1,
-    zIndex: 1,
   },
   header: {
     flexDirection: 'row',
@@ -489,7 +484,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     flex: 1,
     fontFamily: fonts.semibold,
-    color: '#FFFFFF',
+    color: lightColors.textPrimary,
     fontSize: type.title.fontSize,
     lineHeight: type.title.lineHeight,
     fontWeight: '600',
@@ -503,7 +498,7 @@ const styles = StyleSheet.create({
   },
   fieldValue: {
     flex: 1,
-    color: '#FFFFFF',
+    color: lightColors.textPrimary,
     fontSize: type.body.fontSize,
     lineHeight: type.body.lineHeight,
     fontWeight: '400',
@@ -524,7 +519,8 @@ const styles = StyleSheet.create({
   fieldLocked: {
     minHeight: FIELD_H,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.35)',
+    borderColor: lightColors.border,
+    backgroundColor: lightColors.surface,
     borderRadius: radius.md,
     paddingHorizontal: 12,
     flexDirection: 'row',
@@ -542,9 +538,9 @@ const styles = StyleSheet.create({
   inlineMenu: {
     marginTop: 8,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.55)',
+    borderColor: lightColors.borderStrong,
     borderRadius: radius.md,
-    backgroundColor: 'rgba(16,20,24,0.92)',
+    backgroundColor: lightColors.surface,
     overflow: 'hidden',
     maxHeight: 240,
   },
@@ -558,10 +554,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: 'rgba(255,255,255,0.12)',
+    borderBottomColor: lightColors.border,
   },
   inlineRowLabel: {
-    color: '#FFFFFF',
+    color: lightColors.textPrimary,
     fontSize: type.body.fontSize,
     lineHeight: type.body.lineHeight,
   },

@@ -23,7 +23,7 @@ import {
   useSetProfileFollow,
 } from '@/state/queries';
 import { SlideScreen, useSlideBack } from '@/ui/motion/SlideScreen';
-import { ThemeProvider, useTheme } from '@/ui/theme/ThemeProvider';
+import { useTheme } from '@/ui/theme/ThemeProvider';
 import { spacing } from '@/ui/theme/tokens';
 
 /**
@@ -37,11 +37,9 @@ import { spacing } from '@/ui/theme/tokens';
  */
 export default function PublicProfileScreen() {
   return (
-    <ThemeProvider initialMode="dark">
-      <SlideScreen from="right">
-        <PublicProfile />
-      </SlideScreen>
-    </ThemeProvider>
+    <SlideScreen from="right">
+      <PublicProfile />
+    </SlideScreen>
   );
 }
 

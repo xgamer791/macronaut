@@ -33,10 +33,10 @@ export interface HeroMetricModuleProps {
  * inner layout is metric-specific (ring / macro / steps / water / burned).
  */
 export function HeroMetricModule({ metric, values, onPress, size }: HeroMetricModuleProps) {
-  const { colors, resolved } = useTheme();
+  const { colors } = useTheme();
   const def = heroMetricDef(metric);
   const shell = {
-    backgroundColor: resolved === 'dark' ? 'rgba(23,27,32,0.94)' : colors.surface,
+    backgroundColor: colors.surface,
     borderColor: colors.borderStrong,
     width: size,
     height: size,

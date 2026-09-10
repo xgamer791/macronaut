@@ -10,7 +10,7 @@ import { useSignupDraft } from '@/state/signupDraft';
 import { AppText } from '@/ui/components';
 import { SignupHealthBackground } from '@/ui/SignupHealthBackground';
 import { WelcomeCta } from '@/ui/WelcomeCta';
-import { fonts, type } from '@/ui/theme/tokens';
+import { fonts, lightColors, type } from '@/ui/theme/tokens';
 
 function firstParam(value?: string | string[]): string | undefined {
   return Array.isArray(value) ? value[0] : value;
@@ -43,8 +43,10 @@ export function SignupHealthView() {
 
   return (
     <View style={styles.root}>
-      <StatusBar style="light" />
-      <SignupHealthBackground />
+      <StatusBar style="dark" />
+      <View style={styles.hero}>
+        <SignupHealthBackground />
+      </View>
 
       <View style={[styles.frame, { paddingTop: insets.top + 4 }]}>
         <View style={styles.top}>
@@ -56,7 +58,7 @@ export function SignupHealthView() {
               onPress={goBack}
               style={styles.headerSide}
             >
-              <Ionicons name="chevron-back" size={28} color="#FFFFFF" />
+              <Ionicons name="chevron-back" size={28} color={lightColors.textPrimary} />
             </Pressable>
             <AppText accessibilityRole="header" style={styles.headerTitle}>
               Apple Health
@@ -104,11 +106,15 @@ export default function SignupHealthScreen() {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: '#000000',
+    backgroundColor: lightColors.background,
+  },
+  hero: {
+    height: '42%',
+    overflow: 'hidden',
+    backgroundColor: lightColors.track,
   },
   frame: {
     flex: 1,
-    zIndex: 1,
     justifyContent: 'space-between',
   },
   top: {
@@ -129,7 +135,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     flex: 1,
     fontFamily: fonts.semibold,
-    color: '#FFFFFF',
+    color: lightColors.textPrimary,
     fontSize: type.title.fontSize,
     lineHeight: type.title.lineHeight,
     fontWeight: '600',
@@ -137,7 +143,7 @@ const styles = StyleSheet.create({
   },
   headline: {
     fontFamily: fonts.semibold,
-    color: '#FFFFFF',
+    color: lightColors.textPrimary,
     fontSize: type.heading.fontSize,
     lineHeight: type.heading.lineHeight,
     fontWeight: '600',
@@ -149,7 +155,7 @@ const styles = StyleSheet.create({
     gap: 20,
   },
   copy: {
-    color: 'rgba(255,255,255,0.78)',
+    color: lightColors.textSecondary,
     fontSize: type.body.fontSize,
     lineHeight: type.body.lineHeight,
     fontWeight: '400',
@@ -161,7 +167,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   skipLabel: {
-    color: '#FFFFFF',
+    color: lightColors.textPrimary,
     fontSize: 15,
     lineHeight: 20,
     fontWeight: '400',

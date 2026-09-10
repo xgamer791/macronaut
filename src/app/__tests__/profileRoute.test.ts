@@ -31,9 +31,9 @@ describe('profile routes', () => {
     expect(read(path.join('(tabs)', 'settings.tsx'))).toContain('Your profile page');
   });
 
-  it('forces the dark theme on both profile pages', () => {
+  it('uses the app light theme on both profile pages', () => {
     for (const page of [read('profile.tsx'), read(path.join('u', '[handle].tsx'))]) {
-      expect(page).toContain('initialMode="dark"');
+      expect(page).not.toContain('initialMode="dark"');
     }
   });
 

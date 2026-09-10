@@ -42,7 +42,7 @@ import {
   useUpdateProfilePost,
 } from '@/state/queries';
 import { SlideScreen, useSlideBack } from '@/ui/motion/SlideScreen';
-import { ThemeProvider, useTheme } from '@/ui/theme/ThemeProvider';
+import { useTheme } from '@/ui/theme/ThemeProvider';
 import { radius, spacing, touchTarget } from '@/ui/theme/tokens';
 import type { PickedImage } from '@/services/media/pickedImage';
 
@@ -57,19 +57,12 @@ export function profileUrl(handle: string): string {
 
 /**
  * Your own profile page — opened from the header avatar.
- *
- * Always dark regardless of the app's appearance setting: it is a photo-led
- * page, and the banner and picture are chosen against a dark frame. Nesting a
- * ThemeProvider is how that is forced, so every themed child below still uses
- * the ordinary tokens rather than hardcoded hexes.
  */
 export default function ProfileScreen() {
   return (
-    <ThemeProvider initialMode="dark">
-      <SlideScreen from="right">
-        <OwnProfile />
-      </SlideScreen>
-    </ThemeProvider>
+    <SlideScreen from="right">
+      <OwnProfile />
+    </SlideScreen>
   );
 }
 

@@ -19,7 +19,7 @@ const profileHeader = read('ui', 'components', 'ProfileHeader.tsx');
  * logic-level test can reach. */
 describe('sticky chrome headers', () => {
   it('paints the bar with the tab-bar chrome instead of overlay glass', () => {
-    expect(tokens).toContain("chrome: '#101418'");
+    expect(tokens).toContain("chrome: '#FFFFFF'");
     expect(bar).toContain('backgroundColor: colors.chrome');
     expect(bar).toContain('borderBottomColor: colors.border');
     expect(tabBar).toContain('backgroundColor: colors.chrome');

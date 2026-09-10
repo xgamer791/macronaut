@@ -12,7 +12,7 @@ describe('web html shell', () => {
 
   it('pins the shell to the visible viewport so iOS Safari cannot lift it', () => {
     expect(html).toContain('position: fixed');
-    expect(html).toContain('background-color: #101418');
+    expect(html).toContain('background-color: #F6F7F9');
     expect(html).toContain('overscroll-behavior: none');
     expect(html).not.toContain('#signup-health-root');
   });
@@ -35,12 +35,12 @@ describe('web html shell', () => {
     expect(html).toContain("document.addEventListener('focusout'");
   });
 
-  it('forces white autofill text on fields that sit on the dark video', () => {
+  it('forces light autofill text on auth fields', () => {
     // react-native-web drops className, so the fields carry a data attribute.
-    expect(html).toContain('[data-darkfield]');
-    expect(html).toContain('input[data-darkfield]:-webkit-autofill');
-    expect(html).toContain('color-scheme: dark');
-    expect(html).toContain('-webkit-text-fill-color: #FFFFFF !important');
+    expect(html).toContain('[data-authfield]');
+    expect(html).toContain('input[data-authfield]:-webkit-autofill');
+    expect(html).toContain('color-scheme: light');
+    expect(html).toContain('-webkit-text-fill-color: #14181D !important');
     expect(html).not.toContain('-webkit-text-fill-color: currentColor');
   });
 
@@ -56,7 +56,7 @@ describe('web html shell', () => {
     expect(html).toContain('.glass::before');
     expect(html).toContain('.glass::after');
     expect(html).toContain('content: none');
-    expect(html).toContain('rgba(0, 0, 0, 0.630)');
+    expect(html).toContain('rgba(255, 255, 255, 0.94)');
   });
 
   it('slides stack pages with a CSS transform so web actually animates', () => {

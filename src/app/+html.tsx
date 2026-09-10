@@ -21,9 +21,9 @@ export default function Root({ children }: { children: React.ReactNode }) {
           // Belt-and-braces: block pinch/double-tap zoom gestures in browsers
           // that ignore user-scalable, without breaking scroll or taps.
           // Also kill the manila autofill wash. Fields marked with
-          // data-darkfield sit on the dark video, and WebKit paints autofilled
-          // text with its own black, so they force white explicitly —
-          // react-native-web drops className, hence the data attribute.
+          // data-authfield sit on the light auth chrome, and WebKit paints
+          // autofilled text with its own black — force the light ink
+          // explicitly. react-native-web drops className, hence the data attribute.
           dangerouslySetInnerHTML={{
             __html: `html, body { touch-action: pan-x pan-y; } body { -webkit-text-size-adjust: 100%; }
 /* iOS Safari pans the document when it sees a new-password field, which
@@ -37,7 +37,7 @@ html, body, #root {
   height: 100%;
   height: var(--app-viewport-height, 100%);
   width: 100%;
-  background-color: #101418;
+  background-color: #F6F7F9;
 }
 html, body {
   position: fixed;
@@ -55,34 +55,34 @@ textarea:-webkit-autofill, textarea:-webkit-autofill:hover, textarea:-webkit-aut
   background-image: none !important;
   transition: background-color 99999s ease-out 0s;
 }
-[data-darkfield], [data-darkfield] input, input[data-darkfield] {
-  color-scheme: dark;
-  color: #FFFFFF;
-  -webkit-text-fill-color: #FFFFFF;
-  caret-color: #FFFFFF;
+[data-authfield], [data-authfield] input, input[data-authfield] {
+  color-scheme: light;
+  color: #14181D;
+  -webkit-text-fill-color: #14181D;
+  caret-color: #14181D;
 }
-[data-darkfield]:-webkit-autofill, [data-darkfield]:-webkit-autofill:hover,
-[data-darkfield]:-webkit-autofill:focus, [data-darkfield]:-webkit-autofill:active,
-input[data-darkfield]:-webkit-autofill, input[data-darkfield]:-webkit-autofill:hover,
-input[data-darkfield]:-webkit-autofill:focus, input[data-darkfield]:-webkit-autofill:active,
-[data-darkfield] input:-webkit-autofill, [data-darkfield] input:-webkit-autofill:hover,
-[data-darkfield] input:-webkit-autofill:focus, [data-darkfield] input:-webkit-autofill:active {
-  color: #FFFFFF !important;
-  -webkit-text-fill-color: #FFFFFF !important;
-  caret-color: #FFFFFF !important;
+[data-authfield]:-webkit-autofill, [data-authfield]:-webkit-autofill:hover,
+[data-authfield]:-webkit-autofill:focus, [data-authfield]:-webkit-autofill:active,
+input[data-authfield]:-webkit-autofill, input[data-authfield]:-webkit-autofill:hover,
+input[data-authfield]:-webkit-autofill:focus, input[data-authfield]:-webkit-autofill:active,
+[data-authfield] input:-webkit-autofill, [data-authfield] input:-webkit-autofill:hover,
+[data-authfield] input:-webkit-autofill:focus, [data-authfield] input:-webkit-autofill:active {
+  color: #14181D !important;
+  -webkit-text-fill-color: #14181D !important;
+  caret-color: #14181D !important;
 }
 /* Liquid Glass — 2025–26 translucent UI recipe.
    Works on any colorful background; flat backgrounds will look subtler. */
 .glass,
 [data-headerglass] {
-  background: radial-gradient(ellipse 130% 90% at 50% 0%, rgba(0, 0, 0, 0.630) 0%, rgba(0, 0, 0, 0.550) 45%, rgba(0, 0, 0, 0.500) 100%);
+  background: radial-gradient(ellipse 130% 90% at 50% 0%, rgba(255, 255, 255, 0.94) 0%, rgba(246, 247, 249, 0.90) 45%, rgba(246, 247, 249, 0.88) 100%);
   backdrop-filter: blur(39px) saturate(135%);
   -webkit-backdrop-filter: blur(39px) saturate(135%);
   border: none;
   outline: none;
   border-radius: 0;
-  box-shadow: 0 3px 8px -2px rgba(0, 0, 0, 0.198), 0 1px 2px rgba(0, 0, 0, 0.099), inset 0 0 23px rgba(255, 255, 255, 0.040), inset 0 4px 8px -4px rgba(0, 0, 0, 0.220);
-  color: #ffffff;
+  box-shadow: 0 3px 8px -2px rgba(20, 24, 29, 0.08), 0 1px 2px rgba(20, 24, 29, 0.05), inset 0 0 23px rgba(255, 255, 255, 0.40), inset 0 4px 8px -4px rgba(20, 24, 29, 0.04);
+  color: #14181D;
   overflow: hidden;
   isolation: isolate;
 }
@@ -107,7 +107,7 @@ input[data-darkfield]:-webkit-autofill:focus, input[data-darkfield]:-webkit-auto
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
   .glass,
   [data-headerglass] {
-    background: rgba(0, 0, 0, 1.000);
+    background: #FFFFFF;
   }
 }
 /* Stack pages slide over the screen underneath. Notifications and profiles

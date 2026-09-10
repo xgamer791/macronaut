@@ -110,8 +110,8 @@ describe('welcome splash', () => {
     expect(web).not.toContain("removeAttribute('src')");
     expect(web).toContain('WelcomeSlideshow');
     expect(native).toContain('WelcomeSlideshow as WelcomeBackground');
-    expect(welcome).toContain('veilFilm');
-    expect(welcome).toContain('rgba(0,0,0,0.50)');
+    expect(welcome).not.toContain('veilFilm');
+    expect(welcome).toContain('lightColors.background');
     const cta = fs.readFileSync(path.join(appDir, '../ui/WelcomeCta.tsx'), 'utf8');
     expect(cta).toContain('radius.md');
     expect(cta).toContain('palette.accent');
@@ -123,11 +123,11 @@ describe('welcome splash', () => {
     expect(slideshow).toContain('WELCOME_PHOTO_HOLD_MS');
   });
 
-  it('puts the video on each create-account screen and reuses one player', () => {
+  it('keeps the welcome video on the splash and paints the rest of signup light', () => {
     expect(read('welcome.tsx')).toContain('WelcomeBackground');
-    expect(read('signup-legal.tsx')).toContain('WelcomeBackground');
-    expect(read('signup-account.tsx')).toContain('WelcomeBackground');
-    expect(read('signup-credentials.tsx')).toContain('WelcomeBackground');
+    expect(read('signup-legal.tsx')).not.toContain('WelcomeBackground');
+    expect(read('signup-account.tsx')).not.toContain('WelcomeBackground');
+    expect(read('signup-credentials.tsx')).not.toContain('WelcomeBackground');
     expect(read('signup-health.tsx')).toContain('SignupHealthBackground');
     expect(read('signup-health.tsx')).not.toContain('WelcomeBackground');
     expect(read('_layout.tsx')).not.toContain('PersistentWelcomeBackground');

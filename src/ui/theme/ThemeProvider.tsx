@@ -1,6 +1,5 @@
 import React, { createContext, useCallback, useContext, useMemo, useState } from 'react';
-import { useColorScheme } from '@/hooks/use-color-scheme';
-import { darkColors, lightColors, ThemeColors } from './tokens';
+import { lightColors, ThemeColors } from './tokens';
 
 export type AppearanceMode = 'light' | 'dark' | 'system';
 
@@ -15,7 +14,7 @@ const ThemeContext = createContext<ThemeContextValue | null>(null);
 
 export function ThemeProvider({
   children,
-  initialMode = 'system',
+  initialMode = 'light',
   onModeChange,
 }: {
   children: React.ReactNode;
@@ -23,7 +22,6 @@ export function ThemeProvider({
   /** Persistence hook — settings repository saves the preference. */
   onModeChange?: (mode: AppearanceMode) => void;
 }) {
-  const systemScheme = useColorScheme();
   const [mode, setModeState] = useState<AppearanceMode>(initialMode);
   // The stored preference belongs to the account, so it only arrives once the
   // session has loaded. Adopt it then rather than making the tree above wait
@@ -42,17 +40,17 @@ export function ThemeProvider({
     [onModeChange],
   );
 
-  const resolved: 'light' | 'dark' =
-    mode === 'system' ? (systemScheme === 'dark' ? 'dark' : 'light') : mode;
+  // Light-only: leftover dark/system preferences cannot paint the app dark.
+  const resolved = 'light' as const;
 
   const value = useMemo<ThemeContextValue>(
     () => ({
-      colors: resolved === 'dark' ? darkColors : lightColors,
+      colors: lightColors,
       mode,
       resolved,
       setMode,
     }),
-    [mode, resolved, setMode],
+    [mode, setMode],
   );
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;

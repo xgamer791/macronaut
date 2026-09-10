@@ -12,7 +12,7 @@ import { OnboardingProfile } from '@/repositories/settingsRepo';
 import { useRepos } from '@/state/AppProvider';
 import { useAuth } from '@/state/AuthProvider';
 import { keys, useMealCategories, useMyGym, useSetting } from '@/state/queries';
-import { AppearanceMode, useTheme } from '@/ui/theme/ThemeProvider';
+import { useTheme } from '@/ui/theme/ThemeProvider';
 import {
   AppText,
   Button,
@@ -100,7 +100,7 @@ export default function SettingsScreen() {
   const qc = useQueryClient();
   const allRepos = useRepos();
   const { settings, account } = allRepos;
-  const { colors, mode, setMode } = useTheme();
+  const { colors } = useTheme();
   const categories = useMealCategories();
   const { user, signOut } = useAuth();
 
@@ -130,7 +130,6 @@ export default function SettingsScreen() {
 
   const [activityOpen, setActivityOpen] = useState(false);
   const [unitsOpen, setUnitsOpen] = useState(false);
-  const [appearanceOpen, setAppearanceOpen] = useState(false);
   const [mealTimeEdit, setMealTimeEdit] = useState<string | null>(null);
 
   const nutritionStyle: NutritionStyle = useMemo(() => {
@@ -392,13 +391,6 @@ export default function SettingsScreen() {
           value={units.data === 'metric' ? 'Metric (kg, cm)' : 'US (lb, ft)'}
           onPress={() => setUnitsOpen(true)}
         />
-        <View style={[styles.prefDivider, { backgroundColor: colors.border }]} />
-        <PrefRow
-          icon={{ set: 'mci', name: 'brush' }}
-          title="Appearance"
-          value={mode === 'system' ? 'System' : mode === 'dark' ? 'Dark' : 'Light'}
-          onPress={() => setAppearanceOpen(true)}
-        />
       </Card>
       </View>
 
@@ -578,27 +570,6 @@ export default function SettingsScreen() {
           selected={(weekStart.data ?? 'monday') === 'sunday'}
           onPress={() => void setWeekStart('sunday')}
         />
-      </Sheet>
-
-      {/* Appearance sheet */}
-      <Sheet visible={appearanceOpen} onClose={() => setAppearanceOpen(false)} title="Appearance">
-        {(
-          [
-            { value: 'light', label: 'Light' },
-            { value: 'dark', label: 'Dark' },
-            { value: 'system', label: 'System' },
-          ] as { value: AppearanceMode; label: string }[]
-        ).map((opt) => (
-          <ListRow
-            key={opt.value}
-            title={opt.label}
-            selected={mode === opt.value}
-            onPress={() => {
-              setMode(opt.value);
-              setAppearanceOpen(false);
-            }}
-          />
-        ))}
       </Sheet>
 
       {/* Meal time sheet */}

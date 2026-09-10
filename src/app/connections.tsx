@@ -14,7 +14,7 @@ import {
   ScreenHeader,
 } from '@/ui/components';
 import { SlideScreen, useSlideBack } from '@/ui/motion/SlideScreen';
-import { ThemeProvider, useTheme } from '@/ui/theme/ThemeProvider';
+import { useTheme } from '@/ui/theme/ThemeProvider';
 import { radius, spacing, touchTarget, type } from '@/ui/theme/tokens';
 import { followerLabel, followingLabel, friendLabel } from '@/utils/compactCount';
 
@@ -33,17 +33,12 @@ function tabFrom(value: string | string[] | undefined): ConnectionTab {
  * The people around a profile — its followers, who it follows, and the mutual
  * follows that make a friend. Opened by tapping either count under a name, so
  * it arrives from the left with the page it came from sliding out beside it.
- *
- * Always dark, like both profile pages it hangs off: the same photo-led frame
- * those were designed against.
  */
 export default function ConnectionsScreen() {
   return (
-    <ThemeProvider initialMode="dark">
-      <SlideScreen from="left">
-        <Connections />
-      </SlideScreen>
-    </ThemeProvider>
+    <SlideScreen from="left">
+      <Connections />
+    </SlideScreen>
   );
 }
 

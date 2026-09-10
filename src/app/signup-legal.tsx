@@ -7,9 +7,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '@/state/AuthProvider';
 import { useSetting } from '@/state/queries';
 import { AppText } from '@/ui/components';
-import { WelcomeBackground } from '@/ui/WelcomeBackground';
 import { WelcomeCta } from '@/ui/WelcomeCta';
-import { fonts, palette, radius, type } from '@/ui/theme/tokens';
+import { fonts, lightColors, palette, radius, type } from '@/ui/theme/tokens';
 import { SlidePushLayer } from '@/ui/motion/SlidePush';
 
 const TRACK_W = 51;
@@ -94,11 +93,7 @@ export default function SignupLegalScreen() {
   return (
     <SlidePushLayer>
       <View style={styles.root}>
-        <StatusBar style="light" />
-        <WelcomeBackground />
-        <View pointerEvents="none" style={styles.veil}>
-          <View style={styles.veilFilm} />
-        </View>
+        <StatusBar style="dark" />
 
         <View style={[styles.frame, { paddingTop: insets.top + 4 }]}>
           <View style={styles.top}>
@@ -109,7 +104,7 @@ export default function SignupLegalScreen() {
               onPress={goBack}
               style={styles.backHit}
             >
-              <Ionicons name="chevron-back" size={28} color="#FFFFFF" />
+              <Ionicons name="chevron-back" size={28} color={lightColors.textPrimary} />
             </Pressable>
 
             <AppText accessibilityRole="header" style={styles.title}>
@@ -159,19 +154,11 @@ export default function SignupLegalScreen() {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: '#101418',
-  },
-  veil: {
-    ...StyleSheet.absoluteFill,
-  },
-  veilFilm: {
-    ...StyleSheet.absoluteFill,
-    backgroundColor: 'rgba(0,0,0,0.50)',
+    backgroundColor: lightColors.background,
   },
   frame: {
     flex: 1,
     justifyContent: 'space-between',
-    zIndex: 1,
   },
   top: {
     paddingHorizontal: 24,
@@ -185,14 +172,14 @@ const styles = StyleSheet.create({
   },
   title: {
     fontFamily: fonts.medium,
-    color: '#FFFFFF',
+    color: lightColors.textPrimary,
     fontSize: type.hero.fontSize,
     lineHeight: type.hero.lineHeight,
     fontWeight: '500',
     marginTop: 12,
   },
   subtitle: {
-    color: '#FFFFFF',
+    color: lightColors.textSecondary,
     fontSize: type.body.fontSize,
     lineHeight: type.body.lineHeight,
     fontWeight: '400',
@@ -208,7 +195,9 @@ const styles = StyleSheet.create({
     gap: 16,
     paddingVertical: 18,
     paddingHorizontal: 18,
-    backgroundColor: 'rgba(38, 40, 44, 0.92)',
+    backgroundColor: lightColors.surface,
+    borderWidth: 1,
+    borderColor: lightColors.border,
     borderRadius: radius.lg,
   },
   cardCopy: {
@@ -221,13 +210,13 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   cardText: {
-    color: '#FFFFFF',
+    color: lightColors.textPrimary,
     fontSize: type.body.fontSize,
     lineHeight: type.body.lineHeight,
     fontWeight: '400',
   },
   link: {
-    color: '#FFFFFF',
+    color: lightColors.textPrimary,
     fontSize: type.body.fontSize,
     lineHeight: type.body.lineHeight,
     fontWeight: '400',

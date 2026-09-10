@@ -1,6 +1,5 @@
 /** Macronaut design tokens. One confident accent + neutral ramp, fixed macro
- * hues (never color-only — always paired with a label), light default +
- * true-dark. Matches the approved mockups. */
+ * hues (never color-only — always paired with a label). The app is light-only. */
 
 export const palette = {
   // Accent — Macronaut teal (calorie ring, FAB, primary actions)

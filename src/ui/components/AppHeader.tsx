@@ -237,6 +237,7 @@ function HeaderMenu({ visible, onClose }: { visible: boolean; onClose: () => voi
  * has one, initials otherwise. */
 export function HeaderAvatarButton() {
   const router = useRouter();
+  const { colors } = useTheme();
   const { user } = useAuth();
   const savedName = useSetting<string>('displayName', '');
   const displayName = savedName.data || displayNameFromUser(user);
@@ -265,11 +266,11 @@ export function HeaderAvatarButton() {
           accessibilityIgnoresInvertColors
         />
       ) : (
-        <View style={styles.avatarFallback}>
+        <View style={[styles.avatarFallback, { backgroundColor: colors.track }]}>
           {initials ? (
-            <AppText style={styles.initials}>{initials}</AppText>
+            <AppText style={[styles.initials, { color: colors.textPrimary }]}>{initials}</AppText>
           ) : (
-            <Ionicons name="person" size={AVATAR_GLYPH} color={ICON} />
+            <Ionicons name="person" size={AVATAR_GLYPH} color={colors.textMuted} />
           )}
         </View>
       )}
@@ -307,6 +308,7 @@ export function HeaderNotifyButton({
 /** Direct messages. Signed-out visitors are sent through sign-in first. */
 export function HeaderChatsButton() {
   const router = useRouter();
+  const { colors } = useTheme();
   const { signedIn } = useAuth();
 
   return (
@@ -317,7 +319,7 @@ export function HeaderChatsButton() {
         router.push(signedIn ? '/chats' : '/login');
       }}
     >
-      <MessageSquare size={GLYPH + 1} color={ICON} />
+      <MessageSquare size={GLYPH + 1} color={colors.textPrimary} />
     </HeaderHit>
   );
 }
@@ -452,18 +454,16 @@ const styles = StyleSheet.create({
     width: AVATAR,
     height: AVATAR,
     borderRadius: AVATAR / 2,
-    backgroundColor: 'rgba(255,255,255,0.12)',
+    backgroundColor: '#E9ECF1',
   },
   avatarFallback: {
     width: AVATAR,
     height: AVATAR,
     borderRadius: AVATAR / 2,
-    backgroundColor: 'rgba(255,255,255,0.16)',
     alignItems: 'center',
     justifyContent: 'center',
   },
   initials: {
-    color: ICON,
     fontSize: 12,
     lineHeight: 14,
     fontWeight: '700',

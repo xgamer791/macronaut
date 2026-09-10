@@ -17,13 +17,12 @@ import { useSetting } from '@/state/queries';
 import { useAccountAuth } from '@/state/useAccountAuth';
 import { AppText } from '@/ui/components';
 import { fieldStyles, FieldLabel, OutlineInput } from '@/ui/DarkField';
-import { WelcomeBackground } from '@/ui/WelcomeBackground';
 import { WelcomeCta } from '@/ui/WelcomeCta';
-import { fonts, type } from '@/ui/theme/tokens';
+import { fonts, lightColors, type } from '@/ui/theme/tokens';
 
 /** Sign in with the email and password the account was created with. Same
- * chrome as Account Setup: the welcome loop, a back chevron, outlined
- * white-on-video fields, and the accent tile sitting in the form. */
+ * chrome as Account Setup: light fields, a back chevron, and the accent
+ * tile sitting in the form. */
 export default function LoginScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -53,11 +52,7 @@ export default function LoginScreen() {
 
   return (
     <View style={styles.root}>
-      <StatusBar style="light" />
-      <WelcomeBackground />
-      <View pointerEvents="none" style={styles.veil}>
-        <View style={styles.veilFilm} />
-      </View>
+      <StatusBar style="dark" />
 
       <KeyboardAvoidingView
         style={styles.frame}
@@ -71,7 +66,7 @@ export default function LoginScreen() {
             onPress={goBack}
             style={styles.headerSide}
           >
-            <Ionicons name="chevron-back" size={28} color="#FFFFFF" />
+            <Ionicons name="chevron-back" size={28} color={lightColors.textPrimary} />
           </Pressable>
           <AppText accessibilityRole="header" style={styles.headerTitle}>
             Sign In
@@ -121,7 +116,11 @@ export default function LoginScreen() {
                   hitSlop={8}
                   onPress={() => setShowPassword((current) => !current)}
                 >
-                  <Ionicons name={showPassword ? 'eye-off' : 'eye'} size={20} color="#FFFFFF" />
+                  <Ionicons
+                    name={showPassword ? 'eye-off' : 'eye'}
+                    size={20}
+                    color={lightColors.textSecondary}
+                  />
                 </Pressable>
               }
             />
@@ -179,18 +178,10 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: '#101418',
-  },
-  veil: {
-    ...StyleSheet.absoluteFill,
-  },
-  veilFilm: {
-    ...StyleSheet.absoluteFill,
-    backgroundColor: 'rgba(0,0,0,0.50)',
+    backgroundColor: lightColors.background,
   },
   frame: {
     flex: 1,
-    zIndex: 1,
   },
   header: {
     flexDirection: 'row',
@@ -207,7 +198,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     flex: 1,
     fontFamily: fonts.semibold,
-    color: '#FFFFFF',
+    color: lightColors.textPrimary,
     fontSize: type.title.fontSize,
     lineHeight: type.title.lineHeight,
     fontWeight: '600',
@@ -226,7 +217,7 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   forgotLink: {
-    color: '#FFFFFF',
+    color: lightColors.textPrimary,
     fontSize: 14,
     lineHeight: 20,
     fontWeight: '600',
@@ -243,13 +234,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   footerLabel: {
-    color: 'rgba(255,255,255,0.78)',
+    color: lightColors.textSecondary,
     fontSize: 15,
     lineHeight: 20,
     fontWeight: '400',
   },
   footerLink: {
-    color: '#FFFFFF',
+    color: lightColors.textPrimary,
     fontSize: 15,
     lineHeight: 20,
     fontWeight: '600',

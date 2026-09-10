@@ -12,7 +12,7 @@ const config: ExpoConfig = {
   orientation: 'portrait',
   icon: './assets/images/icon.png',
   scheme: 'macronaut',
-  userInterfaceStyle: 'automatic',
+  userInterfaceStyle: 'light',
   ios: {
     icon: './assets/expo.icon',
     // `com.macronaut.app` was not available to register with Apple, so the App
@@ -52,7 +52,7 @@ const config: ExpoConfig = {
     [
       'expo-splash-screen',
       {
-        backgroundColor: '#101418',
+        backgroundColor: '#F6F7F9',
         image: './assets/images/splash-icon.png',
         imageWidth: 76,
       },

@@ -28,7 +28,7 @@ import {
 } from '@/state/queries';
 import { photoShareUrl } from '@/utils/publicLinks';
 import { SlideScreen } from '@/ui/motion/SlideScreen';
-import { ThemeProvider, useTheme } from '@/ui/theme/ThemeProvider';
+import { useTheme } from '@/ui/theme/ThemeProvider';
 import { spacing } from '@/ui/theme/tokens';
 
 /**
@@ -37,11 +37,9 @@ import { spacing } from '@/ui/theme/tokens';
  */
 export default function PhotosScreen() {
   return (
-    <ThemeProvider initialMode="dark">
-      <SlideScreen from="left">
-        <PhotoWall />
-      </SlideScreen>
-    </ThemeProvider>
+    <SlideScreen from="left">
+      <PhotoWall />
+    </SlideScreen>
   );
 }
 

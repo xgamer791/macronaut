@@ -19,9 +19,8 @@ import { useSetting } from '@/state/queries';
 import { useAccountAuth } from '@/state/useAccountAuth';
 import { AppText } from '@/ui/components';
 import { fieldStyles, FieldLabel, OutlineInput } from '@/ui/DarkField';
-import { WelcomeBackground } from '@/ui/WelcomeBackground';
 import { WelcomeCta } from '@/ui/WelcomeCta';
-import { fonts, type } from '@/ui/theme/tokens';
+import { fonts, lightColors, type } from '@/ui/theme/tokens';
 
 /** Email a reset link, then set a new password on the page that link opens.
  * Same chrome as Sign In. Requesting a link never reveals whether the
@@ -112,11 +111,7 @@ export default function ForgotPasswordScreen() {
 
   return (
     <View style={styles.root}>
-      <StatusBar style="light" />
-      <WelcomeBackground />
-      <View pointerEvents="none" style={styles.veil}>
-        <View style={styles.veilFilm} />
-      </View>
+      <StatusBar style="dark" />
 
       <KeyboardAvoidingView
         style={styles.frame}
@@ -130,7 +125,7 @@ export default function ForgotPasswordScreen() {
             onPress={goBack}
             style={styles.headerSide}
           >
-            <Ionicons name="chevron-back" size={28} color="#FFFFFF" />
+            <Ionicons name="chevron-back" size={28} color={lightColors.textPrimary} />
           </Pressable>
           <AppText accessibilityRole="header" style={styles.headerTitle}>
             {view === 'password' ? 'Reset password' : 'Forgot password'}
@@ -244,7 +239,11 @@ export default function ForgotPasswordScreen() {
                       hitSlop={8}
                       onPress={() => setShowPassword((current) => !current)}
                     >
-                      <Ionicons name={showPassword ? 'eye-off' : 'eye'} size={20} color="#FFFFFF" />
+                      <Ionicons
+                        name={showPassword ? 'eye-off' : 'eye'}
+                        size={20}
+                        color={lightColors.textSecondary}
+                      />
                     </Pressable>
                   }
                 />
@@ -279,7 +278,11 @@ export default function ForgotPasswordScreen() {
                       hitSlop={8}
                       onPress={() => setShowConfirm((current) => !current)}
                     >
-                      <Ionicons name={showConfirm ? 'eye-off' : 'eye'} size={20} color="#FFFFFF" />
+                      <Ionicons
+                        name={showConfirm ? 'eye-off' : 'eye'}
+                        size={20}
+                        color={lightColors.textSecondary}
+                      />
                     </Pressable>
                   }
                 />
@@ -320,18 +323,10 @@ export default function ForgotPasswordScreen() {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: '#101418',
-  },
-  veil: {
-    ...StyleSheet.absoluteFill,
-  },
-  veilFilm: {
-    ...StyleSheet.absoluteFill,
-    backgroundColor: 'rgba(0,0,0,0.50)',
+    backgroundColor: lightColors.background,
   },
   frame: {
     flex: 1,
-    zIndex: 1,
   },
   header: {
     flexDirection: 'row',
@@ -348,7 +343,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     flex: 1,
     fontFamily: fonts.semibold,
-    color: '#FFFFFF',
+    color: lightColors.textPrimary,
     fontSize: type.title.fontSize,
     lineHeight: type.title.lineHeight,
     fontWeight: '600',
@@ -366,7 +361,7 @@ const styles = StyleSheet.create({
     paddingTop: 8,
   },
   copy: {
-    color: 'rgba(255,255,255,0.78)',
+    color: lightColors.textSecondary,
     fontSize: type.body.fontSize,
     lineHeight: type.body.lineHeight,
     fontWeight: '400',
@@ -380,7 +375,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   footerLink: {
-    color: '#FFFFFF',
+    color: lightColors.textPrimary,
     fontSize: 15,
     lineHeight: 20,
     fontWeight: '600',

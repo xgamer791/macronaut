@@ -179,35 +179,34 @@ function GroupsList() {
         />
       </View>
 
-      <LinearGradient
-        colors={['#123E35', '#0D201F', '#10171A']}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={styles.hero}
+      <View
+        style={[
+          styles.hero,
+          { backgroundColor: colors.surface, borderColor: colors.border },
+        ]}
       >
-        <View style={styles.heroGlow} />
-        <View style={styles.heroIcon}>
-          <Ionicons name="people" size={25} color="#FFFFFF" />
+        <View style={[styles.heroIcon, { backgroundColor: colors.track, borderColor: colors.border }]}>
+          <Ionicons name="people" size={25} color={colors.accent} />
         </View>
         <View style={styles.heroCopy}>
-          <AppText variant="heading" weight="700" style={styles.heroTitle}>
+          <AppText variant="heading" weight="700">
             Train better, together
           </AppText>
-          <AppText variant="caption" style={styles.heroBody}>
+          <AppText variant="caption" tone="secondary">
             {viewerLocation
               ? `Find active communities near ${viewerLocation}.`
               : 'Find active communities near you and around your interests.'}
           </AppText>
         </View>
         <View style={styles.heroStat}>
-          <AppText variant="heading" weight="700" style={styles.heroTitle}>
+          <AppText variant="heading" weight="700">
             {mine.length}
           </AppText>
-          <AppText variant="micro" style={styles.heroBody}>
+          <AppText variant="micro" tone="muted">
             YOUR GROUPS
           </AppText>
         </View>
-      </LinearGradient>
+      </View>
 
       <View style={[styles.pageTabs, { borderBottomColor: colors.border }]}>
         {PAGES.map((item) => {
@@ -1405,15 +1404,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.md,
     overflow: 'hidden',
-  },
-  heroGlow: {
-    position: 'absolute',
-    width: 180,
-    height: 180,
-    borderRadius: 90,
-    backgroundColor: 'rgba(42, 219, 160, 0.16)',
-    right: -58,
-    top: -92,
+    borderWidth: StyleSheet.hairlineWidth,
   },
   heroIcon: {
     width: 52,
@@ -1421,13 +1412,9 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.14)',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.14)',
   },
   heroCopy: { flex: 1, gap: spacing.xs },
-  heroTitle: { color: '#FFFFFF' },
-  heroBody: { color: 'rgba(255,255,255,0.72)' },
   heroStat: { alignItems: 'center', gap: 1 },
   pageTabs: {
     flexDirection: 'row',

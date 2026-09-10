@@ -27,10 +27,8 @@ import { useAuth } from '@/state/AuthProvider';
 import { clearSignupComplete } from '@/state/signupDraft';
 import { AppText, HomeGymPicker } from '@/ui/components';
 import { DARK_FIELD } from '@/ui/DarkField';
-import { WelcomeBackground } from '@/ui/WelcomeBackground';
 import { WelcomeCta } from '@/ui/WelcomeCta';
-import { ThemeProvider } from '@/ui/theme/ThemeProvider';
-import { fonts, palette, radius, type } from '@/ui/theme/tokens';
+import { fonts, lightColors, palette, radius, type } from '@/ui/theme/tokens';
 import { todayKey } from '@/utils/date';
 
 type Step = 'about' | 'goal' | 'activity' | 'review' | 'gym';
@@ -184,7 +182,7 @@ function PremiumNumberField({
           value={text}
           onChangeText={handleChange}
           placeholder="—"
-          placeholderTextColor="rgba(255,255,255,0.36)"
+          placeholderTextColor={lightColors.textMuted}
           keyboardType="decimal-pad"
           inputMode="decimal"
           {...DARK_FIELD}
@@ -268,7 +266,7 @@ function OptionCard({
       ]}
     >
       <View style={styles.optionIcon}>
-        <Ionicons name={icon} size={22} color={selected ? palette.accentDark : '#FFFFFF'} />
+        <Ionicons name={icon} size={22} color={selected ? palette.accent : lightColors.textPrimary} />
       </View>
       <View style={styles.optionCopy}>
         <AppText style={styles.optionLabel}>{label}</AppText>
@@ -465,11 +463,7 @@ export default function Onboarding() {
 
   return (
     <View style={styles.root}>
-      <StatusBar style="light" />
-      <WelcomeBackground />
-      <View pointerEvents="none" style={styles.veil}>
-        <View style={styles.veilFilm} />
-      </View>
+      <StatusBar style="dark" />
 
       <KeyboardAvoidingView
         style={styles.frame}
@@ -485,7 +479,7 @@ export default function Onboarding() {
                 onPress={() => goTo(STEPS[stepIndex - 1])}
                 style={styles.headerSide}
               >
-                <Ionicons name="chevron-back" size={28} color="#FFFFFF" />
+                <Ionicons name="chevron-back" size={28} color={lightColors.textPrimary} />
               </Pressable>
             ) : (
               <View style={styles.headerSide} />
@@ -862,18 +856,12 @@ export default function Onboarding() {
                 copy="Set your home gym and you'll be connected with everyone on Macronaut who trains there. Change it any time from Settings."
               />
 
-              {/* The picker is a themed component on a screen that is always
-                  dark, so it is pinned to the dark palette like the profile
-                  page does. The claim lands first; finishing onboarding is
-                  what navigates away, so a failed claim keeps you here. */}
-              <ThemeProvider initialMode="dark">
-                <HomeGymPicker
-                  confirmLabel={saving ? 'Saving…' : 'Finish'}
-                  busy={saving}
-                  onDone={() => void complete(targets)}
-                  onSkip={() => void complete(targets)}
-                />
-              </ThemeProvider>
+              <HomeGymPicker
+                confirmLabel={saving ? 'Saving…' : 'Finish'}
+                busy={saving}
+                onDone={() => void complete(targets)}
+                onSkip={() => void complete(targets)}
+              />
 
               {saveError ? <AppText style={styles.saveError}>{saveError}</AppText> : null}
               <View style={styles.actions}>
@@ -890,18 +878,10 @@ export default function Onboarding() {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: '#101418',
-  },
-  veil: {
-    ...StyleSheet.absoluteFill,
-  },
-  veilFilm: {
-    ...StyleSheet.absoluteFill,
-    backgroundColor: 'rgba(0,0,0,0.68)',
+    backgroundColor: lightColors.background,
   },
   frame: {
     flex: 1,
-    zIndex: 1,
   },
   headerWrap: {
     width: '100%',
@@ -923,7 +903,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     flex: 1,
-    color: '#FFFFFF',
+    color: lightColors.textPrimary,
     fontFamily: fonts.semibold,
     fontSize: type.heading.fontSize,
     lineHeight: type.heading.lineHeight,
@@ -932,7 +912,7 @@ const styles = StyleSheet.create({
   },
   stepCount: {
     width: 52,
-    color: 'rgba(255,255,255,0.68)',
+    color: lightColors.textSecondary,
     fontFamily: fonts.medium,
     fontSize: type.caption.fontSize,
     lineHeight: type.caption.lineHeight,
@@ -946,7 +926,7 @@ const styles = StyleSheet.create({
     flex: 1,
     height: 3,
     borderRadius: radius.full,
-    backgroundColor: 'rgba(255,255,255,0.18)',
+    backgroundColor: lightColors.track,
   },
   progressSegmentActive: {
     backgroundColor: palette.accentDark,
@@ -971,7 +951,7 @@ const styles = StyleSheet.create({
     letterSpacing: 1.8,
   },
   title: {
-    color: '#FFFFFF',
+    color: lightColors.textPrimary,
     fontFamily: fonts.semibold,
     fontSize: 30,
     lineHeight: 36,
@@ -979,7 +959,7 @@ const styles = StyleSheet.create({
     letterSpacing: -0.4,
   },
   subtitle: {
-    color: 'rgba(255,255,255,0.72)',
+    color: lightColors.textSecondary,
     fontSize: type.body.fontSize,
     lineHeight: 22,
     fontWeight: '400',
@@ -989,27 +969,27 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     gap: 10,
     borderWidth: 1,
-    borderColor: 'rgba(31,201,139,0.34)',
+    borderColor: 'rgba(23,166,115,0.28)',
     borderRadius: radius.lg,
-    backgroundColor: 'rgba(13,58,43,0.46)',
+    backgroundColor: 'rgba(23,166,115,0.08)',
     padding: 14,
   },
   accountNoteText: {
     flex: 1,
-    color: 'rgba(255,255,255,0.78)',
+    color: lightColors.textSecondary,
     fontSize: type.caption.fontSize,
     lineHeight: 19,
   },
   panel: {
     gap: 18,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.16)',
+    borderColor: lightColors.border,
     borderRadius: radius.xl,
-    backgroundColor: 'rgba(9,13,16,0.76)',
+    backgroundColor: lightColors.surface,
     padding: 18,
   },
   panelTitle: {
-    color: '#FFFFFF',
+    color: lightColors.textPrimary,
     fontFamily: fonts.semibold,
     fontSize: type.heading.fontSize,
     lineHeight: type.heading.lineHeight,
@@ -1019,7 +999,7 @@ const styles = StyleSheet.create({
     gap: 7,
   },
   fieldLabel: {
-    color: 'rgba(255,255,255,0.84)',
+    color: lightColors.textPrimary,
     fontSize: type.caption.fontSize,
     lineHeight: type.caption.lineHeight,
     fontWeight: '600',
@@ -1033,9 +1013,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.42)',
+    borderColor: lightColors.borderStrong,
     borderRadius: radius.md,
-    backgroundColor: 'rgba(255,255,255,0.04)',
+    backgroundColor: lightColors.surface,
     paddingHorizontal: 13,
   },
   fieldError: {
@@ -1046,7 +1026,7 @@ const styles = StyleSheet.create({
     flex: 1,
     minWidth: 0,
     height: 50,
-    color: '#FFFFFF',
+    color: lightColors.textPrimary,
     fontSize: type.body.fontSize,
     lineHeight: type.body.lineHeight,
     padding: 0,
@@ -1055,14 +1035,14 @@ const styles = StyleSheet.create({
       web: {
         outlineStyle: 'none',
         outlineWidth: 0,
-        WebkitTextFillColor: '#FFFFFF',
-        caretColor: '#FFFFFF',
+        WebkitTextFillColor: lightColors.textPrimary,
+        caretColor: lightColors.textPrimary,
       } as object,
       default: {},
     }),
   },
   fieldUnit: {
-    color: 'rgba(255,255,255,0.54)',
+    color: lightColors.textMuted,
     fontSize: type.caption.fontSize,
     lineHeight: type.caption.lineHeight,
   },
@@ -1085,9 +1065,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 4,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.20)',
+    borderColor: lightColors.border,
     borderRadius: radius.md,
-    backgroundColor: 'rgba(255,255,255,0.05)',
+    backgroundColor: lightColors.track,
     padding: 4,
   },
   segment: {
@@ -1102,18 +1082,18 @@ const styles = StyleSheet.create({
     backgroundColor: palette.accent,
   },
   segmentLabel: {
-    color: 'rgba(255,255,255,0.66)',
+    color: lightColors.textSecondary,
     fontFamily: fonts.medium,
     fontSize: type.caption.fontSize,
     lineHeight: type.caption.lineHeight,
     fontWeight: '500',
   },
   segmentLabelSelected: {
-    color: '#FFFFFF',
+    color: lightColors.onAccent,
     fontWeight: '700',
   },
   helper: {
-    color: 'rgba(255,255,255,0.48)',
+    color: lightColors.textMuted,
     fontSize: type.micro.fontSize,
     lineHeight: type.micro.lineHeight,
     marginTop: -12,
@@ -1127,14 +1107,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 13,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.17)',
+    borderColor: lightColors.border,
     borderRadius: radius.lg,
-    backgroundColor: 'rgba(9,13,16,0.72)',
+    backgroundColor: lightColors.surface,
     padding: 14,
   },
   optionSelected: {
     borderColor: palette.accentDark,
-    backgroundColor: 'rgba(13,58,43,0.76)',
+    backgroundColor: 'rgba(23,166,115,0.10)',
   },
   optionIcon: {
     width: 42,
@@ -1147,14 +1127,14 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   optionLabel: {
-    color: '#FFFFFF',
+    color: lightColors.textPrimary,
     fontFamily: fonts.medium,
     fontSize: type.body.fontSize,
     lineHeight: type.body.lineHeight,
     fontWeight: '600',
   },
   optionDetail: {
-    color: 'rgba(255,255,255,0.58)',
+    color: lightColors.textSecondary,
     fontSize: type.caption.fontSize,
     lineHeight: 18,
   },
@@ -1162,7 +1142,7 @@ const styles = StyleSheet.create({
     width: 20,
     height: 20,
     borderWidth: 1.5,
-    borderColor: 'rgba(255,255,255,0.46)',
+    borderColor: lightColors.borderStrong,
     borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
@@ -1186,7 +1166,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
   },
   secondaryLabel: {
-    color: '#FFFFFF',
+    color: lightColors.textPrimary,
     fontSize: type.body.fontSize,
     lineHeight: type.body.lineHeight,
     fontWeight: '500',
@@ -1195,7 +1175,7 @@ const styles = StyleSheet.create({
     opacity: 0.78,
   },
   saveError: {
-    color: '#F7A0A0',
+    color: palette.danger,
     fontSize: type.caption.fontSize,
     lineHeight: type.caption.lineHeight,
     fontWeight: '600',
@@ -1206,9 +1186,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 13,
     borderWidth: 1,
-    borderColor: 'rgba(31,201,139,0.38)',
+    borderColor: 'rgba(23,166,115,0.28)',
     borderRadius: radius.lg,
-    backgroundColor: 'rgba(13,58,43,0.66)',
+    backgroundColor: 'rgba(23,166,115,0.08)',
     padding: 16,
   },
   recommendationIcon: {
@@ -1222,14 +1202,14 @@ const styles = StyleSheet.create({
     gap: 3,
   },
   recommendationTitle: {
-    color: '#FFFFFF',
+    color: lightColors.textPrimary,
     fontFamily: fonts.medium,
     fontSize: type.body.fontSize,
     lineHeight: type.body.lineHeight,
     fontWeight: '600',
   },
   recommendationDetail: {
-    color: 'rgba(255,255,255,0.66)',
+    color: lightColors.textSecondary,
     fontSize: type.caption.fontSize,
     lineHeight: 18,
   },
@@ -1237,14 +1217,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 4,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.16)',
+    borderColor: lightColors.border,
     borderRadius: radius.xl,
-    backgroundColor: 'rgba(9,13,16,0.78)',
+    backgroundColor: lightColors.surface,
     paddingHorizontal: 18,
     paddingVertical: 24,
   },
   targetHeroValue: {
-    color: '#FFFFFF',
+    color: lightColors.textPrimary,
     fontFamily: fonts.semibold,
     fontSize: 46,
     lineHeight: 50,
@@ -1252,7 +1232,7 @@ const styles = StyleSheet.create({
     letterSpacing: -1,
   },
   targetHeroUnit: {
-    color: 'rgba(255,255,255,0.56)',
+    color: lightColors.textMuted,
     fontSize: type.caption.fontSize,
     lineHeight: type.caption.lineHeight,
   },
@@ -1270,22 +1250,22 @@ const styles = StyleSheet.create({
   macroDivider: {
     width: 1,
     height: 28,
-    backgroundColor: 'rgba(255,255,255,0.14)',
+    backgroundColor: lightColors.border,
   },
   macroValue: {
-    color: '#FFFFFF',
+    color: lightColors.textPrimary,
     fontFamily: fonts.medium,
     fontSize: type.heading.fontSize,
     lineHeight: type.heading.lineHeight,
     fontWeight: '600',
   },
   macroLabel: {
-    color: 'rgba(255,255,255,0.48)',
+    color: lightColors.textMuted,
     fontSize: type.micro.fontSize,
     lineHeight: type.micro.lineHeight,
   },
   optionalLabel: {
-    color: 'rgba(255,255,255,0.44)',
+    color: lightColors.textMuted,
     fontFamily: fonts.medium,
     fontSize: 10,
     lineHeight: 14,

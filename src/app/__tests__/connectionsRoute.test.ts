@@ -15,8 +15,7 @@ describe('connections route', () => {
     expect(readApp('_layout.tsx')).toContain('name="connections"');
     const page = readApp('connections.tsx');
     expect(page).toContain('<SlideScreen from="left">');
-    // Dark, like both profile pages it hangs off.
-    expect(page).toContain('initialMode="dark"');
+    expect(page).not.toContain('initialMode="dark"');
   });
 
   it('opens from the follower and following counts on both profile pages', () => {

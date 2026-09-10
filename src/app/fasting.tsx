@@ -741,7 +741,7 @@ const styles = StyleSheet.create({
   liveDot: { width: 7, height: 7, borderRadius: 4 },
   timerCenter: { alignItems: 'center', paddingHorizontal: spacing.md, width: 178 },
   timerValue: {
-    color: '#F2F4F7',
+    color: '#14181D',
     fontFamily: fonts.bold,
     fontSize: 29,
     lineHeight: 36,

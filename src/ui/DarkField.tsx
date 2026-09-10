@@ -1,16 +1,14 @@
 import React from 'react';
 import { Platform, StyleSheet, TextInput, View } from 'react-native';
 import { AppText } from '@/ui/components';
-import { fonts, palette, radius, type } from '@/ui/theme/tokens';
+import { fonts, lightColors, palette, radius, type } from '@/ui/theme/tokens';
 
-/** The outlined white-on-video fields the create-account and sign-in screens
- * share. Both sit on the welcome loop, so they need the same 50pt outline and
- * the same fight with WebKit's autofill styling. */
+/** The outlined fields the create-account and sign-in screens share. */
 
-/** Marks a field that sits on the dark video so the web shell can force white
- * autofill text. react-native-web forwards dataSet, not className, and dataSet
+/** Marks a field so the web shell can force light autofill text.
+ * react-native-web forwards dataSet, not className, and dataSet
  * is absent from the React Native prop types. */
-export const DARK_FIELD: object = Platform.OS === 'web' ? { dataSet: { darkfield: 'true' } } : {};
+export const DARK_FIELD: object = Platform.OS === 'web' ? { dataSet: { authfield: 'true' } } : {};
 
 export const FIELD_HEIGHT = 50;
 
@@ -73,7 +71,7 @@ export function OutlineInput({
         onSubmitEditing={onSubmitEditing}
         returnKeyType={returnKeyType}
         placeholder={placeholder}
-        placeholderTextColor="rgba(255,255,255,0.45)"
+        placeholderTextColor={lightColors.textMuted}
         autoCapitalize={autoCapitalize}
         autoComplete={autoComplete}
         autoCorrect={autoCorrect}
@@ -91,7 +89,7 @@ export function OutlineInput({
 
 export const fieldStyles = StyleSheet.create({
   label: {
-    color: '#FFFFFF',
+    color: lightColors.textPrimary,
     fontSize: type.caption.fontSize,
     lineHeight: type.caption.lineHeight,
     fontWeight: '600',
@@ -106,8 +104,9 @@ export const fieldStyles = StyleSheet.create({
   field: {
     minHeight: FIELD_HEIGHT,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.55)',
+    borderColor: lightColors.borderStrong,
     borderRadius: radius.md,
+    backgroundColor: lightColors.surface,
     paddingHorizontal: 12,
     flexDirection: 'row',
     alignItems: 'center',
@@ -120,7 +119,7 @@ export const fieldStyles = StyleSheet.create({
     fontFamily: fonts.regular,
     flex: 1,
     height: FIELD_HEIGHT,
-    color: '#FFFFFF',
+    color: lightColors.textPrimary,
     fontSize: type.body.fontSize,
     lineHeight: type.body.lineHeight,
     padding: 0,
@@ -129,14 +128,14 @@ export const fieldStyles = StyleSheet.create({
       web: {
         outlineStyle: 'none',
         outlineWidth: 0,
-        WebkitTextFillColor: '#FFFFFF',
-        caretColor: '#FFFFFF',
+        WebkitTextFillColor: lightColors.textPrimary,
+        caretColor: lightColors.textPrimary,
       } as object,
       default: {},
     }),
   },
   helper: {
-    color: 'rgba(255,255,255,0.62)',
+    color: lightColors.textSecondary,
     fontSize: type.micro.fontSize,
     lineHeight: type.micro.lineHeight,
     fontWeight: '400',

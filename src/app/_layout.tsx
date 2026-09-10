@@ -2,6 +2,7 @@ import { useFonts } from 'expo-font';
 import { QueryClient, QueryClientProvider, useQueryClient } from '@tanstack/react-query';
 import { Stack, usePathname } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
+import { StatusBar } from 'expo-status-bar';
 import React, { useEffect, useRef, useSyncExternalStore } from 'react';
 import { Platform, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -32,7 +33,7 @@ function ThemedApp() {
   const qc = useQueryClient();
   const { signedIn } = useAuth();
   const pathname = usePathname();
-  const appearance = useSetting<AppearanceMode>('appearance', 'system', signedIn);
+  const appearance = useSetting<AppearanceMode>('appearance', 'light', signedIn);
 
   // A profile row was only written the first time somebody edited their
   // profile, and that table is what everyone else's people search reads. An
@@ -51,13 +52,14 @@ function ThemedApp() {
   // signing in never unmounts the navigator below (see AccountApp).
   return (
     <ThemeProvider
-      initialMode={appearance.data ?? 'system'}
+      initialMode={appearance.data ?? 'light'}
       onModeChange={(mode) => {
         settings.setAppearance(mode).then(() => {
           qc.invalidateQueries({ queryKey: keys.setting('appearance') });
         });
       }}
     >
+      <StatusBar style="dark" />
       <View style={styles.appShell}>
         <Stack screenOptions={{ headerShown: false }}>
           <Stack.Screen name="(tabs)" />
@@ -214,17 +216,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     padding: 24,
-    backgroundColor: '#101418',
+    backgroundColor: '#F6F7F9',
     gap: 12,
   },
   notConfiguredTitle: {
-    color: '#FFFFFF',
+    color: '#14181D',
     fontFamily: fonts.bold,
     fontSize: 18,
     textAlign: 'center',
   },
   notConfiguredBody: {
-    color: '#B8C0CC',
+    color: '#5A6270',
     fontFamily: fonts.regular,
     fontSize: 14,
     lineHeight: 20,
