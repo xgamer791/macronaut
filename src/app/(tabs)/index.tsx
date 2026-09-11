@@ -4,21 +4,20 @@ import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import { Pressable, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { ActivityType } from '@/repositories/types';
-import { useAuth } from '@/state/AuthProvider';
 import {
   useActivityEntries,
   useDayProgress,
   useDiaryEntries,
   useMealCategories,
-  useNotifications,
 } from '@/state/queries';
 import { useUiStore } from '@/state/uiStore';
 import {
   ActivityLogList,
+  AppHeader,
   AppText,
   BarEntranceProvider,
   CalendarPanel,
-  HeaderMenu,
+  GlassHeaderBar,
   Screen,
   SectionHeader,
   TodayDashboard,
@@ -49,7 +48,6 @@ function TodayBody() {
   const router = useRouter();
   const { colors } = useTheme();
   const { height } = useWindowDimensions();
-  const { signedIn } = useAuth();
   const date = useUiStore((s) => s.selectedDate);
   const setSelectedDate = useUiStore((s) => s.setSelectedDate);
   const setTargetMeal = useUiStore((s) => s.setTargetMeal);
@@ -57,8 +55,6 @@ function TodayBody() {
   const entries = useDiaryEntries(date);
   const activities = useActivityEntries(date);
   const categories = useMealCategories();
-  const notifications = useNotifications();
-  const [menuOpen, setMenuOpen] = useState(false);
   const [calendarOpen, setCalendarOpen] = useState(false);
 
   const consumed = progress?.consumed.calories ?? 0;
@@ -106,7 +102,17 @@ function TodayBody() {
   ];
 
   return (
-    <Screen tabBarSpace={false} padded={false} safeTop={false} backgroundColor={TODAY.canvas}>
+    <Screen
+      tabBarSpace
+      padded={false}
+      safeTop={false}
+      backgroundColor={TODAY.canvas}
+      stickyHeader={
+        <GlassHeaderBar>
+          <AppHeader />
+        </GlassHeaderBar>
+      }
+    >
       <TodayDashboard
         dateLabel={formatDiaryNavLabel(date)}
         consumed={consumed}
@@ -114,11 +120,9 @@ function TodayBody() {
         remaining={remaining}
         goal={target}
         macros={macros}
-        notificationDot={(notifications.data?.unreadCount ?? 0) > 0}
-        minHeight={height}
-        onLogoPress={() => setMenuOpen(true)}
-        onProfilePress={() => router.push('/profile')}
-        onNotifyPress={() => router.push(signedIn ? '/notifications' : '/login')}
+        showHeader={false}
+        topInset={0}
+        minHeight={Math.max(520, height - 160)}
         onPrevDate={() => setSelectedDate(addDays(date, -1))}
         onNextDate={() => setSelectedDate(addDays(date, 1))}
         onDatePress={() => setCalendarOpen(true)}
@@ -219,17 +223,6 @@ function TodayBody() {
         </View>
       </View>
 
-      <HeaderMenu
-        visible={menuOpen}
-        onClose={() => setMenuOpen(false)}
-        extraItems={[
-          { href: '/chats', label: 'Chats', icon: 'chatbubble-outline' },
-          { href: '/friends', label: 'Friends', icon: 'people-outline' },
-          { href: '/groups', label: 'Groups', icon: 'people-circle-outline' },
-          { href: '/progress', label: 'Progress', icon: 'stats-chart-outline' },
-          { href: '/fasting', label: 'Fasting', icon: 'timer-outline' },
-        ]}
-      />
       <CalendarPanel
         visible={calendarOpen}
         selected={date}

@@ -29,7 +29,10 @@ describe('Today accent diary', () => {
     expect(dash).toContain('kcal');
     expect(dash).toContain('macro.label');
     expect(today).toContain('<TodayDashboard');
+    expect(today).toContain('showHeader={false}');
+    expect(today).toContain('<AppHeader />');
     expect(today).toContain('formatDiaryNavLabel');
+    expect(dash).toContain("textAlign: 'center'");
     expect(today).toContain("label: 'Carbs'");
     expect(today).toContain("label: 'Protein'");
     expect(today).toContain("label: 'Fat'");

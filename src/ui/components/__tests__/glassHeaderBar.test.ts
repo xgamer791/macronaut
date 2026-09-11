@@ -37,11 +37,11 @@ describe('sticky chrome headers', () => {
     expect(screen).not.toContain('HeaderGlassProvider');
   });
 
-  it('lets Today paint its own accent diary instead of the shared chrome bar', () => {
+  it('keeps Today on the shared chrome bar above the accent diary', () => {
     expect(today).toContain('<TodayDashboard');
     expect(today).not.toContain('overlayHeader');
-    expect(today).not.toContain('<GlassHeaderBar>');
-    expect(today).not.toContain('<AppHeader />');
+    expect(today).toContain('<GlassHeaderBar>');
+    expect(today).toContain('<AppHeader />');
     expect(today).not.toContain('headerWrap');
     expect(today).not.toContain('heroHeight');
     expect(today).not.toContain('windowHeight * 0.42');

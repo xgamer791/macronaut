@@ -40,6 +40,8 @@ export interface TodayDashboardProps {
   goal: number;
   macros: TodayMacro[];
   notificationDot?: boolean;
+  /** Clone header (sprout / profile / bell). Today uses AppHeader instead. */
+  showHeader?: boolean;
   /** When set, skip the device safe-area (preview frames paint their own chrome). */
   topInset?: number;
   /** Fill the first viewport so meals stay below the fold. */
@@ -70,6 +72,7 @@ export function TodayDashboard({
   goal,
   macros,
   notificationDot,
+  showHeader = true,
   topInset,
   minHeight,
   onLogoPress,
@@ -83,7 +86,7 @@ export function TodayDashboard({
 }: TodayDashboardProps) {
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
-  const padTop = topInset !== undefined ? topInset : insets.top;
+  const padTop = topInset !== undefined ? topInset : showHeader ? insets.top : 0;
   const ringSize = Math.min(248, Math.max(200, width * 0.62));
   const fill = goal > 0 ? Math.min(Math.max(remaining / goal, 0), 1) : 0;
 
@@ -95,38 +98,40 @@ export function TodayDashboard({
         style={StyleSheet.absoluteFill}
       />
 
-      <View style={[styles.header, { paddingTop: padTop + 6 }]}>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Open menu"
-          onPress={onLogoPress}
-          hitSlop={8}
-          style={styles.logoHit}
-        >
-          <SproutLogo size={28} color={TODAY.logo} />
-        </Pressable>
-        <View style={styles.headerActions}>
+      {showHeader ? (
+        <View style={[styles.header, { paddingTop: padTop + 6 }]}>
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Open your profile"
-            onPress={onProfilePress}
+            accessibilityLabel="Open menu"
+            onPress={onLogoPress}
             hitSlop={8}
-            style={styles.iconHit}
+            style={styles.logoHit}
           >
-            <User size={22} color={TODAY.onCanvas} strokeWidth={1.7} />
+            <SproutLogo size={28} color={TODAY.logo} />
           </Pressable>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={notificationDot ? 'Unread notifications' : 'Notifications'}
-            onPress={onNotifyPress}
-            hitSlop={8}
-            style={styles.iconHit}
-          >
-            <Bell size={22} color={TODAY.onCanvas} strokeWidth={1.7} />
-            {notificationDot ? <View style={styles.notifyDot} /> : null}
-          </Pressable>
+          <View style={styles.headerActions}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Open your profile"
+              onPress={onProfilePress}
+              hitSlop={8}
+              style={styles.iconHit}
+            >
+              <User size={22} color={TODAY.onCanvas} strokeWidth={1.7} />
+            </Pressable>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={notificationDot ? 'Unread notifications' : 'Notifications'}
+              onPress={onNotifyPress}
+              hitSlop={8}
+              style={styles.iconHit}
+            >
+              <Bell size={22} color={TODAY.onCanvas} strokeWidth={1.7} />
+              {notificationDot ? <View style={styles.notifyDot} /> : null}
+            </Pressable>
+          </View>
         </View>
-      </View>
+      ) : null}
 
       <View style={styles.dateRow}>
         <Pressable
@@ -182,7 +187,7 @@ export function TodayDashboard({
           </View>
         </Pressable>
 
-        <View style={[styles.sideStat, styles.sideStatEnd]}>
+        <View style={styles.sideStat}>
           <AppText style={styles.sideLabel}>Burned</AppText>
           <AppText style={styles.sideValue}>{formatAmount(burned)}</AppText>
         </View>
@@ -353,16 +358,15 @@ const styles = StyleSheet.create({
     minHeight: 260,
   },
   sideStat: {
-    width: 78,
+    width: 86,
+    alignItems: 'center',
     gap: 4,
-  },
-  sideStatEnd: {
-    alignItems: 'flex-end',
   },
   sideLabel: {
     fontFamily: fonts.regular,
     fontSize: 14,
     lineHeight: 18,
+    textAlign: 'center',
     color: TODAY.onCanvas,
   },
   sideValue: {
@@ -370,6 +374,7 @@ const styles = StyleSheet.create({
     fontSize: 26,
     lineHeight: 30,
     letterSpacing: -0.6,
+    textAlign: 'center',
     color: TODAY.onCanvas,
   },
   ringCopy: {

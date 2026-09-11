@@ -34,7 +34,7 @@ describe('today hero layout', () => {
   it('lets the accent diary own the first viewport instead of the old hero chrome', () => {
     const today = read('app', '(tabs)', 'index.tsx');
     expect(today).toContain('<TodayDashboard');
-    expect(today).toContain('minHeight={height}');
+    expect(today).toContain('showHeader={false}');
     expect(today).toContain('flush');
     expect(today).not.toContain('overlayHeader');
     expect(today).not.toContain('todayHeroHeight');
