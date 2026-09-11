@@ -89,7 +89,6 @@ describe('header auto-hide wiring', () => {
     expect(screen).toContain('AutoHideHeader');
     expect(screen).toContain('onScroll: hideOnScroll ? hide.onScroll');
     expect(screen).toContain('collapseHeader');
-    expect(read('app', '(tabs)', 'index.tsx')).toContain('<TodayDashboard');
     expect(read('app', '(tabs)', 'index.tsx')).toContain('stickyHeader={');
     expect(read('app', 'profile.tsx')).toContain('stickyHeader={');
     expect(read('app', 'u', '[handle].tsx')).toContain('stickyHeader={');

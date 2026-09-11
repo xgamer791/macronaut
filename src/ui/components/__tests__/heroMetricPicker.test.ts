@@ -9,7 +9,7 @@ const today = fs.readFileSync(
 
 describe('homepage module picker', () => {
   it('uses a compact card grid with a clear radio selection', () => {
-    expect(today).not.toContain('<HeroMetricPicker');
+    expect(today).toContain('<HeroMetricPicker');
     expect(today).not.toContain('Each module uses a layout optimized');
     expect(picker).toContain('<Sheet');
     expect(picker).toContain('Customize ${slot} module');
@@ -31,8 +31,10 @@ describe('homepage module picker', () => {
   });
 
   it('closes immediately after a valid choice and keeps the existing sheet transition', () => {
+    const close = today.indexOf('setPickerSlot(null);');
+    const save = today.indexOf('await settings.set(key, id);');
+    expect(close).toBeGreaterThan(-1);
+    expect(close).toBeLessThan(save);
     expect(picker).toContain('void Haptics.selectionAsync()');
-    expect(picker).toContain('onClose={onClose}');
-    expect(picker).toContain('onSelect(metric.id)');
   });
 });

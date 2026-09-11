@@ -13,7 +13,7 @@ describe('training schedule route', () => {
     const calendar = fs.readFileSync(path.join(appDir, 'calendar.tsx'), 'utf8');
     const layout = fs.readFileSync(path.join(appDir, '_layout.tsx'), 'utf8');
     const schedule = fs.readFileSync(path.join(appDir, 'training-schedule.tsx'), 'utf8');
-    expect(today).toContain('<TodayDashboard');
+    expect(today).toContain('<AppHeader />');
     expect(header).toContain("router.push('/calendar')");
     expect(header).not.toContain("router.push('/training-schedule')");
     expect(layout).toContain('name="calendar" options={SLIDE_OVER_OPTIONS}');

@@ -31,16 +31,17 @@ describe('today hero layout', () => {
     expect(read('ui', 'components', 'AppHeader.tsx')).toContain('marginTop: HEADER_ROW_LIFT');
   });
 
-  it('lets the accent diary own the first viewport instead of the old hero chrome', () => {
+  it('lets Screen reserve the header so the first gap cannot collapse', () => {
     const today = read('app', '(tabs)', 'index.tsx');
-    expect(today).toContain('<TodayDashboard');
-    expect(today).toContain('showHeader={false}');
+    expect(today).toContain('paddingTop: HERO_GAP_BELOW_HEADER');
+    expect(today).toContain('paddingBottom: TODAY_SECTION_GAP');
+    expect(today).toContain('gap: TODAY_SECTION_GAP');
+    expect(today).toContain('paddingTop: 0');
     expect(today).toContain('flush');
     expect(today).not.toContain('overlayHeader');
     expect(today).not.toContain('todayHeroHeight');
     expect(today).not.toContain('glassHeaderHeight');
     expect(today).not.toContain('spacing.md + 15');
-    expect(today).not.toContain('paddingTop: HERO_GAP_BELOW_HEADER');
     expect(read('ui', 'components', 'SectionHeader.tsx')).toContain('flush = false');
   });
 });

@@ -37,13 +37,15 @@ describe('sticky chrome headers', () => {
     expect(screen).not.toContain('HeaderGlassProvider');
   });
 
-  it('keeps Today on the shared chrome bar above the accent diary', () => {
-    expect(today).toContain('<TodayDashboard');
+  it('hands Today its header instead of drawing one inside the hero', () => {
+    expect(today).toContain('stickyHeader={');
     expect(today).not.toContain('overlayHeader');
     expect(today).toContain('<GlassHeaderBar>');
     expect(today).toContain('<AppHeader />');
     expect(today).not.toContain('headerWrap');
     expect(today).not.toContain('heroHeight');
+    expect(today).toContain('paddingTop: HERO_GAP_BELOW_HEADER');
+    expect(today).toContain('TODAY_SECTION_GAP');
     expect(today).not.toContain('windowHeight * 0.42');
     expect(today).not.toContain('heroHeight + insets.top');
     expect(today).not.toContain('greetingForHour');

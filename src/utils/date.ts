@@ -85,16 +85,6 @@ export function formatDayKey(key: DayKey, today: DayKey = todayKey()): string {
   return `${WEEKDAY_LABELS[d.getDay()]}, ${MONTH_LABELS[d.getMonth()]} ${d.getDate()}`;
 }
 
-/** Diary navigator label, e.g. `TODAY, 15 JUL`. */
-export function formatDiaryNavLabel(key: DayKey, today: DayKey = todayKey()): string {
-  const d = parseDayKey(key);
-  const stamp = `${d.getDate()} ${MONTH_LABELS[d.getMonth()].toUpperCase()}`;
-  if (key === today) return `TODAY, ${stamp}`;
-  if (key === addDays(today, -1)) return `YESTERDAY, ${stamp}`;
-  if (key === addDays(today, 1)) return `TOMORROW, ${stamp}`;
-  return `${WEEKDAY_LABELS[d.getDay()].toUpperCase()}, ${stamp}`;
-}
-
 export function shortWeekdayLabel(key: DayKey): string {
   return WEEKDAY_LABELS[weekdayOf(key)];
 }
