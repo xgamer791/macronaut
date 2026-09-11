@@ -11,6 +11,7 @@ import {
   useStartFast,
   useStopFast,
 } from '@/state/queries';
+import { resolveFastWindow } from '@/domain/fasting';
 import { parseDayKey, toDayKey, type DayKey } from '@/utils/date';
 import {
   AppText,
@@ -46,15 +47,14 @@ const PRESET_TIMES = [
 type DateTarget = 'start' | 'end';
 type Period = 'am' | 'pm';
 
-function roundedStart(): Date {
+function nowStart(): Date {
   const date = new Date();
   date.setSeconds(0, 0);
-  date.setMinutes(Math.ceil(date.getMinutes() / 5) * 5);
   return date;
 }
 
 function defaultDraft() {
-  const start = roundedStart();
+  const start = nowStart();
   return { start, end: new Date(start.getTime() + DEFAULT_DURATION_MINUTES * MINUTE_MS) };
 }
 
@@ -81,7 +81,7 @@ function FastingScreen() {
   const [seededFastKey, setSeededFastKey] = useState<string | null>(null);
   const [dateTarget, setDateTarget] = useState<DateTarget | null>(null);
   const [timeTarget, setTimeTarget] = useState<DateTarget | null>(null);
-  const [timeDraft, setTimeDraft] = useState(() => roundedStart());
+  const [timeDraft, setTimeDraft] = useState(() => nowStart());
   const [slotOpen, setSlotOpen] = useState(false);
   const [slotName, setSlotName] = useState('');
   const [slotError, setSlotError] = useState<string | null>(null);
@@ -120,13 +120,7 @@ function FastingScreen() {
     Math.round((draft.end.getTime() - draft.start.getTime()) / MINUTE_MS),
   );
   const activeDuration = hasFast ? Math.max(1, activeEndAt - activeStartAt) : 1;
-  const phase = !hasFast
-    ? 'ready'
-    : now < activeStartAt
-      ? 'scheduled'
-      : now >= activeEndAt
-        ? 'complete'
-        : 'active';
+  const phase = !hasFast ? 'ready' : now >= activeEndAt ? 'complete' : 'active';
   const progress =
     phase === 'active'
       ? Math.min(1, Math.max(0, (now - activeStartAt!) / activeDuration))
@@ -134,29 +128,19 @@ function FastingScreen() {
         ? 1
         : 0;
   const timerValue =
-    phase === 'scheduled'
-      ? formatTimer(activeStartAt! - now)
-      : phase === 'active'
-        ? formatTimer(now - activeStartAt!)
-        : phase === 'complete'
-          ? formatTimer(activeEndAt! - activeStartAt!)
-          : '00:00:00';
-  const statusLabel =
     phase === 'active'
-      ? 'FASTING NOW'
-      : phase === 'scheduled'
-        ? 'FAST SCHEDULED'
-        : phase === 'complete'
-          ? 'FAST COMPLETE'
-          : 'READY TO FAST';
+      ? formatTimer(Math.max(0, now - activeStartAt!))
+      : phase === 'complete'
+        ? formatTimer(activeEndAt! - activeStartAt!)
+        : '00:00:00';
+  const statusLabel =
+    phase === 'active' ? 'FASTING NOW' : phase === 'complete' ? 'FAST COMPLETE' : 'READY TO FAST';
   const timerCaption =
     phase === 'active'
       ? `${formatCompactDuration(Math.ceil((activeEndAt! - now) / MINUTE_MS))} remaining`
-      : phase === 'scheduled'
-        ? 'Until your fast begins'
-        : phase === 'complete'
-          ? 'You reached your fasting goal'
-          : 'Choose a time below to begin';
+      : phase === 'complete'
+        ? 'You reached your fasting goal'
+        : 'Choose a time below to begin';
 
   function applyDuration(minutes: number) {
     void Haptics.selectionAsync();
@@ -219,10 +203,9 @@ function FastingScreen() {
       return;
     }
     try {
-      await startFast.mutateAsync({
-        startAt: draft.start.getTime(),
-        endAt: draft.end.getTime(),
-      });
+      const fastWindow = resolveFastWindow(draft.start.getTime(), draft.end.getTime());
+      await startFast.mutateAsync(fastWindow);
+      setDraft({ start: new Date(fastWindow.startAt), end: new Date(fastWindow.endAt) });
       setNow(Date.now());
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : 'Could not save your fast.');
@@ -283,7 +266,7 @@ function FastingScreen() {
                   {timerValue}
                 </AppText>
                 <AppText variant="caption" tone="secondary" align="center">
-                  {phase === 'scheduled' ? 'starts in' : 'elapsed'}
+                  elapsed
                 </AppText>
               </>
             )}
@@ -296,10 +279,7 @@ function FastingScreen() {
 
         {hasFast ? (
           <View style={[styles.activeDates, { borderTopColor: colors.border }]}>
-            <TrackerDate
-              label={phase === 'scheduled' ? 'STARTS' : 'STARTED'}
-              value={formatDateTime(new Date(activeStartAt))}
-            />
+            <TrackerDate label="STARTED" value={formatDateTime(new Date(activeStartAt))} />
             <View style={[styles.dateDivider, { backgroundColor: colors.border }]} />
             <TrackerDate
               label={phase === 'complete' ? 'FINISHED' : 'FINISHES'}

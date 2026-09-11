@@ -61,9 +61,14 @@ describe('home tools and fasting route', () => {
 
     expect(page).toContain('activeStartAt');
     expect(page).toContain('activeEndAt');
+    expect(page).toContain('resolveFastWindow');
     expect(page).toContain('Date.now()');
     expect(page).toContain('setInterval');
     expect(page).toContain("AppState.addEventListener('change'");
+    expect(page).toContain('elapsed');
+    expect(page).not.toContain('starts in');
+    expect(page).not.toContain('FAST SCHEDULED');
+    expect(page).not.toContain('Math.ceil(date.getMinutes()');
     expect(backend).toContain('MAX_CUSTOM_SLOTS = 10');
     expect(backend).toContain("query('fastingStates')");
     expect(schema).toContain('fastingStates: defineTable');
