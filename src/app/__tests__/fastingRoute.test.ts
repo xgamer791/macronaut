@@ -6,7 +6,7 @@ const srcDir = path.join(appDir, '..');
 const projectDir = path.join(appDir, '..', '..');
 
 describe('home tools and fasting route', () => {
-  it('adds an expandable bottom-right tools launcher without replacing the header add button', () => {
+  it('keeps the tools launcher for fasting without parking it on the mint diary', () => {
     const home = fs.readFileSync(path.join(appDir, '(tabs)', 'index.tsx'), 'utf8');
     const launcher = fs.readFileSync(
       path.join(srcDir, 'ui', 'components', 'ToolLauncher.tsx'),
@@ -14,8 +14,8 @@ describe('home tools and fasting route', () => {
     );
     const screen = fs.readFileSync(path.join(srcDir, 'ui', 'components', 'Screen.tsx'), 'utf8');
 
-    expect(home).toContain('floatingOverlay={<ToolLauncher />}');
-    expect(home).toContain('<AppHeader />');
+    expect(home).not.toContain('floatingOverlay={<ToolLauncher />}');
+    expect(home).toContain('<TodayDashboard');
     expect(screen).toContain('floatingOverlay?: React.ReactNode');
     expect(launcher).toContain('Animated.timing');
     expect(launcher).toContain("href: '/fasting'");

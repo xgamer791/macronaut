@@ -71,6 +71,7 @@ function ThemedApp() {
           <Stack.Screen name="signup-credentials" />
           <Stack.Screen name="signup-health" />
           <Stack.Screen name="preview-signup-health" />
+          <Stack.Screen name="preview-today" />
           <Stack.Screen name="onboarding" />
           <Stack.Screen name="add" options={{ presentation: 'modal' }} />
           <Stack.Screen name="manual-entry" options={{ presentation: 'modal' }} />
@@ -120,6 +121,7 @@ const AUTH_FLOW_PATHS = new Set([
   '/signup-credentials',
   '/signup-health',
   '/preview-signup-health',
+  '/preview-today',
   '/onboarding',
 ]);
 

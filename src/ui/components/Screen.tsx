@@ -30,6 +30,8 @@ export interface ScreenProps {
   collapseHeader?: boolean;
   /** Fixed content rendered above the scroll layer (for example a FAB). */
   floatingOverlay?: React.ReactNode;
+  /** Override the page fill (Today uses the diary lime). */
+  backgroundColor?: string;
 }
 
 export function Screen({
@@ -43,6 +45,7 @@ export function Screen({
   overlayHeader = false,
   collapseHeader = true,
   floatingOverlay,
+  backgroundColor,
 }: ScreenProps) {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
@@ -54,7 +57,7 @@ export function Screen({
   // scroll layer as the header left would drag the content with it.
   const [headerHeight, setHeaderHeight] = useState(0);
   const base: StyleProp<ViewStyle> = [
-    { flex: 1, backgroundColor: colors.background },
+    { flex: 1, backgroundColor: backgroundColor ?? colors.background },
     { paddingTop: safeTop && !stickyHeader ? insets.top : 0 },
   ];
   const contentPad = {

@@ -95,7 +95,15 @@ const MENU_ITEMS: MenuItem[] = [
   { href: '/terms', label: 'Terms of Service', icon: 'document-text-outline' },
 ];
 
-function HeaderMenu({ visible, onClose }: { visible: boolean; onClose: () => void }) {
+export function HeaderMenu({
+  visible,
+  onClose,
+  extraItems,
+}: {
+  visible: boolean;
+  onClose: () => void;
+  extraItems?: MenuItem[];
+}) {
   const router = useRouter();
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
@@ -208,7 +216,7 @@ function HeaderMenu({ visible, onClose }: { visible: boolean; onClose: () => voi
               <Ionicons name="close" size={24} color={colors.textPrimary} />
             </Pressable>
           </View>
-          {MENU_ITEMS.map((item) => (
+          {[...(extraItems ?? []), ...MENU_ITEMS].map((item) => (
             <Pressable
               key={item.label}
               accessibilityRole="button"

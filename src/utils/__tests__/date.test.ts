@@ -2,6 +2,7 @@ import {
   addDays,
   addMonths,
   formatDayKey,
+  formatDiaryNavLabel,
   formatMonthYear,
   isValidDayKey,
   monthCalendarDays,
@@ -82,6 +83,15 @@ describe('formatDayKey', () => {
     expect(formatDayKey('2026-07-12', '2026-07-13')).toBe('Yesterday');
     expect(formatDayKey('2026-07-14', '2026-07-13')).toBe('Tomorrow');
     expect(formatDayKey('2026-07-01', '2026-07-13')).toBe('Wed, Jul 1');
+  });
+});
+
+describe('formatDiaryNavLabel', () => {
+  it('matches the reference diary stamp', () => {
+    expect(formatDiaryNavLabel('2026-07-15', '2026-07-15')).toBe('TODAY, 15 JUL');
+    expect(formatDiaryNavLabel('2026-07-14', '2026-07-15')).toBe('YESTERDAY, 14 JUL');
+    expect(formatDiaryNavLabel('2026-07-16', '2026-07-15')).toBe('TOMORROW, 16 JUL');
+    expect(formatDiaryNavLabel('2026-07-01', '2026-07-15')).toBe('WED, 1 JUL');
   });
 });
 
