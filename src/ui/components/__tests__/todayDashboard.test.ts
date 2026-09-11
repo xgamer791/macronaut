@@ -11,7 +11,15 @@ const preview = fs.readFileSync(
   'utf8',
 );
 
-describe('Today mint diary', () => {
+describe('Today accent diary', () => {
+  it('paints the canvas with the app accent instead of the reference lime', () => {
+    expect(dash).toContain('palette.accent');
+    expect(dash).toContain('TODAY.canvas');
+    expect(dash).not.toContain('#D2F58C');
+    expect(dash).not.toContain('#C4F184');
+    expect(dash).not.toContain('#8F9E78');
+  });
+
   it('clones the reference chrome: sprout, date nav, remaining ring, macros', () => {
     expect(dash).toContain('SproutLogo');
     expect(dash).toContain('Remaining');

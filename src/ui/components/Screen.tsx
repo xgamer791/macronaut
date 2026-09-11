@@ -30,7 +30,7 @@ export interface ScreenProps {
   collapseHeader?: boolean;
   /** Fixed content rendered above the scroll layer (for example a FAB). */
   floatingOverlay?: React.ReactNode;
-  /** Override the page fill (Today uses the diary lime). */
+  /** Override the page fill (Today uses the accent canvas). */
   backgroundColor?: string;
 }
 

@@ -5,21 +5,21 @@ import React from 'react';
 import { Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
-import { fonts } from '@/ui/theme/tokens';
+import { fonts, lightColors, palette } from '@/ui/theme/tokens';
 import { AppText } from './AppText';
 
-/** Colors sampled from the reference diary screenshot. */
+/** Diary canvas uses the app accent; cards keep the reference neutrals. */
 export const TODAY = {
-  limeTop: '#D2F58C',
-  limeMid: '#C4F184',
-  limeLow: '#D6EFA6',
-  limeFade: '#F2F0E8',
-  ink: '#111111',
-  muted: '#8D8D8D',
-  sage: '#8F9E78',
-  sageTrack: 'rgba(143, 158, 120, 0.28)',
-  logo: '#243D28',
+  canvas: palette.accent,
+  fade: lightColors.background,
+  onCanvas: palette.onAccent,
+  onCanvasMuted: 'rgba(255, 255, 255, 0.72)',
+  ring: palette.onAccent,
+  ringTrack: 'rgba(255, 255, 255, 0.32)',
+  logo: palette.onAccent,
   card: '#FFFFFF',
+  cardInk: '#111111',
+  cardMuted: '#8D8D8D',
   carbsBar: '#DCDCF5',
   proteinBar: '#F0DCE6',
   fatBar: '#E8E4F5',
@@ -59,8 +59,8 @@ function formatAmount(n: number): string {
 }
 
 /**
- * Mint diary dashboard cloned from the reference: sprout mark, date navigator,
- * remaining-calorie horseshoe, and three macro cards.
+ * Diary dashboard cloned from the reference, painted in the app accent
+ * instead of the source lime gradient.
  */
 export function TodayDashboard({
   dateLabel,
@@ -90,8 +90,8 @@ export function TodayDashboard({
   return (
     <View style={[styles.root, minHeight != null && { minHeight }]}>
       <LinearGradient
-        colors={[TODAY.limeTop, TODAY.limeMid, TODAY.limeLow, TODAY.limeFade]}
-        locations={[0, 0.38, 0.72, 1]}
+        colors={[TODAY.canvas, TODAY.canvas, TODAY.fade]}
+        locations={[0, 0.78, 1]}
         style={StyleSheet.absoluteFill}
       />
 
@@ -113,7 +113,7 @@ export function TodayDashboard({
             hitSlop={8}
             style={styles.iconHit}
           >
-            <User size={22} color={TODAY.ink} strokeWidth={1.7} />
+            <User size={22} color={TODAY.onCanvas} strokeWidth={1.7} />
           </Pressable>
           <Pressable
             accessibilityRole="button"
@@ -122,7 +122,7 @@ export function TodayDashboard({
             hitSlop={8}
             style={styles.iconHit}
           >
-            <Bell size={22} color={TODAY.ink} strokeWidth={1.7} />
+            <Bell size={22} color={TODAY.onCanvas} strokeWidth={1.7} />
             {notificationDot ? <View style={styles.notifyDot} /> : null}
           </Pressable>
         </View>
@@ -136,7 +136,7 @@ export function TodayDashboard({
           hitSlop={10}
           style={styles.chevronHit}
         >
-          <ChevronLeft size={22} color={TODAY.ink} strokeWidth={1.8} />
+          <ChevronLeft size={22} color={TODAY.onCanvas} strokeWidth={1.8} />
         </Pressable>
         <Pressable
           accessibilityRole="button"
@@ -144,7 +144,7 @@ export function TodayDashboard({
           onPress={onDatePress}
           style={styles.dateCenter}
         >
-          <Ionicons name="calendar-outline" size={15} color={TODAY.ink} />
+          <Ionicons name="calendar-outline" size={15} color={TODAY.onCanvas} />
           <AppText style={styles.dateLabel}>{dateLabel}</AppText>
         </Pressable>
         <Pressable
@@ -154,7 +154,7 @@ export function TodayDashboard({
           hitSlop={10}
           style={styles.chevronHit}
         >
-          <ChevronRight size={22} color={TODAY.ink} strokeWidth={1.8} />
+          <ChevronRight size={22} color={TODAY.onCanvas} strokeWidth={1.8} />
         </Pressable>
       </View>
 
@@ -262,7 +262,7 @@ export function RemainingRing({ size, progress }: { size: number; progress: numb
     <Svg width={size} height={size} style={StyleSheet.absoluteFill}>
       <Path
         d={arcPath(cx, cy, r, start, sweep)}
-        stroke={TODAY.sageTrack}
+        stroke={TODAY.ringTrack}
         strokeWidth={stroke}
         strokeLinecap="round"
         fill="none"
@@ -270,7 +270,7 @@ export function RemainingRing({ size, progress }: { size: number; progress: numb
       {filled > 0.5 ? (
         <Path
           d={arcPath(cx, cy, r, start, filled)}
-          stroke={TODAY.sage}
+          stroke={TODAY.ring}
           strokeWidth={stroke}
           strokeLinecap="round"
           fill="none"
@@ -342,7 +342,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 16,
     letterSpacing: 0.7,
-    color: TODAY.ink,
+    color: TODAY.onCanvas,
   },
   ringBlock: {
     flex: 1,
@@ -363,14 +363,14 @@ const styles = StyleSheet.create({
     fontFamily: fonts.regular,
     fontSize: 14,
     lineHeight: 18,
-    color: TODAY.ink,
+    color: TODAY.onCanvas,
   },
   sideValue: {
     fontFamily: fonts.bold,
     fontSize: 26,
     lineHeight: 30,
     letterSpacing: -0.6,
-    color: TODAY.ink,
+    color: TODAY.onCanvas,
   },
   ringCopy: {
     ...StyleSheet.absoluteFillObject,
@@ -382,7 +382,7 @@ const styles = StyleSheet.create({
     fontFamily: fonts.regular,
     fontSize: 15,
     lineHeight: 20,
-    color: TODAY.ink,
+    color: TODAY.onCanvas,
     marginBottom: 2,
   },
   remainingValue: {
@@ -390,13 +390,13 @@ const styles = StyleSheet.create({
     fontSize: 52,
     lineHeight: 56,
     letterSpacing: -1.6,
-    color: TODAY.ink,
+    color: TODAY.onCanvas,
   },
   goalLabel: {
     fontFamily: fonts.regular,
     fontSize: 13,
     lineHeight: 18,
-    color: TODAY.muted,
+    color: TODAY.onCanvasMuted,
     marginTop: 4,
   },
   macroRow: {
@@ -422,13 +422,13 @@ const styles = StyleSheet.create({
     fontFamily: fonts.regular,
     fontSize: 16,
     lineHeight: 20,
-    color: TODAY.ink,
+    color: TODAY.cardInk,
   },
   macroValue: {
     fontFamily: fonts.regular,
     fontSize: 13,
     lineHeight: 17,
-    color: TODAY.muted,
+    color: TODAY.cardMuted,
   },
   macroTrack: {
     height: 4,

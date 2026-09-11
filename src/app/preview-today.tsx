@@ -11,7 +11,7 @@ const REFERENCE_MACROS = [
 ];
 
 /**
- * Ungated visual clone of the diary reference (lime remaining ring + macros)
+ * Ungated visual clone of the diary reference (remaining ring + macros)
  * so the layout can be inspected without signing in. Remove once the Today
  * redesign has shipped.
  */
@@ -93,7 +93,7 @@ const styles = StyleSheet.create({
     height: 844,
     borderRadius: 47,
     overflow: 'hidden',
-    backgroundColor: TODAY.limeTop,
+    backgroundColor: TODAY.canvas,
   },
   island: {
     position: 'absolute',
@@ -123,7 +123,7 @@ const styles = StyleSheet.create({
     fontFamily: fonts.semibold,
     fontSize: 16,
     lineHeight: 19,
-    color: '#111111',
+    color: TODAY.onCanvas,
     letterSpacing: -0.3,
   },
   statusIcons: {
@@ -141,7 +141,7 @@ const styles = StyleSheet.create({
   bar: {
     width: 3,
     borderRadius: 1,
-    backgroundColor: '#111111',
+    backgroundColor: TODAY.onCanvas,
   },
   wifi: {
     width: 16,
@@ -155,14 +155,14 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 8,
     borderTopRightRadius: 8,
     borderWidth: 2,
-    borderColor: '#111111',
+    borderColor: TODAY.onCanvas,
     borderBottomWidth: 0,
   },
   wifiDot: {
     width: 3,
     height: 3,
     borderRadius: 1.5,
-    backgroundColor: '#111111',
+    backgroundColor: TODAY.onCanvas,
     marginTop: 1,
   },
   batteryWrap: {
@@ -174,20 +174,20 @@ const styles = StyleSheet.create({
     height: 11,
     borderRadius: 3,
     borderWidth: 1.2,
-    borderColor: '#111111',
+    borderColor: TODAY.onCanvas,
     padding: 1.5,
   },
   batteryFill: {
     flex: 1,
     borderRadius: 1.5,
-    backgroundColor: '#111111',
+    backgroundColor: TODAY.onCanvas,
   },
   batteryNip: {
     width: 2,
     height: 5,
     borderTopRightRadius: 1,
     borderBottomRightRadius: 1,
-    backgroundColor: '#111111',
+    backgroundColor: TODAY.onCanvas,
     marginLeft: 1,
     opacity: 0.7,
   },

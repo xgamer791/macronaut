@@ -6,7 +6,7 @@ const srcDir = path.join(appDir, '..');
 const projectDir = path.join(appDir, '..', '..');
 
 describe('home tools and fasting route', () => {
-  it('keeps the tools launcher for fasting without parking it on the mint diary', () => {
+  it('keeps the tools launcher for fasting without parking it on the accent diary', () => {
     const home = fs.readFileSync(path.join(appDir, '(tabs)', 'index.tsx'), 'utf8');
     const launcher = fs.readFileSync(
       path.join(srcDir, 'ui', 'components', 'ToolLauncher.tsx'),

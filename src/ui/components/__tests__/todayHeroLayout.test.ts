@@ -31,7 +31,7 @@ describe('today hero layout', () => {
     expect(read('ui', 'components', 'AppHeader.tsx')).toContain('marginTop: HEADER_ROW_LIFT');
   });
 
-  it('lets the mint diary own the first viewport instead of the old hero chrome', () => {
+  it('lets the accent diary own the first viewport instead of the old hero chrome', () => {
     const today = read('app', '(tabs)', 'index.tsx');
     expect(today).toContain('<TodayDashboard');
     expect(today).toContain('minHeight={height}');

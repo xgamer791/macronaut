@@ -36,7 +36,7 @@ const MEAL_IMAGES: Record<string, ImageSource> = {
   snack: require('../../../assets/images/today/meal-snacks.png'),
 };
 
-/** Today — mint remaining-calorie diary cloned from the reference. */
+/** Today — remaining-calorie diary cloned from the reference, in the app accent. */
 export default function TodayScreen() {
   return (
     <BarEntranceProvider pageKey="today">
@@ -106,7 +106,7 @@ function TodayBody() {
   ];
 
   return (
-    <Screen tabBarSpace={false} padded={false} safeTop={false} backgroundColor={TODAY.limeTop}>
+    <Screen tabBarSpace={false} padded={false} safeTop={false} backgroundColor={TODAY.canvas}>
       <TodayDashboard
         dateLabel={formatDiaryNavLabel(date)}
         consumed={consumed}

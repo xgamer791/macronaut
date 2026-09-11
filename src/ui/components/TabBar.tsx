@@ -117,7 +117,7 @@ export function TabBar({ state, navigation }: BottomTabBarProps) {
   // Stack pages get the copy mounted beside the root navigator so they cannot
   // cover it. Hiding this copy also prevents the two bars from overlapping.
   if (!isPrimaryTabPath(pathname)) return null;
-  // Today is a full-bleed diary; the tab bar would sit on the lime canvas.
+  // Today is a full-bleed diary; the tab bar would sit on the accent canvas.
   if (pathname === '/') return null;
 
   return <TabBarItems state={state} navigation={navigation} />;

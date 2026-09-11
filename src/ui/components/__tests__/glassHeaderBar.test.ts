@@ -37,7 +37,7 @@ describe('sticky chrome headers', () => {
     expect(screen).not.toContain('HeaderGlassProvider');
   });
 
-  it('lets Today paint its own mint diary instead of the shared chrome bar', () => {
+  it('lets Today paint its own accent diary instead of the shared chrome bar', () => {
     expect(today).toContain('<TodayDashboard');
     expect(today).not.toContain('overlayHeader');
     expect(today).not.toContain('<GlassHeaderBar>');
