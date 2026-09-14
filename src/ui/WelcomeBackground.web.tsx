@@ -3,6 +3,7 @@ import { Image } from 'expo-image';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Image as RNImage, StyleSheet, View } from 'react-native';
 import { WelcomeSlideshow } from '@/ui/WelcomeSlideshow';
+import { WELCOME_IMAGE_POSITION, WELCOME_OBJECT_POSITION } from '@/ui/welcomeMedia';
 
 const LOOP = require('../../assets/video/welcome-loop.mp4');
 const POSTER = require('../../assets/video/welcome-poster.jpg');
@@ -82,6 +83,7 @@ function acquireWelcomeVideo(src: string, poster: string | undefined): HTMLVideo
     width: '100%',
     height: '100%',
     objectFit: 'cover',
+    objectPosition: WELCOME_OBJECT_POSITION,
     // Video compositor layers on iOS sit above later siblings and eat taps
     // unless this is set — pointer-events is not inherited.
     pointerEvents: 'none',
@@ -94,8 +96,8 @@ function acquireWelcomeVideo(src: string, poster: string | undefined): HTMLVideo
   return video;
 }
 
-/** Web: muted Seedance loop. One shared <video> is handed between create-account
- * screens so back/forward never restarts or leaves it paused. Poster is the
+/** Web: muted Seedance loop. One shared <video> survives welcome remounts
+ * so back/forward never restarts or leaves it paused. Poster is the
  * first jog frame. If the file fails to load, the stills take over. */
 export function WelcomeBackground() {
   const hostRef = useRef<View | null>(null);
@@ -136,7 +138,12 @@ export function WelcomeBackground() {
       pointerEvents="none"
       importantForAccessibility="no-hide-descendants"
     >
-      <Image source={POSTER} style={StyleSheet.absoluteFill} contentFit="cover" />
+      <Image
+        source={POSTER}
+        style={StyleSheet.absoluteFill}
+        contentFit="cover"
+        contentPosition={WELCOME_IMAGE_POSITION}
+      />
       <View ref={hostRef} style={StyleSheet.absoluteFill} />
     </View>
   );

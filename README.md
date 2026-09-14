@@ -125,6 +125,15 @@ npm run lint         # eslint
 
 Both suites run in plain Node against an in-memory backend, so no simulator, device or Convex deployment is needed. CI runs all of it plus a full web export on every push.
 
+For welcome-screen visual regression checks, export the web app with a configured
+`EXPO_PUBLIC_CONVEX_URL`, run `node scripts/preview-welcome.mjs`, and open
+`http://localhost:8787/__welcome-qa`. The local-only harness checks the actual
+video/poster framing and button reachability at nine viewport sizes, including
+mobile toolbar height changes. It also supports scrubbing the entire loop and
+simulating a video error to inspect the still-image fallback. No sign-in is needed.
+The portrait video must stay behind the full welcome canvas, never inside a
+percentage-height banner; its media framing rules live in `src/ui/welcomeMedia.ts`.
+
 ## Building for production
 
 - **Web:** every push to `main` runs `.github/workflows/deploy.yml`, which deploys `convex/` to the production deployment and exports the web build against it in one step (`npx convex deploy --cmd 'npm run export:web'`), then publishes `dist/` to GitHub Pages. `./scripts/verify-live.sh` reports which backend the live bundle points at. See [docs/accounts.md](docs/accounts.md#deploying).

@@ -1,6 +1,7 @@
 import { Image } from 'expo-image';
 import React, { useEffect, useRef, useState } from 'react';
 import { Animated, Easing, StyleSheet, View } from 'react-native';
+import { WELCOME_IMAGE_POSITION } from '@/ui/welcomeMedia';
 import {
   SESSION_WELCOME_INDEX,
   WELCOME_PHOTOS,
@@ -80,12 +81,14 @@ export function WelcomeSlideshow() {
         source={WELCOME_PHOTOS[indexB]}
         style={StyleSheet.absoluteFill}
         contentFit="cover"
+        contentPosition={WELCOME_IMAGE_POSITION}
       />
       <Animated.View style={[StyleSheet.absoluteFill, { opacity: opacityA }]}>
         <Image
           source={WELCOME_PHOTOS[indexA]}
           style={StyleSheet.absoluteFill}
           contentFit="cover"
+          contentPosition={WELCOME_IMAGE_POSITION}
         />
       </Animated.View>
     </View>
