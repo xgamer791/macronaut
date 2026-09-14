@@ -1,6 +1,4 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Image, type ImageSource } from 'expo-image';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import React, { useMemo, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
@@ -49,32 +47,11 @@ const MACRO_TILES: {
   key: MosaicMacro;
   label: string;
   icon: keyof typeof Ionicons.glyphMap;
-  image: ImageSource;
 }[] = [
-  {
-    key: 'protein',
-    label: 'Protein',
-    icon: 'nutrition-outline',
-    image: require('../../../assets/images/progress/macro-protein.png'),
-  },
-  {
-    key: 'carbs',
-    label: 'Carbs',
-    icon: 'leaf-outline',
-    image: require('../../../assets/images/progress/macro-carbs.png'),
-  },
-  {
-    key: 'fat',
-    label: 'Fat',
-    icon: 'water-outline',
-    image: require('../../../assets/images/progress/macro-fat.png'),
-  },
-  {
-    key: 'fiber',
-    label: 'Fiber',
-    icon: 'flower-outline',
-    image: require('../../../assets/images/progress/macro-fiber.png'),
-  },
+  { key: 'protein', label: 'Protein', icon: 'nutrition-outline' },
+  { key: 'carbs', label: 'Carbs', icon: 'leaf-outline' },
+  { key: 'fat', label: 'Fat', icon: 'water-outline' },
+  { key: 'fiber', label: 'Fiber', icon: 'flower-outline' },
 ];
 
 /** Progress — macro mosaic + net kcal line chart (mockup 2). */
@@ -187,29 +164,22 @@ function ProgressBody() {
                   key={tile.key}
                   accessibilityRole="button"
                   accessibilityLabel={`${tile.label}: ${kcal} kcal, ${Math.round(grams)} grams`}
-                  style={styles.mosaicTile}
+                  style={[
+                    styles.mosaicTile,
+                    { backgroundColor: colors.surface, borderColor: colors.borderStrong },
+                  ]}
                 >
-                  <Image source={tile.image} style={StyleSheet.absoluteFill} contentFit="cover" />
-                  <LinearGradient
-                    colors={['rgba(0,0,0,0.15)', 'rgba(8,12,16,0.82)']}
-                    style={StyleSheet.absoluteFill}
-                  />
                   <View style={styles.mosaicIcon}>
-                    <Ionicons
-                      name={tile.icon}
-                      size={20}
-                      color="#FFFFFF"
-                      style={styles.mosaicIconGlyph}
-                    />
+                    <Ionicons name={tile.icon} size={20} color={colors[tile.key]} />
                   </View>
                   <View style={styles.mosaicCopy}>
-                    <AppText variant="body" weight="600" style={{ color: '#FFFFFF' }}>
+                    <AppText variant="body" weight="600">
                       {tile.label}
                     </AppText>
                     <AppText
                       variant="caption"
                       weight="600"
-                      style={{ color: colors.accent }}
+                      tone="secondary"
                       numberOfLines={1}
                     >
                       {kcal.toLocaleString()} kcal / {Math.round(grams).toLocaleString()} g
@@ -527,6 +497,7 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     aspectRatio: 1.15,
     borderRadius: radius.lg,
+    borderWidth: 1,
     overflow: 'hidden',
     justifyContent: 'space-between',
     padding: spacing.md,
@@ -537,12 +508,6 @@ const styles = StyleSheet.create({
     height: 30,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  // The glyph sits straight on the tile photo, so it carries its own shadow.
-  mosaicIconGlyph: {
-    textShadowColor: 'rgba(0,0,0,0.7)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 3,
   },
   mosaicCopy: {
     gap: 2,

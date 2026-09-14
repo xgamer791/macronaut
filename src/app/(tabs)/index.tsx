@@ -1,7 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useQueryClient } from '@tanstack/react-query';
 import { Image, type ImageSource } from 'expo-image';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import { Pressable, StyleSheet, View, useWindowDimensions } from 'react-native';
@@ -39,14 +38,6 @@ import { useTheme } from '@/ui/theme/ThemeProvider';
 import { radius, spacing } from '@/ui/theme/tokens';
 import { HERO_GAP_BELOW_HEADER, TODAY_SECTION_GAP } from '@/ui/components/todayHeroLayout';
 
-const HERO_IMAGE = require('../../../assets/images/today/hero-gym.jpg');
-
-const MACRO_IMAGES: Record<'protein' | 'carbs' | 'fat', ImageSource> = {
-  protein: require('../../../assets/images/progress/macro-protein.png'),
-  carbs: require('../../../assets/images/progress/macro-carbs.png'),
-  fat: require('../../../assets/images/progress/macro-fat.png'),
-};
-
 const MEAL_IMAGES: Record<string, ImageSource> = {
   breakfast: require('../../../assets/images/today/meal-breakfast.png'),
   lunch: require('../../../assets/images/today/meal-lunch.png'),
@@ -61,7 +52,7 @@ const MACRO_ICONS: Record<'protein' | 'carbs' | 'fat', keyof typeof Ionicons.gly
   fat: 'water-outline',
 };
 
-/** Today — dual configurable metric modules + photo macros + meals. */
+/** Today — dual configurable metric modules + macros + meals. */
 export default function TodayScreen() {
   return (
     <BarEntranceProvider pageKey="today">
@@ -212,18 +203,6 @@ function TodayBody() {
     >
       {/* —— Hero —— */}
       <View style={styles.hero}>
-        <Image
-          source={HERO_IMAGE}
-          style={StyleSheet.absoluteFill}
-          contentFit="cover"
-          contentPosition="top"
-        />
-        <LinearGradient
-          colors={['rgba(8,12,16,0.62)', 'rgba(8,12,16,0.18)', 'rgba(14,17,20,0.88)']}
-          locations={[0, 0.5, 1]}
-          style={StyleSheet.absoluteFill}
-        />
-
         <View style={styles.heroBottom}>
           <View style={styles.modulesRow}>
             <HeroMetricModule
@@ -254,44 +233,34 @@ function TodayBody() {
       />
 
       <View style={styles.body}>
-        {/* —— Macro photo cards —— */}
+        {/* —— Macro cards —— */}
         <View style={styles.macroRow}>
           {macros.map((m) => {
             const pct = m.target && m.target > 0 ? Math.min(m.consumed / m.target, 1) : 0;
+            const hue = colors[m.key];
             return (
-              <View key={m.key} style={styles.macroTile}>
-                <Image
-                  source={MACRO_IMAGES[m.key]}
-                  style={StyleSheet.absoluteFill}
-                  contentFit="cover"
-                />
-                <LinearGradient
-                  colors={['rgba(10,12,16,0.55)', 'rgba(10,12,16,0.88)']}
-                  style={StyleSheet.absoluteFill}
-                />
+              <View
+                key={m.key}
+                style={[
+                  styles.macroTile,
+                  { backgroundColor: colors.surface, borderColor: colors.borderStrong },
+                ]}
+              >
                 <View style={styles.macroIcon}>
-                  <Ionicons
-                    name={MACRO_ICONS[m.key]}
-                    size={18}
-                    color="#FFFFFF"
-                    style={styles.macroIconGlyph}
-                  />
+                  <Ionicons name={MACRO_ICONS[m.key]} size={18} color={hue} />
                 </View>
-                <AppText variant="caption" style={{ color: 'rgba(255,255,255,0.85)' }}>
+                <AppText variant="caption" tone="secondary">
                   {m.label}
                 </AppText>
-                <AppText variant="heading" weight="700" display style={{ color: '#FFFFFF' }}>
+                <AppText variant="heading" weight="700" display>
                   {Math.round(m.consumed)} g
                 </AppText>
-                <View style={styles.macroTrack}>
+                <View style={[styles.macroTrack, { backgroundColor: colors.track }]}>
                   <View
-                    style={[
-                      styles.macroFill,
-                      { width: `${pct * 100}%`, backgroundColor: colors.accent },
-                    ]}
+                    style={[styles.macroFill, { width: `${pct * 100}%`, backgroundColor: hue }]}
                   />
                 </View>
-                <AppText variant="micro" style={{ color: 'rgba(255,255,255,0.65)' }}>
+                <AppText variant="micro" tone="muted">
                   / {Math.round(m.target ?? 0)} g
                 </AppText>
               </View>
@@ -427,6 +396,7 @@ const styles = StyleSheet.create({
   macroTile: {
     flex: 1,
     borderRadius: radius.lg,
+    borderWidth: 1,
     overflow: 'hidden',
     padding: spacing.md,
     gap: 4,
@@ -440,16 +410,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginBottom: 4,
   },
-  // The glyph sits straight on the hero photo, so it carries its own shadow.
-  macroIconGlyph: {
-    textShadowColor: 'rgba(0,0,0,0.7)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 3,
-  },
   macroTrack: {
     height: 5,
     borderRadius: 3,
-    backgroundColor: 'rgba(255,255,255,0.2)',
     overflow: 'hidden',
     marginTop: 2,
   },
