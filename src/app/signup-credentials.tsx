@@ -32,9 +32,11 @@ import {
 import { useAccountAuth } from '@/state/useAccountAuth';
 import { useEmailAvailability } from '@/state/useEmailAvailability';
 import { AppText } from '@/ui/components';
-import { fieldStyles, FieldLabel, OutlineInput } from '@/ui/DarkField';
+import { fieldStyles, FieldLabel, OutlineInput } from '@/ui/WelcomeFields';
 import { WelcomeCta } from '@/ui/WelcomeCta';
-import { fonts, lightColors, palette, radius, type } from '@/ui/theme/tokens';
+import { WelcomeScene } from '@/ui/WelcomeScene';
+import { welcomeColors } from '@/ui/welcomeMedia';
+import { fonts, palette, radius, type } from '@/ui/theme/tokens';
 
 function LockedField({
   value,
@@ -88,7 +90,11 @@ function SelectTrigger({
       <AppText style={styles.fieldValue} numberOfLines={1}>
         {value}
       </AppText>
-      <Ionicons name={open ? 'chevron-up' : 'chevron-down'} size={16} color={lightColors.textSecondary} />
+      <Ionicons
+        name={open ? 'chevron-up' : 'chevron-down'}
+        size={16}
+        color={welcomeColors.textSecondary}
+      />
     </Pressable>
   );
 }
@@ -235,227 +241,239 @@ export default function SignupCredentialsScreen() {
   };
 
   return (
-    <View style={styles.root}>
-      <StatusBar style="dark" />
+    <WelcomeScene>
+      <View style={styles.root}>
+        <StatusBar style="light" />
 
-      <KeyboardAvoidingView
-        style={styles.frame}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      >
-        <View style={[styles.header, { paddingTop: insets.top + 4 }]}>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Back"
-            hitSlop={8}
-            onPress={goBack}
-            style={styles.headerSide}
-          >
-            <Ionicons name="chevron-back" size={28} color={lightColors.textPrimary} />
-          </Pressable>
-          <AppText accessibilityRole="header" style={styles.headerTitle}>
-            Create An Account
-          </AppText>
-          <View style={styles.headerSide} />
-        </View>
-
-        <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.form}>
-          <View>
-            <FieldLabel>Name</FieldLabel>
-            <OutlineInput
-              accessibilityLabel="Name"
-              value={name}
-              onChangeText={setName}
-              autoCapitalize="words"
-              autoComplete="name"
-              textContentType="name"
-              onFocus={closeMenus}
-            />
-          </View>
-
-          <View>
-            <FieldLabel>Email address</FieldLabel>
-            <OutlineInput
-              accessibilityLabel="Email address"
-              value={email}
-              onChangeText={setEmail}
-              autoCapitalize="none"
-              autoComplete="email"
-              autoCorrect={false}
-              keyboardType="email-address"
-              textContentType="emailAddress"
-              onFocus={closeMenus}
-              invalid={emailTaken}
-            />
-            {emailTaken ? (
-              <AppText accessibilityRole="alert" style={[fieldStyles.error, fieldStyles.fieldNote]}>
-                An account already uses this email address. Sign in instead, or use another address.
-              </AppText>
-            ) : checkingEmail ? (
-              <AppText style={fieldStyles.helper}>Checking this email address…</AppText>
-            ) : null}
-          </View>
-
-          <View>
-            <FieldLabel>Confirm email address</FieldLabel>
-            <OutlineInput
-              accessibilityLabel="Confirm email address"
-              value={confirmEmail}
-              onChangeText={setConfirmEmail}
-              autoCapitalize="none"
-              autoComplete="email"
-              autoCorrect={false}
-              keyboardType="email-address"
-              textContentType="emailAddress"
-              onFocus={closeMenus}
-              onBlur={() => setConfirmEmailTouched(true)}
-              invalid={emailMismatch}
-            />
-            {emailMismatch ? (
-              <AppText accessibilityRole="alert" style={[fieldStyles.error, fieldStyles.fieldNote]}>
-                Email addresses do not match.
-              </AppText>
-            ) : emailConfirmed ? (
-              <AppText style={[fieldStyles.ok, fieldStyles.fieldNote]}>
-                Email addresses match.
-              </AppText>
-            ) : null}
-          </View>
-
-          <View>
-            <FieldLabel>Password</FieldLabel>
-            <OutlineInput
-              accessibilityLabel="Password"
-              value={password}
-              onChangeText={setPassword}
-              autoCapitalize="none"
-              autoComplete="password-new"
-              autoCorrect={false}
-              secureTextEntry={!showPassword}
-              textContentType="newPassword"
-              onFocus={closeMenus}
-              trailing={
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel={showPassword ? 'Hide password' : 'Show password'}
-                  hitSlop={8}
-                  onPress={() => setShowPassword((current) => !current)}
-                >
-                  <Ionicons
-                    name={showPassword ? 'eye-off' : 'eye'}
-                    size={20}
-                    color={lightColors.textSecondary}
-                  />
-                </Pressable>
-              }
-            />
-            <AppText style={fieldStyles.helper}>
-              Minimum password length is 8 characters. Please use at least 1 uppercase letter, 1
-              lowercase letter and 1 number.
+        <KeyboardAvoidingView
+          style={styles.frame}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        >
+          <View style={[styles.header, { paddingTop: insets.top + 4 }]}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Back"
+              hitSlop={8}
+              onPress={goBack}
+              style={styles.headerSide}
+            >
+              <Ionicons name="chevron-back" size={28} color={welcomeColors.textPrimary} />
+            </Pressable>
+            <AppText accessibilityRole="header" style={styles.headerTitle}>
+              Create An Account
             </AppText>
+            <View style={styles.headerSide} />
           </View>
 
-          <View>
-            <FieldLabel>Confirm password</FieldLabel>
-            <OutlineInput
-              accessibilityLabel="Confirm password"
-              value={confirmPassword}
-              onChangeText={setConfirmPassword}
-              autoCapitalize="none"
-              autoComplete="password-new"
-              autoCorrect={false}
-              secureTextEntry={!showConfirm}
-              textContentType="newPassword"
-              onFocus={closeMenus}
-              onBlur={() => setConfirmPasswordTouched(true)}
-              invalid={passwordMismatch}
-              trailing={
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel={
-                    showConfirm ? 'Hide confirm password' : 'Show confirm password'
-                  }
-                  hitSlop={8}
-                  onPress={() => setShowConfirm((current) => !current)}
-                >
-                  <Ionicons
-                    name={showConfirm ? 'eye-off' : 'eye'}
-                    size={20}
-                    color={lightColors.textSecondary}
-                  />
-                </Pressable>
-              }
-            />
-            {passwordMismatch ? (
-              <AppText accessibilityRole="alert" style={[fieldStyles.error, fieldStyles.fieldNote]}>
-                Passwords do not match.
-              </AppText>
-            ) : passwordConfirmed ? (
-              <AppText style={[fieldStyles.ok, fieldStyles.fieldNote]}>Passwords match.</AppText>
-            ) : null}
-          </View>
-
-          <View>
-            <FieldLabel>Date of birth</FieldLabel>
-            <View style={styles.birthdayRow}>
-              <View style={styles.monthCol}>
-                <FieldLabel>Month</FieldLabel>
-                <LockedField value={MONTHS[monthIndex]} accessibilityLabel="Month" />
-              </View>
-              <View style={styles.dayCol}>
-                <FieldLabel>Day</FieldLabel>
-                <LockedField value={day} accessibilityLabel="Day" centered />
-              </View>
-              <View style={styles.yearCol}>
-                <FieldLabel>Year</FieldLabel>
-                <LockedField value={year} accessibilityLabel="Year" centered />
-              </View>
-            </View>
-            <AppText style={fieldStyles.helper}>
-              Date of birth helps us comply with global regulations and calculate certain metrics.
-              Once set, it cannot be changed.
-            </AppText>
-          </View>
-
-          <View>
-            <FieldLabel>Country/Region</FieldLabel>
-            <SelectTrigger
-              value={country}
-              open={openSelect === 'country'}
-              accessibilityLabel="Country or region"
-              onPress={() => toggle('country')}
-            />
-            {openSelect === 'country' ? (
-              <OptionList
-                options={COUNTRIES}
-                selected={country}
-                onSelect={(item) => {
-                  setCountry(item);
-                  setOpenSelect(null);
-                }}
+          <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.form}>
+            <View>
+              <FieldLabel>Name</FieldLabel>
+              <OutlineInput
+                accessibilityLabel="Name"
+                value={name}
+                onChangeText={setName}
+                autoCapitalize="words"
+                autoComplete="name"
+                textContentType="name"
+                onFocus={closeMenus}
               />
-            ) : null}
-            <AppText style={fieldStyles.helper}>
-              Country or region of residence helps us comply with global regulations and calculate
-              certain metrics. Once set, it cannot be changed.
-            </AppText>
-          </View>
-        </ScrollView>
+            </View>
 
-        <View style={[styles.dock, { paddingBottom: Math.max(insets.bottom, 12) + 8 }]}>
-          {auth.error ? (
-            <AppText accessibilityRole="alert" style={fieldStyles.error}>
-              {auth.error}
-            </AppText>
-          ) : null}
-          <WelcomeCta
-            label={auth.busy ? 'Creating account…' : 'Create Account'}
-            accessibilityLabel="Create Account"
-            disabled={!ready || auth.busy}
-            onPress={() => void createAccount()}
-          />
-        </View>
-      </KeyboardAvoidingView>
-    </View>
+            <View>
+              <FieldLabel>Email address</FieldLabel>
+              <OutlineInput
+                accessibilityLabel="Email address"
+                value={email}
+                onChangeText={setEmail}
+                autoCapitalize="none"
+                autoComplete="email"
+                autoCorrect={false}
+                keyboardType="email-address"
+                textContentType="emailAddress"
+                onFocus={closeMenus}
+                invalid={emailTaken}
+              />
+              {emailTaken ? (
+                <AppText
+                  accessibilityRole="alert"
+                  style={[fieldStyles.error, fieldStyles.fieldNote]}
+                >
+                  An account already uses this email address. Sign in instead, or use another
+                  address.
+                </AppText>
+              ) : checkingEmail ? (
+                <AppText style={fieldStyles.helper}>Checking this email address…</AppText>
+              ) : null}
+            </View>
+
+            <View>
+              <FieldLabel>Confirm email address</FieldLabel>
+              <OutlineInput
+                accessibilityLabel="Confirm email address"
+                value={confirmEmail}
+                onChangeText={setConfirmEmail}
+                autoCapitalize="none"
+                autoComplete="email"
+                autoCorrect={false}
+                keyboardType="email-address"
+                textContentType="emailAddress"
+                onFocus={closeMenus}
+                onBlur={() => setConfirmEmailTouched(true)}
+                invalid={emailMismatch}
+              />
+              {emailMismatch ? (
+                <AppText
+                  accessibilityRole="alert"
+                  style={[fieldStyles.error, fieldStyles.fieldNote]}
+                >
+                  Email addresses do not match.
+                </AppText>
+              ) : emailConfirmed ? (
+                <AppText style={[fieldStyles.ok, fieldStyles.fieldNote]}>
+                  Email addresses match.
+                </AppText>
+              ) : null}
+            </View>
+
+            <View>
+              <FieldLabel>Password</FieldLabel>
+              <OutlineInput
+                accessibilityLabel="Password"
+                value={password}
+                onChangeText={setPassword}
+                autoCapitalize="none"
+                autoComplete="password-new"
+                autoCorrect={false}
+                secureTextEntry={!showPassword}
+                textContentType="newPassword"
+                onFocus={closeMenus}
+                trailing={
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={showPassword ? 'Hide password' : 'Show password'}
+                    hitSlop={8}
+                    onPress={() => setShowPassword((current) => !current)}
+                  >
+                    <Ionicons
+                      name={showPassword ? 'eye-off' : 'eye'}
+                      size={20}
+                      color={welcomeColors.textSecondary}
+                    />
+                  </Pressable>
+                }
+              />
+              <AppText style={fieldStyles.helper}>
+                Minimum password length is 8 characters. Please use at least 1 uppercase letter, 1
+                lowercase letter and 1 number.
+              </AppText>
+            </View>
+
+            <View>
+              <FieldLabel>Confirm password</FieldLabel>
+              <OutlineInput
+                accessibilityLabel="Confirm password"
+                value={confirmPassword}
+                onChangeText={setConfirmPassword}
+                autoCapitalize="none"
+                autoComplete="password-new"
+                autoCorrect={false}
+                secureTextEntry={!showConfirm}
+                textContentType="newPassword"
+                onFocus={closeMenus}
+                onBlur={() => setConfirmPasswordTouched(true)}
+                invalid={passwordMismatch}
+                trailing={
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={
+                      showConfirm ? 'Hide confirm password' : 'Show confirm password'
+                    }
+                    hitSlop={8}
+                    onPress={() => setShowConfirm((current) => !current)}
+                  >
+                    <Ionicons
+                      name={showConfirm ? 'eye-off' : 'eye'}
+                      size={20}
+                      color={welcomeColors.textSecondary}
+                    />
+                  </Pressable>
+                }
+              />
+              {passwordMismatch ? (
+                <AppText
+                  accessibilityRole="alert"
+                  style={[fieldStyles.error, fieldStyles.fieldNote]}
+                >
+                  Passwords do not match.
+                </AppText>
+              ) : passwordConfirmed ? (
+                <AppText style={[fieldStyles.ok, fieldStyles.fieldNote]}>Passwords match.</AppText>
+              ) : null}
+            </View>
+
+            <View>
+              <FieldLabel>Date of birth</FieldLabel>
+              <View style={styles.birthdayRow}>
+                <View style={styles.monthCol}>
+                  <FieldLabel>Month</FieldLabel>
+                  <LockedField value={MONTHS[monthIndex]} accessibilityLabel="Month" />
+                </View>
+                <View style={styles.dayCol}>
+                  <FieldLabel>Day</FieldLabel>
+                  <LockedField value={day} accessibilityLabel="Day" centered />
+                </View>
+                <View style={styles.yearCol}>
+                  <FieldLabel>Year</FieldLabel>
+                  <LockedField value={year} accessibilityLabel="Year" centered />
+                </View>
+              </View>
+              <AppText style={fieldStyles.helper}>
+                Date of birth helps us comply with global regulations and calculate certain metrics.
+                Once set, it cannot be changed.
+              </AppText>
+            </View>
+
+            <View>
+              <FieldLabel>Country/Region</FieldLabel>
+              <SelectTrigger
+                value={country}
+                open={openSelect === 'country'}
+                accessibilityLabel="Country or region"
+                onPress={() => toggle('country')}
+              />
+              {openSelect === 'country' ? (
+                <OptionList
+                  options={COUNTRIES}
+                  selected={country}
+                  onSelect={(item) => {
+                    setCountry(item);
+                    setOpenSelect(null);
+                  }}
+                />
+              ) : null}
+              <AppText style={fieldStyles.helper}>
+                Country or region of residence helps us comply with global regulations and calculate
+                certain metrics. Once set, it cannot be changed.
+              </AppText>
+            </View>
+          </ScrollView>
+
+          <View style={[styles.dock, { paddingBottom: Math.max(insets.bottom, 12) + 8 }]}>
+            {auth.error ? (
+              <AppText accessibilityRole="alert" style={fieldStyles.error}>
+                {auth.error}
+              </AppText>
+            ) : null}
+            <WelcomeCta
+              label={auth.busy ? 'Creating account…' : 'Create Account'}
+              accessibilityLabel="Create Account"
+              disabled={!ready || auth.busy}
+              onPress={() => void createAccount()}
+            />
+          </View>
+        </KeyboardAvoidingView>
+      </View>
+    </WelcomeScene>
   );
 }
 
@@ -464,7 +482,7 @@ const FIELD_H = 50;
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: lightColors.background,
+    backgroundColor: welcomeColors.background,
   },
   frame: {
     flex: 1,
@@ -484,7 +502,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     flex: 1,
     fontFamily: fonts.semibold,
-    color: lightColors.textPrimary,
+    color: welcomeColors.textPrimary,
     fontSize: type.title.fontSize,
     lineHeight: type.title.lineHeight,
     fontWeight: '600',
@@ -498,7 +516,7 @@ const styles = StyleSheet.create({
   },
   fieldValue: {
     flex: 1,
-    color: lightColors.textPrimary,
+    color: welcomeColors.textPrimary,
     fontSize: type.body.fontSize,
     lineHeight: type.body.lineHeight,
     fontWeight: '400',
@@ -519,8 +537,8 @@ const styles = StyleSheet.create({
   fieldLocked: {
     minHeight: FIELD_H,
     borderWidth: 1,
-    borderColor: lightColors.border,
-    backgroundColor: lightColors.surface,
+    borderColor: welcomeColors.border,
+    backgroundColor: welcomeColors.surface,
     borderRadius: radius.md,
     paddingHorizontal: 12,
     flexDirection: 'row',
@@ -538,9 +556,9 @@ const styles = StyleSheet.create({
   inlineMenu: {
     marginTop: 8,
     borderWidth: 1,
-    borderColor: lightColors.borderStrong,
+    borderColor: welcomeColors.borderStrong,
     borderRadius: radius.md,
-    backgroundColor: lightColors.surface,
+    backgroundColor: welcomeColors.surface,
     overflow: 'hidden',
     maxHeight: 240,
   },
@@ -554,10 +572,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: lightColors.border,
+    borderBottomColor: welcomeColors.border,
   },
   inlineRowLabel: {
-    color: lightColors.textPrimary,
+    color: welcomeColors.textPrimary,
     fontSize: type.body.fontSize,
     lineHeight: type.body.lineHeight,
   },

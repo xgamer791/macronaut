@@ -9,7 +9,7 @@ import { AppText } from '@/ui/components';
 import { WelcomeBackground } from '@/ui/WelcomeBackground';
 import { WelcomeCta } from '@/ui/WelcomeCta';
 import { fonts, lightColors } from '@/ui/theme/tokens';
-import { getWelcomeLayout } from '@/ui/welcomeMedia';
+import { getWelcomeLayout, WELCOME_SCRIM } from '@/ui/welcomeMedia';
 
 /** Full-screen video splash, stacked wordmark, two identical CTAs, then a
  * text link. Create Account opens the legal gate, Sign In the email and
@@ -75,7 +75,7 @@ const styles = StyleSheet.create({
   },
   scrim: {
     ...StyleSheet.absoluteFill,
-    backgroundColor: 'rgba(0,0,0,0.55)',
+    backgroundColor: WELCOME_SCRIM,
   },
   frame: {
     flexGrow: 1,

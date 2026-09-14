@@ -39,14 +39,14 @@ function attachToTop() {
   resumeWelcomeVideo();
 }
 
-function claimHost(host: HTMLElement) {
+export function claimHost(host: HTMLElement) {
   const i = hosts.indexOf(host);
   if (i >= 0) hosts.splice(i, 1);
   hosts.push(host);
   attachToTop();
 }
 
-function releaseHost(host: HTMLElement) {
+export function releaseHost(host: HTMLElement) {
   const i = hosts.indexOf(host);
   if (i >= 0) hosts.splice(i, 1);
   if (hosts.length > 0) {
@@ -59,7 +59,7 @@ function releaseHost(host: HTMLElement) {
   }, 400);
 }
 
-function acquireWelcomeVideo(src: string, poster: string | undefined): HTMLVideoElement {
+export function acquireWelcomeVideo(src: string, poster: string | undefined): HTMLVideoElement {
   if (sharedVideo) return sharedVideo;
 
   const video = document.createElement('video');
@@ -127,6 +127,11 @@ export function WelcomeBackground() {
       if (useStills) return;
       const host = hostRef.current as unknown as HTMLElement | null;
       if (host) claimHost(host);
+      // Stack routes can remain mounted while covered. Release on blur,
+      // not just unmount, so the player stops at the Apple Health boundary.
+      return () => {
+        if (host) releaseHost(host);
+      };
     }, [useStills]),
   );
 

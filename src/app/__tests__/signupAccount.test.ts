@@ -24,8 +24,8 @@ describe('signup account setup', () => {
     expect(source).toContain('Day');
     expect(source).toContain('Year');
     expect(source).toContain('Country/Region');
-    expect(source).not.toContain('WelcomeBackground');
-    expect(source).toContain('lightColors.background');
+    expect(source).toContain('WelcomeScene');
+    expect(source).toContain('welcomeColors.background');
     expect(source).toContain('WelcomeCta');
     expect(source).toMatch(/fonts\.(semibold|medium)/);
     expect(source).toContain('type.title');
@@ -44,7 +44,7 @@ describe('signup account setup', () => {
     const legal = read('signup-legal.tsx');
     const fields = fs.readFileSync(path.join(appDir, '../ui/DarkField.tsx'), 'utf8');
     expect(account).toContain("outlineStyle: 'none'");
-    expect(account).toContain('WebkitTextFillColor: lightColors.textPrimary');
+    expect(account).toContain('WebkitTextFillColor: welcomeColors.textPrimary');
     expect(account).toContain('DARK_FIELD');
     expect(fields).toContain("dataSet: { authfield: 'true' }");
     expect(account).toContain('inlineMenu');

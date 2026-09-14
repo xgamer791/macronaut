@@ -18,9 +18,11 @@ import { useAuth } from '@/state/AuthProvider';
 import { useSetting } from '@/state/queries';
 import { saveSignupDraftValues, useSignupDraft } from '@/state/signupDraft';
 import { AppText } from '@/ui/components';
-import { DARK_FIELD, FieldLabel } from '@/ui/DarkField';
+import { DARK_FIELD, FieldLabel } from '@/ui/WelcomeFields';
 import { WelcomeCta } from '@/ui/WelcomeCta';
-import { fonts, lightColors, palette, radius, type } from '@/ui/theme/tokens';
+import { WelcomeScene } from '@/ui/WelcomeScene';
+import { welcomeColors } from '@/ui/welcomeMedia';
+import { fonts, palette, radius, type } from '@/ui/theme/tokens';
 
 type OpenSelect = 'month' | 'country' | null;
 
@@ -46,7 +48,11 @@ function SelectTrigger({
       <AppText style={styles.fieldValue} numberOfLines={1}>
         {value}
       </AppText>
-      <Ionicons name={open ? 'chevron-up' : 'chevron-down'} size={16} color={lightColors.textSecondary} />
+      <Ionicons
+        name={open ? 'chevron-up' : 'chevron-down'}
+        size={16}
+        color={welcomeColors.textSecondary}
+      />
     </Pressable>
   );
 }
@@ -116,127 +122,129 @@ export default function SignupAccountScreen() {
   };
 
   return (
-    <View style={styles.root}>
-      <StatusBar style="dark" />
+    <WelcomeScene>
+      <View style={styles.root}>
+        <StatusBar style="light" />
 
-      <KeyboardAvoidingView
-        style={styles.frame}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      >
-        <View style={[styles.header, { paddingTop: insets.top + 4 }]}>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Back"
-            hitSlop={8}
-            onPress={goBack}
-            style={styles.headerSide}
-          >
-            <Ionicons name="chevron-back" size={28} color={lightColors.textPrimary} />
-          </Pressable>
-          <AppText accessibilityRole="header" style={styles.headerTitle}>
-            Account Setup
-          </AppText>
-          <View style={styles.headerSide} />
-        </View>
+        <KeyboardAvoidingView
+          style={styles.frame}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        >
+          <View style={[styles.header, { paddingTop: insets.top + 4 }]}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Back"
+              hitSlop={8}
+              onPress={goBack}
+              style={styles.headerSide}
+            >
+              <Ionicons name="chevron-back" size={28} color={welcomeColors.textPrimary} />
+            </Pressable>
+            <AppText accessibilityRole="header" style={styles.headerTitle}>
+              Account Setup
+            </AppText>
+            <View style={styles.headerSide} />
+          </View>
 
-        <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.form}>
-          <View>
-            <View style={styles.birthdayRow}>
-              <View style={styles.monthCol}>
-                <FieldLabel>Month</FieldLabel>
-                <SelectTrigger
-                  value={MONTHS[monthIndex]}
-                  open={openSelect === 'month'}
-                  accessibilityLabel="Month"
-                  onPress={() => toggle('month')}
-                />
+          <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.form}>
+            <View>
+              <View style={styles.birthdayRow}>
+                <View style={styles.monthCol}>
+                  <FieldLabel>Month</FieldLabel>
+                  <SelectTrigger
+                    value={MONTHS[monthIndex]}
+                    open={openSelect === 'month'}
+                    accessibilityLabel="Month"
+                    onPress={() => toggle('month')}
+                  />
+                </View>
+                <View style={styles.dayCol}>
+                  <FieldLabel>Day</FieldLabel>
+                  <TextInput
+                    accessibilityLabel="Day"
+                    value={day}
+                    onChangeText={(next) => setDay(next.replace(/\D/g, '').slice(0, 2))}
+                    onFocus={() => setOpenSelect(null)}
+                    placeholder="DD"
+                    placeholderTextColor={welcomeColors.textMuted}
+                    keyboardType="number-pad"
+                    maxLength={2}
+                    autoComplete="off"
+                    textContentType="none"
+                    {...DARK_FIELD}
+                    style={styles.input}
+                  />
+                </View>
+                <View style={styles.yearCol}>
+                  <FieldLabel>Year</FieldLabel>
+                  <TextInput
+                    accessibilityLabel="Year"
+                    value={year}
+                    onChangeText={(next) => setYear(next.replace(/\D/g, '').slice(0, 4))}
+                    onFocus={() => setOpenSelect(null)}
+                    placeholder="YYYY"
+                    placeholderTextColor={welcomeColors.textMuted}
+                    keyboardType="number-pad"
+                    maxLength={4}
+                    autoComplete="off"
+                    textContentType="none"
+                    {...DARK_FIELD}
+                    style={styles.input}
+                  />
+                </View>
               </View>
-              <View style={styles.dayCol}>
-                <FieldLabel>Day</FieldLabel>
-                <TextInput
-                  accessibilityLabel="Day"
-                  value={day}
-                  onChangeText={(next) => setDay(next.replace(/\D/g, '').slice(0, 2))}
-                  onFocus={() => setOpenSelect(null)}
-                  placeholder="DD"
-                  placeholderTextColor={lightColors.textMuted}
-                  keyboardType="number-pad"
-                  maxLength={2}
-                  autoComplete="off"
-                  textContentType="none"
-                  {...DARK_FIELD}
-                  style={styles.input}
+              {openSelect === 'month' ? (
+                <OptionList
+                  options={MONTHS}
+                  selected={MONTHS[monthIndex]}
+                  onSelect={(item) => {
+                    setMonthIndex(MONTHS.indexOf(item as (typeof MONTHS)[number]));
+                    setOpenSelect(null);
+                  }}
                 />
-              </View>
-              <View style={styles.yearCol}>
-                <FieldLabel>Year</FieldLabel>
-                <TextInput
-                  accessibilityLabel="Year"
-                  value={year}
-                  onChangeText={(next) => setYear(next.replace(/\D/g, '').slice(0, 4))}
-                  onFocus={() => setOpenSelect(null)}
-                  placeholder="YYYY"
-                  placeholderTextColor={lightColors.textMuted}
-                  keyboardType="number-pad"
-                  maxLength={4}
-                  autoComplete="off"
-                  textContentType="none"
-                  {...DARK_FIELD}
-                  style={styles.input}
-                />
-              </View>
+              ) : null}
             </View>
-            {openSelect === 'month' ? (
-              <OptionList
-                options={MONTHS}
-                selected={MONTHS[monthIndex]}
-                onSelect={(item) => {
-                  setMonthIndex(MONTHS.indexOf(item as (typeof MONTHS)[number]));
-                  setOpenSelect(null);
+
+            <View>
+              <FieldLabel>Country/Region</FieldLabel>
+              <SelectTrigger
+                value={country}
+                open={openSelect === 'country'}
+                accessibilityLabel="Country or region"
+                onPress={() => toggle('country')}
+              />
+              {openSelect === 'country' ? (
+                <OptionList
+                  options={COUNTRIES}
+                  selected={country}
+                  onSelect={(item) => {
+                    setCountry(item);
+                    setOpenSelect(null);
+                  }}
+                />
+              ) : null}
+            </View>
+
+            <View style={styles.ctaWrap}>
+              <WelcomeCta
+                label="Continue"
+                disabled={!ready}
+                onPress={() => saveSignupDraftValues({ monthIndex, day, year, country })}
+                href={{
+                  pathname: '/signup-credentials',
+                  params: {
+                    month: String(monthIndex),
+                    day,
+                    year,
+                    country,
+                  },
                 }}
               />
-            ) : null}
-          </View>
-
-          <View>
-            <FieldLabel>Country/Region</FieldLabel>
-            <SelectTrigger
-              value={country}
-              open={openSelect === 'country'}
-              accessibilityLabel="Country or region"
-              onPress={() => toggle('country')}
-            />
-            {openSelect === 'country' ? (
-              <OptionList
-                options={COUNTRIES}
-                selected={country}
-                onSelect={(item) => {
-                  setCountry(item);
-                  setOpenSelect(null);
-                }}
-              />
-            ) : null}
-          </View>
-
-          <View style={styles.ctaWrap}>
-            <WelcomeCta
-              label="Continue"
-              disabled={!ready}
-              onPress={() => saveSignupDraftValues({ monthIndex, day, year, country })}
-              href={{
-                pathname: '/signup-credentials',
-                params: {
-                  month: String(monthIndex),
-                  day,
-                  year,
-                  country,
-                },
-              }}
-            />
-          </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
-    </View>
+            </View>
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </View>
+    </WelcomeScene>
   );
 }
 
@@ -245,7 +253,7 @@ const FIELD_H = 50;
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: lightColors.background,
+    backgroundColor: welcomeColors.background,
   },
   frame: {
     flex: 1,
@@ -265,7 +273,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     flex: 1,
     fontFamily: fonts.semibold,
-    color: lightColors.textPrimary,
+    color: welcomeColors.textPrimary,
     fontSize: type.title.fontSize,
     lineHeight: type.title.lineHeight,
     fontWeight: '600',
@@ -293,8 +301,8 @@ const styles = StyleSheet.create({
   field: {
     height: FIELD_H,
     borderWidth: 1,
-    borderColor: lightColors.borderStrong,
-    backgroundColor: lightColors.surface,
+    borderColor: welcomeColors.borderStrong,
+    backgroundColor: welcomeColors.surface,
     borderRadius: radius.md,
     paddingHorizontal: 12,
     flexDirection: 'row',
@@ -304,7 +312,7 @@ const styles = StyleSheet.create({
   },
   fieldValue: {
     flex: 1,
-    color: lightColors.textPrimary,
+    color: welcomeColors.textPrimary,
     fontSize: type.body.fontSize,
     lineHeight: type.body.lineHeight,
     fontWeight: '400',
@@ -313,20 +321,20 @@ const styles = StyleSheet.create({
     fontFamily: fonts.regular,
     height: FIELD_H,
     borderWidth: 1,
-    borderColor: lightColors.borderStrong,
+    borderColor: welcomeColors.borderStrong,
     borderRadius: radius.md,
-    color: lightColors.textPrimary,
+    color: welcomeColors.textPrimary,
     fontSize: type.body.fontSize,
     lineHeight: type.body.lineHeight,
     textAlign: 'center',
     paddingHorizontal: 8,
-    backgroundColor: lightColors.surface,
+    backgroundColor: welcomeColors.surface,
     ...Platform.select({
       web: {
         outlineStyle: 'none',
         outlineWidth: 0,
-        WebkitTextFillColor: lightColors.textPrimary,
-        caretColor: lightColors.textPrimary,
+        WebkitTextFillColor: welcomeColors.textPrimary,
+        caretColor: welcomeColors.textPrimary,
       } as object,
       default: {},
     }),
@@ -334,9 +342,9 @@ const styles = StyleSheet.create({
   inlineMenu: {
     marginTop: 8,
     borderWidth: 1,
-    borderColor: lightColors.borderStrong,
+    borderColor: welcomeColors.borderStrong,
     borderRadius: radius.md,
-    backgroundColor: lightColors.surface,
+    backgroundColor: welcomeColors.surface,
     overflow: 'hidden',
     maxHeight: 240,
   },
@@ -350,10 +358,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: lightColors.border,
+    borderBottomColor: welcomeColors.border,
   },
   inlineRowLabel: {
-    color: lightColors.textPrimary,
+    color: welcomeColors.textPrimary,
     fontSize: type.body.fontSize,
     lineHeight: type.body.lineHeight,
   },

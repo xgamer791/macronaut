@@ -123,13 +123,17 @@ describe('welcome splash', () => {
     expect(slideshow).toContain('WELCOME_PHOTO_HOLD_MS');
   });
 
-  it('keeps the welcome video on the splash and paints the rest of signup light', () => {
+  it('continues the welcome video through signup and stops at Apple Health', () => {
     expect(read('welcome.tsx')).toContain('WelcomeBackground');
-    expect(read('signup-legal.tsx')).not.toContain('WelcomeBackground');
-    expect(read('signup-account.tsx')).not.toContain('WelcomeBackground');
-    expect(read('signup-credentials.tsx')).not.toContain('WelcomeBackground');
+    expect(read('signup-legal.tsx')).toContain('WelcomeScene');
+    expect(read('signup-account.tsx')).toContain('WelcomeScene');
+    expect(read('signup-credentials.tsx')).toContain('WelcomeScene');
     expect(read('signup-health.tsx')).toContain('SignupHealthBackground');
     expect(read('signup-health.tsx')).not.toContain('WelcomeBackground');
+    expect(read('signup-health.tsx')).not.toContain('WelcomeScene');
+    expect(read('onboarding.tsx')).not.toContain('WelcomeScene');
+    expect(read('login.tsx')).toContain('WelcomeScene');
+    expect(read('forgot-password.tsx')).toContain('WelcomeScene');
     expect(read('_layout.tsx')).not.toContain('PersistentWelcomeBackground');
     const web = fs.readFileSync(path.join(appDir, '../ui/WelcomeBackground.web.tsx'), 'utf8');
     expect(web).toContain('sharedVideo');

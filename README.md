@@ -133,6 +133,11 @@ mobile toolbar height changes. It also supports scrubbing the entire loop and
 simulating a video error to inspect the still-image fallback. No sign-in is needed.
 The portrait video must stay behind the full welcome canvas, never inside a
 percentage-height banner; its media framing rules live in `src/ui/welcomeMedia.ts`.
+Sign In, password recovery, the legal gate, Account Setup, and Create Account
+use `WelcomeScene` and the same shared player. The video releases on navigation
+blur and stops at `signup-health`; Apple Health and subsequent personalization
+keep their own backgrounds. `welcomeVideoLifecycle.test.ts` checks player reuse,
+forward/back playback continuity, and pause/resume at that boundary.
 
 ## Building for production
 

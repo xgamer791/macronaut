@@ -18,9 +18,11 @@ import { useAuth } from '@/state/AuthProvider';
 import { useSetting } from '@/state/queries';
 import { useAccountAuth } from '@/state/useAccountAuth';
 import { AppText } from '@/ui/components';
-import { fieldStyles, FieldLabel, OutlineInput } from '@/ui/DarkField';
+import { fieldStyles, FieldLabel, OutlineInput } from '@/ui/WelcomeFields';
 import { WelcomeCta } from '@/ui/WelcomeCta';
-import { fonts, lightColors, type } from '@/ui/theme/tokens';
+import { WelcomeScene } from '@/ui/WelcomeScene';
+import { welcomeColors } from '@/ui/welcomeMedia';
+import { fonts, type } from '@/ui/theme/tokens';
 
 /** Email a reset link, then set a new password on the page that link opens.
  * Same chrome as Sign In. Requesting a link never reveals whether the
@@ -110,220 +112,222 @@ export default function ForgotPasswordScreen() {
   }
 
   return (
-    <View style={styles.root}>
-      <StatusBar style="dark" />
+    <WelcomeScene>
+      <View style={styles.root}>
+        <StatusBar style="light" />
 
-      <KeyboardAvoidingView
-        style={styles.frame}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      >
-        <View style={[styles.header, { paddingTop: insets.top + 4 }]}>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Back"
-            hitSlop={8}
-            onPress={goBack}
-            style={styles.headerSide}
-          >
-            <Ionicons name="chevron-back" size={28} color={lightColors.textPrimary} />
-          </Pressable>
-          <AppText accessibilityRole="header" style={styles.headerTitle}>
-            {view === 'password' ? 'Reset password' : 'Forgot password'}
-          </AppText>
-          <View style={styles.headerSide} />
-        </View>
-
-        <ScrollView
-          keyboardShouldPersistTaps="handled"
-          contentContainerStyle={[styles.form, view === 'password' ? styles.formPassword : null]}
+        <KeyboardAvoidingView
+          style={styles.frame}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         >
-          {view === 'request' ? (
-            <>
-              <AppText style={styles.copy}>
-                Enter the email on your account. If it has a password, we will send a reset link.
-              </AppText>
+          <View style={[styles.header, { paddingTop: insets.top + 4 }]}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Back"
+              hitSlop={8}
+              onPress={goBack}
+              style={styles.headerSide}
+            >
+              <Ionicons name="chevron-back" size={28} color={welcomeColors.textPrimary} />
+            </Pressable>
+            <AppText accessibilityRole="header" style={styles.headerTitle}>
+              {view === 'password' ? 'Reset password' : 'Forgot password'}
+            </AppText>
+            <View style={styles.headerSide} />
+          </View>
 
-              <View>
-                <FieldLabel>Email address</FieldLabel>
-                <OutlineInput
-                  accessibilityLabel="Email address"
-                  value={email}
-                  onChangeText={(next) => {
-                    if (auth.error) auth.clearError();
-                    setEmail(next);
-                  }}
-                  autoCapitalize="none"
-                  autoComplete="email"
-                  autoCorrect={false}
-                  keyboardType="email-address"
-                  textContentType="emailAddress"
-                  returnKeyType="send"
-                  onSubmitEditing={() => void sendLink()}
-                />
-              </View>
-
-              {auth.error ? (
-                <AppText accessibilityRole="alert" style={fieldStyles.error}>
-                  {auth.error}
+          <ScrollView
+            keyboardShouldPersistTaps="handled"
+            contentContainerStyle={[styles.form, view === 'password' ? styles.formPassword : null]}
+          >
+            {view === 'request' ? (
+              <>
+                <AppText style={styles.copy}>
+                  Enter the email on your account. If it has a password, we will send a reset link.
                 </AppText>
-              ) : null}
 
-              <View style={styles.ctaWrap}>
-                <WelcomeCta
-                  label={auth.busy ? 'Sending…' : 'Send reset link'}
-                  accessibilityLabel="Send reset link"
-                  disabled={!requestReady || auth.busy}
-                  onPress={() => void sendLink()}
-                />
-              </View>
-            </>
-          ) : null}
+                <View>
+                  <FieldLabel>Email address</FieldLabel>
+                  <OutlineInput
+                    accessibilityLabel="Email address"
+                    value={email}
+                    onChangeText={(next) => {
+                      if (auth.error) auth.clearError();
+                      setEmail(next);
+                    }}
+                    autoCapitalize="none"
+                    autoComplete="email"
+                    autoCorrect={false}
+                    keyboardType="email-address"
+                    textContentType="emailAddress"
+                    returnKeyType="send"
+                    onSubmitEditing={() => void sendLink()}
+                  />
+                </View>
 
-          {view === 'sent' ? (
-            <>
-              <AppText style={styles.copy}>
-                If {email.trim()} has a password on Macronaut, we sent a reset link. Open it to
-                choose a new password.
-              </AppText>
+                {auth.error ? (
+                  <AppText accessibilityRole="alert" style={fieldStyles.error}>
+                    {auth.error}
+                  </AppText>
+                ) : null}
 
-              {auth.error ? (
-                <AppText accessibilityRole="alert" style={fieldStyles.error}>
-                  {auth.error}
+                <View style={styles.ctaWrap}>
+                  <WelcomeCta
+                    label={auth.busy ? 'Sending…' : 'Send reset link'}
+                    accessibilityLabel="Send reset link"
+                    disabled={!requestReady || auth.busy}
+                    onPress={() => void sendLink()}
+                  />
+                </View>
+              </>
+            ) : null}
+
+            {view === 'sent' ? (
+              <>
+                <AppText style={styles.copy}>
+                  If {email.trim()} has a password on Macronaut, we sent a reset link. Open it to
+                  choose a new password.
                 </AppText>
-              ) : null}
 
-              <View style={styles.ctaWrap}>
-                <WelcomeCta
-                  label={auth.busy ? 'Sending…' : 'Send again'}
-                  accessibilityLabel="Send again"
-                  disabled={!requestReady || auth.busy}
-                  onPress={() => void sendLink()}
-                />
-              </View>
+                {auth.error ? (
+                  <AppText accessibilityRole="alert" style={fieldStyles.error}>
+                    {auth.error}
+                  </AppText>
+                ) : null}
 
-              <Pressable
-                accessibilityRole="link"
-                accessibilityLabel="Use a different email"
-                disabled={auth.busy}
-                onPress={goBack}
-                style={styles.footerHit}
-              >
-                <AppText style={styles.footerLink}>Use a different email</AppText>
-              </Pressable>
-            </>
-          ) : null}
+                <View style={styles.ctaWrap}>
+                  <WelcomeCta
+                    label={auth.busy ? 'Sending…' : 'Send again'}
+                    accessibilityLabel="Send again"
+                    disabled={!requestReady || auth.busy}
+                    onPress={() => void sendLink()}
+                  />
+                </View>
 
-          {view === 'password' && reset ? (
-            <>
-              <AppText style={styles.copy}>Choose a new password for {reset.email}.</AppText>
+                <Pressable
+                  accessibilityRole="link"
+                  accessibilityLabel="Use a different email"
+                  disabled={auth.busy}
+                  onPress={goBack}
+                  style={styles.footerHit}
+                >
+                  <AppText style={styles.footerLink}>Use a different email</AppText>
+                </Pressable>
+              </>
+            ) : null}
 
-              <View>
-                <FieldLabel>New password</FieldLabel>
-                <OutlineInput
-                  accessibilityLabel="New password"
-                  value={password}
-                  onChangeText={(next) => {
-                    if (auth.error) auth.clearError();
-                    setPassword(next);
-                  }}
-                  autoCapitalize="none"
-                  autoComplete="password-new"
-                  autoCorrect={false}
-                  secureTextEntry={!showPassword}
-                  textContentType="newPassword"
-                  returnKeyType="next"
-                  trailing={
-                    <Pressable
-                      accessibilityRole="button"
-                      accessibilityLabel={showPassword ? 'Hide password' : 'Show password'}
-                      hitSlop={8}
-                      onPress={() => setShowPassword((current) => !current)}
-                    >
-                      <Ionicons
-                        name={showPassword ? 'eye-off' : 'eye'}
-                        size={20}
-                        color={lightColors.textSecondary}
-                      />
-                    </Pressable>
-                  }
-                />
-                <AppText style={fieldStyles.helper}>
-                  Minimum password length is 8 characters. Please use at least 1 uppercase letter, 1
-                  lowercase letter and 1 number.
-                </AppText>
-              </View>
+            {view === 'password' && reset ? (
+              <>
+                <AppText style={styles.copy}>Choose a new password for {reset.email}.</AppText>
 
-              <View>
-                <FieldLabel>Confirm new password</FieldLabel>
-                <OutlineInput
-                  accessibilityLabel="Confirm new password"
-                  value={confirmPassword}
-                  onChangeText={(next) => {
-                    if (auth.error) auth.clearError();
-                    setConfirmPassword(next);
-                  }}
-                  autoCapitalize="none"
-                  autoComplete="password-new"
-                  autoCorrect={false}
-                  secureTextEntry={!showConfirm}
-                  textContentType="newPassword"
-                  returnKeyType="go"
-                  onSubmitEditing={() => void resetPassword()}
-                  trailing={
-                    <Pressable
-                      accessibilityRole="button"
-                      accessibilityLabel={
-                        showConfirm ? 'Hide confirm password' : 'Show confirm password'
-                      }
-                      hitSlop={8}
-                      onPress={() => setShowConfirm((current) => !current)}
-                    >
-                      <Ionicons
-                        name={showConfirm ? 'eye-off' : 'eye'}
-                        size={20}
-                        color={lightColors.textSecondary}
-                      />
-                    </Pressable>
-                  }
-                />
-              </View>
+                <View>
+                  <FieldLabel>New password</FieldLabel>
+                  <OutlineInput
+                    accessibilityLabel="New password"
+                    value={password}
+                    onChangeText={(next) => {
+                      if (auth.error) auth.clearError();
+                      setPassword(next);
+                    }}
+                    autoCapitalize="none"
+                    autoComplete="password-new"
+                    autoCorrect={false}
+                    secureTextEntry={!showPassword}
+                    textContentType="newPassword"
+                    returnKeyType="next"
+                    trailing={
+                      <Pressable
+                        accessibilityRole="button"
+                        accessibilityLabel={showPassword ? 'Hide password' : 'Show password'}
+                        hitSlop={8}
+                        onPress={() => setShowPassword((current) => !current)}
+                      >
+                        <Ionicons
+                          name={showPassword ? 'eye-off' : 'eye'}
+                          size={20}
+                          color={welcomeColors.textSecondary}
+                        />
+                      </Pressable>
+                    }
+                  />
+                  <AppText style={fieldStyles.helper}>
+                    Minimum password length is 8 characters. Please use at least 1 uppercase letter,
+                    1 lowercase letter and 1 number.
+                  </AppText>
+                </View>
 
-              {auth.error ? (
-                <AppText accessibilityRole="alert" style={fieldStyles.error}>
-                  {auth.error}
-                </AppText>
-              ) : null}
+                <View>
+                  <FieldLabel>Confirm new password</FieldLabel>
+                  <OutlineInput
+                    accessibilityLabel="Confirm new password"
+                    value={confirmPassword}
+                    onChangeText={(next) => {
+                      if (auth.error) auth.clearError();
+                      setConfirmPassword(next);
+                    }}
+                    autoCapitalize="none"
+                    autoComplete="password-new"
+                    autoCorrect={false}
+                    secureTextEntry={!showConfirm}
+                    textContentType="newPassword"
+                    returnKeyType="go"
+                    onSubmitEditing={() => void resetPassword()}
+                    trailing={
+                      <Pressable
+                        accessibilityRole="button"
+                        accessibilityLabel={
+                          showConfirm ? 'Hide confirm password' : 'Show confirm password'
+                        }
+                        hitSlop={8}
+                        onPress={() => setShowConfirm((current) => !current)}
+                      >
+                        <Ionicons
+                          name={showConfirm ? 'eye-off' : 'eye'}
+                          size={20}
+                          color={welcomeColors.textSecondary}
+                        />
+                      </Pressable>
+                    }
+                  />
+                </View>
 
-              <View style={styles.ctaWrap}>
-                <WelcomeCta
-                  label={auth.busy ? 'Resetting…' : 'Reset password'}
-                  accessibilityLabel="Reset password"
-                  disabled={!confirmReady || auth.busy}
-                  onPress={() => void resetPassword()}
-                />
-              </View>
+                {auth.error ? (
+                  <AppText accessibilityRole="alert" style={fieldStyles.error}>
+                    {auth.error}
+                  </AppText>
+                ) : null}
 
-              <Pressable
-                accessibilityRole="link"
-                accessibilityLabel="Request a new link"
-                disabled={auth.busy}
-                onPress={() => startOver(reset.email)}
-                style={styles.footerHit}
-              >
-                <AppText style={styles.footerLink}>Request a new link</AppText>
-              </Pressable>
-            </>
-          ) : null}
-        </ScrollView>
-      </KeyboardAvoidingView>
-    </View>
+                <View style={styles.ctaWrap}>
+                  <WelcomeCta
+                    label={auth.busy ? 'Resetting…' : 'Reset password'}
+                    accessibilityLabel="Reset password"
+                    disabled={!confirmReady || auth.busy}
+                    onPress={() => void resetPassword()}
+                  />
+                </View>
+
+                <Pressable
+                  accessibilityRole="link"
+                  accessibilityLabel="Request a new link"
+                  disabled={auth.busy}
+                  onPress={() => startOver(reset.email)}
+                  style={styles.footerHit}
+                >
+                  <AppText style={styles.footerLink}>Request a new link</AppText>
+                </Pressable>
+              </>
+            ) : null}
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </View>
+    </WelcomeScene>
   );
 }
 
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: lightColors.background,
+    backgroundColor: welcomeColors.background,
   },
   frame: {
     flex: 1,
@@ -343,7 +347,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     flex: 1,
     fontFamily: fonts.semibold,
-    color: lightColors.textPrimary,
+    color: welcomeColors.textPrimary,
     fontSize: type.title.fontSize,
     lineHeight: type.title.lineHeight,
     fontWeight: '600',
@@ -361,7 +365,7 @@ const styles = StyleSheet.create({
     paddingTop: 8,
   },
   copy: {
-    color: lightColors.textSecondary,
+    color: welcomeColors.textSecondary,
     fontSize: type.body.fontSize,
     lineHeight: type.body.lineHeight,
     fontWeight: '400',
@@ -375,7 +379,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   footerLink: {
-    color: lightColors.textPrimary,
+    color: welcomeColors.textPrimary,
     fontSize: 15,
     lineHeight: 20,
     fontWeight: '600',

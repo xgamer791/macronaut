@@ -20,7 +20,7 @@ describe('sign in', () => {
     expect(source).toContain('auth.error');
     // Same welcome loop and outlined fields as create-account, not the old
     // glass card.
-    expect(source).not.toContain('WelcomeBackground');
+    expect(source).toContain('WelcomeScene');
     expect(source).toContain('WelcomeCta');
     expect(source).toContain('OutlineInput');
     expect(source).toContain('FieldLabel');
@@ -28,7 +28,7 @@ describe('sign in', () => {
     // dock at the bottom of the screen.
     expect(source).toContain('ctaWrap');
     expect(source).toContain('paddingTop: 28');
-    expect(source).toContain('lightColors.background');
+    expect(source).toContain('welcomeColors.background');
     expect(source).not.toContain('styles.dock');
     expect(source).not.toContain('AuthShell');
     expect(source).not.toContain('backdropFilter');

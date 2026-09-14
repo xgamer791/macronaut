@@ -2,6 +2,7 @@ import React from 'react';
 import { Platform, StyleSheet, TextInput, View } from 'react-native';
 import { AppText } from '@/ui/components';
 import { fonts, lightColors, palette, radius, type } from '@/ui/theme/tokens';
+import { welcomeColors } from '@/ui/welcomeMedia';
 
 /** The outlined fields the create-account and sign-in screens share. */
 
@@ -9,14 +10,19 @@ import { fonts, lightColors, palette, radius, type } from '@/ui/theme/tokens';
  * react-native-web forwards dataSet, not className, and dataSet
  * is absent from the React Native prop types. */
 export const DARK_FIELD: object = Platform.OS === 'web' ? { dataSet: { authfield: 'true' } } : {};
+export const VIDEO_FIELD: object =
+  Platform.OS === 'web' ? { dataSet: { videoauthfield: 'true' } } : {};
 
 export const FIELD_HEIGHT = 50;
 
-export function FieldLabel({ children }: { children: string }) {
+export function FieldLabel({ children, appearance }: { children: string; appearance?: 'video' }) {
   return (
-    <AppText style={fieldStyles.label}>
+    <AppText style={appearance === 'video' ? videoFieldStyles.label : fieldStyles.label}>
       {children}
-      <AppText style={fieldStyles.required}> *</AppText>
+      <AppText style={appearance === 'video' ? videoFieldStyles.required : fieldStyles.required}>
+        {' '}
+        *
+      </AppText>
     </AppText>
   );
 }
@@ -39,6 +45,7 @@ export function OutlineInput({
   onSubmitEditing,
   returnKeyType,
   invalid,
+  appearance,
 }: {
   value: string;
   onChangeText: (next: string) => void;
@@ -59,9 +66,12 @@ export function OutlineInput({
   /** Outlines the field in the danger colour. The reason belongs next to it,
    * in words — the outline alone is not something everyone can see. */
   invalid?: boolean;
+  appearance?: 'video';
 }) {
+  const styles = appearance === 'video' ? videoFieldStyles : fieldStyles;
+  const attributes = appearance === 'video' ? VIDEO_FIELD : DARK_FIELD;
   return (
-    <View style={[fieldStyles.field, invalid ? fieldStyles.fieldInvalid : null]} {...DARK_FIELD}>
+    <View style={[styles.field, invalid ? styles.fieldInvalid : null]} {...attributes}>
       <TextInput
         accessibilityLabel={accessibilityLabel}
         value={value}
@@ -71,7 +81,9 @@ export function OutlineInput({
         onSubmitEditing={onSubmitEditing}
         returnKeyType={returnKeyType}
         placeholder={placeholder}
-        placeholderTextColor={lightColors.textMuted}
+        placeholderTextColor={
+          appearance === 'video' ? welcomeColors.textMuted : lightColors.textMuted
+        }
         autoCapitalize={autoCapitalize}
         autoComplete={autoComplete}
         autoCorrect={autoCorrect}
@@ -79,8 +91,8 @@ export function OutlineInput({
         secureTextEntry={secureTextEntry}
         textContentType={textContentType}
         maxLength={maxLength}
-        {...DARK_FIELD}
-        style={fieldStyles.fieldInput}
+        {...attributes}
+        style={styles.fieldInput}
       />
       {trailing}
     </View>
@@ -158,4 +170,30 @@ export const fieldStyles = StyleSheet.create({
   fieldNote: {
     marginTop: 8,
   },
+});
+
+export const videoFieldStyles = StyleSheet.create({
+  ...fieldStyles,
+  label: { ...fieldStyles.label, color: welcomeColors.textPrimary },
+  required: { ...fieldStyles.required, color: '#FFB4B4' },
+  field: {
+    ...fieldStyles.field,
+    backgroundColor: welcomeColors.surface,
+    borderColor: welcomeColors.borderStrong,
+  },
+  fieldInvalid: { borderColor: '#FFB4B4' },
+  fieldInput: {
+    ...fieldStyles.fieldInput,
+    color: welcomeColors.textPrimary,
+    ...Platform.select({
+      web: {
+        WebkitTextFillColor: welcomeColors.textPrimary,
+        caretColor: welcomeColors.textPrimary,
+      } as object,
+      default: {},
+    }),
+  },
+  helper: { ...fieldStyles.helper, color: welcomeColors.textSecondary },
+  error: { ...fieldStyles.error, color: '#FFB4B4' },
+  ok: { ...fieldStyles.ok, color: '#87F0C9' },
 });

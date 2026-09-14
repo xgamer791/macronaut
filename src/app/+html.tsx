@@ -71,6 +71,16 @@ input[data-authfield]:-webkit-autofill:focus, input[data-authfield]:-webkit-auto
   -webkit-text-fill-color: #14181D !important;
   caret-color: #14181D !important;
 }
+/* Video-backed auth fields opt in separately; personalization stays light. */
+[data-videoauthfield], [data-videoauthfield] input, input[data-videoauthfield],
+[data-videoauthfield]:-webkit-autofill,
+[data-videoauthfield] input:-webkit-autofill,
+input[data-videoauthfield]:-webkit-autofill {
+  color-scheme: dark;
+  color: #FFFFFF !important;
+  -webkit-text-fill-color: #FFFFFF !important;
+  caret-color: #FFFFFF !important;
+}
 /* Liquid Glass — 2025–26 translucent UI recipe.
    Works on any colorful background; flat backgrounds will look subtler. */
 .glass,

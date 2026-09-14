@@ -33,8 +33,8 @@ describe('forgot password', () => {
     expect(source).toContain('confirmPasswordReset');
     expect(source).toContain('isValidSignupPassword');
     expect(source).toContain('passwordsMatch');
-    expect(source).not.toContain('WelcomeBackground');
-    expect(source).toContain('lightColors.background');
+    expect(source).toContain('WelcomeScene');
+    expect(source).toContain('welcomeColors.background');
     expect(source).toContain('WelcomeCta');
     expect(source).toContain('OutlineInput');
     expect(source).toContain('useLocalSearchParams');

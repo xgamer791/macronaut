@@ -2,13 +2,15 @@ import { Ionicons } from '@expo/vector-icons';
 import { Link, Redirect, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import React, { useEffect, useState } from 'react';
-import { Animated, Pressable, StyleSheet, View } from 'react-native';
+import { Animated, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '@/state/AuthProvider';
 import { useSetting } from '@/state/queries';
 import { AppText } from '@/ui/components';
 import { WelcomeCta } from '@/ui/WelcomeCta';
-import { fonts, lightColors, palette, radius, type } from '@/ui/theme/tokens';
+import { WelcomeScene } from '@/ui/WelcomeScene';
+import { welcomeColors } from '@/ui/welcomeMedia';
+import { fonts, palette, radius, type } from '@/ui/theme/tokens';
 import { SlidePushLayer } from '@/ui/motion/SlidePush';
 
 const TRACK_W = 51;
@@ -92,61 +94,63 @@ export default function SignupLegalScreen() {
   // Privacy and Terms over this page while signed out.
   return (
     <SlidePushLayer>
-      <View style={styles.root}>
-        <StatusBar style="dark" />
+      <WelcomeScene>
+        <View style={styles.root}>
+          <StatusBar style="light" />
 
-        <View style={[styles.frame, { paddingTop: insets.top + 4 }]}>
-          <View style={styles.top}>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Back"
-              hitSlop={8}
-              onPress={goBack}
-              style={styles.backHit}
-            >
-              <Ionicons name="chevron-back" size={28} color={lightColors.textPrimary} />
-            </Pressable>
+          <View style={[styles.frame, { paddingTop: insets.top + 4 }]}>
+            <ScrollView contentContainerStyle={styles.top}>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Back"
+                hitSlop={8}
+                onPress={goBack}
+                style={styles.backHit}
+              >
+                <Ionicons name="chevron-back" size={28} color={welcomeColors.textPrimary} />
+              </Pressable>
 
-            <AppText accessibilityRole="header" style={styles.title}>
-              {'Terms of Service\nand Privacy Policy'}
-            </AppText>
-            <AppText style={styles.subtitle}>Please review the following to continue:</AppText>
+              <AppText accessibilityRole="header" style={styles.title}>
+                {'Terms of Service\nand Privacy Policy'}
+              </AppText>
+              <AppText style={styles.subtitle}>Please review the following to continue:</AppText>
 
-            <View style={styles.cards}>
-              <View style={styles.card}>
-                <View style={styles.cardCopy}>
-                  <AppText style={styles.cardText}>I have read and agree to the </AppText>
-                  <LegalLink href="/terms">Terms of Service</LegalLink>
-                  <AppText style={styles.cardText}> and </AppText>
-                  <LegalLink href="/privacy">Privacy Policy</LegalLink>
-                  <AppText style={styles.cardText}>.</AppText>
+              <View style={styles.cards}>
+                <View style={styles.card}>
+                  <View style={styles.cardCopy}>
+                    <AppText style={styles.cardText}>I have read and agree to the </AppText>
+                    <LegalLink href="/terms">Terms of Service</LegalLink>
+                    <AppText style={styles.cardText}> and </AppText>
+                    <LegalLink href="/privacy">Privacy Policy</LegalLink>
+                    <AppText style={styles.cardText}>.</AppText>
+                  </View>
+                  <LegalToggle
+                    value={agreed}
+                    onValueChange={setAgreed}
+                    accessibilityLabel="Agree to the Terms of Service and Privacy Policy"
+                  />
                 </View>
-                <LegalToggle
-                  value={agreed}
-                  onValueChange={setAgreed}
-                  accessibilityLabel="Agree to the Terms of Service and Privacy Policy"
-                />
-              </View>
 
-              <View style={styles.card}>
-                <AppText style={[styles.cardText, styles.cardFill]}>
-                  Receive exclusive health education, tips, and special offers to get the most out
-                  of your Macronaut experience.
-                </AppText>
-                <LegalToggle
-                  value={offers}
-                  onValueChange={setOffers}
-                  accessibilityLabel="Receive health education, tips, and special offers"
-                />
+                <View style={styles.card}>
+                  <AppText style={[styles.cardText, styles.cardFill]}>
+                    Receive exclusive health education, tips, and special offers to get the most out
+                    of your Macronaut experience.
+                  </AppText>
+                  <LegalToggle
+                    value={offers}
+                    onValueChange={setOffers}
+                    accessibilityLabel="Receive health education, tips, and special offers"
+                  />
+                </View>
               </View>
+            </ScrollView>
+
+            <View style={[styles.dock, { paddingBottom: Math.max(insets.bottom, 12) + 8 }]}>
+              <WelcomeCta label="Save and continue" disabled={!agreed} href="/signup-account" />
             </View>
           </View>
-
-          <View style={[styles.dock, { paddingBottom: Math.max(insets.bottom, 12) + 8 }]}>
-            <WelcomeCta label="Save and continue" disabled={!agreed} href="/signup-account" />
-          </View>
         </View>
-      </View>
+      </WelcomeScene>
     </SlidePushLayer>
   );
 }
@@ -154,7 +158,7 @@ export default function SignupLegalScreen() {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: lightColors.background,
+    backgroundColor: welcomeColors.background,
   },
   frame: {
     flex: 1,
@@ -162,6 +166,7 @@ const styles = StyleSheet.create({
   },
   top: {
     paddingHorizontal: 24,
+    paddingBottom: 24,
   },
   backHit: {
     width: 44,
@@ -172,14 +177,14 @@ const styles = StyleSheet.create({
   },
   title: {
     fontFamily: fonts.medium,
-    color: lightColors.textPrimary,
+    color: welcomeColors.textPrimary,
     fontSize: type.hero.fontSize,
     lineHeight: type.hero.lineHeight,
     fontWeight: '500',
     marginTop: 12,
   },
   subtitle: {
-    color: lightColors.textSecondary,
+    color: welcomeColors.textSecondary,
     fontSize: type.body.fontSize,
     lineHeight: type.body.lineHeight,
     fontWeight: '400',
@@ -195,9 +200,9 @@ const styles = StyleSheet.create({
     gap: 16,
     paddingVertical: 18,
     paddingHorizontal: 18,
-    backgroundColor: lightColors.surface,
+    backgroundColor: welcomeColors.surface,
     borderWidth: 1,
-    borderColor: lightColors.border,
+    borderColor: welcomeColors.border,
     borderRadius: radius.lg,
   },
   cardCopy: {
@@ -210,13 +215,13 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   cardText: {
-    color: lightColors.textPrimary,
+    color: welcomeColors.textPrimary,
     fontSize: type.body.fontSize,
     lineHeight: type.body.lineHeight,
     fontWeight: '400',
   },
   link: {
-    color: lightColors.textPrimary,
+    color: welcomeColors.textPrimary,
     fontSize: type.body.fontSize,
     lineHeight: type.body.lineHeight,
     fontWeight: '400',
@@ -241,5 +246,6 @@ const styles = StyleSheet.create({
   },
   dock: {
     paddingHorizontal: 24,
+    paddingTop: 12,
   },
 });

@@ -30,12 +30,12 @@ describe('signup legal gate', () => {
     expect(source).not.toContain('Terms of Use');
   });
 
-  it('uses light chrome, fonts, and the accent CTA', () => {
+  it('uses readable video chrome, fonts, and the accent CTA', () => {
     const source = read('signup-legal.tsx');
-    expect(source).not.toContain('WelcomeBackground');
+    expect(source).toContain('WelcomeScene');
     expect(source).toContain('WelcomeCta');
     expect(source).not.toContain('veilFilm');
-    expect(source).toContain('lightColors.background');
+    expect(source).toContain('welcomeColors.background');
     expect(source).toMatch(/fonts\.(semibold|medium)/);
     expect(source).toContain('type.hero');
     expect(source).toContain('type.body');

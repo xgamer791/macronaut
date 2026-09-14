@@ -16,12 +16,14 @@ import { useAuth } from '@/state/AuthProvider';
 import { useSetting } from '@/state/queries';
 import { useAccountAuth } from '@/state/useAccountAuth';
 import { AppText } from '@/ui/components';
-import { fieldStyles, FieldLabel, OutlineInput } from '@/ui/DarkField';
+import { fieldStyles, FieldLabel, OutlineInput } from '@/ui/WelcomeFields';
 import { WelcomeCta } from '@/ui/WelcomeCta';
-import { fonts, lightColors, type } from '@/ui/theme/tokens';
+import { WelcomeScene } from '@/ui/WelcomeScene';
+import { welcomeColors } from '@/ui/welcomeMedia';
+import { fonts, type } from '@/ui/theme/tokens';
 
 /** Sign in with the email and password the account was created with. Same
- * chrome as Account Setup: light fields, a back chevron, and the accent
+ * chrome as Account Setup: video-backed fields, a back chevron, and the accent
  * tile sitting in the form. */
 export default function LoginScreen() {
   const router = useRouter();
@@ -51,134 +53,136 @@ export default function LoginScreen() {
   }
 
   return (
-    <View style={styles.root}>
-      <StatusBar style="dark" />
+    <WelcomeScene>
+      <View style={styles.root}>
+        <StatusBar style="light" />
 
-      <KeyboardAvoidingView
-        style={styles.frame}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      >
-        <View style={[styles.header, { paddingTop: insets.top + 4 }]}>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Back"
-            hitSlop={8}
-            onPress={goBack}
-            style={styles.headerSide}
-          >
-            <Ionicons name="chevron-back" size={28} color={lightColors.textPrimary} />
-          </Pressable>
-          <AppText accessibilityRole="header" style={styles.headerTitle}>
-            Sign In
-          </AppText>
-          <View style={styles.headerSide} />
-        </View>
-
-        <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.form}>
-          <View>
-            <FieldLabel>Email address</FieldLabel>
-            <OutlineInput
-              accessibilityLabel="Email address"
-              value={email}
-              onChangeText={(next) => {
-                if (auth.error) auth.clearError();
-                setEmail(next);
-              }}
-              autoCapitalize="none"
-              autoComplete="email"
-              autoCorrect={false}
-              keyboardType="email-address"
-              textContentType="emailAddress"
-              returnKeyType="next"
-            />
+        <KeyboardAvoidingView
+          style={styles.frame}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        >
+          <View style={[styles.header, { paddingTop: insets.top + 4 }]}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Back"
+              hitSlop={8}
+              onPress={goBack}
+              style={styles.headerSide}
+            >
+              <Ionicons name="chevron-back" size={28} color={welcomeColors.textPrimary} />
+            </Pressable>
+            <AppText accessibilityRole="header" style={styles.headerTitle}>
+              Sign In
+            </AppText>
+            <View style={styles.headerSide} />
           </View>
 
-          <View>
-            <FieldLabel>Password</FieldLabel>
-            <OutlineInput
-              accessibilityLabel="Password"
-              value={password}
-              onChangeText={(next) => {
-                if (auth.error) auth.clearError();
-                setPassword(next);
-              }}
-              autoCapitalize="none"
-              autoComplete="password"
-              autoCorrect={false}
-              secureTextEntry={!showPassword}
-              textContentType="password"
-              returnKeyType="go"
-              onSubmitEditing={() => void signIn()}
-              trailing={
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel={showPassword ? 'Hide password' : 'Show password'}
-                  hitSlop={8}
-                  onPress={() => setShowPassword((current) => !current)}
-                >
-                  <Ionicons
-                    name={showPassword ? 'eye-off' : 'eye'}
-                    size={20}
-                    color={lightColors.textSecondary}
-                  />
-                </Pressable>
-              }
-            />
+          <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.form}>
+            <View>
+              <FieldLabel>Email address</FieldLabel>
+              <OutlineInput
+                accessibilityLabel="Email address"
+                value={email}
+                onChangeText={(next) => {
+                  if (auth.error) auth.clearError();
+                  setEmail(next);
+                }}
+                autoCapitalize="none"
+                autoComplete="email"
+                autoCorrect={false}
+                keyboardType="email-address"
+                textContentType="emailAddress"
+                returnKeyType="next"
+              />
+            </View>
+
+            <View>
+              <FieldLabel>Password</FieldLabel>
+              <OutlineInput
+                accessibilityLabel="Password"
+                value={password}
+                onChangeText={(next) => {
+                  if (auth.error) auth.clearError();
+                  setPassword(next);
+                }}
+                autoCapitalize="none"
+                autoComplete="password"
+                autoCorrect={false}
+                secureTextEntry={!showPassword}
+                textContentType="password"
+                returnKeyType="go"
+                onSubmitEditing={() => void signIn()}
+                trailing={
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={showPassword ? 'Hide password' : 'Show password'}
+                    hitSlop={8}
+                    onPress={() => setShowPassword((current) => !current)}
+                  >
+                    <Ionicons
+                      name={showPassword ? 'eye-off' : 'eye'}
+                      size={20}
+                      color={welcomeColors.textSecondary}
+                    />
+                  </Pressable>
+                }
+              />
+              <Pressable
+                accessibilityRole="link"
+                accessibilityLabel="Forgot password"
+                disabled={auth.busy}
+                onPress={() => {
+                  auth.clearError();
+                  router.push({
+                    pathname: '/forgot-password',
+                    params: isPlausibleEmail(email) ? { email: email.trim() } : {},
+                  });
+                }}
+                style={styles.forgotHit}
+              >
+                <AppText style={styles.forgotLink}>Forgot password?</AppText>
+              </Pressable>
+            </View>
+
+            {auth.error ? (
+              <AppText accessibilityRole="alert" style={fieldStyles.error}>
+                {auth.error}
+              </AppText>
+            ) : null}
+
+            <View style={styles.ctaWrap}>
+              <WelcomeCta
+                label={auth.busy ? 'Signing in…' : 'Sign In'}
+                accessibilityLabel="Sign In"
+                disabled={!ready || auth.busy}
+                onPress={() => void signIn()}
+              />
+            </View>
+
             <Pressable
               accessibilityRole="link"
-              accessibilityLabel="Forgot password"
+              accessibilityLabel="Create Account"
               disabled={auth.busy}
               onPress={() => {
                 auth.clearError();
-                router.push({
-                  pathname: '/forgot-password',
-                  params: isPlausibleEmail(email) ? { email: email.trim() } : {},
-                });
+                router.replace('/signup-legal');
               }}
-              style={styles.forgotHit}
+              style={styles.footerHit}
             >
-              <AppText style={styles.forgotLink}>Forgot password?</AppText>
+              <AppText style={styles.footerLabel}>Don&apos;t have an account? </AppText>
+              <AppText style={styles.footerLink}>Create Account.</AppText>
             </Pressable>
-          </View>
-
-          {auth.error ? (
-            <AppText accessibilityRole="alert" style={fieldStyles.error}>
-              {auth.error}
-            </AppText>
-          ) : null}
-
-          <View style={styles.ctaWrap}>
-            <WelcomeCta
-              label={auth.busy ? 'Signing in…' : 'Sign In'}
-              accessibilityLabel="Sign In"
-              disabled={!ready || auth.busy}
-              onPress={() => void signIn()}
-            />
-          </View>
-
-          <Pressable
-            accessibilityRole="link"
-            accessibilityLabel="Create Account"
-            disabled={auth.busy}
-            onPress={() => {
-              auth.clearError();
-              router.replace('/signup-legal');
-            }}
-            style={styles.footerHit}
-          >
-            <AppText style={styles.footerLabel}>Don&apos;t have an account? </AppText>
-            <AppText style={styles.footerLink}>Create Account.</AppText>
-          </Pressable>
-        </ScrollView>
-      </KeyboardAvoidingView>
-    </View>
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </View>
+    </WelcomeScene>
   );
 }
 
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: lightColors.background,
+    backgroundColor: welcomeColors.background,
   },
   frame: {
     flex: 1,
@@ -198,7 +202,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     flex: 1,
     fontFamily: fonts.semibold,
-    color: lightColors.textPrimary,
+    color: welcomeColors.textPrimary,
     fontSize: type.title.fontSize,
     lineHeight: type.title.lineHeight,
     fontWeight: '600',
@@ -217,7 +221,7 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   forgotLink: {
-    color: lightColors.textPrimary,
+    color: welcomeColors.textPrimary,
     fontSize: 14,
     lineHeight: 20,
     fontWeight: '600',
@@ -234,13 +238,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   footerLabel: {
-    color: lightColors.textSecondary,
+    color: welcomeColors.textSecondary,
     fontSize: 15,
     lineHeight: 20,
     fontWeight: '400',
   },
   footerLink: {
-    color: lightColors.textPrimary,
+    color: welcomeColors.textPrimary,
     fontSize: 15,
     lineHeight: 20,
     fontWeight: '600',

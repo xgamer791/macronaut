@@ -50,7 +50,7 @@ describe('signup credentials', () => {
     expect(source).toContain('invalid={passwordMismatch}');
     expect(source).toContain('invalid={emailMismatch}');
     expect(fields).toContain('invalid?: boolean');
-    expect(fields).toContain('fieldStyles.fieldInvalid');
+    expect(fields).toContain('styles.fieldInvalid');
     expect(fields).toContain('borderColor: palette.danger');
   });
 
@@ -106,8 +106,8 @@ describe('signup credentials', () => {
     expect(source).not.toContain('setMonthIndex');
     expect(source).toContain('inlineMenu');
     expect(source).toContain('isValidSignupBirthday');
-    expect(source).not.toContain('WelcomeBackground');
-    expect(source).toContain('lightColors.background');
+    expect(source).toContain('WelcomeScene');
+    expect(source).toContain('welcomeColors.background');
     expect(source).toContain('WelcomeCta');
     expect(source).toMatch(/fonts\.(semibold|medium)/);
     expect(source).toContain('type.title');
