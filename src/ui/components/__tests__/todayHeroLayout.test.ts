@@ -31,6 +31,13 @@ describe('today hero layout', () => {
     expect(read('ui', 'components', 'AppHeader.tsx')).toContain('marginTop: HEADER_ROW_LIFT');
   });
 
+  it('does not paint photo backgrounds behind the hero or macros', () => {
+    const today = read('app', '(tabs)', 'index.tsx');
+    expect(today).not.toContain('hero-gym');
+    expect(today).not.toContain('macro-protein');
+    expect(today).not.toContain('LinearGradient');
+  });
+
   it('lets Screen reserve the header so the first gap cannot collapse', () => {
     const today = read('app', '(tabs)', 'index.tsx');
     expect(today).toContain('paddingTop: HERO_GAP_BELOW_HEADER');
