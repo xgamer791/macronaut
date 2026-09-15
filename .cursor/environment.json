@@ -1,0 +1,15 @@
+{
+  "name": "Macronaut",
+  "install": "npm ci && ./scripts/cloud-agent-setup.sh",
+  "terminals": [
+    {
+      "name": "convex",
+      "command": "CONVEX_AGENT_MODE=anonymous npx convex dev --tail-logs disable"
+    },
+    {
+      "name": "web",
+      "command": "npm run web"
+    }
+  ],
+  "ports": [8081, 3210, 3211]
+}
