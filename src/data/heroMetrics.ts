@@ -5,16 +5,9 @@ type IonName = ComponentProps<typeof Ionicons>['name'];
 
 /** Metrics that can appear in Today hero modules. */
 export type HeroMetricId =
-  | 'calories'
-  | 'protein'
-  | 'carbs'
-  | 'fat'
-  | 'fiber'
-  | 'water'
-  | 'steps'
-  | 'burned';
+  'calories' | 'protein' | 'carbs' | 'fat' | 'fiber' | 'water' | 'steps' | 'burned' | 'fasting';
 
-export type HeroMetricKind = 'ring' | 'macro' | 'steps' | 'water' | 'burned';
+export type HeroMetricKind = 'ring' | 'macro' | 'steps' | 'water' | 'burned' | 'fasting';
 
 export interface HeroMetricDef {
   id: HeroMetricId;
@@ -91,6 +84,14 @@ export const HERO_METRICS: HeroMetricDef[] = [
     kind: 'burned',
     unit: 'kcal',
     icon: 'flash-outline',
+  },
+  {
+    id: 'fasting',
+    label: 'Fasting',
+    subtitle: 'Live timer — current fast progress',
+    kind: 'fasting',
+    unit: 'minutes',
+    icon: 'timer-outline',
   },
 ];
 

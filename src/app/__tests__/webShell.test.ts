@@ -72,6 +72,12 @@ describe('web html shell', () => {
     expect(html).toContain('opacity 294ms cubic-bezier(0.22, 1, 0.36, 1)');
   });
 
+  it('slides module pickers from their matching edge on the hamburger curve', () => {
+    expect(html).toContain('[data-modulepicker]');
+    expect(html).toContain('[data-modulepicker] [data-moduledrawer]');
+    expect(html).toContain('[data-modulepicker="shut"] [data-modulescrim]');
+  });
+
   it('slides the sticky header as one slab on the same 294ms curve', () => {
     expect(html).toContain('[data-screenscroll]');
     expect(html).toContain('overflow-anchor: none');

@@ -158,6 +158,17 @@ input[data-videoauthfield]:-webkit-autofill {
   will-change: transform;
   transition: transform 294ms cubic-bezier(0.22, 1, 0.36, 1);
 }
+/* Today module pickers use the same edge-drawer movement as the hamburger. */
+[data-modulepicker] [data-modulescrim] {
+  transition: opacity 294ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+[data-modulepicker="shut"] [data-modulescrim] {
+  opacity: 0;
+}
+[data-modulepicker] [data-moduledrawer] {
+  will-change: transform;
+  transition: transform 294ms cubic-bezier(0.22, 1, 0.36, 1);
+}
 /* Calendar panel: the same right-hand slide, on the same curve. */
 [data-calendarpanel] [data-calendarsheet] {
   will-change: transform;
@@ -173,6 +184,8 @@ input[data-videoauthfield]:-webkit-autofill {
   }
   [data-headermenu] [data-menuscrim],
   [data-headermenu] [data-menudrawer],
+  [data-modulepicker] [data-modulescrim],
+  [data-modulepicker] [data-moduledrawer],
   [data-calendarpanel] [data-calendarsheet] {
     transition: none;
   }

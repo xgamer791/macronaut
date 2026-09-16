@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useQueryClient } from '@tanstack/react-query';
 import { Image, type ImageSource } from 'expo-image';
 import { useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { useRepos } from '@/state/AppProvider';
 import {
@@ -10,6 +10,7 @@ import {
   useActivityEntries,
   useDayProgress,
   useDiaryEntries,
+  useFastingState,
   useMealCategories,
   useSetting,
 } from '@/state/queries';
@@ -73,6 +74,7 @@ function TodayBody() {
   const progress = useDayProgress(date);
   const entries = useDiaryEntries(date);
   const activities = useActivityEntries(date);
+  const fasting = useFastingState();
   const categories = useMealCategories();
   const waterGoal = useSetting<number>('waterGoalCups', 8);
   const stepGoal = useSetting<number>('stepGoal', 10000);
@@ -81,6 +83,7 @@ function TodayBody() {
   const leftSetting = useSetting<string>('heroModuleLeft', DEFAULT_HERO_LEFT);
   const rightSetting = useSetting<string>('heroModuleRight', DEFAULT_HERO_RIGHT);
   const [pickerSlot, setPickerSlot] = useState<'left' | 'right' | null>(null);
+  const [fastingNow, setFastingNow] = useState(() => Date.now());
 
   const leftMetric: HeroMetricId = isHeroMetricId(leftSetting.data)
     ? leftSetting.data
@@ -92,6 +95,19 @@ function TodayBody() {
   const consumed = progress?.consumed.calories ?? 0;
   const burned = progress?.burned ?? 0;
   const target = progress?.target.calories ?? 0;
+  const fastStartAt = fasting.data?.activeStartAt ?? null;
+  const fastEndAt = fasting.data?.activeEndAt ?? null;
+
+  useEffect(() => {
+    if (fastStartAt === null || fastEndAt === null) return;
+    const refresh = () => setFastingNow(Date.now());
+    const immediate = setTimeout(refresh, 0);
+    const timer = setInterval(refresh, 30_000);
+    return () => {
+      clearTimeout(immediate);
+      clearInterval(timer);
+    };
+  }, [fastEndAt, fastStartAt]);
 
   // Equal modules fill the content row: edge inset lg, fixed md gutter between cards.
   const moduleSize = Math.floor((width - spacing.lg * 2 - spacing.md) / 2);
@@ -136,6 +152,25 @@ function TodayBody() {
           value: burned,
           detail: burned > 0 ? 'From logged activity' : 'Log activity below',
         };
+      case 'fasting': {
+        if (fastStartAt === null || fastEndAt === null) {
+          return { value: 0, target: 0, progress: 0, detail: 'Ready to start' };
+        }
+        const durationMinutes = Math.max(1, Math.round((fastEndAt - fastStartAt) / 60_000));
+        if (fastingNow >= fastEndAt) {
+          return { value: 0, target: durationMinutes, progress: 1, detail: 'Fast complete' };
+        }
+        const remainingMinutes = Math.max(1, Math.ceil((fastEndAt - fastingNow) / 60_000));
+        return {
+          value: remainingMinutes,
+          target: durationMinutes,
+          progress: Math.min(
+            1,
+            Math.max(0, (fastingNow - fastStartAt) / (fastEndAt - fastStartAt)),
+          ),
+          detail: 'Fasting now',
+        };
+      }
       default:
         return { value: 0 };
     }
@@ -223,8 +258,8 @@ function TodayBody() {
 
       <HeroMetricPicker
         slot={pickerSlot}
-        selected={pickerSlot === 'left' ? leftMetric : rightMetric}
-        other={pickerSlot === 'left' ? rightMetric : leftMetric}
+        left={leftMetric}
+        right={rightMetric}
         onClose={() => setPickerSlot(null)}
         onSelect={(metric) => {
           if (!pickerSlot) return;
@@ -270,87 +305,87 @@ function TodayBody() {
 
         {/* —— Meals —— */}
         <View style={styles.section}>
-        <SectionHeader flush title="Meals" />
+          <SectionHeader flush title="Meals" />
 
-        <View
-          style={[
-            styles.mealsCard,
-            { backgroundColor: colors.surface, borderColor: colors.border },
-          ]}
-        >
-          {(categories.data ?? []).map((cat, idx, arr) => {
-            const kcal = Math.round(mealTotals.get(cat.id) ?? 0);
-            const time = mealTimes.get(cat.id);
-            const title = mealTitles.get(cat.id) ?? cat.name;
-            const image = MEAL_IMAGES[cat.id] ?? MEAL_IMAGES.lunch;
-            return (
-              <Pressable
-                key={cat.id}
-                accessibilityRole="button"
-                accessibilityLabel={`${title}, ${kcal} kcal`}
-                onPress={() => {
-                  setSelectedDate(date);
-                  setTargetMeal(cat.id);
-                  router.push(kcal > 0 ? '/day-detail' : '/add');
-                }}
-                style={[
-                  styles.mealRow,
-                  idx < arr.length - 1 && {
-                    borderBottomWidth: StyleSheet.hairlineWidth,
-                    borderBottomColor: colors.border,
-                  },
-                ]}
-              >
-                <Image source={image} style={styles.mealThumb} contentFit="cover" />
-                <View style={styles.mealCopy}>
-                  <AppText variant="body" weight="600" numberOfLines={1}>
-                    {title}
-                  </AppText>
-                  <AppText variant="caption" tone="muted">
-                    {kcal > 0 ? `${kcal.toLocaleString()} kcal` : 'Not logged'}
-                  </AppText>
-                </View>
-                {time ? (
-                  <AppText variant="caption" tone="muted" style={{ marginRight: 4 }}>
-                    {time}
-                  </AppText>
-                ) : null}
-                <Ionicons name="add" size={22} color={colors.accent} />
-              </Pressable>
-            );
-          })}
-        </View>
+          <View
+            style={[
+              styles.mealsCard,
+              { backgroundColor: colors.surface, borderColor: colors.border },
+            ]}
+          >
+            {(categories.data ?? []).map((cat, idx, arr) => {
+              const kcal = Math.round(mealTotals.get(cat.id) ?? 0);
+              const time = mealTimes.get(cat.id);
+              const title = mealTitles.get(cat.id) ?? cat.name;
+              const image = MEAL_IMAGES[cat.id] ?? MEAL_IMAGES.lunch;
+              return (
+                <Pressable
+                  key={cat.id}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${title}, ${kcal} kcal`}
+                  onPress={() => {
+                    setSelectedDate(date);
+                    setTargetMeal(cat.id);
+                    router.push(kcal > 0 ? '/day-detail' : '/add');
+                  }}
+                  style={[
+                    styles.mealRow,
+                    idx < arr.length - 1 && {
+                      borderBottomWidth: StyleSheet.hairlineWidth,
+                      borderBottomColor: colors.border,
+                    },
+                  ]}
+                >
+                  <Image source={image} style={styles.mealThumb} contentFit="cover" />
+                  <View style={styles.mealCopy}>
+                    <AppText variant="body" weight="600" numberOfLines={1}>
+                      {title}
+                    </AppText>
+                    <AppText variant="caption" tone="muted">
+                      {kcal > 0 ? `${kcal.toLocaleString()} kcal` : 'Not logged'}
+                    </AppText>
+                  </View>
+                  {time ? (
+                    <AppText variant="caption" tone="muted" style={{ marginRight: 4 }}>
+                      {time}
+                    </AppText>
+                  ) : null}
+                  <Ionicons name="add" size={22} color={colors.accent} />
+                </Pressable>
+              );
+            })}
+          </View>
         </View>
 
         {/* —— Activity (below fold; keeps logging entry points) —— */}
         <View style={styles.section}>
-        <SectionHeader
-          flush
-          title="Activity"
-          right={
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Open activity tracking"
-              onPress={() => router.push('/activity')}
-              style={{ minHeight: 44, justifyContent: 'center' }}
-            >
-              <AppText variant="caption" weight="600" style={{ color: colors.accent }}>
-                View all ›
-              </AppText>
-            </Pressable>
-          }
-        />
-        <ActivityLogList
-          burnedByType={burnedByType}
-          onLog={(type) => {
-            setSelectedDate(date);
-            router.push({ pathname: '/activity', params: { type } });
-          }}
-          onOpenType={(type) => {
-            setSelectedDate(date);
-            router.push({ pathname: '/activity', params: { type } });
-          }}
-        />
+          <SectionHeader
+            flush
+            title="Activity"
+            right={
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Open activity tracking"
+                onPress={() => router.push('/activity')}
+                style={{ minHeight: 44, justifyContent: 'center' }}
+              >
+                <AppText variant="caption" weight="600" style={{ color: colors.accent }}>
+                  View all ›
+                </AppText>
+              </Pressable>
+            }
+          />
+          <ActivityLogList
+            burnedByType={burnedByType}
+            onLog={(type) => {
+              setSelectedDate(date);
+              router.push({ pathname: '/activity', params: { type } });
+            }}
+            onOpenType={(type) => {
+              setSelectedDate(date);
+              router.push({ pathname: '/activity', params: { type } });
+            }}
+          />
         </View>
       </View>
     </Screen>

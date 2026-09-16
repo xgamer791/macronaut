@@ -30,7 +30,7 @@ export interface HeroMetricModuleProps {
 
 /**
  * Today hero tracking module. Outer chrome matches the calorie card shell;
- * inner layout is metric-specific (ring / macro / steps / water / burned).
+ * inner layout is metric-specific (ring / macro / steps / water / burned / fasting).
  */
 export function HeroMetricModule({ metric, values, onPress, size }: HeroMetricModuleProps) {
   const { colors } = useTheme();
@@ -61,8 +61,10 @@ export function HeroMetricModule({ metric, values, onPress, size }: HeroMetricMo
         <StepsInner values={values} />
       ) : def.kind === 'water' ? (
         <WaterInner values={values} />
-      ) : (
+      ) : def.kind === 'burned' ? (
         <BurnedInner values={values} />
+      ) : (
+        <FastingInner values={values} />
       )}
     </Pressable>
   );
@@ -259,6 +261,70 @@ function BurnedInner({ values }: { values: HeroMetricValues }) {
   );
 }
 
+function compactMinutes(total: number): string {
+  const minutes = Math.max(0, Math.round(total));
+  const hours = Math.floor(minutes / 60);
+  const rest = minutes % 60;
+  if (hours && rest) return `${hours}h ${rest}m`;
+  if (hours) return `${hours}h`;
+  return `${rest}m`;
+}
+
+function FastingInner({ values }: { values: HeroMetricValues }) {
+  const { colors } = useTheme();
+  const target = Math.max(0, Math.round(values.target ?? 0));
+  const active = target > 0 && values.detail === 'Fasting now';
+  const complete = values.detail === 'Fast complete';
+  const elapsed = active ? Math.max(0, target - Math.round(values.value)) : complete ? target : 0;
+  const pct = Math.min(1, Math.max(0, values.progress ?? 0));
+
+  return (
+    <View style={styles.fastingLayout}>
+      <View style={styles.fastingHeader}>
+        <View style={[styles.fastingIcon, { backgroundColor: `${colors.accent}1A` }]}>
+          <Ionicons name="timer-outline" size={18} color={colors.accent} />
+        </View>
+        <AppText variant="caption" weight="600" tone="secondary" style={styles.fastingTitle}>
+          Fasting
+        </AppText>
+        {active ? (
+          <View style={[styles.liveBadge, { backgroundColor: `${colors.accent}1A` }]}>
+            <View style={[styles.liveDot, { backgroundColor: colors.accent }]} />
+            <AppText variant="micro" weight="700" style={{ color: colors.accent }}>
+              LIVE
+            </AppText>
+          </View>
+        ) : null}
+      </View>
+
+      <View style={styles.fastingCenter}>
+        <AppText variant="heading" weight="700" display style={styles.fastingValue}>
+          {active ? compactMinutes(values.value) : complete ? 'Complete' : 'Ready'}
+        </AppText>
+        <AppText variant="micro" tone="muted">
+          {active ? 'remaining' : complete ? 'goal reached' : 'no active fast'}
+        </AppText>
+      </View>
+
+      <View style={[styles.fastTrack, { backgroundColor: colors.track }]}>
+        <View
+          style={[styles.fastFill, { width: `${pct * 100}%`, backgroundColor: colors.accent }]}
+        />
+      </View>
+      <View style={styles.fastingFooter}>
+        <AppText variant="micro" tone="muted">
+          {active || complete ? `${compactMinutes(elapsed)} elapsed` : 'Start from + menu'}
+        </AppText>
+        {target > 0 ? (
+          <AppText variant="micro" tone="muted">
+            {compactMinutes(target)} goal
+          </AppText>
+        ) : null}
+      </View>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   shell: {
     borderRadius: radius.xl,
@@ -375,5 +441,63 @@ const styles = StyleSheet.create({
     fontSize: 28,
     lineHeight: 32,
     fontFamily: fonts.semibold,
+  },
+  fastingLayout: {
+    flex: 1,
+    width: '100%',
+    justifyContent: 'space-between',
+    gap: 5,
+  },
+  fastingHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  fastingIcon: {
+    width: 28,
+    height: 28,
+    borderRadius: radius.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  fastingTitle: {
+    flex: 1,
+  },
+  liveBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    borderRadius: radius.full,
+    paddingHorizontal: 6,
+    paddingVertical: 3,
+  },
+  liveDot: {
+    width: 5,
+    height: 5,
+    borderRadius: radius.full,
+  },
+  fastingCenter: {
+    alignItems: 'flex-start',
+  },
+  fastingValue: {
+    fontSize: 25,
+    lineHeight: 29,
+    fontFamily: fonts.semibold,
+  },
+  fastTrack: {
+    height: 7,
+    borderRadius: radius.full,
+    overflow: 'hidden',
+    width: '100%',
+  },
+  fastFill: {
+    height: '100%',
+    borderRadius: radius.full,
+  },
+  fastingFooter: {
+    minHeight: 15,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: spacing.xs,
   },
 });
